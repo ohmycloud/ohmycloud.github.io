@@ -7,10 +7,42 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>❤ 焉知非鱼</copyright>
-    <lastBuildDate>Mon, 10 Dec 2018 16:16:21 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 13 Dec 2018 16:16:21 +0000</lastBuildDate>
     
 	<atom:link href="https://ohmycloud.github.io/tags/hbase/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>使用 Spark HBase Connector 读取 HBase</title>
+      <link>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-spark-hbase-connector-%E8%AF%BB%E5%8F%96-hbase/</link>
+      <pubDate>Thu, 13 Dec 2018 16:16:21 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-spark-hbase-connector-%E8%AF%BB%E5%8F%96-hbase/</guid>
+      <description>pom 依赖：
+&amp;lt;!--https://mvnrepository.com/artifact/com.hortonworks/shc-core --&amp;gt; &amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;com.hortonworks&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;shc-core&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;1.1.1-2.1-s_2.11&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; 部分代码：
+package xxxx.xxxx import org.apache.log4j.{Level, Logger} import org.apache.spark.sql.execution.datasources.hbase._ import org.apache.spark.sql.functions._ import org.apache.spark.sql.{DataFrame, SparkSession} /***提交方式 *spark2-submit --name HBASE-CONNECTOR --files /etc/hbase/conf/hbase-site.xml --class xxx.xxxx --master yarn --deploy-mode cluster --driver-memory 2g --driver-cores 2 --executor-memory 2g --executor-cores 1 --num-executors 2 wmanxiety-1.0-SNAPSHOT.jar --day 20180810 --repartition 500 --interval 7 */ object MileageAnxiety { def cat = s&amp;#34;&amp;#34;&amp;#34;{ |&amp;#34;table&amp;#34;:{&amp;#34;namespace&amp;#34;:&amp;#34;default&amp;#34;, &amp;#34;name&amp;#34;:&amp;#34;trip_signal&amp;#34;, &amp;#34;tableCoder&amp;#34;:&amp;#34;PrimitiveType&amp;#34;}, |&amp;#34;rowkey&amp;#34;:&amp;#34;key&amp;#34;, |&amp;#34;columns&amp;#34;:{ |&amp;#34;rowkey&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;rowkey&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;key&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;vin&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;vin&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;tripStatus&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;tripStatus&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;tripStartTime&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;tripStartTime&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;tripEndTime&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;tripEndTime&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;tripDistance&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;tripDistance&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;startSoc&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;startSoc&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;endSoc&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;endSoc&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;maxSpeed&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;maxSpeed&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;startMileage&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;startMileage&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;}, |&amp;#34;coordinate&amp;#34;:{&amp;#34;cf&amp;#34;:&amp;#34;info&amp;#34;, &amp;#34;col&amp;#34;:&amp;#34;coordinate&amp;#34;, &amp;#34;type&amp;#34;:&amp;#34;string&amp;#34;} |} |}&amp;#34;&amp;#34;&amp;#34;.</description>
+    </item>
+    
+    <item>
+      <title>使用 Phoenix 读取 HBase</title>
+      <link>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-phoenix-%E8%AF%BB%E5%8F%96-hbase/</link>
+      <pubDate>Wed, 12 Dec 2018 16:16:21 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-phoenix-%E8%AF%BB%E5%8F%96-hbase/</guid>
+      <description>我使用的是 CDH5.13.2， 所以 pom 文件依赖为：
+&amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.apache.phoenix&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;phoenix-spark&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;4.14.0-cdh5.13.2&amp;lt;/version&amp;gt; &amp;lt;scope&amp;gt;provided&amp;lt;/scope&amp;gt; &amp;lt;/dependency&amp;gt; &amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.apache.phoenix&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;phoenix-core&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;4.14.0-cdh5.13.2&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; 这样读取：
+val df = sqlContext.read.format(&amp;#34;jdbc&amp;#34;) .option(&amp;#34;driver&amp;#34;, &amp;#34;org.apache.phoenix.jdbc.PhoenixDriver&amp;#34;) .option(&amp;#34;url&amp;#34;, &amp;#34;jdbc:phoenix:localhost:2181&amp;#34;) .option(&amp;#34;dbtable&amp;#34;, &amp;#34;US_POPULATION&amp;#34;) .load() 或者
+val df = sqlContext.load( &amp;#34;jdbc&amp;#34;, Map(&amp;#34;zkUrl&amp;#34; -&amp;gt; &amp;#34;localhost:2181&amp;#34;, &amp;#34;url&amp;#34; -&amp;gt; &amp;#34;jdbc:phoenix:localhost:2181&amp;#34;, &amp;#34;dbtable&amp;#34; -&amp;gt; &amp;#34;US_POPULATION&amp;#34;, &amp;#34;driver&amp;#34; -&amp;gt; &amp;#34;org.apache.phoenix.jdbc.PhoenixDriver&amp;#34;) ) </description>
+    </item>
+    
+    <item>
+      <title>使用 HBase 的 FilterList 过滤器</title>
+      <link>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-hbase-%E7%9A%84-filterlist-%E8%BF%87%E6%BB%A4%E5%99%A8/</link>
+      <pubDate>Tue, 11 Dec 2018 16:16:21 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8-hbase-%E7%9A%84-filterlist-%E8%BF%87%E6%BB%A4%E5%99%A8/</guid>
+      <description>package wmstat.trip import org.apache.hadoop.hbase.client._ import org.apache.hadoop.hbase.io.ImmutableBytesWritable import org.apache.hadoop.hbase.mapreduce.TableInputFormat import org.apache.hadoop.hbase.HBaseConfiguration import org.apache.hadoop.hbase.filter._ import org.apache.hadoop.hbase.protobuf.ProtobufUtil import org.apache.hadoop.hbase.util.{Base64, Bytes} import org.apache.spark.sql.SQLContext import org.apache.spark.{SparkConf, SparkContext} import wmutils.WmTimeUtil._ import scala.collection.mutable.ArrayBuffer object HBaseSpark { def main(args:Array[String]): Unit ={ // 本地模式运行,便于测试  val sparkConf = new SparkConf().setMaster(&amp;#34;local&amp;#34;).setAppName(&amp;#34;HBaseTest&amp;#34;) // 创建 HBase 扫描器  val scan = new Scan() // val filter=new RowFilter(CompareFilter.CompareOp.GREATER_OR_EQUAL, new RegexStringComparator(&amp;#34;^[a-zA-Z0-9]+_20180903[0-9]{6}$&amp;#34;)) //使用正则表达式过滤近一个月的 // scan.setFilter(filter)  // 过去 7 天  val arrayWeek: ArrayBuffer[String] = lastestNdays(&amp;#34;&amp;#34;, 7) // filterList  val filterList = new FilterList(FilterList.</description>
+    </item>
     
     <item>
       <title>使用 Spark 读取 HBase</title>

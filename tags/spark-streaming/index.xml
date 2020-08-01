@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Spark Streaming on Writing about past times</title>
+    <link>https://ohmycloud.github.io/tags/spark-streaming/</link>
+    <description>Recent content in Spark Streaming on Writing about past times</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>❤ 焉知非鱼</copyright>
+    <lastBuildDate>Fri, 22 Nov 2019 19:34:09 +0000</lastBuildDate>
+    
+	<atom:link href="https://ohmycloud.github.io/tags/spark-streaming/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>为什么你可能会误用 Spark Streaming API</title>
+      <link>https://ohmycloud.github.io/posts/why-you-might-be-misusing-spark-streaming-api/</link>
+      <pubDate>Fri, 22 Nov 2019 19:34:09 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/why-you-might-be-misusing-spark-streaming-api/</guid>
+      <description>免责声明：是的，我知道这个话题有些争议，而且我知道大多数信息都在 Spark 文档中针对其 Streaming API 进行了介绍，但是当我看到这个错误发生了很多遍之后，我感到写这篇博客的冲动很强烈。
+ 我经常会看到来自 Spark Streaming 的新手在 StackOverflow 上提问，大致如下所示：
+问题：“我正在尝试执行 XYZ，但无法正常工作，该怎么办？ 这是我的代码：”
+val sparkContext = new SparkContext(&amp;#34;MyApp&amp;#34;) val streamingContext = new StreamingContext(sparkContext, Seconds(4)) val dataStream = streamingContext.socketTextStream(&amp;#34;127.0.0.1&amp;#34;, 1337) dataStream.foreachRDD { rdd =&amp;gt; // Process RDD Here } 嗯，好吧，这是怎么了？ 当我开始学习 Spark 时，我的第一个着陆点是有关 RDD（弹性分布式数据集）如何工作的解释。通常的例子是单词统计，其中所有操作都在 RDD 上执行。我认为可以肯定的是，这是许多其他学习 Spark 的人的切入点（尽管如今 DataFrame\Sets 已成为初学者的首选方法）。
+当人们飞跃使用 Spark Streaming 时，可能有点不清楚 DStream 的附加抽象意味着什么。这导致许多人寻求他们可以掌握的东西，他们遇到的最熟悉的方法是 foreachRDD，该方法将 RDD 作为输入并产生 Unit（典型的副作用方法的结果）。然后，他们可以再次在他们已经感到满意和理解的 RDD 级别上工作。这完全遗漏了 DStreams 的要点，这就是为什么我想简要了解一下我们可以在 DStream 本身上做些什么而无需探究底层 RDD 的原因。</description>
+    </item>
+    
+    <item>
+      <title>探索 Apache Spark 中的状态流</title>
+      <link>https://ohmycloud.github.io/posts/exploring-stateful-streaming-with-apache-spark/</link>
+      <pubDate>Fri, 22 Nov 2019 17:51:31 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/exploring-stateful-streaming-with-apache-spark/</guid>
+      <description>更新(2017.08.01): Spark v2.2 最近推出了一个叫做 mapGroupsWithState 的有状态流的新抽象, 我最近有一篇博客也是关于它的。我强烈建议你检查一下。
+ 介绍 Apache Spark 由几个模块组成，每个模块都有不同的用途。 它的功能强大的模块之一是 Streaming API，它使开发人员能够在称为 Discretized Stream 或 DStream 的抽象下使用连续流（或准确地说是微批次）。
+在这篇文章中，我将深入探讨 Spark Streaming 的一个特殊属性，它是有状态的 Streaming API。 有状态流使我们能够维护微批之间的状态，从而使我们能够形成数据的会话化。
+免责声明-为了遵循本文的流程，应该对 Spark 的工作原理有基本的了解，并对 DStream 抽象具有一般的了解。 如果没有，请继续阅读，不用担心，我会等你&amp;hellip;
+欢迎回来！ 让我们继续。
+通过例子理解 为了了解如何使用 API​​，让我们创建一个简单的传入数据示例，该示例要求我们进行会话化。我们的输入数据流将是 UserEvent 类型：
+case class UserEvent(id: Int, data: String, isLast: Boolean) 每个事件描述一个唯一的用户。我们通过用户 ID 标识用户，并用 String 表示发生的事件的内容。我们还想知道用户何时结束会话，因此我们提供了一个 isLast 标志来指示会话结束。
+我们负责汇总所有用户事件的状态将是 UserSession 类型的状态：
+case class UserSession(userEvents: Seq[UserEvent]) 其中包含特定用户发生的事件序列。在此示例中，我们假设数据源是来自于 Kafka 使用的 JSON 编码数据流。
+我们的 Id 属性将用作键，而 UserEvent 将是我们的值。两个放在一块，我们得到一个 DStream[(Int, UserEvent)]。</description>
+    </item>
+    
+    <item>
+      <title>在 Spark Streaming 程序中执行 shell 命令</title>
+      <link>https://ohmycloud.github.io/posts/execute-shell-command-in-spark-streaming-application/</link>
+      <pubDate>Mon, 21 Oct 2019 16:16:38 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/execute-shell-command-in-spark-streaming-application/</guid>
+      <description>我有个 Spark FileStreaming 程序，当监控到一个批次完成后，就执行 hdfs 的 mv 命令：
+import scala.sys.process._ import org.apache.spark.streaming.StreamingContext import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchCompleted} class StreamingMonitor(ssc: StreamingContext) extends StreamingListener { override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted): Unit = { try { val day = Seq(&amp;#34;sh&amp;#34;, &amp;#34;-c&amp;#34;, &amp;#34;hdfs dfs -cat /tmp/apps/days.txt | head -1&amp;#34;).!!.trim // 取日期文本文件的第一行  Seq(&amp;#34;sh&amp;#34;, &amp;#34;-c&amp;#34;, s&amp;#34;&amp;#34;&amp;#34;if hdfs dfs -test -e /a26_adapter_data/nation/vintype=A26/d=${day}; then hdfs dfs -mv /a26_adapter_data/nation/vintype=A26/d=${day}/daily_parquet/nation/vintype=A26 fi &amp;#34;&amp;#34;&amp;#34;).!! Seq(&amp;#34;sh&amp;#34;, &amp;#34;-c&amp;#34;, s&amp;#34;&amp;#34;&amp;#34;if hdfs dfs -test -e /a26_adapter_data/enterprise/vintype=A26/dt=${day}; then hdfs dfs -mv /a26_adapter_data/enterprise/vintype=A26/dt=${day}/daily_parquet/enterprise/vintype=A26 fi &amp;#34;&amp;#34;&amp;#34;).</description>
+    </item>
+    
+    <item>
+      <title>sub trip</title>
+      <link>https://ohmycloud.github.io/posts/subtrip/</link>
+      <pubDate>Thu, 22 Nov 2018 19:29:53 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/subtrip/</guid>
+      <description>Use the exa command line instead of ls to list tree of code:
+master ~/work/cihon/gac/socket-streaming&amp;gt; exa --tree socket-streaming/src socket-streaming/src └── main ├── resources │ ├── application.conf │ ├── application.prd.conf │ ├── application.test.conf │ ├── log4j.properties │ └── metrics.properties └── scala └── com └── gac └── xs6 └── bigdata ├── BigdataApplication.scala ├── conf │ └── SparkConfiguration.scala ├── core │ ├── Adapter.scala │ └── impl │ ├── AdapterImpl.scala │ └── SubTripImpl.scala ├── model │ ├── SourceData.</description>
+    </item>
+    
+    <item>
+      <title>Spark Streaming 配置</title>
+      <link>https://ohmycloud.github.io/posts/spark-yarn-submit-waitappcompletion/</link>
+      <pubDate>Fri, 17 Mar 2017 16:36:25 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/spark-yarn-submit-waitappcompletion/</guid>
+      <description>看一下提交命令 offline.sh 中的一个有趣的配置：
+spark2-submit \ --class $1 \ --master yarn \ --deploy-mode cluster \ --driver-memory 4g \ --driver-cores 2 \ --executor-memory 6g \ --executor-cores 3 \ --num-executors 12 \ --conf spark.yarn.submit.waitAppCompletion=false \ --files /etc/hbase/conf/hbase-site.xml \ /tmp/xxxx.jar spark.yarn.submit.waitAppCompletion 这个配置，看字面意思，提交任务，直到程序结束运行的意思。如果设置为 false， 那么提交完就可以去干别的事情了，不用一直等着看结果；如果设置为 true（默认的）， 顾名思义，提交完程序后会一直在终端中打印信息，直到程序运行结束。所以为了方便，还是设置成 false 比较合适。因为等一会你可以通过 yarn logs applicationId application_1534402443030_0345 查看运行的日志/运行结果。
+./offline.sh wmstat.Completion 12 7 它提交完就完事了，任务还在后台运行，所以打印出来的日志很短：
+SLF4J: Class path contains multiple SLF4J bindings. SLF4J: Found binding in [jar:file:/opt/cloudera/parcels/SPARK2-2.3.0.cloudera2-1.cdh5.13.3.p0.316101/lib/spark2/jars/phoenix-4.14.0-cdh5.13.2-client.jar!/org/slf4j/impl/StaticLoggerBinder.class] SLF4J: Found binding in [jar:file:/opt/cloudera/parcels/CDH-5.</description>
+    </item>
+    
+    <item>
+      <title>dr.who</title>
+      <link>https://ohmycloud.github.io/posts/exitcodeexception-exitcode1/</link>
+      <pubDate>Mon, 06 Mar 2017 16:36:25 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/exitcodeexception-exitcode1/</guid>
+      <description>提交了 Spark Streaming 程序后，看到 Spark Streaming 的 UI 界面， Executors 下面只有一个 driver 在运行，Streaming 界面一直在排队，像卡住了一样！点进去 driver 的 logs -&amp;gt; stdout 界面，看到很多这样的日志：
+18/09/04 19:10:45 org.apache.spark.internal.Logging$class.logWarning(Logging.scala:66) WARN YarnClusterScheduler: Initial job has not accepted any resources; check your cluster UI to ensure that workers are registered and have sufficient resources 18/09/04 19:10:51 org.apache.spark.internal.Logging$class.logWarning(Logging.scala:66) WARN YarnAllocator: Container marked as failed: container_e13_1534402443030_0354_02_000125 on host: WMBigdata6. Exit status: 1. Diagnostics: Exception from container-launch. Container id: container_e13_1534402443030_0354_02_000125 Exit code: 1 Stack trace: ExitCodeException exitCode=1: at org.</description>
+    </item>
+    
+  </channel>
+</rss>
