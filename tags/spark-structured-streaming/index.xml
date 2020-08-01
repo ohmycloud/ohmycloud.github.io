@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Spark Structured Streaming on Writing about past times</title>
+    <link>https://ohmycloud.github.io/tags/spark-structured-streaming/</link>
+    <description>Recent content in Spark Structured Streaming on Writing about past times</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>❤ 焉知非鱼</copyright>
+    <lastBuildDate>Wed, 26 Feb 2020 15:33:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://ohmycloud.github.io/tags/spark-structured-streaming/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>在 Spark Structured Streaming 中管理 Kafka Offsets</title>
+      <link>https://ohmycloud.github.io/posts/save-kafka-offsets-in-spark-structured-streaming/</link>
+      <pubDate>Wed, 26 Feb 2020 15:33:00 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/save-kafka-offsets-in-spark-structured-streaming/</guid>
+      <description>HBase 表 create &amp;#39;stream_kafka_offsets&amp;#39;, {NAME=&amp;gt;&amp;#39;offsets&amp;#39;, TTL=&amp;gt;1209600} RowKey 布局:
+row: &amp;lt;topicName&amp;gt;:&amp;lt;groupID&amp;gt;:&amp;lt;EPOCH_BATCHTIME_MS&amp;gt; column family: offsets qualifier: &amp;lt;PARTITION_ID&amp;gt; value: &amp;lt;OFFSET_ID&amp;gt; /*Save offsets for each batch into HBase */ def saveOffsets(topicName: String, groupID: String, offsetRanges: Array[OffsetRange], hbaseTableName: String, batchTime: org.apache.spark.streaming.Time) = { val hbaseConf = HBaseConfiguration.create() hbaseConf.addResource(&amp;#34;src/main/resources/hbase-site.xml&amp;#34;) val conn = ConnectionFactory.createConnection(hbaseConf) val table = conn.getTable(TableName.valueOf(hbaseTableName)) val rowKey = topicName + &amp;#34;:&amp;#34; + groupID + &amp;#34;:&amp;#34; + String.valueOf(batchTime.milliseconds) val put = new Put(rowKey.getBytes) for(offset &amp;lt;- offsetRanges){ put.</description>
+    </item>
+    
+    <item>
+      <title>parquet-format-not-work-in-spark-structured-streaming</title>
+      <link>https://ohmycloud.github.io/posts/parquet-format-not-work-in-spark-structured-streaming/</link>
+      <pubDate>Wed, 26 Feb 2020 14:48:38 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/parquet-format-not-work-in-spark-structured-streaming/</guid>
+      <description>使用 Spark Structured Streaming 消费 Kafka 数据并实时保存为 parquet 文件时, 出现一个问题, 代码如下:
+val res: StreamingQuery = adapterData .repartition(sparkConf.numOfPartitions) .writeStream .format(&amp;#34;parquet&amp;#34;) .option(&amp;#34;path&amp;#34;, &amp;#34;/parquet_data/enterprise/&amp;#34;) .partitionBy(&amp;#34;vintype&amp;#34;, &amp;#34;dt&amp;#34;) .outputMode(OutputMode.Append()) .trigger(Trigger.ProcessingTime(&amp;#34;1200 seconds&amp;#34;)) .queryName(&amp;#34;enterprise kafka data saving as parquet&amp;#34;) .start() 问题：
+在线上运行一段时间后, 发现 /parquet_data/enterprise/ 目录下不再有新的文件追加了, 查日志没发现原因。隔一段时间就出现一次。临时解决办法是删除并重建 _spark_metadata 目录和 checkpoint 目录。 这样会丢数据。</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的触发器</title>
+      <link>https://ohmycloud.github.io/posts/triggers-in-spark-structured-streaming/</link>
+      <pubDate>Fri, 04 Oct 2019 12:55:38 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/triggers-in-spark-structured-streaming/</guid>
+      <description>最近几周，我专注于 Apache Beam 项目。经过一番阅读之后，我发现了 Beam 和 Spark 结构化流之间的许多相似概念（或反之？）。相似之处之一就是触发器。
+经过数月的休息后，本文介绍了另一个 Apache Spark 功能，即触发器。第一部分介绍了 Apache Spark 结构化流项目的上下文中的触发器。第二个显示了一些实现细节。最后一部分包含一些学习测试，显示了触发器如何工作。
+触发器角色 Spark 触发器与 Apache Beam 中的触发器具有相似的作用，即，它们确定何时开始对累积数据进行处理。该处理的执行显然会向结果表发出新数据。关于 Apache Spark 中基于流的先前版本（基于 DStream），触发器的概念类似于批处理间隔属性。
+在描述的版本（2.2.1）中，Spark 中有2种不同的触发器类型。第一种类型基于处理时间。它根据处理时间按固定间隔执行流查询。可以以任何单位时间（ms，s，min，&amp;hellip;）定义此间隔。第二种类型称为once，因为它仅执行一次查询。执行后，查询终止，即使有新数据到达，查询也不会再次开始。
+默认情况下，Apache Spark 结构化流以 0 ms的基于处理时间的触发器执行查询。这意味着 Spark 将在处理完之前的查询后尽快启动新查询。仅当存在新数据时，才会执行新的执行。
+触发器内部 在内部，触发器分组在 org.apache.spark.sql.streaming.Trigger 类中，其中每种触发器类型都由一个或多个工厂方法表示。在处理时间的情况下，我们可以使用以下方法创建触发器：ProcessingTime（长间隔Ms），ProcessingTime（长间隔，TimeUnit timeUnit），ProcessingTime（持续时间间隔）或 ProcessingTime（字符串间隔）。它们全部都从 org.apache.spark.sql.streaming.ProcessingTime 对象调用幕后创建或应用方法。一次触发器由返回 OneTimeTrigger 案例对象的 Once() 表示。
+如此创建的触发器实例稍后将在流查询中用作 org.apache.spark.sql.execution.streaming.StreamExecution 属性的一部分。在此实例中，触发器用于构建org.apache.spark.sql.execution.streaming.TriggerExecutor 实现的正确实例，该实现将是 ProcessingTimeExecutor 来处理基于时间的触发器，或者是 OneTimeExecutor 来执行一次触发器。
+稍后，流查询由 TriggerExecutor的execute(triggerHandler: ()=&amp;gt; Boolean) 方法执行。此方法的实现取决于触发器类型。对于一次执行的触发器，execute 方法仅启动一次 TriggerHandler 函数。对于ProcessingTimeExecutor，execute 方法是一个长时间运行的过程（while(true)循环），其中触发器在执行查询之前等待间隔时间。
+触发器还与 org.apache.spark.sql.execution.streaming.ProgressReporter#finishTrigger(hasNewData: Boolean) 方法中定义的统计信息有关。
+触发器范例 下面的学习测试显示了一些触发特性：
+&amp;#34;once trigger&amp;#34; should &amp;#34;execute the query only once&amp;#34; in { val inputStream = new MemoryStream[Int](1, sparkSession.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的输出模式</title>
+      <link>https://ohmycloud.github.io/posts/output-modes-in-spark-structured-streaming/</link>
+      <pubDate>Fri, 04 Oct 2019 12:05:27 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/output-modes-in-spark-structured-streaming/</guid>
+      <description>结构化流引入了许多有关基于 DStream 的流的新概念。其中之一是输出模式。
+这篇文章介绍了 Spark 2.0.0 中引入的用于处理流数据输出的输出模式。第一部分通过简短的理论部分向他们展示。第二部分介绍了它们的 API。最后一部分显示了它们在某些学习测试中的工作方式。
+输出模式定义 输出模式指定将数据写入结果表的方式。在可用的输出模式中，我们可以区分:
+ 追加(append)-这里仅将新行写入输出接收器。此模式保留给处理，不进行任何汇总，非常适合不可变的结果。 需要注意的重要一点是与水位的关系。如果在聚合中定义了水位，则它控制何时将附加数据发送到结果表。它仅在“中间”状态（=处理期间更改的状态）完成之后才发生。仅当水位的新值在给定组中的最新条目之前通过时，才会发生这种情况。例如，假设水位设置为19:00:00，并且组“A”的记录的最新值来自 19:00:05。现在，当水位传递到 19:00:06时，组“A”的结果将被发送到结果表。引擎认为不会传递任何新的事件，因此可以安全地将结果发送到输出表。 完成(compelete)-在这种模式下，所有行每次都被写入输出接收器。当流有一些更新时，将进行写入。此模式专用于具有聚合的处理。 更新(update)-与上一个相似，不同之处在于仅将更新的行写入输出接收器。  输出模式 API 输出模式定义发生在 DataStreamWriter#outputMode（outputMode: String）方法中。因此，传递的名称稍后会从 InternalOutputModes 对象转换为相应的 case 对象。
+解析的实例主要在 DataStreamWriter 类中使用。它从那里传递到 StreamingQueryManager#startQuery(userSpecifiedName: Option[String], userSpecifiedCheckpointLocation: Option[String], df: DataFrame, sink: Sink, outputMode: OutputMode, useTempCheckpointLocation: Boolean = false, recoverFromCheckpointLocation: Boolean = true, trigger: Trigger = ProcessingTime(0), triggerClock: Clock = new SystemClock()).。顾名思义，此方法开始执行流查询。
+在物理执行方面，我们可以在 StateStoreSaveExec 中找到输出模式的轨迹。在那里存储中间状态结果。顺便说一下，我们可以找到许多有关水位的参考，有助于消除过时的结果。如果您想了解更多信息，请转到 Apache Spark 结构化流中有关 StateStore 的文章。
+输出模式示例 下表总结了可用于给定类型的处理的模式。在每个测试之后，编写一些测试以显示使用情况和未使用情况:
+ 带水位的聚合 附加模式: 受支持-但结果仅在超过水位后才发出（=输出完成）。如果未将汇总应用于水位的列，则该查询将不起作用。 完整模式: 受支持-与更新不同，不使用水位 更新模式: 支持-水位用于删除太旧的聚合  测试:</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的容错</title>
+      <link>https://ohmycloud.github.io/posts/fault-tolerance-inspark-structured-streaming/</link>
+      <pubDate>Fri, 04 Oct 2019 11:34:28 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/fault-tolerance-inspark-structured-streaming/</guid>
+      <description>结构化流可通过应用于状态管理，数据源和数据接收器的语义来保证端到端的一次精确交付（以微批处理模式）。关于状态的帖子更详细地介绍了状态，但还有2个其他部分尚待发现。
+这篇文章分为2个主要部分。第一部分着眼于数据源，并说明了在微批量处理的情况下，一旦交付，它们将如何对端到端做出贡献。第二部分是关于接收器的部分，而最后一部分则是在一个示例中总结了所有理论要点。
+数据源 就正好一次处理而言，源必须是可重播的。也就是说，它必须允许跟踪当前的读取位置，还必须从上一个故障位置开始重新处理。这两个属性都有助于在任意失败（包括 driver 或 executor）后恢复处理状态。可重播源的一个很好的例子是 Apache Kafka 或其基于云的同事 Amazon Kinesis。两者都能够跟踪当前读取的元素-带偏移量的 Kafka 和带序列号的 Kinesis。不可重播源的一个很好的例子是 org.apache.spark.sql.execution.streaming.MemoryStream，在关闭应用程序后由于数据存储在易失性内存中而无法恢复。
+借助检查点机制，可以跟踪已处理的偏移量。在结构化流中，检查点文件中存储的项主要是有关当前批次中处理的偏移量的元数据。检查点存储在 checkpointLocation 选项或 spark.sql.streaming.checkpointLocation 配置条目中指定的位置。
+对于微批量执行，检查点将集成在以下架构中：
+ 检查点位置通过 StreamingQueryManager的startQuery 和 createQuery 方法从 DataStreamWriter#startQuery() 方法传递到 StreamExecution 抽象类。 StreamExecution 初始化对象 org.apache.spark.sql.execution.streaming.OffsetSeqLog。该对象表示 WAL日志，该日志记录每个已处理批次中存在的偏移量。 该字段表示处理数据源中偏移量的逻辑。当前微批处理的偏移量（我们称其为 N）始终在处理完成之前写入。该事实还假定来自先前微批处理（N-1）的所有数据均已正确写入输出接收器。在以下来自 org.apache.spark.sql.execution.streaming.MicroBatchExecution#constructNextBatch() 的代码段中进行了表示：  updateStatusMessage(&amp;#34;Writing offsets to log&amp;#34;) reportTimeTaken(&amp;#34;walCommit&amp;#34;) { assert(offsetLog.add( currentBatchId, availableOffsets.toOffsetSeq(sources, offsetSeqMetadata)), s&amp;#34;Concurrent update to the log. Multiple streaming jobs detected for $currentBatchId&amp;#34;) logInfo(s&amp;#34;Committed offsets for batch $currentBatchId. &amp;#34; + s&amp;#34;Metadata ${offsetSeqMetadata.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中流之间的内连接</title>
+      <link>https://ohmycloud.github.io/posts/inner-joins-between-streams-in-spark-structured-streaming/</link>
+      <pubDate>Fri, 04 Oct 2019 10:53:37 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/inner-joins-between-streams-in-spark-structured-streaming/</guid>
+      <description>Apache Kafka Streams 支持流之间的连接，社区对 Apache Spark 期望相同。此功能已在最新的 2.3.0 版本中实现并发布，在此之后的几个月后，现在是讨论该功能的好时机。
+该帖子由 2 个部分组成。第一个介绍了流管道中的连接的想法。下一个讨论两种受支持的类型之一-内连接。
+连接和流 在流上执行连接操作非常具有挑战性，这有很多原因。最明显的是延迟。对于有界数据源，要连接的所有数据都就位，而对于基于流的数据源，数据则在不断移动。有时（通常？）移动速度不同。可能是由于技术方面的问题（例如摄入管道问题），或者仅是由于功能要求，而相关事件并非总是在相似的时间段内生成。这种功能限制之一可能是在电子商务商店中的订购过程，在该过程中，订单很难很快完成。因此，连接操作必须以某种方式管理相关但非常异步的事件的情况。
+解决的另一个重要点是状态管理。由于给定事件的数据可能随时（非常晚）到达，并且存储该事件的存储空间有限，因此引擎必须弄清楚如何处理累积状态，尤其是何时丢弃它。此特定时间对应于我们不希望为给定的连接键接收任何新事件的时刻。
+Apache Spark 结构化流提供了连接 2 个或更多流的功能，从而解决了 2.3.0 版本中的两个问题。流到流的连接可以通过以下时间轴来表征：
+ 连接语义与批连接相同 找到匹配元素后立即生成输出（内连接） 水位和时间范围查询用于连接较晚的数据，并确定何时不再发生给定键的其他事件（状态丢弃） 支持不同的连接类型：内连和外连 连接可以级联，即应用于两个以上的流  但是，从 Apache Spark 2.3.1 开始，流到流连接具有几个限制：
+ 它只能与 append 输出模式一起使用（已计划支持其他模式） 连接之前仅支持类似 map 的操作，例如我们不能在连接之前进行聚合  流的内连接 支持的第一种流到流连接是内连接。由于当没有匹配的行不发出时是严格的连接，因此连接的列不需要任何时间限制。但是，这样做很危险，因为即使没有匹配的行也可能在状态存储中保留很长时间。这是因为建议使用一种条件来告知特定键的状态应保留多长时间。下面显示了不清除状态时内连接的最简单情况：
+it should &amp;#34;output the result as soon as it arrives without watermark&amp;#34; in { val mainEventsStream = new MemoryStream[MainEvent](1, sparkSession.sqlContext) val joinedEventsStream = new MemoryStream[JoinedEvent](2, sparkSession.sqlContext) val stream = mainEventsStream.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的外连接</title>
+      <link>https://ohmycloud.github.io/posts/outer-joins-in-spark-structured-streaming/</link>
+      <pubDate>Fri, 04 Oct 2019 08:25:57 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/outer-joins-in-spark-structured-streaming/</guid>
+      <description>以前，我们在 Apache Spark 中发现了流到流的内连接，但是它们不是唯一受支持的类型。另一个是外连接，使我们可以在不匹配行的情况下连接流。
+这篇文章是关于结构化流模块中的外连接的。它的第一部分介绍了有关这种连接的一些理论观点。第二篇展示了如何通过一些 Scala 示例来实现它。
+当匹配是可选的 流式外连接与经典的，类似批处理的连接没有什么不同。有了它们，我们总是从一侧获得所有行，即使其中一些行在连接数据集中没有匹配项也是如此。对于 RDBMS 之类的有限数据源，此类不匹配将直接返回，其中 null 表示另一侧的行。但是，无限来源的逻辑是不同的。由于不同的特性，例如网络延迟影响或脱机设备产生事件，因此在给定时刻我们可能没有所有连接的元素。因此，我们必须能够将物理连接推迟到我们确定要连接的大多数行都将到来的那一刻。为此，我们需要将一侧的行存储在某处。并且，如果您还记得 Apache Spark 结构化流中流之间的内连接的文章中的一些注释，则 Apache Spark 为此使用状态存储。下图从鸟瞰显示了这一点：
+该图像清楚地表明，与内连接水位的情况一样，行被缓冲在状态存储中。 外连接还使用水位和范围查询条件的概念来确定何时不应在给定的行中接收第二个流中的任何新匹配。 这就是为什么完全没有水位的外连接是不可能的：
+it should &amp;#34;fail without watermark and range condition on watermark in the query&amp;#34; in { val mainEventsStream = new MemoryStream[MainEvent](1, sparkSession.sqlContext) val joinedEventsStream = new MemoryStream[JoinedEvent](2, sparkSession.sqlContext) val mainEventsDataset = mainEventsStream.toDS().select($&amp;#34;mainKey&amp;#34;, $&amp;#34;mainEventTime&amp;#34;, $&amp;#34;mainEventTimeWatermark&amp;#34;) .withWatermark(&amp;#34;mainEventTimeWatermark&amp;#34;, &amp;#34;2 seconds&amp;#34;) val joinedEventsDataset = joinedEventsStream.toDS().select($&amp;#34;joinedKey&amp;#34;, $&amp;#34;joinedEventTime&amp;#34;, $&amp;#34;joinedEventTimeWatermark&amp;#34;) .withWatermark(&amp;#34;joinedEventTimeWatermark&amp;#34;, &amp;#34;2 seconds&amp;#34;) val stream = mainEventsDataset.</description>
+    </item>
+    
+    <item>
+      <title>流到流的状态管理</title>
+      <link>https://ohmycloud.github.io/posts/stream-to-stream-state-management/</link>
+      <pubDate>Fri, 04 Oct 2019 08:02:39 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/stream-to-stream-state-management/</guid>
+      <description>上周，我们在 Apache Spark 结构化流中发现了 2 种流对流连接类型。如这些帖子所述，有时可能会省略状态管理逻辑（对于内连接），但通常建议减少内存压力。 Apache Spark 提出了 3 种不同的状态管理策略，这些策略将在以下各节中详细介绍。
+这篇文章分为 4 部分。第一个回顾了流对流连接情况下的状态特异性。接下来的 3 个讨论 3 种状态管理策略。
+状态和流连接 如 Apache Spark 结构化流中的外连接这篇文章所述，每个潜在的可连接行都缓存在状态存储中。每当找到匹配的行时，都会进行连接并发射结果。内连接类型就是这种情况。对于外连接，逻辑略有不同，由于匹配的行或由于过期状态而发出结果。过期状态表示我们不希望收到给定条目的匹配事件的时刻。希望此行为也适用于内连接，但不同之处在于其可选特性。
+没有这种“过期状态”的概念，引擎将使行无限期地匹配，并且由于数据源是无界的，因此不可避免地迟早会失败。因此，Apache Spark 提供了 3 种不同的策略来管理状态过期（水位）。
+状态键水位 这些策略中的第一个称为状态键水位。在以下情况下将其应用于查询：
+ 在至少一个连接流中之一中定义了一个水位列-它可以是时间戳列或窗口列。如果仅在一侧定义水位，则 Apache Spark 能够从该水位推导另一侧的水位。 水位列在 JOIN 子句中用作相等约束  此策略的名称来自直接在 JOIN 子句条件中使用水位-因此是状态键。为了说明这一点，我们可以用下面的代码片段举几个例子：
+&amp;#34;state key watermark&amp;#34; should &amp;#34;be built from watermark used in join&amp;#34; in { val mainEventsStream = new MemoryStream[MainEvent](1, sparkSession.sqlContext) val joinedEventsStream = new MemoryStream[JoinedEvent](2, sparkSession.sqlContext) val mainEventsDataset = mainEventsStream.</description>
+    </item>
+    
+    <item>
+      <title>流和流之间的连接内部研讨</title>
+      <link>https://ohmycloud.github.io/posts/stream-to-stream-joins-internals/</link>
+      <pubDate>Thu, 03 Oct 2019 17:36:48 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/stream-to-stream-joins-internals/</guid>
+      <description>在最近关于Apache Spark结构化流的3篇文章中，我们发现了流连接：内部连接，外部连接和状态管理策略。发现所有这些操作背后发生的事情是总结该系列的一个好方法。 这篇文章首先介绍了流连接过程中涉及的类。接下来是专注于与联接有关的状态管理内部的部分。文章以关于连接机制的一小段结尾。
+所涉及的类 在流连接所涉及的类中，我们可以区分3个非常重要的类：SymmetricHashJoinStateManager，StreamingSymmetricHashJoinExec 和 StreamingJoinHelper。所有这些都用于流查询执行的不同阶段。
+首先，查询的流式表示形式 IncrementalExecution 实例存储对该状态的引用。如果查询具有某些流间连接，则此状态在每次执行时都表示为 StreamingSymmetricHashJoinExec 的实例。该实例在每次执行中都不同，不同点是偏移量统计信息和状态水位谓词。谓词的计算公式为：
+def getStateWatermarkPredicates( leftAttributes: Seq[Attribute], rightAttributes: Seq[Attribute], leftKeys: Seq[Expression], rightKeys: Seq[Expression], condition: Option[Expression], eventTimeWatermark: Option[Long]): JoinStateWatermarkPredicates 此方法通过应用不同的规则来计算用于从状态存储中丢弃太晚的行的状态水位谓词。 它首先检查查询的相等性 JOIN 中涉及的所有列中是否至少有一个用水位注释标记的列。 如果是，它将自动认为必须将状态键水位策略应用于迟到的行（您可以在 Apache Spark 结构化流的外连接中了解它们）。 如果不是，则检查一个连接侧是否定义了水位列。 如果满足上述条件之一，并且优先选择前者，则使用常规的 org.apache.spark.sql.execution.streaming.WatermarkSupport＃watermarkExpression(optionalWatermarkExpression: Option[Expression], optionalWatermarkMs: Option[Long]) 方法。
+ JOIN 子句中的相等重要性 流到流连接的实际实现仅接受相等关系作为连接键。 这意味着如果我们有2个流：stream#1(field1[int], field2[timestamp]), stream#2(field10[int], field20[timestamp]), ，则只有 field1 和 field10 之间的相等关系以及 field2 和 field20 将被视为连接键。 如果在 JOIN 的 ON 部分中表示不等式，则会将其转换为 WHERE 条件。
+ 例如，以下查询：
+val mainEventsDataset = mainEventsStream.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 和 Kafka 偏移量管理</title>
+      <link>https://ohmycloud.github.io/posts/spark-structured-streaming-and-kafka-offests-management/</link>
+      <pubDate>Thu, 03 Oct 2019 17:04:09 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/spark-structured-streaming-and-kafka-offests-management/</guid>
+      <description>前段时间，我对 Apache Spark 结构化流中 Apache Kafka 连接器的实现提出了3个有趣的问题。 我将在这篇文章中回答他们。
+您可以想象，该帖子分为3个部分。 每个人都会回答一个问题。 在文章结尾，您应该更好地了解谁负责 Apache Kafka 连接器中的内容。
+问题1：偏移量跟踪 第一个问题是关于 Apache Kafka 偏移量跟踪的。 谁跟踪他们，driver 或 executor？ 在深入探讨该问题之前，让我们回顾一下我在分析结构化流式 Kafka 集成-Kafka源帖子中介绍的一些基础知识。 Apache Kafka 源代码首先从 driver 读取要处理的偏移量，然后将其分配给 executor 以进行实际处理。 因此，我们可以推断出，从这个角度来看，偏移量是由 driver 跟踪的。 您会注意到在 KafkaSource 类内部创建 KafkaSourceRDD 的代码中：
+// Calculate offset ranges val offsetRanges = topicPartitions.map { tp =&amp;gt; // ... } // Create an RDD that reads from Kafka and get the (key, value) pair as byte arrays.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的初始化状态</title>
+      <link>https://ohmycloud.github.io/posts/initializing-state-in-structured-streaming/</link>
+      <pubDate>Thu, 03 Oct 2019 16:43:59 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/initializing-state-in-structured-streaming/</guid>
+      <description>不久前，Sunil 询问我是否可以像基于 DStream 的 API 一样在 Apache Spark 结构化流中加载初始状态。 由于回应并不明显，因此我决定调查并通过这篇文章分享调查结果。
+文章首先简短地回忆了 Apache Spark Streaming 模块中的状态初始化。 下一节将讨论可用于在 Apache Spark 结构化流库中执行相同操作的方法。
+流中的初始化状态 在基于 DStream 的库中初始化状态很简单。 您只需要创建一个基于键的 RDD 并将其传递给 StateSpec 的 initialState 方法：
+&amp;#34;streaming processing&amp;#34; should &amp;#34;start with initialized state&amp;#34; in { val conf = new SparkConf().setAppName(&amp;#34;DStream initialState test&amp;#34;).setMaster(&amp;#34;local[*]&amp;#34;) val streamingContext = new StreamingContext(conf, Durations.seconds(1)) streamingContext.checkpoint(&amp;#34;/tmp/spark-initialstate-test&amp;#34;) val dataQueue = new mutable.Queue[RDD[OneVisit]]() // A mapping function that maintains an integer state and return a UserVisit  def mappingFunction(key: String, value: Option[OneVisit], state: State[UserVisit]): Option[(String, String)] = { var visitedPages = state.</description>
+    </item>
+    
+    <item>
+      <title>Apache Spark 2.4.0 特性  - foreachBatch</title>
+      <link>https://ohmycloud.github.io/posts/foreach-batch/</link>
+      <pubDate>Thu, 03 Oct 2019 15:13:39 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/foreach-batch/</guid>
+      <description>当我第一次听说 foreachBatch 功能时，我以为这是结构化流模块中 foreachPartition 的实现。但是，经过一些分析，我发现我错了，因为此新功能解决了其他但也很重要的问题。您会发现更多。
+在 Apache Spark 2.4.0 功能系列的这一新文章中，我将展示 foreachBatch 方法的实现。在第一部分中，我将简要介绍有关此功能的要点。我还将在其中添加有关实现的一些详细信息。在接下来的2部分中，我将展示.foreachBatch 数据接收器解决的问题。
+定义 在 2.4.0 发行版之前，foreach 是我们可以放置一些自定义逻辑的单一接收器。它很容易使用，因为它看起来像包装在类中的 foreach 循环。另外，foreach 接收器非常适合连续执行，因为我们将重点放在每次一行所带来的信息上。但是，由于基于微批处理的管道的适应性通常更差一些，因为我们经常需要对整个累积的微批处理进行某些处理。
+2.4.0 版本使用新的 org.apache.spark.sql.execution.streaming.sources.ForeachBatchSink 接收器解决了微批处理的这些问题。它的主要思想很简单。引擎累积在给定的微批次中处理的数据，并将其作为数据集传递到接收器。这不仅意味着您可以对整个数据应用一种逻辑，而且还可以在流传输管道中执行一些纯批处理，例如将数据写入不可流式的数据存储中。
+除了具体的数据集之外，foreachBatch 消费者方法还接受一个名为 batchId 的属性。此参数包含生成数据集的微批处理的 ID。您可以使用此属性实现一次传递语义，因为默认情况下，引擎以至少一次语义运行。
+最后，由于 ForeachBatchSink 解决了微批次问题，因此您不能将其与连续触发器一起使用。在 DataStreamWriter 内部进行的简单检查显示：
+} else if (source == &amp;#34;foreachBatch&amp;#34;) { assertNotPartitioned(&amp;#34;foreachBatch&amp;#34;) if (trigger.isInstanceOf[ContinuousTrigger]) { throw new AnalysisException(&amp;#34;&amp;#39;foreachBatch&amp;#39; is not supported with continuous trigger&amp;#34;) } 您还可以看到接收器不支持分区管道（.partitionBy(...)）。 如果您对引入此逻辑的任务感兴趣，可以在“另请阅读”部分中找到一个链接。
+用例：不流式接收器 我已经在上一节中提到了 foreachBatch 的第一个用例。 当您要将处理后的数据保存到关系数据库或键值存储之类的不可流式接收器中时，此新接收器很有用。 为了简单起见，我将使用内存中单例键值存储：
+&amp;#34;foreachBatch&amp;#34; should &amp;#34;save the data into a key-value memory store&amp;#34; in { val inputStream = new MemoryStream[Int](1, sparkSession.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的持续执行</title>
+      <link>https://ohmycloud.github.io/posts/continuous-execution/</link>
+      <pubDate>Thu, 03 Oct 2019 14:35:22 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/continuous-execution/</guid>
+      <description>这些年来，Apache Spark 的流媒体被认为是与微批处理一起工作的。但是，版本 2.3.0 试图对此进行更改，并提出了一种称为“连续”的新执行模型。即使它仍处于实验状态，还是值得更多了解它。
+这篇文章介绍了连续流处理的新实验功能。第一部分解释并与微批执行策略进行比较。下一个显示一些内部细节。在第三部分中，我们可以了解至少一次保证。最后一部分在基于比率的源示例中显示了一个简单的连续执行用例。
+连续流 毕竟为什么要替换微批​​处理的 Spark 区别标记（与允许连续流处理的 Apache Flink 或 Apache Beam 不同）？答案很简单-延迟。使用微批处理时，延迟很高。在最坏的情况下，等待时间是批处理时间与任务启动时间的总和，估计为几毫秒。连续处理将数据到达与其处理之间的等待时间减少到几毫秒。延迟减少是此（仍）实验特性背后的主要动机。
+从鸟瞰来看，连续查询在多个线程中执行。每个线程负责不同的分区。因此，为了保证最佳的并行性，集群中可用核心的数量必须等于要处理的分区的数量。在处理期间，这些线程将结果连续写入结果表。
+从技术上讲，可以通过 .trigger(Trigger.Continuous(&amp;quot;1 second&amp;quot;)) 使用连续触发来启用连续处理。但必须强调的是，在当前（2.3.0）Spark 版本中，并非所有操作都暴露于此模式下。在可用的转换中，我们只能区分投影（select，映射函数）和选择（过滤器子句）。
+但是，降低延迟并不是没有代价的。实际上，更快的处理将交付保证从正好一次下降到了至少一次。因此，对于处理延迟比交付保证更为重要的系统，建议执行连续执行。
+ContinuousExecution 类 最初，在结构化流中，StreamExecution 包含整个执行逻辑。仅在 2.3.0 版本中，它才成为由 MicroBatchExecution 和 ContinuousExecution 扩展的抽象类。这两个类的出发点都是 org.apache.spark.sql.execution.streaming.StreamExecution#runStream()，在执行一些初始化步骤之后，该类将激活每个执行策略中实现的流查询，方法为 runActivatedStream(sparkSessionForStream: SparkSession)` 方法。
+由于以下代码，ContinuousExecution 连续运行查询：
+do { runContinuous(sparkSessionForStream) } while (state.updateAndGet(stateUpdate) == ACTIVE) 在此 runContinuous 方法内部，发生了许多操作。第一个步骤包括将查询逻辑计划转换为一系列 ContinuousReaders。此接口定义是否可以连续方式读取给定的数据源。当前仅支持 Apache Kafka 和基于速率的源（该源以固定的Y间隔每秒生成 X（行，计数器）行，其中 X 和 Y 是配置参数）。如果某些源或操作不支持连续模式，则在启动查询之前会引发 UnsupportedOperationException。
+在创建源之后，将解析起始偏移量，以确定何时开始执行给定执行的处理。如果查询是第一次启动，则偏移量自然为空。但是，再次执行查询时，将从提交日志中检索偏移量。稍后，将为每个映射到读取偏移量的数据源创建一个 StreamingDataSourceV2Relation 实例。接下来，创建数据读取器和写入器，并以与微批处理方法完全相同的方式生成执行计划。
+在下一步中，引擎通过 EpochCoordinator 实例以纪元（与微批处理中的批处理类似）进行播放。这是连续处理的杰作。此 RPC 端点负责处理以下消息：
+ 生成新的纪元ID-通过消息 IncrementAndGetEpoch，该纪元 ID 会自动增加。然后，在 runContinuous 方法中返回新值。 返回当前纪元ID-表示为 GetCurrentEpoch 实例的此 getter 消息由定期执行 EpochPollRunnable 中定义的逻辑的线程使用。在此逻辑中，引擎检索当前已知的纪元并将其添加到要处理的消息的内部队列中。在此列表下面的模式中将对此进行详细说明。 在纪元下提交分区-在给定时期内对分区的处理终止时，会将 CommitPartitionEpoch 消息发送给 EpochCoordinator 以发出信号。如果所有纪元的分区都已处理，则 ContinuousExecution 将此纪元标记为已提交。这意味着该纪元被保留在提交日志中，并且在重新处理的情况下，与之关联的偏移量被用作起始偏移量（请参见上一段）。  这些涉及纪元协调器的连续处理逻辑可以在以下简化模式中恢复：</description>
+    </item>
+    
+    <item>
+      <title>Apache Spark 2.4.0 特性 - Watermark Configuration</title>
+      <link>https://ohmycloud.github.io/posts/watermark-configuration/</link>
+      <pubDate>Thu, 03 Oct 2019 14:09:24 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/watermark-configuration/</guid>
+      <description>有关 Apache Spark 2.4.0 功能的系列继续进行。在上周发现了桶剪枝之后，现在该切换到结构化流模块并查看其主要进展了。
+这篇文章介绍了 2.4.0 版本中添加的水位配置功能。第一部分解释了它的变化。第二个给出了实现细节，其中显示了用于保证向后兼容性的策略之一。最后一部分包含说明水位配置功能的测试用例。
+最小或最大水位？ 2.3.0 版可以连接流。如 Apache Spark 结构化流中的流之间的内联中所述，这样做不是一件容易的事，因为联接的流可能具有不同的延迟。水位是控制哪些数据可以联接的方法之一，即使它来得很晚。在 2.4.0 发行版之前，定义了多个水位时，默认情况下使用最小值。它使我们能够以最慢的流移动，并且不会丢失太多数据：
+通过 Apache Spark 2.4.0 中引入的更改，我们可以在这种情况下配置使用的水位，并采用最小或最大水位。 当然，选择最大值将导致应用程序以最快的速度向前移动，从而丢失更多数据：
+水位配置实现 水位管理是通过 spark.sql.streaming.multipleWatermarkPolicy 配置条目实现的。它采用“最小”或“最大”值之一。它们中的每一个都导致相应的 MultipleWatermarkPolicy 实例的初始化：MinWatermark 和 MaxWatermark。两者都附带一种解决使用的水位值的方法。根据使用的策略，此方法仅是对 Seq 的 min 或 max 方法的调用。负责调用已配置策略的类为 WatermarkTracker。
+向后兼容性由 MultipleWatermarkPolicy 条目的默认值 &amp;lsquo;min&amp;rsquo; 保证。除非您明确更改此值，否则您应该能够在新的 Spark 版本上运行旧的流传输管道，而不会出现问题。甚至那些从 Apache Spark 2.4.0 之前的检查点恢复的管道。而且由于我们在谈论检查点，所以要记住的一件事很重要。从检查点还原管道后，我们无法修改水位策略。任何更改都将被忽略。
+最大水位示例 为了看到这个新功能的实际效果，我们将执行2个测试用例。前者将具有最小水位，因此可以接受更多迟到数据：
+object FirstWatermark { var FirstKnownValue = &amp;#34;&amp;#34; } def launchDataInjection(mainEventsStream: MemoryStream[MainEvent], joinedEventsStream: MemoryStream[JoinedEvent], query: StreamingQuery): Unit = { new Thread(new Runnable() { override def run(): Unit = { val stateManagementHelper = new StateManagementHelper(mainEventsStream, joinedEventsStream) var key = 0 val processingTimeFrom1970 = 10000L // 10 sec  stateManagementHelper.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的查询指标</title>
+      <link>https://ohmycloud.github.io/posts/query-metrics-in-spark-structured-streaming/</link>
+      <pubDate>Thu, 03 Oct 2019 13:12:56 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/query-metrics-in-spark-structured-streaming/</guid>
+      <description>长查询的重点之一是跟踪。知道查询的执行方式总是很重要的。在结构化流中，由于有了称为 ProgressReporter 的特殊对象，我们可以追踪此执行。
+在本文中，我们将重点介绍 ProgressReporter 对象收集的指标。在第一部分中，我们将解释其生命周期以及一些实现细节。下一部分将涵盖公开的信息，而最后一部分将通过一些测试展示 ProgressReporter 的行为。
+ProgressReporter 首先，让我们定义这个著名的 ProgressReporter。它是 org.apache.spark.sql.execution.streaming 中的一个 trait，由 StreamExecution 抽象类直接继承，因此由其实现间接继承：org.apache.spark.sql.execution.streaming.continuous.ContinuousExecution 和 org.apache.spark.sql.execution.streaming.MicroBatchExecution。 ProgressReporter 的作用是提供一个接口，该接口一旦实现，便可以自由用于报告有关流查询执行情况的统计信息。
+ProgressReporter 定义了严格的生命周期阶段：
+1、一切开始于流查询触发器（处理时间或事件时间）执行时。触发器要做的第一件事是对 ProgressReporter 的 startTrigger 方法的调用。此方法使报告程序准备好累积刚刚开始执行的统计信息。
+2、稍后，根据选择的流模式（微批或连续），报告器将记录有关几个不同步骤执行情况的统计信息。下一部分将详细介绍这些步骤。为此，它使用了方法 reportTimeTaken[T](triggerDetailKey: String)(body: =&amp;gt; T)，该方法将有关执行这些步骤的度量添加到 currentDurationsMs: mutable.HashMap[String，Long]` 字段中。
+3、下一步是数据处理，报告者还将收集一些统计信息。
+4、将这些统计信息添加到 currentDurationMs 映射后，如果执行微批处理，则 ProgressReporter 调用 finishTrigger(hasNewData: Boolean)。此方法完成触发器的执行，并创建保存执行统计信息的对象，这些统计信息放入 progressBuffer = new mutable.Queue[StreamingQueryProgress]() 中。之后，客户端可以通过公共访问器方法直接从那里检索更新（或最后一个更新）。
+在 ProgressReporter 中，我们还可以找到其他一些指标，例如：
+ newData - 它是一个 Map[BaseStreamingSource, LogicalPlan]，其中包含每个源的最新数据。 availableOffsets - 这是一个类似于 map 的 StreamProgress 对象，用于存储未提交到接收器的可用于处理的偏移量。 commitOffsets - 类似于 availableOffset。不同之处在于，它存储已处理和已提交数据的偏移量。 currentBatchId - 当前处理批次的 ID。 currentStatus - org.</description>
+    </item>
+    
+    <item>
+      <title>Spark Structured Streaming 中的状态聚合</title>
+      <link>https://ohmycloud.github.io/posts/stateful-aggregations-in-spark-structured-streaming/</link>
+      <pubDate>Wed, 02 Oct 2019 22:32:41 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/stateful-aggregations-in-spark-structured-streaming/</guid>
+      <description>https://www.waitingforcode.com/apache-spark-structured-streaming/stateful-aggregations-apache-spark-structured-streaming/read
+最近，我们发现了用于处理结构化流中状态聚合的状态存储的概念。但是那时我们还没有花时间在这些聚合上。按照承诺，现在将对其进行描述。 这篇文章开始于聚合与有状态聚合之间的简短比较。在本文结尾之后，直接进行了一些测试，这些测试说明了状态聚合。
+聚合与有状态聚合 聚合是从多个值中计算单个值的操作。在 Apache Spark 中，这种操作的示例可以是 count 或 sum 方法。在流式应用程序上下文中，我们谈论有状态聚合，即具有这些值的状态的聚合在一段时间内逐渐增长。
+在对结构化流中的输出模式，状态存储和触发器给出了解释之后，就更容易理解状态聚合的特殊性。如所告知的，输出模式不仅确定数据量，而且还决定是否可以丢弃中间状态（如果与水印一起使用的话）。然后，所有这些中间状态都保留在容错状态存储中。上一次触发器执行后，触发器会按固定的时间间隔执行状态计算，这些数据是从上一次触发器执行中累积的。以下架构显示了所有这些部分如何协同工作：
+因此，为了简单起见，我们可以将状态聚合定义为结果随时间变化的聚合。 结果计算由触发器启动，并保存在状态存储中，在经过处理的数据通过水印之前（如果已定义），可以从状态存储中删除结果。
+有状态聚合示例 两项测试显示了 Apache Spark 结构化流中的状态聚合：
+&amp;#34;stateful count aggregation&amp;#34; should &amp;#34;succeed after grouping by id&amp;#34; in { val testKey = &amp;#34;stateful-aggregation-count&amp;#34; val inputStream = new MemoryStream[(Long, String)](1, sparkSession.sqlContext) val aggregatedStream = inputStream.toDS().toDF(&amp;#34;id&amp;#34;, &amp;#34;name&amp;#34;) .groupBy(&amp;#34;id&amp;#34;) .agg(count(&amp;#34;*&amp;#34;)) val query = aggregatedStream.writeStream.trigger(Trigger.ProcessingTime(1000)).outputMode(&amp;#34;update&amp;#34;) .foreach( new InMemoryStoreWriter[Row](testKey, (row) =&amp;gt; s&amp;#34;${row.getAs[Long](&amp;#34;id&amp;#34;)}-&amp;gt; ${row.getAs[Long](&amp;#34;count(1)&amp;#34;)}&amp;#34;)) .start() new Thread(new Runnable() { override def run(): Unit = { inputStream.</description>
+    </item>
+    
+    <item>
+      <title>写入到 Elasticsearch</title>
+      <link>https://ohmycloud.github.io/posts/write-to-elasticsearch/</link>
+      <pubDate>Tue, 01 Oct 2019 16:40:54 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/write-to-elasticsearch/</guid>
+      <description>如果你使用 Elasticsearch 6.x 或者更高版本, 那么用 Spark Structured Streaming 写入到 Elasticsearch 就很直截了当。
+不像 5.x 之前的版本那样, 为了写入到 Elasticsearch, 你必须实现一个自定义的 sink, 6.x 版本在 Spark Structured Streaming 里面开箱即用。
+依赖如下:
+&amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.elasticsearch&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;elasticsearch-spark-20_2.11&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;6.2.4&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; &amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.apache.spark&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;spark-core_${scala.main}&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;2.3.1&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; &amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.apache.spark&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;spark-sql_${scala.main}&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;2.3.1&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; &amp;lt;dependency&amp;gt; &amp;lt;groupId&amp;gt;org.apache.spark&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;spark-streaming_${scala.main}&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;2.3.1&amp;lt;/version&amp;gt; &amp;lt;/dependency&amp;gt; 然后写入到 Elasticsearch 就相当简单了。
+ 1、创建带有 Elasticsearch 配置的 SparkSession  val spark = SparkSession .builder // run app locally utilizing all cores  .master(&amp;#34;local[*]&amp;#34;) .appName(getClass.getName) .config(&amp;#34;es.nodes&amp;#34;, &amp;#34;localhost&amp;#34;) .</description>
+    </item>
+    
+    <item>
+      <title>自定义会话窗口</title>
+      <link>https://ohmycloud.github.io/posts/custom-session-windows/</link>
+      <pubDate>Tue, 01 Oct 2019 16:22:19 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/custom-session-windows/</guid>
+      <description>Spark Structured Streaming 允许我们以一种直接了当的方式在滑动事件时间窗口上执行聚合。
+Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作和水位。
+用例  在会话持续时间内求用户收益的总和，当流中有存款事件时，存入当前余额并关闭会话。
+ 窗口和水位 默认情况下，窗口和水位与基于时间的窗口一起使用。在我们的用例中，这不起作用，因为当我们收到一个存放当前余额的信号时，我们想关闭会话。
+结果 我们可以通过基于 mapGroupsWithState 函数实现自定义会话窗口来实现.
+定义自定义会话类 case class Transaction(sessionId: String, winAmount: Double, deposit: Boolean) case class SessionTrackingValue(totalSum: Double) case class SessionUpdate(sessionId: String, currentBalance: Double, depositCurrentBalance: Boolean) 创建本地 SparkSession val spark: SparkSession = SparkSession .builder .master(&amp;#34;local[*]&amp;#34;) .appName(getClass.getName) .getOrCreate() 创建 socket 流 val socketStream: DataFrame = spark.readStream // socket as stream input  .format(&amp;#34;socket&amp;#34;) // connect to socket port localhost:9999 waiting for incoming stream  .</description>
+    </item>
+    
+    <item>
+      <title>使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</title>
+      <link>https://ohmycloud.github.io/posts/stateful-transformations-with-mapgroupswithstate/</link>
+      <pubDate>Mon, 30 Sep 2019 09:50:04 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/stateful-transformations-with-mapgroupswithstate/</guid>
+      <description>mapGroupsWithState 解释 mapGroupsWithState(timeoutConf: GroupStateTimeout)(func: (K, Iterator[V], GroupState[S]) =&amp;gt; U) 是一个应用到数据组上的转换。由于它要求数据分组, 所以可能会引入 shuffling 的风险。通过调用 func 参数来计算 state。这个转换可以用在有界数据源和无界数据源上。对于有界数据源, 最终状态会立即被计算出来, 对于无界数据源, 每次触发处理后, 状态都可能会改变。
+mapGroupsWithState 的参数  timeoutConf: GroupStateTimeout 这个参数负责处理超时。  mapGroupsWithState 转换接收 3 个不同的超时值: NoTimeout, ProcessingTimeTimeout 和 EventTimeTimeout(只在设置了水位时才有效)。状态过期时间定义在作为 func 参数值的函数里面, 它要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutDuration (processing time), 要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutTimestamp (event time)。
+每次至少有一条记录被发送到组里时, 就更新超时时间。状态只有在给定组在指定阈值时间内未接收到任何数据时才被认为过期。
+超时时间是在指定 GroupState 对象里面定义的, 所以根据处理的组指定不同的超时配置也是完全可行的。
+ func: (K, Iterator[V], GroupState[S]) =&amp;gt; U - 该函数定义如何处理组里的值以生成状态。  如你所见, 它完全是类型无关的, 例如, 值([V]) 和状态 [S] 都不影响所返回的数据集([U])的类型。
+当两个条件之一满足时, 该函数就会被调用: 要么组里有要处理的新值, 要么状态已经过期。在状态过期这种情况下, 会使用一个空列表的值作为第二个参数来调用该函数。</description>
+    </item>
+    
+    <item>
+      <title>使用 Spark Structured Streaming 重构项目</title>
+      <link>https://ohmycloud.github.io/posts/refactoring-with-spark-structured-streaming/</link>
+      <pubDate>Sun, 19 May 2019 21:50:48 +0000</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/refactoring-with-spark-structured-streaming/</guid>
+      <description>现在这个项目唯一的乐趣就是使用我学到的新技术重构之前的项目。今天完成了数据适配, 该项目目录结构如下:
+├── EnApplication.scala ├── NaApplication.scala ├── conf │ ├── HbaseConfiguration.scala │ ├── KafkaConfiguration.scala │ ├── MysqlConfiguration.scala │ └── SparkConfiguration.scala ├── core │ ├── Adapter.scala │ └── impl │ ├── AdapterImpl.scala │ └── EnAdapterImpl.scala ├── model │ ├── EnSourceData.scala │ └── SourceData.scala ├── module │ ├── EnMainModule.scala │ └── MainModule.scala ├── pipeline │ ├── NaSchema.scala │ ├── NaSparkSession.scala │ └── SourceDataFrame.scala └── util └── XsUdfs.scala 与之前的项目一样, 依旧使用了依赖注入:
+ Kafka 配置  class KafkaConfiguration extends Serializable{ private val config: Config = ConfigFactory.</description>
+    </item>
+    
+  </channel>
+</rss>

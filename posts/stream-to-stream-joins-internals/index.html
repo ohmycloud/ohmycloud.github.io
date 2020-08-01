@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 流和流之间的连接内部研讨 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="流和流之间的连接内部研讨" />
+<meta property="og:description" content="在最近关于Apache Spark结构化流的3篇文章中，我们发现了流连接：内部连接，外部连接和状态管理策略。发现所有这些操作背后发生的事情是总结该系列的一个好方法。 这篇文章首先介绍了流连接过程中涉及的类。接下来是专注于与联接有关的状态管理内部的部分。文章以关于连接机制的一小段结尾。
+所涉及的类 在流连接所涉及的类中，我们可以区分3个非常重要的类：SymmetricHashJoinStateManager，StreamingSymmetricHashJoinExec 和 StreamingJoinHelper。所有这些都用于流查询执行的不同阶段。
+首先，查询的流式表示形式 IncrementalExecution 实例存储对该状态的引用。如果查询具有某些流间连接，则此状态在每次执行时都表示为 StreamingSymmetricHashJoinExec 的实例。该实例在每次执行中都不同，不同点是偏移量统计信息和状态水位谓词。谓词的计算公式为：
+def getStateWatermarkPredicates( leftAttributes: Seq[Attribute], rightAttributes: Seq[Attribute], leftKeys: Seq[Expression], rightKeys: Seq[Expression], condition: Option[Expression], eventTimeWatermark: Option[Long]): JoinStateWatermarkPredicates 此方法通过应用不同的规则来计算用于从状态存储中丢弃太晚的行的状态水位谓词。 它首先检查查询的相等性 JOIN 中涉及的所有列中是否至少有一个用水位注释标记的列。 如果是，它将自动认为必须将状态键水位策略应用于迟到的行（您可以在 Apache Spark 结构化流的外连接中了解它们）。 如果不是，则检查一个连接侧是否定义了水位列。 如果满足上述条件之一，并且优先选择前者，则使用常规的 org.apache.spark.sql.execution.streaming.WatermarkSupport＃watermarkExpression(optionalWatermarkExpression: Option[Expression], optionalWatermarkMs: Option[Long]) 方法。
+ JOIN 子句中的相等重要性 流到流连接的实际实现仅接受相等关系作为连接键。 这意味着如果我们有2个流：stream#1(field1[int], field2[timestamp]), stream#2(field10[int], field20[timestamp]), ，则只有 field1 和 field10 之间的相等关系以及 field2 和 field20 将被视为连接键。 如果在 JOIN 的 ON 部分中表示不等式，则会将其转换为 WHERE 条件。
+ 例如，以下查询：
+val mainEventsDataset = mainEventsStream." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/stream-to-stream-joins-internals/" />
+<meta property="article:published_time" content="2019-10-03T17:36:48+00:00" />
+<meta property="article:modified_time" content="2019-10-03T17:36:48+00:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="流和流之间的连接内部研讨"/>
+<meta name="twitter:description" content="在最近关于Apache Spark结构化流的3篇文章中，我们发现了流连接：内部连接，外部连接和状态管理策略。发现所有这些操作背后发生的事情是总结该系列的一个好方法。 这篇文章首先介绍了流连接过程中涉及的类。接下来是专注于与联接有关的状态管理内部的部分。文章以关于连接机制的一小段结尾。
+所涉及的类 在流连接所涉及的类中，我们可以区分3个非常重要的类：SymmetricHashJoinStateManager，StreamingSymmetricHashJoinExec 和 StreamingJoinHelper。所有这些都用于流查询执行的不同阶段。
+首先，查询的流式表示形式 IncrementalExecution 实例存储对该状态的引用。如果查询具有某些流间连接，则此状态在每次执行时都表示为 StreamingSymmetricHashJoinExec 的实例。该实例在每次执行中都不同，不同点是偏移量统计信息和状态水位谓词。谓词的计算公式为：
+def getStateWatermarkPredicates( leftAttributes: Seq[Attribute], rightAttributes: Seq[Attribute], leftKeys: Seq[Expression], rightKeys: Seq[Expression], condition: Option[Expression], eventTimeWatermark: Option[Long]): JoinStateWatermarkPredicates 此方法通过应用不同的规则来计算用于从状态存储中丢弃太晚的行的状态水位谓词。 它首先检查查询的相等性 JOIN 中涉及的所有列中是否至少有一个用水位注释标记的列。 如果是，它将自动认为必须将状态键水位策略应用于迟到的行（您可以在 Apache Spark 结构化流的外连接中了解它们）。 如果不是，则检查一个连接侧是否定义了水位列。 如果满足上述条件之一，并且优先选择前者，则使用常规的 org.apache.spark.sql.execution.streaming.WatermarkSupport＃watermarkExpression(optionalWatermarkExpression: Option[Expression], optionalWatermarkMs: Option[Long]) 方法。
+ JOIN 子句中的相等重要性 流到流连接的实际实现仅接受相等关系作为连接键。 这意味着如果我们有2个流：stream#1(field1[int], field2[timestamp]), stream#2(field10[int], field20[timestamp]), ，则只有 field1 和 field10 之间的相等关系以及 field2 和 field20 将被视为连接键。 如果在 JOIN 的 ON 部分中表示不等式，则会将其转换为 WHERE 条件。
+ 例如，以下查询：
+val mainEventsDataset = mainEventsStream."/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/spark-structured-streaming-and-kafka-offests-management/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/stream-to-stream-state-management/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&text=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&is_video=false&description=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&name=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8&description=%e5%9c%a8%e6%9c%80%e8%bf%91%e5%85%b3%e4%ba%8eApache%20Spark%e7%bb%93%e6%9e%84%e5%8c%96%e6%b5%81%e7%9a%843%e7%af%87%e6%96%87%e7%ab%a0%e4%b8%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%91%e7%8e%b0%e4%ba%86%e6%b5%81%e8%bf%9e%e6%8e%a5%ef%bc%9a%e5%86%85%e9%83%a8%e8%bf%9e%e6%8e%a5%ef%bc%8c%e5%a4%96%e9%83%a8%e8%bf%9e%e6%8e%a5%e5%92%8c%e7%8a%b6%e6%80%81%e7%ae%a1%e7%90%86%e7%ad%96%e7%95%a5%e3%80%82%e5%8f%91%e7%8e%b0%e6%89%80%e6%9c%89%e8%bf%99%e4%ba%9b%e6%93%8d%e4%bd%9c%e8%83%8c%e5%90%8e%e5%8f%91%e7%94%9f%e7%9a%84%e4%ba%8b%e6%83%85%e6%98%af%e6%80%bb%e7%bb%93%e8%af%a5%e7%b3%bb%e5%88%97%e7%9a%84%e4%b8%80%e4%b8%aa%e5%a5%bd%e6%96%b9%e6%b3%95%e3%80%82%20%e8%bf%99%e7%af%87%e6%96%87%e7%ab%a0%e9%a6%96%e5%85%88%e4%bb%8b%e7%bb%8d%e4%ba%86%e6%b5%81%e8%bf%9e%e6%8e%a5%e8%bf%87%e7%a8%8b%e4%b8%ad%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%e3%80%82%e6%8e%a5%e4%b8%8b%e6%9d%a5%e6%98%af%e4%b8%93%e6%b3%a8%e4%ba%8e%e4%b8%8e%e8%81%94%e6%8e%a5%e6%9c%89%e5%85%b3%e7%9a%84%e7%8a%b6%e6%80%81%e7%ae%a1%e7%90%86%e5%86%85%e9%83%a8%e7%9a%84%e9%83%a8%e5%88%86%e3%80%82%e6%96%87%e7%ab%a0%e4%bb%a5%e5%85%b3%e4%ba%8e%e8%bf%9e%e6%8e%a5%e6%9c%ba%e5%88%b6%e7%9a%84%e4%b8%80%e5%b0%8f%e6%ae%b5%e7%bb%93%e5%b0%be%e3%80%82%0a%e6%89%80%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%20%e5%9c%a8%e6%b5%81%e8%bf%9e%e6%8e%a5%e6%89%80%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%e4%b8%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%af%e4%bb%a5%e5%8c%ba%e5%88%863%e4%b8%aa%e9%9d%9e%e5%b8%b8%e9%87%8d%e8%a6%81%e7%9a%84%e7%b1%bb%ef%bc%9aSymmetricHashJoinStateManager%ef%bc%8cStreamingSymmetricHashJoinExec%20%e5%92%8c%20StreamingJoinHelper%e3%80%82%e6%89%80%e6%9c%89%e8%bf%99%e4%ba%9b%e9%83%bd%e7%94%a8%e4%ba%8e%e6%b5%81%e6%9f%a5%e8%af%a2%e6%89%a7%e8%a1%8c%e7%9a%84%e4%b8%8d%e5%90%8c%e9%98%b6%e6%ae%b5%e3%80%82%0a%e9%a6%96%e5%85%88%ef%bc%8c%e6%9f%a5%e8%af%a2%e7%9a%84%e6%b5%81%e5%bc%8f%e8%a1%a8%e7%a4%ba%e5%bd%a2%e5%bc%8f%20IncrementalExecution%20%e5%ae%9e%e4%be%8b%e5%ad%98%e5%82%a8%e5%af%b9%e8%af%a5%e7%8a%b6%e6%80%81%e7%9a%84%e5%bc%95%e7%94%a8%e3%80%82%e5%a6%82%e6%9e%9c%e6%9f%a5%e8%af%a2%e5%85%b7%e6%9c%89%e6%9f%90%e4%ba%9b%e6%b5%81%e9%97%b4%e8%bf%9e%e6%8e%a5%ef%bc%8c%e5%88%99%e6%ad%a4%e7%8a%b6%e6%80%81%e5%9c%a8%e6%af%8f%e6%ac%a1%e6%89%a7%e8%a1%8c%e6%97%b6%e9%83%bd%e8%a1%a8%e7%a4%ba%e4%b8%ba%20StreamingSymmetricHashJoinExec%20%e7%9a%84%e5%ae%9e%e4%be%8b%e3%80%82%e8%af%a5%e5%ae%9e%e4%be%8b%e5%9c%a8%e6%af%8f%e6%ac%a1%e6%89%a7%e8%a1%8c%e4%b8%ad%e9%83%bd%e4%b8%8d%e5%90%8c%ef%bc%8c%e4%b8%8d%e5%90%8c%e7%82%b9%e6%98%af%e5%81%8f%e7%a7%bb%e9%87%8f%e7%bb%9f%e8%ae%a1%e4%bf%a1%e6%81%af%e5%92%8c%e7%8a%b6%e6%80%81%e6%b0%b4%e4%bd%8d%e8%b0%93%e8%af%8d%e3%80%82%e8%b0%93%e8%af%8d%e7%9a%84%e8%ae%a1%e7%ae%97%e5%85%ac%e5%bc%8f%e4%b8%ba%ef%bc%9a%0adef%20getStateWatermarkPredicates%28%20leftAttributes%3a%20Seq%5bAttribute%5d%2c%20rightAttributes%3a%20Seq%5bAttribute%5d%2c%20leftKeys%3a%20Seq%5bExpression%5d%2c%20rightKeys%3a%20Seq%5bExpression%5d%2c%20condition%3a%20Option%5bExpression%5d%2c%20eventTimeWatermark%3a%20Option%5bLong%5d%29%3a%20JoinStateWatermarkPredicates%20%e6%ad%a4%e6%96%b9%e6%b3%95%e9%80%9a%e8%bf%87%e5%ba%94%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e8%a7%84%e5%88%99%e6%9d%a5%e8%ae%a1%e7%ae%97%e7%94%a8%e4%ba%8e%e4%bb%8e%e7%8a%b6%e6%80%81%e5%ad%98%e5%82%a8%e4%b8%ad%e4%b8%a2%e5%bc%83%e5%a4%aa%e6%99%9a%e7%9a%84%e8%a1%8c%e7%9a%84%e7%8a%b6%e6%80%81%e6%b0%b4%e4%bd%8d%e8%b0%93%e8%af%8d%e3%80%82%20%e5%ae%83%e9%a6%96%e5%85%88%e6%a3%80%e6%9f%a5%e6%9f%a5%e8%af%a2%e7%9a%84%e7%9b%b8%e7%ad%89%e6%80%a7%20JOIN%20%e4%b8%ad%e6%b6%89%e5%8f%8a%e7%9a%84%e6%89%80%e6%9c%89%e5%88%97%e4%b8%ad%e6%98%af%e5%90%a6%e8%87%b3%e5%b0%91%e6%9c%89%e4%b8%80%e4%b8%aa%e7%94%a8%e6%b0%b4%e4%bd%8d%e6%b3%a8%e9%87%8a%e6%a0%87%e8%ae%b0%e7%9a%84%e5%88%97%e3%80%82%20%e5%a6%82%e6%9e%9c%e6%98%af%ef%bc%8c%e5%ae%83%e5%b0%86%e8%87%aa%e5%8a%a8%e8%ae%a4%e4%b8%ba%e5%bf%85%e9%a1%bb%e5%b0%86%e7%8a%b6%e6%80%81%e9%94%ae%e6%b0%b4%e4%bd%8d%e7%ad%96%e7%95%a5%e5%ba%94%e7%94%a8%e4%ba%8e%e8%bf%9f%e5%88%b0%e7%9a%84%e8%a1%8c%ef%bc%88%e6%82%a8%e5%8f%af%e4%bb%a5%e5%9c%a8%20Apache%20Spark%20%e7%bb%93%e6%9e%84%e5%8c%96%e6%b5%81%e7%9a%84%e5%a4%96%e8%bf%9e%e6%8e%a5%e4%b8%ad%e4%ba%86%e8%a7%a3%e5%ae%83%e4%bb%ac%ef%bc%89%e3%80%82%20%e5%a6%82%e6%9e%9c%e4%b8%8d%e6%98%af%ef%bc%8c%e5%88%99%e6%a3%80%e6%9f%a5%e4%b8%80%e4%b8%aa%e8%bf%9e%e6%8e%a5%e4%be%a7%e6%98%af%e5%90%a6%e5%ae%9a%e4%b9%89%e4%ba%86%e6%b0%b4%e4%bd%8d%e5%88%97%e3%80%82%20%e5%a6%82%e6%9e%9c%e6%bb%a1%e8%b6%b3%e4%b8%8a%e8%bf%b0%e6%9d%a1%e4%bb%b6%e4%b9%8b%e4%b8%80%ef%bc%8c%e5%b9%b6%e4%b8%94%e4%bc%98%e5%85%88%e9%80%89%e6%8b%a9%e5%89%8d%e8%80%85%ef%bc%8c%e5%88%99%e4%bd%bf%e7%94%a8%e5%b8%b8%e8%a7%84%e7%9a%84%20org.apache.spark.sql.execution.streaming.WatermarkSupport%ef%bc%83watermarkExpression%28optionalWatermarkExpression%3a%20Option%5bExpression%5d%2c%20optionalWatermarkMs%3a%20Option%5bLong%5d%29%20%e6%96%b9%e6%b3%95%e3%80%82%0a%20JOIN%20%e5%ad%90%e5%8f%a5%e4%b8%ad%e7%9a%84%e7%9b%b8%e7%ad%89%e9%87%8d%e8%a6%81%e6%80%a7%20%e6%b5%81%e5%88%b0%e6%b5%81%e8%bf%9e%e6%8e%a5%e7%9a%84%e5%ae%9e%e9%99%85%e5%ae%9e%e7%8e%b0%e4%bb%85%e6%8e%a5%e5%8f%97%e7%9b%b8%e7%ad%89%e5%85%b3%e7%b3%bb%e4%bd%9c%e4%b8%ba%e8%bf%9e%e6%8e%a5%e9%94%ae%e3%80%82%20%e8%bf%99%e6%84%8f%e5%91%b3%e7%9d%80%e5%a6%82%e6%9e%9c%e6%88%91%e4%bb%ac%e6%9c%892%e4%b8%aa%e6%b5%81%ef%bc%9astream%231%28field1%5bint%5d%2c%20field2%5btimestamp%5d%29%2c%20stream%232%28field10%5bint%5d%2c%20field20%5btimestamp%5d%29%2c%20%ef%bc%8c%e5%88%99%e5%8f%aa%e6%9c%89%20field1%20%e5%92%8c%20field10%20%e4%b9%8b%e9%97%b4%e7%9a%84%e7%9b%b8%e7%ad%89%e5%85%b3%e7%b3%bb%e4%bb%a5%e5%8f%8a%20field2%20%e5%92%8c%20field20%20%e5%b0%86%e8%a2%ab%e8%a7%86%e4%b8%ba%e8%bf%9e%e6%8e%a5%e9%94%ae%e3%80%82%20%e5%a6%82%e6%9e%9c%e5%9c%a8%20JOIN%20%e7%9a%84%20ON%20%e9%83%a8%e5%88%86%e4%b8%ad%e8%a1%a8%e7%a4%ba%e4%b8%8d%e7%ad%89%e5%bc%8f%ef%bc%8c%e5%88%99%e4%bc%9a%e5%b0%86%e5%85%b6%e8%bd%ac%e6%8d%a2%e4%b8%ba%20WHERE%20%e6%9d%a1%e4%bb%b6%e3%80%82%0a%20%e4%be%8b%e5%a6%82%ef%bc%8c%e4%bb%a5%e4%b8%8b%e6%9f%a5%e8%af%a2%ef%bc%9a%0aval%20mainEventsDataset%20%3d%20mainEventsStream.">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&t=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#所涉及的类">所涉及的类</a></li>
+    <li><a href="#旧状态清理">旧状态清理</a>
+      <ul>
+        <li><a href="#连接">连接</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        流和流之间的连接内部研讨
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2019-10-03 17:36:48 &#43;0000 UTC" itemprop="datePublished">2019-10-03</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <p>在最近关于Apache Spark结构化流的3篇文章中，我们发现了流连接：内部连接，外部连接和状态管理策略。发现所有这些操作背后发生的事情是总结该系列的一个好方法。
+这篇文章首先介绍了流连接过程中涉及的类。接下来是专注于与联接有关的状态管理内部的部分。文章以关于连接机制的一小段结尾。</p>
+<h2 id="所涉及的类">所涉及的类</h2>
+<p>在流连接所涉及的类中，我们可以区分3个非常重要的类：SymmetricHashJoinStateManager，StreamingSymmetricHashJoinExec 和 StreamingJoinHelper。所有这些都用于流查询执行的不同阶段。</p>
+<p>首先，查询的流式表示形式 IncrementalExecution 实例存储对该状态的引用。如果查询具有某些流间连接，则此状态在每次执行时都表示为 StreamingSymmetricHashJoinExec 的实例。该实例在每次执行中都不同，不同点是偏移量统计信息和状态水位谓词。谓词的计算公式为：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">def</span> getStateWatermarkPredicates<span style="color:#f92672">(</span>
+    leftAttributes<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Attribute</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+    rightAttributes<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Attribute</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+    leftKeys<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Expression</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+    rightKeys<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Expression</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+    condition<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Expression</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+    eventTimeWatermark<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Long</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">JoinStateWatermarkPredicates</span>
+</code></pre></div><p>此方法通过应用不同的规则来计算用于从状态存储中丢弃太晚的行的状态水位谓词。 它首先检查查询的相等性 JOIN 中涉及的所有列中是否至少有一个用水位注释标记的列。 如果是，它将自动认为必须将状态键水位策略应用于迟到的行（您可以在 <a href="https://www.waitingforcode.com/apache-spark-structured-streaming/outer-joins-apache-spark-structured-streaming/read">Apache Spark 结构化流的外连接</a>中了解它们）。 如果不是，则检查一个连接侧是否定义了水位列。 如果满足上述条件之一，并且优先选择前者，则使用常规的 org.apache.spark.sql.execution.streaming.WatermarkSupport＃watermarkExpression(optionalWatermarkExpression: Option[Expression], optionalWatermarkMs: Option[Long]) 方法。</p>
+<blockquote>
+<p>JOIN 子句中的相等重要性
+流到流连接的实际实现仅接受相等关系作为连接键。 这意味着如果我们有2个流：stream#1(field1[int], field2[timestamp]), stream#2(field10[int], field20[timestamp]), ，则只有 field1 和 field10 之间的相等关系以及 field2 和 field20 将被视为连接键。 如果在 JOIN 的 ON 部分中表示不等式，则会将其转换为 WHERE 条件。</p>
+</blockquote>
+<p>例如，以下查询：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> mainEventsDataset <span style="color:#66d9ef">=</span> mainEventsStream<span style="color:#f92672">.</span>toDS<span style="color:#f92672">(</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>select<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;mainKey&#34;</span><span style="color:#f92672">,</span> $<span style="color:#e6db74">&#34;mainEventTime&#34;</span><span style="color:#f92672">,</span> $<span style="color:#e6db74">&#34;mainEventTimeWatermark&#34;</span><span style="color:#f92672">,</span>
+window<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;mainEventTimeWatermark&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;3 seconds&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>as<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mainWatermarkWindow&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>withWatermark<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mainWatermarkWindow&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;3 seconds&#34;</span><span style="color:#f92672">)</span>
+<span style="color:#66d9ef">val</span> joinedEventsDataset <span style="color:#66d9ef">=</span> joinedEventsStream<span style="color:#f92672">.</span>toDS<span style="color:#f92672">(</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>select<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;joinedKey&#34;</span><span style="color:#f92672">,</span> $<span style="color:#e6db74">&#34;joinedEventTime&#34;</span><span style="color:#f92672">,</span> $<span style="color:#e6db74">&#34;joinedEventTimeWatermark&#34;</span><span style="color:#f92672">,</span>
+window<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;joinedEventTimeWatermark&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;3 seconds&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>as<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedWatermarkWindow&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>withWatermark<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedWatermarkWindow&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;3 seconds&#34;</span><span style="color:#f92672">)</span>
+ 
+<span style="color:#66d9ef">val</span> stream <span style="color:#66d9ef">=</span> mainEventsDataset<span style="color:#f92672">.</span>join<span style="color:#f92672">(</span>joinedEventsDataset<span style="color:#f92672">,</span> mainEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mainKey&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">===</span> joinedEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedKey&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">&amp;&amp;</span> expr<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedWatermarkWindow &gt; mainWatermarkWindow&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+ 
+<span style="color:#66d9ef">val</span> query <span style="color:#66d9ef">=</span> stream<span style="color:#f92672">.</span>writeStream<span style="color:#f92672">.</span>trigger<span style="color:#f92672">(</span><span style="color:#a6e22e">Trigger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTime</span><span style="color:#f92672">(</span><span style="color:#ae81ff">5000L</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>foreach<span style="color:#f92672">(</span><span style="color:#a6e22e">RowProcessor</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>start<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+</code></pre></div><p>会被转换为：</p>
+<pre><code>+- Exchange hashpartitioning(joinedKey#966, 200)
+   +- EventTimeWatermark joinedWatermarkWindow#23: struct, interval 3 seconds
+      +- Union
+         :- *(7) Project [joinedKey#966, joinedEventTime#967L, joinedEventTimeWatermark#968, named_struct(start, precisetimestampconversion(((((CASE WHEN 
+         // ...
+         :  +- *(7) Filter (isnotnull(joinedEventTimeWatermark#968) &amp;&amp; isnotnull(joinedKey#966))
+         :     +- LocalTableScan [joinedKey#966, joinedEventTime#967L, joinedEventTimeWatermark#968]
+// ...
+</code></pre><p>虽然类似的查询，但在JOIN子句中具有相等条件，但将在数据混洗级别进行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> stream <span style="color:#66d9ef">=</span> mainEventsDataset<span style="color:#f92672">.</span>join<span style="color:#f92672">(</span>joinedEventsDataset<span style="color:#f92672">,</span> mainEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mainKey&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">===</span> joinedEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedKey&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">&amp;&amp;</span>
+  mainEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mainEventTimeWatermark&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">===</span> joinedEventsDataset<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;joinedEventTimeWatermark&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+</code></pre></div><p>并且物理执行计划为：</p>
+<pre><code>== Physical Plan ==
+StreamingSymmetricHashJoin [mainKey#1447, mainEventTimeWatermark#1449-T2000ms], [joinedKey#1451, joinedEventTimeWatermark#1453], Inner, condition = [ leftOnly = null, rightOnly = null, both = null, full = null ], state info [ checkpoint = file:/tmp/temporary-4bd3025b-1e05-4410-9ee4-04dd4191c63b/state, runId = b85412cd-94b1-4112-8d81-1e5c2e94a0f9, opId = 0, ver = 2, numPartitions = 200], 8000, state cleanup [ left key predicate: (input[1, timestamp, true] &lt;= 8000000), right key predicate: (input[1, timestamp, true] &lt;= 8000000) ]
+:- Exchange hashpartitioning(mainKey#1447, mainEventTimeWatermark#1449-T2000ms, 200)
+:  +- *(5) Filter isnotnull(mainEventTimeWatermark#1449-T2000ms)
+:     +- EventTimeWatermark mainEventTimeWatermark#1449: timestamp, interval 2 seconds
+:        +- Union
+// ...
+:              +- LocalTableScan [mainKey#2479, mainEventTime#2480L, mainEventTimeWatermark#2481]
++- Exchange hashpartitioning(joinedKey#1451, joinedEventTimeWatermark#1453, 200)
+   +- Union
+      :- *(6) Filter (isnotnull(joinedEventTimeWatermark#1453) &amp;&amp; isnotnull(joinedKey#1451))
+      :  +- LocalTableScan [joinedKey#1451, joinedEventTime#1452L, joinedEventTimeWatermark#1453]
+</code></pre><h2 id="旧状态清理">旧状态清理</h2>
+<p>定义水位表达式后，引擎将其转换为状态键水位的实例 (JoinStateKeyWatermarkPredicate(expr: Expression))  或状态值水位 (JoinStateValueWatermarkPredicate(expr: Expression))。需要强调的是，每个查询方都有自己的谓词，因为每个流可以具有不同的延迟特性。</p>
+<p>这种构建的谓词稍后用于 org.apache.spark.sql.execution.streaming.StreamingSymmetricHashJoinExec。OneSideHashJoiner 实例由 StreamingSymmetricHashJoinExec 引用。在删除过程中，引擎将调用适当的 <code>SymmetricHashJoinStateManager</code> 的方法：</p>
+<ul>
+<li>removeByKeyCondition(removalCondition: UnsafeRow =&gt; Boolean) 用于键水位</li>
+<li>removeByValueCondition(removalCondition: UnsafeRow =&gt; Boolean) 用于值水位</li>
+</ul>
+<p>两种方法的参数都是从基础水位类型构建的谓词。 对于值一，它可以表示为(joinedWatermarkWindow＃23-T3000ms&gt; mainWatermarkWindow＃14-T3000ms)。 内部将状态存储为 multi-map，即一个具有零个或多个值的键。 这样引擎就只能删除一部分存储状态。</p>
+<h3 id="连接">连接</h3>
+<p>到目前为止，我们已经了解了状态管理，但是如何连接自己呢？在信息块的第一部分中，简要介绍了它们的执行情况。正如我们在此处看到的那样，不可避免地要通过哈希交换（即混洗）进行连接。具有给定连接键的所有行都移到同一分区，这就是魔术发生的地方。物理执行是通过 <code>processPartitions(leftInputIter: Iterator[InternalRow], rightInputIter: Iterator[InternalRow])</code> 方法进行的。它由2个 OneSideHashJoiner 实例提供帮助，每个实例代表联接的每一侧。</p>
+<p>连接的结果是一行 <code>org.apache.spark.sql.catalyst.expressions.JoinedRow</code> 类型，该类型使用 <code>withLeft(InternalRow)</code> 和 <code>withRight(InternalRow)</code> 方法构造。但是在发生之前，OneSideHashJoiner 首先检索所有非迟到的行，并为它们中的每一个检索，并检查是否满足过滤条件。这些条件是连接前过滤器（仅适用于已处理连接侧的过滤器）和连接后过滤器（整体连接条件）。稍后，连接器尝试通过执行以下操作为每条有效行在另一侧找到匹配的行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> key <span style="color:#66d9ef">=</span> keyGenerator<span style="color:#f92672">(</span>thisRow<span style="color:#f92672">)</span>
+<span style="color:#66d9ef">val</span> outputIter <span style="color:#66d9ef">=</span> otherSideJoiner<span style="color:#f92672">.</span>joinStateManager<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span>key<span style="color:#f92672">)</span><span style="color:#f92672">.</span>map <span style="color:#f92672">{</span> thatRow <span style="color:#66d9ef">=&gt;</span>
+  generateJoinedRow<span style="color:#f92672">(</span>thisRow<span style="color:#f92672">,</span> thatRow<span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span><span style="color:#f92672">.</span>filter<span style="color:#f92672">(</span>postJoinFilter<span style="color:#f92672">)</span>
+</code></pre></div><p>如果实际匹配的行（原始版本，未连接）可以保留在状态存储中，则连接器稍后进行验证。 仅当2个水位谓词（键和值，已在文章中提到）有效（即行本身未过期）时，该参数才会保留在该位置。 这就是内连接的全部内容。 对于外连接，将启动特殊处理。 匹配的行由不匹配完成，发生在这里：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> outputIter<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Iterator</span><span style="color:#f92672">[</span><span style="color:#66d9ef">InternalRow</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> joinType <span style="color:#66d9ef">match</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Inner</span> <span style="color:#66d9ef">=&gt;</span>
+    innerOutputIter
+  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">LeftOuter</span> <span style="color:#66d9ef">=&gt;</span>
+    <span style="color:#66d9ef">def</span> matchesWithRightSideState<span style="color:#f92672">(</span>leftKeyValue<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">UnsafeRowPair</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">{</span>
+      rightSideJoiner<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span>leftKeyValue<span style="color:#f92672">.</span>key<span style="color:#f92672">)</span><span style="color:#f92672">.</span>exists <span style="color:#f92672">{</span> rightValue <span style="color:#66d9ef">=&gt;</span>
+        postJoinFilter<span style="color:#f92672">(</span>joinedRow<span style="color:#f92672">.</span>withLeft<span style="color:#f92672">(</span>leftKeyValue<span style="color:#f92672">.</span>value<span style="color:#f92672">)</span><span style="color:#f92672">.</span>withRight<span style="color:#f92672">(</span>rightValue<span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#75715e">// BK: removeOldState returns an iterator with expired rows 
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     It clearly shows that without watermark it wouldn&#39;t be possible
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     to emit not matched ones in the case of outer join.
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> removedRowIter <span style="color:#66d9ef">=</span> leftSideJoiner<span style="color:#f92672">.</span>removeOldState<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> outerOutputIter <span style="color:#66d9ef">=</span> removedRowIter
+      <span style="color:#f92672">.</span>filterNot<span style="color:#f92672">(</span>pair <span style="color:#66d9ef">=&gt;</span> matchesWithRightSideState<span style="color:#f92672">(</span>pair<span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>pair <span style="color:#66d9ef">=&gt;</span> joinedRow<span style="color:#f92672">.</span>withLeft<span style="color:#f92672">(</span>pair<span style="color:#f92672">.</span>value<span style="color:#f92672">)</span><span style="color:#f92672">.</span>withRight<span style="color:#f92672">(</span>nullRight<span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+ 
+    innerOutputIter <span style="color:#f92672">++</span> outerOutputIter
+  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">RightOuter</span> <span style="color:#66d9ef">=&gt;</span>
+    <span style="color:#75715e">// BK: does the same as LeftOuter but by switching sides
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">case</span> <span style="color:#66d9ef">_</span> <span style="color:#66d9ef">=&gt;</span> throwBadJoinTypeException<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>使用完所有连接的行后，将执行回调以从状态存储中删除旧状态：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> cleanupIter <span style="color:#66d9ef">=</span> joinType <span style="color:#66d9ef">match</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Inner</span> <span style="color:#66d9ef">=&gt;</span>
+    leftSideJoiner<span style="color:#f92672">.</span>removeOldState<span style="color:#f92672">(</span><span style="color:#f92672">)</span> <span style="color:#f92672">++</span> rightSideJoiner<span style="color:#f92672">.</span>removeOldState<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+  <span style="color:#75715e">// BK: for outer only joined rows are removed - the removal of outer side
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//     was made before, at generating not fully matched rows
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">LeftOuter</span> <span style="color:#66d9ef">=&gt;</span> rightSideJoiner<span style="color:#f92672">.</span>removeOldState<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+  <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">RightOuter</span> <span style="color:#66d9ef">=&gt;</span> leftSideJoiner<span style="color:#f92672">.</span>removeOldState<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+  <span style="color:#66d9ef">case</span> <span style="color:#66d9ef">_</span> <span style="color:#66d9ef">=&gt;</span> throwBadJoinTypeException<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>  
+</code></pre></div><p>无限数据源中的状态管理非常重要。 通过计算水位谓词，它有助于减少存储的行数。 但是，如本文第一部分所示，它不是流连接功能中涉及的单个部分。 另一个在寻找匹配。 在第3部分中介绍，它描述了StreamingSymmetricHashJoinExec 的 processPartitions 方法中实现的连接逻辑。 如我们所知，该操作首先检索有效行（过滤器+允许的延迟），然后只有主行在另一侧查找匹配的行。 完成此操作后，将返回一个包含所有连接行的迭代器，并且在迭代结束时将调用清理旧行的函数。</p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#所涉及的类">所涉及的类</a></li>
+    <li><a href="#旧状态清理">旧状态清理</a>
+      <ul>
+        <li><a href="#连接">连接</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&text=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&is_video=false&description=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&title=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&name=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8&description=%e5%9c%a8%e6%9c%80%e8%bf%91%e5%85%b3%e4%ba%8eApache%20Spark%e7%bb%93%e6%9e%84%e5%8c%96%e6%b5%81%e7%9a%843%e7%af%87%e6%96%87%e7%ab%a0%e4%b8%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%91%e7%8e%b0%e4%ba%86%e6%b5%81%e8%bf%9e%e6%8e%a5%ef%bc%9a%e5%86%85%e9%83%a8%e8%bf%9e%e6%8e%a5%ef%bc%8c%e5%a4%96%e9%83%a8%e8%bf%9e%e6%8e%a5%e5%92%8c%e7%8a%b6%e6%80%81%e7%ae%a1%e7%90%86%e7%ad%96%e7%95%a5%e3%80%82%e5%8f%91%e7%8e%b0%e6%89%80%e6%9c%89%e8%bf%99%e4%ba%9b%e6%93%8d%e4%bd%9c%e8%83%8c%e5%90%8e%e5%8f%91%e7%94%9f%e7%9a%84%e4%ba%8b%e6%83%85%e6%98%af%e6%80%bb%e7%bb%93%e8%af%a5%e7%b3%bb%e5%88%97%e7%9a%84%e4%b8%80%e4%b8%aa%e5%a5%bd%e6%96%b9%e6%b3%95%e3%80%82%20%e8%bf%99%e7%af%87%e6%96%87%e7%ab%a0%e9%a6%96%e5%85%88%e4%bb%8b%e7%bb%8d%e4%ba%86%e6%b5%81%e8%bf%9e%e6%8e%a5%e8%bf%87%e7%a8%8b%e4%b8%ad%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%e3%80%82%e6%8e%a5%e4%b8%8b%e6%9d%a5%e6%98%af%e4%b8%93%e6%b3%a8%e4%ba%8e%e4%b8%8e%e8%81%94%e6%8e%a5%e6%9c%89%e5%85%b3%e7%9a%84%e7%8a%b6%e6%80%81%e7%ae%a1%e7%90%86%e5%86%85%e9%83%a8%e7%9a%84%e9%83%a8%e5%88%86%e3%80%82%e6%96%87%e7%ab%a0%e4%bb%a5%e5%85%b3%e4%ba%8e%e8%bf%9e%e6%8e%a5%e6%9c%ba%e5%88%b6%e7%9a%84%e4%b8%80%e5%b0%8f%e6%ae%b5%e7%bb%93%e5%b0%be%e3%80%82%0a%e6%89%80%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%20%e5%9c%a8%e6%b5%81%e8%bf%9e%e6%8e%a5%e6%89%80%e6%b6%89%e5%8f%8a%e7%9a%84%e7%b1%bb%e4%b8%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%af%e4%bb%a5%e5%8c%ba%e5%88%863%e4%b8%aa%e9%9d%9e%e5%b8%b8%e9%87%8d%e8%a6%81%e7%9a%84%e7%b1%bb%ef%bc%9aSymmetricHashJoinStateManager%ef%bc%8cStreamingSymmetricHashJoinExec%20%e5%92%8c%20StreamingJoinHelper%e3%80%82%e6%89%80%e6%9c%89%e8%bf%99%e4%ba%9b%e9%83%bd%e7%94%a8%e4%ba%8e%e6%b5%81%e6%9f%a5%e8%af%a2%e6%89%a7%e8%a1%8c%e7%9a%84%e4%b8%8d%e5%90%8c%e9%98%b6%e6%ae%b5%e3%80%82%0a%e9%a6%96%e5%85%88%ef%bc%8c%e6%9f%a5%e8%af%a2%e7%9a%84%e6%b5%81%e5%bc%8f%e8%a1%a8%e7%a4%ba%e5%bd%a2%e5%bc%8f%20IncrementalExecution%20%e5%ae%9e%e4%be%8b%e5%ad%98%e5%82%a8%e5%af%b9%e8%af%a5%e7%8a%b6%e6%80%81%e7%9a%84%e5%bc%95%e7%94%a8%e3%80%82%e5%a6%82%e6%9e%9c%e6%9f%a5%e8%af%a2%e5%85%b7%e6%9c%89%e6%9f%90%e4%ba%9b%e6%b5%81%e9%97%b4%e8%bf%9e%e6%8e%a5%ef%bc%8c%e5%88%99%e6%ad%a4%e7%8a%b6%e6%80%81%e5%9c%a8%e6%af%8f%e6%ac%a1%e6%89%a7%e8%a1%8c%e6%97%b6%e9%83%bd%e8%a1%a8%e7%a4%ba%e4%b8%ba%20StreamingSymmetricHashJoinExec%20%e7%9a%84%e5%ae%9e%e4%be%8b%e3%80%82%e8%af%a5%e5%ae%9e%e4%be%8b%e5%9c%a8%e6%af%8f%e6%ac%a1%e6%89%a7%e8%a1%8c%e4%b8%ad%e9%83%bd%e4%b8%8d%e5%90%8c%ef%bc%8c%e4%b8%8d%e5%90%8c%e7%82%b9%e6%98%af%e5%81%8f%e7%a7%bb%e9%87%8f%e7%bb%9f%e8%ae%a1%e4%bf%a1%e6%81%af%e5%92%8c%e7%8a%b6%e6%80%81%e6%b0%b4%e4%bd%8d%e8%b0%93%e8%af%8d%e3%80%82%e8%b0%93%e8%af%8d%e7%9a%84%e8%ae%a1%e7%ae%97%e5%85%ac%e5%bc%8f%e4%b8%ba%ef%bc%9a%0adef%20getStateWatermarkPredicates%28%20leftAttributes%3a%20Seq%5bAttribute%5d%2c%20rightAttributes%3a%20Seq%5bAttribute%5d%2c%20leftKeys%3a%20Seq%5bExpression%5d%2c%20rightKeys%3a%20Seq%5bExpression%5d%2c%20condition%3a%20Option%5bExpression%5d%2c%20eventTimeWatermark%3a%20Option%5bLong%5d%29%3a%20JoinStateWatermarkPredicates%20%e6%ad%a4%e6%96%b9%e6%b3%95%e9%80%9a%e8%bf%87%e5%ba%94%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e8%a7%84%e5%88%99%e6%9d%a5%e8%ae%a1%e7%ae%97%e7%94%a8%e4%ba%8e%e4%bb%8e%e7%8a%b6%e6%80%81%e5%ad%98%e5%82%a8%e4%b8%ad%e4%b8%a2%e5%bc%83%e5%a4%aa%e6%99%9a%e7%9a%84%e8%a1%8c%e7%9a%84%e7%8a%b6%e6%80%81%e6%b0%b4%e4%bd%8d%e8%b0%93%e8%af%8d%e3%80%82%20%e5%ae%83%e9%a6%96%e5%85%88%e6%a3%80%e6%9f%a5%e6%9f%a5%e8%af%a2%e7%9a%84%e7%9b%b8%e7%ad%89%e6%80%a7%20JOIN%20%e4%b8%ad%e6%b6%89%e5%8f%8a%e7%9a%84%e6%89%80%e6%9c%89%e5%88%97%e4%b8%ad%e6%98%af%e5%90%a6%e8%87%b3%e5%b0%91%e6%9c%89%e4%b8%80%e4%b8%aa%e7%94%a8%e6%b0%b4%e4%bd%8d%e6%b3%a8%e9%87%8a%e6%a0%87%e8%ae%b0%e7%9a%84%e5%88%97%e3%80%82%20%e5%a6%82%e6%9e%9c%e6%98%af%ef%bc%8c%e5%ae%83%e5%b0%86%e8%87%aa%e5%8a%a8%e8%ae%a4%e4%b8%ba%e5%bf%85%e9%a1%bb%e5%b0%86%e7%8a%b6%e6%80%81%e9%94%ae%e6%b0%b4%e4%bd%8d%e7%ad%96%e7%95%a5%e5%ba%94%e7%94%a8%e4%ba%8e%e8%bf%9f%e5%88%b0%e7%9a%84%e8%a1%8c%ef%bc%88%e6%82%a8%e5%8f%af%e4%bb%a5%e5%9c%a8%20Apache%20Spark%20%e7%bb%93%e6%9e%84%e5%8c%96%e6%b5%81%e7%9a%84%e5%a4%96%e8%bf%9e%e6%8e%a5%e4%b8%ad%e4%ba%86%e8%a7%a3%e5%ae%83%e4%bb%ac%ef%bc%89%e3%80%82%20%e5%a6%82%e6%9e%9c%e4%b8%8d%e6%98%af%ef%bc%8c%e5%88%99%e6%a3%80%e6%9f%a5%e4%b8%80%e4%b8%aa%e8%bf%9e%e6%8e%a5%e4%be%a7%e6%98%af%e5%90%a6%e5%ae%9a%e4%b9%89%e4%ba%86%e6%b0%b4%e4%bd%8d%e5%88%97%e3%80%82%20%e5%a6%82%e6%9e%9c%e6%bb%a1%e8%b6%b3%e4%b8%8a%e8%bf%b0%e6%9d%a1%e4%bb%b6%e4%b9%8b%e4%b8%80%ef%bc%8c%e5%b9%b6%e4%b8%94%e4%bc%98%e5%85%88%e9%80%89%e6%8b%a9%e5%89%8d%e8%80%85%ef%bc%8c%e5%88%99%e4%bd%bf%e7%94%a8%e5%b8%b8%e8%a7%84%e7%9a%84%20org.apache.spark.sql.execution.streaming.WatermarkSupport%ef%bc%83watermarkExpression%28optionalWatermarkExpression%3a%20Option%5bExpression%5d%2c%20optionalWatermarkMs%3a%20Option%5bLong%5d%29%20%e6%96%b9%e6%b3%95%e3%80%82%0a%20JOIN%20%e5%ad%90%e5%8f%a5%e4%b8%ad%e7%9a%84%e7%9b%b8%e7%ad%89%e9%87%8d%e8%a6%81%e6%80%a7%20%e6%b5%81%e5%88%b0%e6%b5%81%e8%bf%9e%e6%8e%a5%e7%9a%84%e5%ae%9e%e9%99%85%e5%ae%9e%e7%8e%b0%e4%bb%85%e6%8e%a5%e5%8f%97%e7%9b%b8%e7%ad%89%e5%85%b3%e7%b3%bb%e4%bd%9c%e4%b8%ba%e8%bf%9e%e6%8e%a5%e9%94%ae%e3%80%82%20%e8%bf%99%e6%84%8f%e5%91%b3%e7%9d%80%e5%a6%82%e6%9e%9c%e6%88%91%e4%bb%ac%e6%9c%892%e4%b8%aa%e6%b5%81%ef%bc%9astream%231%28field1%5bint%5d%2c%20field2%5btimestamp%5d%29%2c%20stream%232%28field10%5bint%5d%2c%20field20%5btimestamp%5d%29%2c%20%ef%bc%8c%e5%88%99%e5%8f%aa%e6%9c%89%20field1%20%e5%92%8c%20field10%20%e4%b9%8b%e9%97%b4%e7%9a%84%e7%9b%b8%e7%ad%89%e5%85%b3%e7%b3%bb%e4%bb%a5%e5%8f%8a%20field2%20%e5%92%8c%20field20%20%e5%b0%86%e8%a2%ab%e8%a7%86%e4%b8%ba%e8%bf%9e%e6%8e%a5%e9%94%ae%e3%80%82%20%e5%a6%82%e6%9e%9c%e5%9c%a8%20JOIN%20%e7%9a%84%20ON%20%e9%83%a8%e5%88%86%e4%b8%ad%e8%a1%a8%e7%a4%ba%e4%b8%8d%e7%ad%89%e5%bc%8f%ef%bc%8c%e5%88%99%e4%bc%9a%e5%b0%86%e5%85%b6%e8%bd%ac%e6%8d%a2%e4%b8%ba%20WHERE%20%e6%9d%a1%e4%bb%b6%e3%80%82%0a%20%e4%be%8b%e5%a6%82%ef%bc%8c%e4%bb%a5%e4%b8%8b%e6%9f%a5%e8%af%a2%ef%bc%9a%0aval%20mainEventsDataset%20%3d%20mainEventsStream.">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fstream-to-stream-joins-internals%2f&t=%e6%b5%81%e5%92%8c%e6%b5%81%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%9e%e6%8e%a5%e5%86%85%e9%83%a8%e7%a0%94%e8%ae%a8">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西" />
+<meta property="og:description" content="欢迎来到今年 12/25 的 Raku One-Liner Advent Calendar! 的第12天。今天，我们将研究一个计算零的单行程序。
+say 0.1 &#43; 0.2 - 0.3 如果您熟悉编程，那么您很清楚，只要开始使用浮点运算，就会失去精度，并且很快就会面对小错误。
+您可能还看到了网站，0.30000000000000004.com，它有很多不同的编程语言列表，以及它们如何打印简单的表达式 0.1 &#43; 0.2。在大多数情况下，您没有得到 0.3 这个准确值。通常当你得到零时，它实际上是在打印操作期间舍入的结果。
+在 Raku 中，0.1 &#43; 0.2正好是 0.3，今天的单行程序正好打印了一个零。
+让我们稍微探讨一下 Raku 的内部结构，看看它是如何工作的。几天前，我们看到 Raku 的 grammar（在 Rakudo 编译器中实现）具有以下检测数字的片段：
+token numish { [ | &#39;NaN&#39; &gt;&gt; | &lt;integer&gt; | &lt;dec_number&gt; | &lt;rad_number&gt; | &lt;rat_number&gt; | &lt;complex_number&gt; | &#39;Inf&#39; &gt;&gt; | $&lt;uinf&gt;=&#39;∞&#39; | &lt;unum=:No&#43;:Nl&gt; ] } 假如你很熟悉 Raku，就会知道 Raku 使用有理数来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。
+Grammar 中所谓的 rat_number 是用尖括号写的数字：" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/whats-behind-0-dot-1-plus-0-dot2-in-perl6/" />
+<meta property="article:published_time" content="2018-12-12T09:13:30+00:00" />
+<meta property="article:modified_time" content="2018-12-12T09:13:30+00:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西"/>
+<meta name="twitter:description" content="欢迎来到今年 12/25 的 Raku One-Liner Advent Calendar! 的第12天。今天，我们将研究一个计算零的单行程序。
+say 0.1 &#43; 0.2 - 0.3 如果您熟悉编程，那么您很清楚，只要开始使用浮点运算，就会失去精度，并且很快就会面对小错误。
+您可能还看到了网站，0.30000000000000004.com，它有很多不同的编程语言列表，以及它们如何打印简单的表达式 0.1 &#43; 0.2。在大多数情况下，您没有得到 0.3 这个准确值。通常当你得到零时，它实际上是在打印操作期间舍入的结果。
+在 Raku 中，0.1 &#43; 0.2正好是 0.3，今天的单行程序正好打印了一个零。
+让我们稍微探讨一下 Raku 的内部结构，看看它是如何工作的。几天前，我们看到 Raku 的 grammar（在 Rakudo 编译器中实现）具有以下检测数字的片段：
+token numish { [ | &#39;NaN&#39; &gt;&gt; | &lt;integer&gt; | &lt;dec_number&gt; | &lt;rad_number&gt; | &lt;rat_number&gt; | &lt;complex_number&gt; | &#39;Inf&#39; &gt;&gt; | $&lt;uinf&gt;=&#39;∞&#39; | &lt;unum=:No&#43;:Nl&gt; ] } 假如你很熟悉 Raku，就会知道 Raku 使用有理数来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。
+Grammar 中所谓的 rat_number 是用尖括号写的数字："/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/who-watches-the-minions/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/five-spark-sql-helper-utility-functions-to-extract-and-explore-complex-data-types/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&text=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&is_video=false&description=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&name=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf&description=%e6%ac%a2%e8%bf%8e%e6%9d%a5%e5%88%b0%e4%bb%8a%e5%b9%b4%2012%2f25%20%e7%9a%84%20Raku%20One-Liner%20Advent%20Calendar%21%20%e7%9a%84%e7%ac%ac12%e5%a4%a9%e3%80%82%e4%bb%8a%e5%a4%a9%ef%bc%8c%e6%88%91%e4%bb%ac%e5%b0%86%e7%a0%94%e7%a9%b6%e4%b8%80%e4%b8%aa%e8%ae%a1%e7%ae%97%e9%9b%b6%e7%9a%84%e5%8d%95%e8%a1%8c%e7%a8%8b%e5%ba%8f%e3%80%82%0asay%200.1%20%2b%200.2%20-%200.3%20%e5%a6%82%e6%9e%9c%e6%82%a8%e7%86%9f%e6%82%89%e7%bc%96%e7%a8%8b%ef%bc%8c%e9%82%a3%e4%b9%88%e6%82%a8%e5%be%88%e6%b8%85%e6%a5%9a%ef%bc%8c%e5%8f%aa%e8%a6%81%e5%bc%80%e5%a7%8b%e4%bd%bf%e7%94%a8%e6%b5%ae%e7%82%b9%e8%bf%90%e7%ae%97%ef%bc%8c%e5%b0%b1%e4%bc%9a%e5%a4%b1%e5%8e%bb%e7%b2%be%e5%ba%a6%ef%bc%8c%e5%b9%b6%e4%b8%94%e5%be%88%e5%bf%ab%e5%b0%b1%e4%bc%9a%e9%9d%a2%e5%af%b9%e5%b0%8f%e9%94%99%e8%af%af%e3%80%82%0a%e6%82%a8%e5%8f%af%e8%83%bd%e8%bf%98%e7%9c%8b%e5%88%b0%e4%ba%86%e7%bd%91%e7%ab%99%ef%bc%8c0.30000000000000004.com%ef%bc%8c%e5%ae%83%e6%9c%89%e5%be%88%e5%a4%9a%e4%b8%8d%e5%90%8c%e7%9a%84%e7%bc%96%e7%a8%8b%e8%af%ad%e8%a8%80%e5%88%97%e8%a1%a8%ef%bc%8c%e4%bb%a5%e5%8f%8a%e5%ae%83%e4%bb%ac%e5%a6%82%e4%bd%95%e6%89%93%e5%8d%b0%e7%ae%80%e5%8d%95%e7%9a%84%e8%a1%a8%e8%be%be%e5%bc%8f%200.1%20%2b%200.2%e3%80%82%e5%9c%a8%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%83%85%e5%86%b5%e4%b8%8b%ef%bc%8c%e6%82%a8%e6%b2%a1%e6%9c%89%e5%be%97%e5%88%b0%200.3%20%e8%bf%99%e4%b8%aa%e5%87%86%e7%a1%ae%e5%80%bc%e3%80%82%e9%80%9a%e5%b8%b8%e5%bd%93%e4%bd%a0%e5%be%97%e5%88%b0%e9%9b%b6%e6%97%b6%ef%bc%8c%e5%ae%83%e5%ae%9e%e9%99%85%e4%b8%8a%e6%98%af%e5%9c%a8%e6%89%93%e5%8d%b0%e6%93%8d%e4%bd%9c%e6%9c%9f%e9%97%b4%e8%88%8d%e5%85%a5%e7%9a%84%e7%bb%93%e6%9e%9c%e3%80%82%0a%e5%9c%a8%20Raku%20%e4%b8%ad%ef%bc%8c0.1%20%2b%200.2%e6%ad%a3%e5%a5%bd%e6%98%af%200.3%ef%bc%8c%e4%bb%8a%e5%a4%a9%e7%9a%84%e5%8d%95%e8%a1%8c%e7%a8%8b%e5%ba%8f%e6%ad%a3%e5%a5%bd%e6%89%93%e5%8d%b0%e4%ba%86%e4%b8%80%e4%b8%aa%e9%9b%b6%e3%80%82%0a%e8%ae%a9%e6%88%91%e4%bb%ac%e7%a8%8d%e5%be%ae%e6%8e%a2%e8%ae%a8%e4%b8%80%e4%b8%8b%20Raku%20%e7%9a%84%e5%86%85%e9%83%a8%e7%bb%93%e6%9e%84%ef%bc%8c%e7%9c%8b%e7%9c%8b%e5%ae%83%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84%e3%80%82%e5%87%a0%e5%a4%a9%e5%89%8d%ef%bc%8c%e6%88%91%e4%bb%ac%e7%9c%8b%e5%88%b0%20Raku%20%e7%9a%84%20grammar%ef%bc%88%e5%9c%a8%20Rakudo%20%e7%bc%96%e8%af%91%e5%99%a8%e4%b8%ad%e5%ae%9e%e7%8e%b0%ef%bc%89%e5%85%b7%e6%9c%89%e4%bb%a5%e4%b8%8b%e6%a3%80%e6%b5%8b%e6%95%b0%e5%ad%97%e7%9a%84%e7%89%87%e6%ae%b5%ef%bc%9a%0atoken%20numish%20%7b%20%5b%20%7c%20%27NaN%27%20%26gt%3b%26gt%3b%20%7c%20%26lt%3binteger%26gt%3b%20%7c%20%26lt%3bdec_number%26gt%3b%20%7c%20%26lt%3brad_number%26gt%3b%20%7c%20%26lt%3brat_number%26gt%3b%20%7c%20%26lt%3bcomplex_number%26gt%3b%20%7c%20%27Inf%27%20%26gt%3b%26gt%3b%20%7c%20%24%26lt%3buinf%26gt%3b%3d%27%e2%88%9e%27%20%7c%20%26lt%3bunum%3d%3aNo%2b%3aNl%26gt%3b%20%5d%20%7d%20%e5%81%87%e5%a6%82%e4%bd%a0%e5%be%88%e7%86%9f%e6%82%89%20Raku%ef%bc%8c%e5%b0%b1%e4%bc%9a%e7%9f%a5%e9%81%93%20Raku%20%e4%bd%bf%e7%94%a8%e6%9c%89%e7%90%86%e6%95%b0%e6%9d%a5%e5%ad%98%e5%82%a8%e6%b5%ae%e7%82%b9%e6%95%b0%ef%bc%88%e5%a6%820.1%ef%bc%89%e8%bf%99%e4%b8%80%e4%ba%8b%e5%ae%9e%e5%8f%af%e4%bb%a5%e8%a7%a3%e9%87%8a%e4%b8%8a%e8%bf%b0%e8%a1%8c%e4%b8%ba%e3%80%82%e8%bf%99%e6%98%af%e5%af%b9%e7%9a%84%ef%bc%8c%e4%bd%86%e6%98%af%e7%9c%8b%e4%b8%80%e4%b8%8b%20grammar%ef%bc%8c%e4%bd%a0%e4%bc%9a%e5%8f%91%e7%8e%b0%e8%bf%99%e7%af%87%e6%96%87%e7%ab%a0%e6%9c%89%e7%82%b9%e9%95%bf%e3%80%82%0aGrammar%20%e4%b8%ad%e6%89%80%e8%b0%93%e7%9a%84%20rat_number%20%e6%98%af%e7%94%a8%e5%b0%96%e6%8b%ac%e5%8f%b7%e5%86%99%e7%9a%84%e6%95%b0%e5%ad%97%ef%bc%9a">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&t=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents"></nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2018-12-12 09:13:30 &#43;0000 UTC" itemprop="datePublished">2018-12-12</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <p>欢迎来到今年 12/25 的 <strong>Raku One-Liner Advent Calendar!</strong> 的第<a href="https://raku.online/2018/12/12/displaying-a-zero-in-perl-6/">12</a>天。今天，我们将研究一个计算零的单行程序。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">say <span style="color:#ae81ff">0.1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">0.2</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">0.3</span>
+</code></pre></div><p>如果您熟悉编程，那么您很清楚，只要开始使用浮点运算，就会失去精度，并且很快就会面对小错误。</p>
+<p>您可能还看到了网站，<a href="http://0.30000000000000004.com/">0.30000000000000004.com</a>，它有很多不同的编程语言列表，以及它们如何打印简单的表达式 <code>0.1 + 0.2</code>。在大多数情况下，您没有得到 <code>0.3</code> 这个准确值。通常当你得到零时，它实际上是在打印操作期间舍入的结果。</p>
+<p>在 Raku 中，<code>0.1 + 0.2</code>正好是 <code>0.3</code>，今天的单行程序正好打印了一个零。</p>
+<p>让我们稍微探讨一下 Raku 的内部结构，看看它是如何工作的。<a href="https://rakuadvent.wordpress.com/2018/12/08/">几天前</a>，我们看到 <a href="https://github.com/rakudo/rakudo/blob/master/src/Raku/Grammar.nqp">Raku 的 grammar</a>（在 Rakudo 编译器中实现）具有以下检测数字的片段：</p>
+<pre><code class="language-raku" data-lang="raku">token numish {
+    [
+    | 'NaN' &gt;&gt;
+    | &lt;integer&gt;
+    | &lt;dec_number&gt;
+    | &lt;rad_number&gt;
+    | &lt;rat_number&gt;
+    | &lt;complex_number&gt;
+    | 'Inf' &gt;&gt;
+    | $&lt;uinf&gt;='∞'
+    | &lt;unum=:No+:Nl&gt;
+    ]
+}
+</code></pre><p>假如你很熟悉 Raku，就会知道 Raku 使用<a href="https://docs.raku.org/type/Rat">有理数</a>来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。</p>
+<p>Grammar 中所谓的 <code>rat_number</code> 是用尖括号写的数字：</p>
+<pre><code class="language-raku" data-lang="raku">token rat_number { '&lt;' &lt;bare_rat_number&gt; '&gt;' }
+token bare_rat_number { 
+    &lt;?before &lt;.[-−+0..9&lt;&gt;:boxd]&gt;+? '/'&gt;
+    &lt;nu=.signed-integer&gt; '/' &lt;de=integer&gt;
+}
+</code></pre><p>因此，如果您将程序更改为：</p>
+<pre><code class="language-raku" data-lang="raku">say &lt;1/10&gt; + &lt;2/10&gt; - &lt;3/10&gt;
+</code></pre><p>那么你将立即操作有理数。以下是以此格式转换数字的相应<a href="https://github.com/rakudo/rakudo/blob/master/src/Raku/Actions.nqp">action操作</a>：</p>
+<pre><code class="language-raku" data-lang="raku">method rat_number($/) { make $&lt;bare_rat_number&gt;.ast }
+
+method bare_rat_number($/) {
+    my $nu := $&lt;nu&gt;.ast.compile_time_value;
+    my $de := $&lt;de&gt;.ast;
+    my $ast := $*W.add_constant(
+        'Rat', 'type_new', $nu, $de, :nocache(1));
+    $ast.node($/);
+    make $ast;
+}
+</code></pre><p>在某些时候，抽象语法树获得一个包含 <code>Rat</code> 类型常量的节点，其中 <code>$nu</code> 和 <code>$de</code> 部分为分子和分母。</p>
+<p>在我们的示例中，使用以 0.1 的形式写入的数字，它们首先传递 <code>dec_number</code> 标记：</p>
+<pre><code class="language-raku" data-lang="raku">token dec_number {
+    :dba('decimal number')
+    [
+    | $&lt;coeff&gt; = [ '.' &lt;frac=.decint&gt; ] &lt;escale&gt;?
+    | $&lt;coeff&gt; = [ &lt;int=.decint&gt; '.' &lt;frac=.decint&gt; ]
+                 &lt;escale&gt;?
+    | $&lt;coeff&gt; = [ &lt;int=.decint&gt; ] &lt;escale&gt;
+    ]
+}
+</code></pre><p>数字的整数和小数部分进入最终 Match 对象的 <code>&lt;int&gt;</code> 和 <code>&lt;frac&gt;</code> 键。此 grammar 标记的 action 操作方法相当复杂。让我告诉你。</p>
+<pre><code class="language-raku" data-lang="raku">method dec_number($/) {
+    if $&lt;escale&gt; { # wants a Num
+        make $*W.add_numeric_constant: $/, 'Num', ~$/;
+    } else { # wants a Rat
+        my $Int := $*W.find_symbol(['Int']);
+        my $parti;
+        my $partf;
+
+        # we build up the number in parts
+        if nqp::chars($&lt;int&gt;) {
+            $parti := $&lt;int&gt;.ast;
+        } else {
+            $parti := nqp::box_i(0, $Int);
+        }
+
+        if nqp::chars($&lt;frac&gt;) {
+            $partf := nqp::radix_I(
+                      10, $&lt;frac&gt;.Str, 0, 4, $Int);
+
+            $parti := nqp::mul_I($parti, $partf[1], $Int);
+            $parti := nqp::add_I($parti, $partf[0], $Int);
+
+            $partf := $partf[1];
+        } else {
+            $partf := nqp::box_i(1, $Int);
+        }
+
+        my $ast := $*W.add_constant(
+            'Rat', 'type_new', $parti, $partf,
+            :nocache(1));
+        $ast.node($/);
+        make $ast;
+    }
+}
+</code></pre><p>对于每个数字 0.1,0.2 和 0.3，上面的代码接收它们的整数和小数部分，准备两个整数，<code>$parti</code> 和 <code>$partf</code>，并将它们传递给我们在 <code>rat_number</code> action 中看到的新常量的相同构造函数。然后你得到一个 <code>Rat</code> 数。</p>
+<p>现在我们跳过一些细节，并将看看另一个有理数的重要部分，你必须要了解它们。</p>
+<p>在我们的示例中，整数和小数部分获得以下值：</p>
+<pre><code>$parti=1, $partf=10
+$parti=2, $partf=10
+$parti=3, $partf=10
+</code></pre><p>如果您破解 <a href="https://raku.online/2017/12/23/playing-with-code/">Rakudo 文件的本地副本</a>，您可以轻松地自己查看。</p>
+<p>或者，在命令行中使用 <code>--target=parse</code> 选项：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ raku --target<span style="color:#f92672">=</span>parse -e<span style="color:#e6db74">&#39;say 0.1 + 0.2 - 0.3&#39;</span>
+</code></pre></div><p>输出的一部分将包含我们想要查看的数据：</p>
+<pre><code>- 0: 0.1
+- value: 0.1
+    - number: 0.1
+    - numish: 0.1
+        - dec_number: 0.1
+        - frac: 1
+        - int: 0
+        - coeff: 0.1
+- 1: 0.2
+- value: 0.2
+    - number: 0.2
+    - numish: 0.2
+        - dec_number: 0.2
+        - coeff: 0.2
+        - frac: 2
+        - int: 0
+</code></pre><p>将数字表示为分数，很容易进行精确计算，这就是我们在输出中看到纯零的原因。</p>
+<p>回到我们的分数。如果您打印分子和分母（例如，使用 <code>nude</code> 方法），您将看到如果可能，该分数被标准化：</p>
+<pre><code>&gt; &lt;1/10&gt;.nude.say
+(1 10)
+</code></pre><pre><code>&gt; &lt;2/10&gt;.nude.say
+(1 5)
+</code></pre><pre><code>&gt; 0.2.nude.say
+(1 5)
+&gt; 0.3.nude.say
+(3 10)
+</code></pre><p>如您所见，我们有 1/5，而不是 2/10，它代表相同的数字，具有相同的精度。使用数字时，您不必担心找到两个分数的公分母，例如：</p>
+<pre><code>&gt; (0.1 + 0.2).nude.say
+(3 10)
+</code></pre><p>我希望今天在一个看似简单的单行程序背后没有太多的裸露。明天见到你与 Raku 有趣的另一部分！</p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents"></nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&text=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&is_video=false&description=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&title=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&name=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf&description=%e6%ac%a2%e8%bf%8e%e6%9d%a5%e5%88%b0%e4%bb%8a%e5%b9%b4%2012%2f25%20%e7%9a%84%20Raku%20One-Liner%20Advent%20Calendar%21%20%e7%9a%84%e7%ac%ac12%e5%a4%a9%e3%80%82%e4%bb%8a%e5%a4%a9%ef%bc%8c%e6%88%91%e4%bb%ac%e5%b0%86%e7%a0%94%e7%a9%b6%e4%b8%80%e4%b8%aa%e8%ae%a1%e7%ae%97%e9%9b%b6%e7%9a%84%e5%8d%95%e8%a1%8c%e7%a8%8b%e5%ba%8f%e3%80%82%0asay%200.1%20%2b%200.2%20-%200.3%20%e5%a6%82%e6%9e%9c%e6%82%a8%e7%86%9f%e6%82%89%e7%bc%96%e7%a8%8b%ef%bc%8c%e9%82%a3%e4%b9%88%e6%82%a8%e5%be%88%e6%b8%85%e6%a5%9a%ef%bc%8c%e5%8f%aa%e8%a6%81%e5%bc%80%e5%a7%8b%e4%bd%bf%e7%94%a8%e6%b5%ae%e7%82%b9%e8%bf%90%e7%ae%97%ef%bc%8c%e5%b0%b1%e4%bc%9a%e5%a4%b1%e5%8e%bb%e7%b2%be%e5%ba%a6%ef%bc%8c%e5%b9%b6%e4%b8%94%e5%be%88%e5%bf%ab%e5%b0%b1%e4%bc%9a%e9%9d%a2%e5%af%b9%e5%b0%8f%e9%94%99%e8%af%af%e3%80%82%0a%e6%82%a8%e5%8f%af%e8%83%bd%e8%bf%98%e7%9c%8b%e5%88%b0%e4%ba%86%e7%bd%91%e7%ab%99%ef%bc%8c0.30000000000000004.com%ef%bc%8c%e5%ae%83%e6%9c%89%e5%be%88%e5%a4%9a%e4%b8%8d%e5%90%8c%e7%9a%84%e7%bc%96%e7%a8%8b%e8%af%ad%e8%a8%80%e5%88%97%e8%a1%a8%ef%bc%8c%e4%bb%a5%e5%8f%8a%e5%ae%83%e4%bb%ac%e5%a6%82%e4%bd%95%e6%89%93%e5%8d%b0%e7%ae%80%e5%8d%95%e7%9a%84%e8%a1%a8%e8%be%be%e5%bc%8f%200.1%20%2b%200.2%e3%80%82%e5%9c%a8%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%83%85%e5%86%b5%e4%b8%8b%ef%bc%8c%e6%82%a8%e6%b2%a1%e6%9c%89%e5%be%97%e5%88%b0%200.3%20%e8%bf%99%e4%b8%aa%e5%87%86%e7%a1%ae%e5%80%bc%e3%80%82%e9%80%9a%e5%b8%b8%e5%bd%93%e4%bd%a0%e5%be%97%e5%88%b0%e9%9b%b6%e6%97%b6%ef%bc%8c%e5%ae%83%e5%ae%9e%e9%99%85%e4%b8%8a%e6%98%af%e5%9c%a8%e6%89%93%e5%8d%b0%e6%93%8d%e4%bd%9c%e6%9c%9f%e9%97%b4%e8%88%8d%e5%85%a5%e7%9a%84%e7%bb%93%e6%9e%9c%e3%80%82%0a%e5%9c%a8%20Raku%20%e4%b8%ad%ef%bc%8c0.1%20%2b%200.2%e6%ad%a3%e5%a5%bd%e6%98%af%200.3%ef%bc%8c%e4%bb%8a%e5%a4%a9%e7%9a%84%e5%8d%95%e8%a1%8c%e7%a8%8b%e5%ba%8f%e6%ad%a3%e5%a5%bd%e6%89%93%e5%8d%b0%e4%ba%86%e4%b8%80%e4%b8%aa%e9%9b%b6%e3%80%82%0a%e8%ae%a9%e6%88%91%e4%bb%ac%e7%a8%8d%e5%be%ae%e6%8e%a2%e8%ae%a8%e4%b8%80%e4%b8%8b%20Raku%20%e7%9a%84%e5%86%85%e9%83%a8%e7%bb%93%e6%9e%84%ef%bc%8c%e7%9c%8b%e7%9c%8b%e5%ae%83%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84%e3%80%82%e5%87%a0%e5%a4%a9%e5%89%8d%ef%bc%8c%e6%88%91%e4%bb%ac%e7%9c%8b%e5%88%b0%20Raku%20%e7%9a%84%20grammar%ef%bc%88%e5%9c%a8%20Rakudo%20%e7%bc%96%e8%af%91%e5%99%a8%e4%b8%ad%e5%ae%9e%e7%8e%b0%ef%bc%89%e5%85%b7%e6%9c%89%e4%bb%a5%e4%b8%8b%e6%a3%80%e6%b5%8b%e6%95%b0%e5%ad%97%e7%9a%84%e7%89%87%e6%ae%b5%ef%bc%9a%0atoken%20numish%20%7b%20%5b%20%7c%20%27NaN%27%20%26gt%3b%26gt%3b%20%7c%20%26lt%3binteger%26gt%3b%20%7c%20%26lt%3bdec_number%26gt%3b%20%7c%20%26lt%3brad_number%26gt%3b%20%7c%20%26lt%3brat_number%26gt%3b%20%7c%20%26lt%3bcomplex_number%26gt%3b%20%7c%20%27Inf%27%20%26gt%3b%26gt%3b%20%7c%20%24%26lt%3buinf%26gt%3b%3d%27%e2%88%9e%27%20%7c%20%26lt%3bunum%3d%3aNo%2b%3aNl%26gt%3b%20%5d%20%7d%20%e5%81%87%e5%a6%82%e4%bd%a0%e5%be%88%e7%86%9f%e6%82%89%20Raku%ef%bc%8c%e5%b0%b1%e4%bc%9a%e7%9f%a5%e9%81%93%20Raku%20%e4%bd%bf%e7%94%a8%e6%9c%89%e7%90%86%e6%95%b0%e6%9d%a5%e5%ad%98%e5%82%a8%e6%b5%ae%e7%82%b9%e6%95%b0%ef%bc%88%e5%a6%820.1%ef%bc%89%e8%bf%99%e4%b8%80%e4%ba%8b%e5%ae%9e%e5%8f%af%e4%bb%a5%e8%a7%a3%e9%87%8a%e4%b8%8a%e8%bf%b0%e8%a1%8c%e4%b8%ba%e3%80%82%e8%bf%99%e6%98%af%e5%af%b9%e7%9a%84%ef%bc%8c%e4%bd%86%e6%98%af%e7%9c%8b%e4%b8%80%e4%b8%8b%20grammar%ef%bc%8c%e4%bd%a0%e4%bc%9a%e5%8f%91%e7%8e%b0%e8%bf%99%e7%af%87%e6%96%87%e7%ab%a0%e6%9c%89%e7%82%b9%e9%95%bf%e3%80%82%0aGrammar%20%e4%b8%ad%e6%89%80%e8%b0%93%e7%9a%84%20rat_number%20%e6%98%af%e7%94%a8%e5%b0%96%e6%8b%ac%e5%8f%b7%e5%86%99%e7%9a%84%e6%95%b0%e5%ad%97%ef%bc%9a">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fwhats-behind-0-dot-1-plus-0-dot2-in-perl6%2f&t=%f0%9f%8e%84%2012%2f25.%20%e5%9c%a8%20Raku%20%e4%b8%ad%2c%200.1%20%2b%200.2%20%e8%83%8c%e5%90%8e%e7%9a%84%e4%b8%9c%e8%a5%bf">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>

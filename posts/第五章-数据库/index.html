@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> Flask 入门 - 数据库 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="Flask 入门 - 数据库" />
+<meta property="og:description" content="文档数据库和键值对数据库这两种数据库合称 NoSQL 数据库。
+SQL 数据库 表中有个特殊的列，称为主键，其值为表中各行的唯一标识符。表中还可以有称为外键的列，引用同一个表或不同表中某行的主键。行之间的这种联系称为关系，这是关系型数据库模型的基础。
+NoSQL 数据库 NoSQL 数据库一般使用集合代替表，使用文档代替记录。NoSQL 数据库采用的设计方式使联结变得困难，所以大多数数据库根本不支持这种操作。
+使用SQL还是NoSQL SQL 数据库擅于用高效且紧凑的形式存储结构化数据。这种数据库需要花费大量精力保证数据的一致性。NoSQL 数据库放宽了对这种一致性的要求，从而获得性能上的优势。
+Python 数据库框架 Flask-SQLAlchemy Flask-SQLAlchemy 是一个 Flask 扩展，简化了在 Flask 程序中使用 SQLAlchemy 的操作。SQLAlchemy 是一个很强大的关系型数据库框架，支持多种数据库后台。SQLAlchemy 提供了高层 ORM（Object-Relational Mapper，对象关系映射），也提供了使用数据库原生 SQL 的低层功能。
+(venv) $ pip install flask-sqlalchemy 在 Flask-SQLAlchemy 中, 数据库使用 URL 指定。 表 5-1 Flask-SQLAlchemy 数据库 URL
+   数据库引擎 URL     MySQL mysql://username:password@hostname/database   Postgres postgresql://username:password@hostname/database   SQLite（Unix） sqlite:////absolute/path/to/database   SQLite（Windows） sqlite:///c:/absolute/path/to/database    在这些 URL 中，hostname 表示 MySQL 服务所在的主机，可以是本地主机（localhost），也可以是远程服务器。数据库服务器上可以托管多个数据库，因此 database 表示要使用的数据库名。如果数据库需要进行认证，username 和 password 表示数据库用户密令。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/%E7%AC%AC%E4%BA%94%E7%AB%A0-%E6%95%B0%E6%8D%AE%E5%BA%93/" />
+<meta property="article:published_time" content="2017-01-09T16:16:21+00:00" />
+<meta property="article:modified_time" content="2017-01-09T16:16:21+00:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Flask 入门 - 数据库"/>
+<meta name="twitter:description" content="文档数据库和键值对数据库这两种数据库合称 NoSQL 数据库。
+SQL 数据库 表中有个特殊的列，称为主键，其值为表中各行的唯一标识符。表中还可以有称为外键的列，引用同一个表或不同表中某行的主键。行之间的这种联系称为关系，这是关系型数据库模型的基础。
+NoSQL 数据库 NoSQL 数据库一般使用集合代替表，使用文档代替记录。NoSQL 数据库采用的设计方式使联结变得困难，所以大多数数据库根本不支持这种操作。
+使用SQL还是NoSQL SQL 数据库擅于用高效且紧凑的形式存储结构化数据。这种数据库需要花费大量精力保证数据的一致性。NoSQL 数据库放宽了对这种一致性的要求，从而获得性能上的优势。
+Python 数据库框架 Flask-SQLAlchemy Flask-SQLAlchemy 是一个 Flask 扩展，简化了在 Flask 程序中使用 SQLAlchemy 的操作。SQLAlchemy 是一个很强大的关系型数据库框架，支持多种数据库后台。SQLAlchemy 提供了高层 ORM（Object-Relational Mapper，对象关系映射），也提供了使用数据库原生 SQL 的低层功能。
+(venv) $ pip install flask-sqlalchemy 在 Flask-SQLAlchemy 中, 数据库使用 URL 指定。 表 5-1 Flask-SQLAlchemy 数据库 URL
+   数据库引擎 URL     MySQL mysql://username:password@hostname/database   Postgres postgresql://username:password@hostname/database   SQLite（Unix） sqlite:////absolute/path/to/database   SQLite（Windows） sqlite:///c:/absolute/path/to/database    在这些 URL 中，hostname 表示 MySQL 服务所在的主机，可以是本地主机（localhost），也可以是远程服务器。数据库服务器上可以托管多个数据库，因此 database 表示要使用的数据库名。如果数据库需要进行认证，username 和 password 表示数据库用户密令。"/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/%E7%AC%AC%E4%BA%8C%E7%AB%A0-app-%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/%E7%AC%AC%E5%85%AD%E7%AB%A0-%E7%94%B5%E5%AD%90%E9%82%AE%E4%BB%B6/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&text=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&is_video=false&description=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&name=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93&description=%e6%96%87%e6%a1%a3%e6%95%b0%e6%8d%ae%e5%ba%93%e5%92%8c%e9%94%ae%e5%80%bc%e5%af%b9%e6%95%b0%e6%8d%ae%e5%ba%93%e8%bf%99%e4%b8%a4%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%88%e7%a7%b0%20NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e3%80%82%0aSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%20%e8%a1%a8%e4%b8%ad%e6%9c%89%e4%b8%aa%e7%89%b9%e6%ae%8a%e7%9a%84%e5%88%97%ef%bc%8c%e7%a7%b0%e4%b8%ba%e4%b8%bb%e9%94%ae%ef%bc%8c%e5%85%b6%e5%80%bc%e4%b8%ba%e8%a1%a8%e4%b8%ad%e5%90%84%e8%a1%8c%e7%9a%84%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%e7%ac%a6%e3%80%82%e8%a1%a8%e4%b8%ad%e8%bf%98%e5%8f%af%e4%bb%a5%e6%9c%89%e7%a7%b0%e4%b8%ba%e5%a4%96%e9%94%ae%e7%9a%84%e5%88%97%ef%bc%8c%e5%bc%95%e7%94%a8%e5%90%8c%e4%b8%80%e4%b8%aa%e8%a1%a8%e6%88%96%e4%b8%8d%e5%90%8c%e8%a1%a8%e4%b8%ad%e6%9f%90%e8%a1%8c%e7%9a%84%e4%b8%bb%e9%94%ae%e3%80%82%e8%a1%8c%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%99%e7%a7%8d%e8%81%94%e7%b3%bb%e7%a7%b0%e4%b8%ba%e5%85%b3%e7%b3%bb%ef%bc%8c%e8%bf%99%e6%98%af%e5%85%b3%e7%b3%bb%e5%9e%8b%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a8%a1%e5%9e%8b%e7%9a%84%e5%9f%ba%e7%a1%80%e3%80%82%0aNoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%20NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e4%b8%80%e8%88%ac%e4%bd%bf%e7%94%a8%e9%9b%86%e5%90%88%e4%bb%a3%e6%9b%bf%e8%a1%a8%ef%bc%8c%e4%bd%bf%e7%94%a8%e6%96%87%e6%a1%a3%e4%bb%a3%e6%9b%bf%e8%ae%b0%e5%bd%95%e3%80%82NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e9%87%87%e7%94%a8%e7%9a%84%e8%ae%be%e8%ae%a1%e6%96%b9%e5%bc%8f%e4%bd%bf%e8%81%94%e7%bb%93%e5%8f%98%e5%be%97%e5%9b%b0%e9%9a%be%ef%bc%8c%e6%89%80%e4%bb%a5%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a0%b9%e6%9c%ac%e4%b8%8d%e6%94%af%e6%8c%81%e8%bf%99%e7%a7%8d%e6%93%8d%e4%bd%9c%e3%80%82%0a%e4%bd%bf%e7%94%a8SQL%e8%bf%98%e6%98%afNoSQL%20SQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%93%85%e4%ba%8e%e7%94%a8%e9%ab%98%e6%95%88%e4%b8%94%e7%b4%a7%e5%87%91%e7%9a%84%e5%bd%a2%e5%bc%8f%e5%ad%98%e5%82%a8%e7%bb%93%e6%9e%84%e5%8c%96%e6%95%b0%e6%8d%ae%e3%80%82%e8%bf%99%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e9%9c%80%e8%a6%81%e8%8a%b1%e8%b4%b9%e5%a4%a7%e9%87%8f%e7%b2%be%e5%8a%9b%e4%bf%9d%e8%af%81%e6%95%b0%e6%8d%ae%e7%9a%84%e4%b8%80%e8%87%b4%e6%80%a7%e3%80%82NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%94%be%e5%ae%bd%e4%ba%86%e5%af%b9%e8%bf%99%e7%a7%8d%e4%b8%80%e8%87%b4%e6%80%a7%e7%9a%84%e8%a6%81%e6%b1%82%ef%bc%8c%e4%bb%8e%e8%80%8c%e8%8e%b7%e5%be%97%e6%80%a7%e8%83%bd%e4%b8%8a%e7%9a%84%e4%bc%98%e5%8a%bf%e3%80%82%0aPython%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a1%86%e6%9e%b6%20Flask-SQLAlchemy%20Flask-SQLAlchemy%20%e6%98%af%e4%b8%80%e4%b8%aa%20Flask%20%e6%89%a9%e5%b1%95%ef%bc%8c%e7%ae%80%e5%8c%96%e4%ba%86%e5%9c%a8%20Flask%20%e7%a8%8b%e5%ba%8f%e4%b8%ad%e4%bd%bf%e7%94%a8%20SQLAlchemy%20%e7%9a%84%e6%93%8d%e4%bd%9c%e3%80%82SQLAlchemy%20%e6%98%af%e4%b8%80%e4%b8%aa%e5%be%88%e5%bc%ba%e5%a4%a7%e7%9a%84%e5%85%b3%e7%b3%bb%e5%9e%8b%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a1%86%e6%9e%b6%ef%bc%8c%e6%94%af%e6%8c%81%e5%a4%9a%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%8e%e5%8f%b0%e3%80%82SQLAlchemy%20%e6%8f%90%e4%be%9b%e4%ba%86%e9%ab%98%e5%b1%82%20ORM%ef%bc%88Object-Relational%20Mapper%ef%bc%8c%e5%af%b9%e8%b1%a1%e5%85%b3%e7%b3%bb%e6%98%a0%e5%b0%84%ef%bc%89%ef%bc%8c%e4%b9%9f%e6%8f%90%e4%be%9b%e4%ba%86%e4%bd%bf%e7%94%a8%e6%95%b0%e6%8d%ae%e5%ba%93%e5%8e%9f%e7%94%9f%20SQL%20%e7%9a%84%e4%bd%8e%e5%b1%82%e5%8a%9f%e8%83%bd%e3%80%82%0a%28venv%29%20%24%20pip%20install%20flask-sqlalchemy%20%e5%9c%a8%20Flask-SQLAlchemy%20%e4%b8%ad%2c%20%e6%95%b0%e6%8d%ae%e5%ba%93%e4%bd%bf%e7%94%a8%20URL%20%e6%8c%87%e5%ae%9a%e3%80%82%20%e8%a1%a8%205-1%20Flask-SQLAlchemy%20%e6%95%b0%e6%8d%ae%e5%ba%93%20URL%0a%20%20%20%e6%95%b0%e6%8d%ae%e5%ba%93%e5%bc%95%e6%93%8e%20URL%20%20%20%20%20MySQL%20mysql%3a%2f%2fusername%3apassword%40hostname%2fdatabase%20%20%20Postgres%20postgresql%3a%2f%2fusername%3apassword%40hostname%2fdatabase%20%20%20SQLite%ef%bc%88Unix%ef%bc%89%20sqlite%3a%2f%2f%2f%2fabsolute%2fpath%2fto%2fdatabase%20%20%20SQLite%ef%bc%88Windows%ef%bc%89%20sqlite%3a%2f%2f%2fc%3a%2fabsolute%2fpath%2fto%2fdatabase%20%20%20%20%e5%9c%a8%e8%bf%99%e4%ba%9b%20URL%20%e4%b8%ad%ef%bc%8chostname%20%e8%a1%a8%e7%a4%ba%20MySQL%20%e6%9c%8d%e5%8a%a1%e6%89%80%e5%9c%a8%e7%9a%84%e4%b8%bb%e6%9c%ba%ef%bc%8c%e5%8f%af%e4%bb%a5%e6%98%af%e6%9c%ac%e5%9c%b0%e4%b8%bb%e6%9c%ba%ef%bc%88localhost%ef%bc%89%ef%bc%8c%e4%b9%9f%e5%8f%af%e4%bb%a5%e6%98%af%e8%bf%9c%e7%a8%8b%e6%9c%8d%e5%8a%a1%e5%99%a8%e3%80%82%e6%95%b0%e6%8d%ae%e5%ba%93%e6%9c%8d%e5%8a%a1%e5%99%a8%e4%b8%8a%e5%8f%af%e4%bb%a5%e6%89%98%e7%ae%a1%e5%a4%9a%e4%b8%aa%e6%95%b0%e6%8d%ae%e5%ba%93%ef%bc%8c%e5%9b%a0%e6%ad%a4%20database%20%e8%a1%a8%e7%a4%ba%e8%a6%81%e4%bd%bf%e7%94%a8%e7%9a%84%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%8d%e3%80%82%e5%a6%82%e6%9e%9c%e6%95%b0%e6%8d%ae%e5%ba%93%e9%9c%80%e8%a6%81%e8%bf%9b%e8%a1%8c%e8%ae%a4%e8%af%81%ef%bc%8cusername%20%e5%92%8c%20password%20%e8%a1%a8%e7%a4%ba%e6%95%b0%e6%8d%ae%e5%ba%93%e7%94%a8%e6%88%b7%e5%af%86%e4%bb%a4%e3%80%82">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&t=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#sql-数据库">SQL 数据库</a></li>
+    <li><a href="#nosql-数据库">NoSQL 数据库</a></li>
+    <li><a href="#使用sql还是nosql">使用SQL还是NoSQL</a></li>
+    <li><a href="#python-数据库框架-flask-sqlalchemy">Python 数据库框架 Flask-SQLAlchemy</a></li>
+    <li><a href="#定义模型">定义模型</a></li>
+    <li><a href="#关系">关系</a></li>
+    <li><a href="#数据库操作">数据库操作</a>
+      <ul>
+        <li><a href="#创建表">创建表</a></li>
+        <li><a href="#插入行">插入行</a></li>
+        <li><a href="#修改行">修改行</a></li>
+        <li><a href="#删除行">删除行</a></li>
+        <li><a href="#查询行">查询行</a></li>
+        <li><a href="#在视图函数中操作数据库">在视图函数中操作数据库</a></li>
+        <li><a href="#集成-python-shell">集成 Python shell</a></li>
+      </ul>
+    </li>
+    <li><a href="#使用-flask-migrate-实现数据库迁移">使用 Flask-Migrate 实现数据库迁移</a>
+      <ul>
+        <li><a href="#创建迁移仓库">创建迁移仓库</a></li>
+        <li><a href="#创建迁移脚本">创建迁移脚本</a></li>
+        <li><a href="#更新数据库">更新数据库</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        Flask 入门 - 数据库
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2017-01-09 16:16:21 &#43;0000 UTC" itemprop="datePublished">2017-01-09</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <p>文档数据库和键值对数据库这两种数据库合称 <code>NoSQL</code> 数据库。</p>
+<h2 id="sql-数据库">SQL 数据库</h2>
+<p>表中有个特殊的列，称为主键，其值为表中各行的唯一标识符。表中还可以有称为外键的列，引用同一个表或不同表中某行的主键。行之间的这种联系称为关系，这是关系型数据库模型的基础。</p>
+<h2 id="nosql-数据库">NoSQL 数据库</h2>
+<p>NoSQL 数据库一般使用集合代替表，使用文档代替记录。NoSQL 数据库采用的设计方式使联结变得困难，所以大多数数据库根本不支持这种操作。</p>
+<h2 id="使用sql还是nosql">使用SQL还是NoSQL</h2>
+<p>SQL 数据库擅于用高效且紧凑的形式存储结构化数据。这种数据库需要花费大量精力保证数据的一致性。NoSQL 数据库放宽了对这种一致性的要求，从而获得性能上的优势。</p>
+<h2 id="python-数据库框架-flask-sqlalchemy">Python 数据库框架 Flask-SQLAlchemy</h2>
+<p>Flask-SQLAlchemy 是一个 Flask 扩展，简化了在 Flask 程序中使用 SQLAlchemy 的操作。SQLAlchemy 是一个很强大的关系型数据库框架，支持多种数据库后台。SQLAlchemy 提供了高层 ORM（Object-Relational Mapper，对象关系映射），也提供了使用数据库原生 SQL 的低层功能。</p>
+<pre><code>(venv) $ pip install flask-sqlalchemy
+</code></pre><p>在 Flask-SQLAlchemy 中, 数据库使用 URL 指定。
+表 5-1 Flask-SQLAlchemy 数据库 URL</p>
+<table>
+<thead>
+<tr>
+<th align="left">数据库引擎</th>
+<th align="left">URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MySQL</td>
+<td align="left">mysql://username:password@hostname/database</td>
+</tr>
+<tr>
+<td align="left">Postgres</td>
+<td align="left">postgresql://username:password@hostname/database</td>
+</tr>
+<tr>
+<td align="left">SQLite（Unix）</td>
+<td align="left">sqlite:////absolute/path/to/database</td>
+</tr>
+<tr>
+<td align="left">SQLite（Windows）</td>
+<td align="left">sqlite:///c:/absolute/path/to/database</td>
+</tr>
+</tbody>
+</table>
+<p>在这些 URL 中，hostname 表示 MySQL 服务所在的主机，可以是本地主机（localhost），也可以是远程服务器。数据库服务器上可以托管多个数据库，因此 database 表示要使用的数据库名。如果数据库需要进行认证，username 和 password 表示数据库用户密令。</p>
+<blockquote>
+<p>SQLite 数据库不需要使用服务器，因此不用指定 hostname、username 和 password。URL 中的 database 是硬盘上文件的文件名。</p>
+</blockquote>
+<p>程序使用的数据库 URL 必须保存到 Flask 配置对象的 <code>SQLALCHEMY_DATABASE_URI</code> 键中。配
+置对象中还有一个很有用的选项，即 <code>SQLALCHEMY_COMMIT_ON_TEARDOWN</code> 键，将其设为 True 时，每次请求结束后都会自动提交数据库中的变动。示例 5-1 展示了如何初始化及配置一个简单的 SQLite 数据库。</p>
+<p>示例 5-1 hello.py: 配置数据库</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> flask_sqlalchemy <span style="color:#f92672">import</span> SQLAlchemy
+
+basedir <span style="color:#f92672">=</span> os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>abspath(os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>dirname(__file__))
+app <span style="color:#f92672">=</span> Flask(__name__)
+app<span style="color:#f92672">.</span>config[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">SQLALCHEMY_DATABASE_URI</span><span style="color:#e6db74">&#39;</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">sqlite:///</span><span style="color:#e6db74">&#39;</span> <span style="color:#f92672">+</span> os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>join(basedir, <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">data.sqlite</span><span style="color:#e6db74">&#39;</span>)
+app<span style="color:#f92672">.</span>config[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">SQLALCHEMY_COMMIT_ON_TEARDOWN</span><span style="color:#e6db74">&#39;</span>] <span style="color:#f92672">=</span> True
+
+db <span style="color:#f92672">=</span> SQLAlchemy(app)
+</code></pre></div><p>db 对象是 SQLAlchemy 类的实例, 表示程序使用的数据库。data.sqlite 是数据库的名字, 上面使用 + 号拼接了数据库的绝对路径。</p>
+<h2 id="定义模型">定义模型</h2>
+<p>模型表示程序使用的<strong>持久化</strong>化的实体。在 ORM(对象关系映射)中, 模型一般是一个 Python 类, 类中的<strong>属性</strong>对应着数据库表中的<strong>列</strong>。</p>
+<p>Flask-SQLAlchemy 创建的数据库实例(例如 db)为模型提供了一个基类以及一系列辅助类和辅助函数, 可以用于定义模型的结构。下面把数据库中的  roles 表和 users 表定义为 模型 Role 和模型 User。</p>
+<p>示例 5-2 hello.py: 定义 Role 和 User 模型</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Role</span>(db<span style="color:#f92672">.</span>Model):
+    __tablename__ <span style="color:#f92672">=</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">roles</span><span style="color:#e6db74">&#39;</span>
+    id <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>Column(db<span style="color:#f92672">.</span>Integer, primary_key<span style="color:#f92672">=</span>True)
+    name <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>Column(db<span style="color:#f92672">.</span>String(<span style="color:#ae81ff">64</span>), unique<span style="color:#f92672">=</span>True)
+
+    <span style="color:#66d9ef">def</span> __repr__(self):
+        <span style="color:#66d9ef">return</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">&lt;Role </span><span style="color:#e6db74">%r</span><span style="color:#e6db74">&gt;</span><span style="color:#e6db74">&#39;</span> <span style="color:#f92672">%</span> self<span style="color:#f92672">.</span>name
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">User</span>(db<span style="color:#f92672">.</span>Model):
+    __tablename__ <span style="color:#f92672">=</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">users</span><span style="color:#e6db74">&#39;</span>
+    id <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>Column(db<span style="color:#f92672">.</span>Integer, primary_key<span style="color:#f92672">=</span>True)
+    username <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>Column(db<span style="color:#f92672">.</span>String(<span style="color:#ae81ff">64</span>), unique<span style="color:#f92672">=</span>True, index<span style="color:#f92672">=</span>True)
+
+    <span style="color:#66d9ef">def</span> __repr__(self):
+        <span style="color:#66d9ef">return</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">&lt;User </span><span style="color:#e6db74">%r</span><span style="color:#e6db74">&gt;</span><span style="color:#e6db74">&#39;</span> <span style="color:#f92672">%</span> self<span style="color:#f92672">.</span>username
+</code></pre></div><p><strong>类变量</strong><code>__tablename__</code>定义在数据库中使用的表名。如果没有定义 <code>__tablename__</code> , Flask-SQLAlchemy 会使用一个默认名字。<code>id</code>/<code>name</code>/<code>username</code> 都是模型中的属性,  被定义为 db.Column 类的实例, 代表数据库中的<strong>列</strong>。</p>
+<p><code>db.Column</code> 类构造函数的第一个参数是数据库列和模型属性的<strong>类型</strong>。表 5-2 列出了一些可用的・<strong>列类型</strong>以及在模型中使用的 Python 类型。</p>
+<p>表5-2 最常用的SQLAlchemy 列类型</p>
+<table>
+<thead>
+<tr>
+<th align="center">类型名</th>
+<th align="center">Python类型</th>
+<th align="left">说  明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">Integer</td>
+<td align="center">int</td>
+<td align="left">普通整数，一般是 32 位</td>
+</tr>
+<tr>
+<td align="center">SmallInteger</td>
+<td align="center">int</td>
+<td align="left">取值范围小的整数，一般是 16 位</td>
+</tr>
+<tr>
+<td align="center">BigInteger</td>
+<td align="center">int 或 long</td>
+<td align="left">不限制精度的整数</td>
+</tr>
+<tr>
+<td align="center">Float</td>
+<td align="center">float</td>
+<td align="left">浮点数</td>
+</tr>
+<tr>
+<td align="center">Numeric</td>
+<td align="center">decimal.Decimal</td>
+<td align="left">定点数</td>
+</tr>
+<tr>
+<td align="center">String</td>
+<td align="center">str</td>
+<td align="left">变长字符串</td>
+</tr>
+<tr>
+<td align="center">Text</td>
+<td align="center">str</td>
+<td align="left">变长字符串，对较长或不限长度的字符串做了优化</td>
+</tr>
+<tr>
+<td align="center">Unicode</td>
+<td align="center">unicode</td>
+<td align="left">变长 Unicode 字符串</td>
+</tr>
+<tr>
+<td align="center">UnicodeText</td>
+<td align="center">unicode</td>
+<td align="left">变长 Unicode 字符串，对较长或不限长度的字符串做了优化</td>
+</tr>
+<tr>
+<td align="center">Boolean</td>
+<td align="center">bool</td>
+<td align="left">布尔值</td>
+</tr>
+<tr>
+<td align="center">Date</td>
+<td align="center">datetime.date</td>
+<td align="left">日期</td>
+</tr>
+<tr>
+<td align="center">Time</td>
+<td align="center">datetime.time</td>
+<td align="left">时间</td>
+</tr>
+<tr>
+<td align="center">DateTime</td>
+<td align="center">datetime.datetime</td>
+<td align="left">日期和时间</td>
+</tr>
+<tr>
+<td align="center">Interval</td>
+<td align="center">datetime.timedelta</td>
+<td align="left">时间间隔</td>
+</tr>
+<tr>
+<td align="center">Enum</td>
+<td align="center">str</td>
+<td align="left">一组字符串</td>
+</tr>
+<tr>
+<td align="center">PickleType</td>
+<td align="center">任何 Python 对象</td>
+<td align="left">自动使用 Pickle 序列化</td>
+</tr>
+<tr>
+<td align="center">LargeBinary</td>
+<td align="center">str</td>
+<td align="left">二进制文件</td>
+</tr>
+</tbody>
+</table>
+<p>db.Column 中其余的参数指定属性的配置选项。表 5-3 列出了一些可用选项。</p>
+<p>表5-3 最常用的 SQLAlchemy 列选项</p>
+<table>
+<thead>
+<tr>
+<th align="center">选项名</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">primary_key</td>
+<td align="left">如果设为 True ，这列就是表的主键</td>
+</tr>
+<tr>
+<td align="center">unique</td>
+<td align="left">如果设为 True ，这列不允许出现重复的值</td>
+</tr>
+<tr>
+<td align="center">index</td>
+<td align="left">如果设为 True ，为这列创建索引，提升查询效率</td>
+</tr>
+<tr>
+<td align="center">nullable</td>
+<td align="left">如果设为 True ，这列允许使用空值；如果设为 False ，这列不允许使用空值</td>
+</tr>
+<tr>
+<td align="center">default</td>
+<td align="left">为这列定义默认值</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Flask-SQLAlchemy 要求每个模型都要定义 主键 ，这一列经常命名为 id 。</p>
+</blockquote>
+<p>虽然没有强制要求，但这两个模型都定义了 <strong>repr()</strong> 方法，返回一个具有可读性的字符串表示模型，可在调试和测试时使用。</p>
+<h2 id="关系">关系</h2>
+<p>关系型数据库使用关系把不同表中的行联系起来。图 5-1 所示的关系图表示用户和角色之间的一种简单关系。这是角色到用户的一对多关系，因为一个角色可属于多个用户，而每个用户都只能有一个角色。</p>
+<p>图 5-1 中的一对多关系在<strong>模型</strong>中的表示方法如示例 5-3 所示:
+示例 5-3 hello.py: 关系</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Role</span>(db<span style="color:#f92672">.</span>Model):
+    <span style="color:#75715e"># ...</span>
+    users <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>relationship(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span>, backref<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">role</span><span style="color:#e6db74">&#39;</span>)
+    
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">User</span>(db<span style="color:#f92672">.</span>Model):
+    <span style="color:#75715e"># ...</span>
+    role_id <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>Column(db<span style="color:#f92672">.</span>Integer, db<span style="color:#f92672">.</span>ForeignKey(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">roles.id</span><span style="color:#e6db74">&#39;</span>))
+</code></pre></div><p>如图 5-1 所示, 关系使用了 users 表中的外键连接了两行。添加到 User 模型中的 role_id 列被定义为外键, 就是这个外键建立起了关系。传给 db.ForeignKey() 的参数 <code>roles.id</code> 表明, 这列的值是 roles 表中行的 id 值。</p>
+<p>对于一个 Role 类的<strong>实例</strong>, 其 users 属性将返回<strong>与角色相关联</strong>的用户组成的<strong>列表</strong>。 db.relationship() 的第一个参数表明这个关系的另一端是哪个模型。关系表明有两方, 一方是 Role, 一方是 User。</p>
+<p>db.relationship() 中的 backref 参数向 User 模型(类)中<strong>添加了一个 role 属性</strong>, 它是一个 Role 的实例, 从而定义反向关系。这一属性可替代 role_id 访问 Role 模型。
+注意, 这时候 User 类中的属性有 <strong>tablename</strong>、id、username、role_id、还有 role 共 5 个属性。</p>
+<p>大多数情况下， db.relationship() 都能自行找到关系中的外键，但有时却无法决定把哪一列作为外键。例如，如果 User 模型中有两个或以上的列定义为 Role 模型的外键，SQLAlchemy 就不知道该使用哪列。如果无法决定外键，你就要为 db.relationship() 提供
+额外参数，从而确定所用外键。表 5-4 列出了定义关系时常用的配置选项。</p>
+<p><strong>表5-4　常用的SQLAlchemy关系选项</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">选项名</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">backref</td>
+<td align="left">在关系的另一个模型中添加反向引用</td>
+</tr>
+<tr>
+<td align="center">primaryjoin</td>
+<td align="left">明确指定两个模型之间使用的联结条件。只在模棱两可的关系中需要指定</td>
+</tr>
+<tr>
+<td align="center">lazy</td>
+<td align="left">指定如何加载相关记录。可选值有 select （首次访问时按需加载）、 immediate （源对象加载后就加载）、 joined （加载记录，但使用联结）、 subquery （立即加载，但使用子查询），noload （永不加载）和 dynamic （不加载记录，但提供加载记录的查询）</td>
+</tr>
+<tr>
+<td align="center">uselist</td>
+<td align="left">如果设为 Fales ，不使用列表，而使用标量值</td>
+</tr>
+<tr>
+<td align="center">order_by</td>
+<td align="left">指定关系中记录的排序方式</td>
+</tr>
+<tr>
+<td align="center">secondary</td>
+<td align="left">指定多对多关系中关系表的名字</td>
+</tr>
+<tr>
+<td align="center">secondaryjoin</td>
+<td align="left">SQLAlchemy 无法自行决定时，指定多对多关系中的二级联结条件</td>
+</tr>
+</tbody>
+</table>
+<h2 id="数据库操作">数据库操作</h2>
+<p>在 Python shell 中操作数据库。</p>
+<h3 id="创建表">创建表</h3>
+<p>让 Flask-SQLAlchemy 根据模型类型创建数据库。 方法是使用 <code>db.create_all()</code> 函数:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">(venv) <span style="color:#960050;background-color:#1e0010">$</span> python hello<span style="color:#f92672">.</span>py shell
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">from</span> hello <span style="color:#f92672">import</span> db <span style="color:#75715e"># hello 是一个包, db 是包中的变量</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>create_all()
+</code></pre></div><p>这会在程序的根目录下创建一个名为 data.sqlite 的数据库文件。这个数据库的名字是在配置中指定的。如果数据库表已经存在于数据库中, 那么 db.create_all() 不会重新创建或更新这个表。如果修改模型后要把改动应用到现有数据库中, 那更新<strong>现有数据库</strong>的粗暴方式是先删除旧表再重建新表:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>drop_all()
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>create_all()
+</code></pre></div><p>这样会把数据库中原有的数据都销毁了。本章末尾会使用数据库迁移工具来达到更好的解决方法。</p>
+<h3 id="插入行">插入行</h3>
+<p>我们先创建一些角色和用户:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e"># 创建三个角色</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">from</span> hello <span style="color:#f92672">import</span> Role, User
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> admin_role <span style="color:#f92672">=</span> Role(name<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">Admin</span><span style="color:#e6db74">&#39;</span>)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> mod_role   <span style="color:#f92672">=</span> Role(name<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">Moderator</span><span style="color:#e6db74">&#39;</span>)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_role  <span style="color:#f92672">=</span> Role(name<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span>)
+
+<span style="color:#75715e"># 创建三个用户</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_john  <span style="color:#f92672">=</span> User(username<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">John</span><span style="color:#e6db74">&#39;</span>, role<span style="color:#f92672">=</span>admin_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_susan <span style="color:#f92672">=</span> User(username<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">susan</span><span style="color:#e6db74">&#39;</span>, role<span style="color:#f92672">=</span>user_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_david <span style="color:#f92672">=</span> User(username<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">david</span><span style="color:#e6db74">&#39;</span>, role<span style="color:#f92672">=</span>user_role)
+</code></pre></div><p>模型类的构造函数接受的参数是使用<strong>关键字参数</strong>指定的模型属性的初始值。(实际上是初始化一个 role/user 对象)。注意 role 属性也可以使用, 虽然它<strong>不是真正的数据库列</strong>, 但却是一对多关系的高级表示。这些新建对象的 <strong>id属性</strong>并没有明确设定, 因为主键是由 Flask-SQLAlchemy 管理的。现在这些对象只存在于 Python 中, 还未写入数据库, 因此 id 尚未被赋值:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">print</span>(admin_role<span style="color:#f92672">.</span>id)
+None
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">print</span>(user_susan<span style="color:#f92672">.</span>id)
+None
+<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>
+</code></pre></div><p>通过<strong>数据库会话</strong>(db.session)来管理对数据库所做的改动。在把对象写入数据库之前, 先要将这些对象添加到会话中:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(admin_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(mod_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(user_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(user_john)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(user_susan)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(user_david)
+</code></pre></div><p>或者简写为:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add_all([admin_role, mod_role, user_role, user_john, user_susan, user_david])
+</code></pre></div><p>把对象添加(想想 git add)到会话中后我们还需要调用 commit() 方法<strong>提交</strong>会话(想想 git commit)：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>commit()
+</code></pre></div><p>提交后就会执行数据库语句, 再次查看 id 属性，现在它们已经赋值了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">print</span>(admin_role<span style="color:#f92672">.</span>id) <span style="color:#75715e"># 1</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">print</span>(mod_role<span style="color:#f92672">.</span>id)   <span style="color:#75715e"># 2</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">print</span>(user_role<span style="color:#f92672">.</span>id)  <span style="color:#75715e"># 3</span>
+</code></pre></div><p>数据库会话(session)能保证数据库的<strong>一致性</strong>。提交操作使用<strong>原子方式</strong>把会话中的对象<strong>全部</strong>写入数据库。如果在写入会话的过程中发生了错误, 那么<strong>整个会话</strong>都会失效。如果你始终把相关改动放在会话中提交, 就能避免因<strong>部分更新</strong>导致的数据库不一致性。</p>
+<blockquote>
+<p>数据库会话也可回滚。调用 db.session.rollback() 后, 添加到数据库会话中的所有对象都会还原到它们在数据库中时的状态。</p>
+</blockquote>
+<h3 id="修改行">修改行</h3>
+<p>在<strong>数据库会话</strong>上调用 add() 方法也能更新模型。我们继续在之前的 shell 会话中进行操作:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e"># 把 Admin 这个角色重命名为 Administrator</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> admin_role<span style="color:#f92672">.</span>name <span style="color:#f92672">=</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">Administrator</span><span style="color:#e6db74">&#39;</span> <span style="color:#75715e"># 对管理员角色进行重命名</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(admin_role)
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>commit() <span style="color:#75715e"># 提交</span>
+</code></pre></div><h3 id="删除行">删除行</h3>
+<p>数据库会话中的 delete() 方法用于从数据库中删除数据(想想 git rm/delete):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>delete(mod_role) <span style="color:#75715e"># 删除 mod_role</span>
+db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>commit() <span style="color:#75715e"># 提交</span>
+</code></pre></div><p>注意，删除与插入和更新一样，提交数据库会话后才会执行。</p>
+<h3 id="查询行">查询行</h3>
+<p>Flask-SQLAlchemy 为每个模型类都提供了 query 对象。最基本的模型查询是取回对应表中的所有记录:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> Role<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>all()
+[<span style="color:#f92672">&lt;</span>Role <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">Administrator</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>Role <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>]
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> User<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>all()
+[<span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">john</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">susan</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">david</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>]
+</code></pre></div><p>使用<strong>过滤器</strong>可以过滤查询结果:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e"># 过滤列 role 为 user_role 的行</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> User<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>filter_by(role<span style="color:#f92672">=</span>user_role)<span style="color:#f92672">.</span>all()
+[<span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">susan</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">david</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>]
+</code></pre></div><p>若要查看 SQLAlchemy 为查询生成的原生 SQL 查询语句，只需把 query 对象转换成字符串：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">str(User<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>filter_by(role<span style="color:#f92672">=</span>user_role))
+<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">SELECT users.id AS users_id, users.username AS users_username,users.role_id AS users_role_id FROM users WHERE :param_1 = users.role_id</span><span style="color:#e6db74">&#39;</span>
+</code></pre></div><p>如果你退出了 Python shell 的话, 前面例子中创建的对象就不会以 Python 对象的形式存在，而是作为各自数据库表中的行存在。如果你打开了一个新的 shell 会话, 就要从数据库中读取行, 再重新创建 Python 对象。最基本的模型查询是取回对应表中的所有记录</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e"># 发起一个查询, 加载名为 User 的用户角色</span>
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_role <span style="color:#f92672">=</span> Role<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>filter_by(name<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span>)<span style="color:#f92672">.</span>first()
+</code></pre></div><p>filter_by() 等过滤器在 query 对象上调用，返回一个更精确的 query 对象。多个过滤器可以一起调用，直到获得所需结果。</p>
+<p>表 5-5 列出了可在 query 对象上调用的常用过滤器。</p>
+<p><strong>表5-5　常用的SQLAlchemy查询过滤器</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">过滤器</th>
+<th align="left">说 明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">filter()</td>
+<td align="left">把过滤器添加到原查询上，返回一个新查询</td>
+</tr>
+<tr>
+<td align="center">filter_by()</td>
+<td align="left">把等值过滤器添加到原查询上，返回一个新查询</td>
+</tr>
+<tr>
+<td align="center">limit()</td>
+<td align="left">使用指定的值限制原查询返回的结果数量，返回一个新查询</td>
+</tr>
+<tr>
+<td align="center">offset()</td>
+<td align="left">偏移原查询返回的结果，返回一个新查询</td>
+</tr>
+<tr>
+<td align="center">order_by()</td>
+<td align="left">根据指定条件对原查询结果进行排序，返回一个新查询</td>
+</tr>
+<tr>
+<td align="center">group_by()</td>
+<td align="left">根据指定条件对原查询结果进行分组，返回一个新查询</td>
+</tr>
+</tbody>
+</table>
+<p>在查询上应用指定的过滤器后, 通过调用 <code>all()</code> 执行查询, 以「列表」的形式返回结果。除了 all() 之外，还有其它方法能触发查询的执行。表 5-6 列出了执行查询的其它方法。</p>
+<p><strong>表5-6　最常使用的SQLAlchemy查询执行函数</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">方 法</th>
+<th align="left">说 明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">all()</td>
+<td align="left">以列表形式返回查询的所有结果</td>
+</tr>
+<tr>
+<td align="center">first()</td>
+<td align="left">返回查询的第一个结果，如果没有结果，则返回 None</td>
+</tr>
+<tr>
+<td align="center">first_or_404()</td>
+<td align="left">返回查询的第一个结果，如果没有结果，则终止请求，返回 404 错误响应</td>
+</tr>
+<tr>
+<td align="center">get()</td>
+<td align="left">返回指定主键对应的行，如果没有对应的行，则返回 None</td>
+</tr>
+<tr>
+<td align="center">get_or_404()</td>
+<td align="left">返回指定主键对应的行，如果没找到指定的主键，则终止请求，返回 404 错误响应</td>
+</tr>
+<tr>
+<td align="center">count()</td>
+<td align="left">返回查询结果的数量</td>
+</tr>
+<tr>
+<td align="center">paginate()</td>
+<td align="left">返回一个 Paginate 对象，它包含指定范围内的结果</td>
+</tr>
+</tbody>
+</table>
+<p>关系和查询的处理方式类似。下面这个例子分别从关系的两端查询角色和用户之间的一对多关系:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> users <span style="color:#f92672">=</span> user_role<span style="color:#f92672">.</span>users
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> users
+[<span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">susan</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">david</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>]
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> users[<span style="color:#ae81ff">0</span>]<span style="color:#f92672">.</span>role
+<span style="color:#f92672">&lt;</span>Role <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>
+</code></pre></div><p>这个例子中的 user_role.users 查询有个小问题。执行 user_role.users 表达式时, 隐含的查询会调用 <code>all()</code> 函数并返回一个用户列表。 query 对象是隐藏的, 因此无法指定更精确的查询过滤器。就这个给定的示例而言, 返回一个按照字母顺序排列的用户列表可能会更好。在下面的示例中, 我们修改了关系的设置, 加入了 lazy = &lsquo;dynamic&rsquo; 参数, 以<strong>禁止自动执行查询</strong>。</p>
+<p>示例 5-4 hello.py: 动态关系</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Role</span>(db<span style="color:#f92672">.</span>Model):
+    <span style="color:#75715e"># ...</span>
+    users <span style="color:#f92672">=</span> db<span style="color:#f92672">.</span>relationship(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">User</span><span style="color:#e6db74">&#39;</span>, backref<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">role</span><span style="color:#e6db74">&#39;</span>, lazy<span style="color:#f92672">=</span><span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">dynamic</span><span style="color:#e6db74">&#39;</span>)
+    <span style="color:#75715e"># ...</span>
+</code></pre></div><p>这样配置关系之后， user_role.roles 会返回一个<strong>尚未执行</strong>的查询，因此可以在其上添加<em>过滤器</em>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_role<span style="color:#f92672">.</span>users<span style="color:#f92672">.</span>order_by(User<span style="color:#f92672">.</span>username)<span style="color:#f92672">.</span>all()
+[<span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">david</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>, <span style="color:#f92672">&lt;</span>User <span style="color:#e6db74">u</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">susan</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">&gt;</span>]
+<span style="color:#f92672">&gt;&gt;</span><span style="color:#f92672">&gt;</span> user_role<span style="color:#f92672">.</span>users<span style="color:#f92672">.</span>count()
+<span style="color:#ae81ff">2</span>
+</code></pre></div><h3 id="在视图函数中操作数据库">在视图函数中操作数据库</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#a6e22e">@app.route</span>(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">/</span><span style="color:#e6db74">&#39;</span>, methods<span style="color:#f92672">=</span>[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">GET</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">POST</span><span style="color:#e6db74">&#39;</span>])
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">index</span>():
+    form <span style="color:#f92672">=</span> NameForm() <span style="color:#75715e"># 用户名表单</span>
+    <span style="color:#66d9ef">if</span> form<span style="color:#f92672">.</span>validate_on_submit(): <span style="color:#75715e"># 提交表单后</span>
+        user <span style="color:#f92672">=</span> User<span style="color:#f92672">.</span>query<span style="color:#f92672">.</span>filter_by(username<span style="color:#f92672">=</span>form<span style="color:#f92672">.</span>name<span style="color:#f92672">.</span>data)<span style="color:#f92672">.</span>first() <span style="color:#75715e"># 在数据库中查询当前输入的姓名</span>
+        <span style="color:#66d9ef">if</span> user <span style="color:#f92672">is</span> None:
+            user <span style="color:#f92672">=</span> User(username <span style="color:#f92672">=</span> form<span style="color:#f92672">.</span>name<span style="color:#f92672">.</span>data) <span style="color:#75715e"># 如果这个名字是新人, 就在数据库中新添加一个</span>
+            db<span style="color:#f92672">.</span>session<span style="color:#f92672">.</span>add(user)
+            session[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">known</span><span style="color:#e6db74">&#39;</span>] <span style="color:#f92672">=</span> False <span style="color:#75715e"># 并在 session 中把 known 设置为假</span>
+        <span style="color:#66d9ef">else</span>:
+            session[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">known</span><span style="color:#e6db74">&#39;</span>] <span style="color:#f92672">=</span> True  <span style="color:#75715e"># 否则, 用户名已存在, known 为真</span>
+        session[<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">name</span><span style="color:#e6db74">&#39;</span>] <span style="color:#f92672">=</span> form<span style="color:#f92672">.</span>name<span style="color:#f92672">.</span>data <span style="color:#75715e"># 把用户名保存在 session 的 name 变量中</span>
+        form<span style="color:#f92672">.</span>name<span style="color:#f92672">.</span>data <span style="color:#f92672">=</span> <span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">&#39;</span> <span style="color:#75715e"># 提交完成后清空表单的用户名</span>
+        <span style="color:#66d9ef">return</span> redirect(url_for(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">index</span><span style="color:#e6db74">&#39;</span>)) <span style="color:#75715e"># 重定向到主页</span>
+    <span style="color:#66d9ef">return</span> render_template(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">index.html</span><span style="color:#e6db74">&#39;</span>, form<span style="color:#f92672">=</span>form, name<span style="color:#f92672">=</span>session<span style="color:#f92672">.</span>get(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">name</span><span style="color:#e6db74">&#39;</span>), known<span style="color:#f92672">=</span>session<span style="color:#f92672">.</span>get(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">known</span><span style="color:#e6db74">&#39;</span>, False))
+</code></pre></div><p>在这个修改后的版本中，提交表单后，程序会使用 filter_by() 查询过滤器在数据库中查找提交的名字。变量 known 被写入用户会话中，因此重定向之后，可以把数据传给模板，用来显示自定义的欢迎消息。</p>
+<blockquote>
+<p>注意，要想让程序正常运行，你必须按照前面介绍的方法，在 Python shell 中创建数据库表。我再强调一遍如下所示：</p>
+</blockquote>
+<pre><code>&gt;&gt;&gt; from hello import db
+&gt;&gt;&gt; db.create_all()
+&gt;&gt;&gt; from hello import Role, User
+&gt;&gt;&gt; admin_role = Role(name='Admin')
+&gt;&gt;&gt; mod_role = Role(name='Moderator')
+&gt;&gt;&gt; user_role = Role(name='User')
+&gt;&gt;&gt; user_john = User(username='john', role=admin_role)
+&gt;&gt;&gt; user_susan = User(username='susan', role=user_role)
+&gt;&gt;&gt; user_david = User(username='david', role=user_role)
+&gt;&gt;&gt; db.session.add_all([admin_role, mod_role, user_role,user_john, user_susan, user_david])
+&gt;&gt;&gt; db.session.commit()
+</code></pre><p>对应的模板新版本如示例 5-6 所示。这个模板使用 known 参数在欢迎消息中加入第二行, 从而对<strong>已知用户</strong>和<strong>新用户</strong>显示不同的内容。</p>
+<p><strong>示例 5-6 templates/index.html</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-html" data-lang="html">{% extends &#34;base.html&#34; %}
+{% import &#34;bootstrap/wtf.html&#34; as wtf %}
+
+{% block title %}Flasky{% endblock %}
+{% block page_content %}
+&lt;<span style="color:#f92672">div</span> <span style="color:#a6e22e">class</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;page-header&#34;</span>&gt;
+    &lt;<span style="color:#f92672">h1</span>&gt;Hello, {% if name %}{{ name }}{% else %}Strangr{% endif %}!&lt;/<span style="color:#f92672">h1</span>&gt;
+    {% if not konwn %}
+    &lt;<span style="color:#f92672">p</span>&gt;Pleased to meet you!&lt;/<span style="color:#f92672">p</span>&gt;
+    {% else %}
+    &lt;<span style="color:#f92672">p</span>&gt;Happy to meet you again!&lt;/<span style="color:#f92672">p</span>&gt;
+&lt;/<span style="color:#f92672">div</span>&gt;
+{{ wtf.quick_form(form) }}
+{% endblock %}    
+</code></pre></div><p>再说一遍,</p>
+<pre><code> git clone https://github.com/miguelgrinberg/flasky.git
+</code></pre><p>下载官方源码后使用 <code>git checkout xx</code> 就会出现该章节对应的代码, 但是没有虚拟环境, 你需要激活虚拟环境后才能运行</p>
+<pre><code>python hello.py runserver --host=127.0.0.1
+</code></pre><h3 id="集成-python-shell">集成 Python shell</h3>
+<p>你在上面也看到了, 每次启动 shell 会话都要导入数据库实例(db)和模型(User, Role), 枯燥又重复。为了发挥我们的懒惰精神, 我们可以使用 Flask-Script 命令自动导入特定的对象。</p>
+<p>我们来为 shell 命令注册一个 make_context 回调函数, 如示例 5-7 所示。这个模板所示。</p>
+<p><strong>示例 5-7 hello.py: 为 shell 命令添加一个上下文</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> flask_script <span style="color:#f92672">import</span> Shell
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">make_shell_context</span>():
+    <span style="color:#66d9ef">return</span> dict(app<span style="color:#f92672">=</span>app, db<span style="color:#f92672">=</span>db, User<span style="color:#f92672">=</span>User, Role<span style="color:#f92672">=</span>Role)
+manager<span style="color:#f92672">.</span>add_command(<span style="color:#e6db74"></span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">shell</span><span style="color:#e6db74">&#34;</span>, Shell(make_context<span style="color:#f92672">=</span>make_shell_context))
+</code></pre></div><p>make_shell_context() 函数注册了程序(app)、数据库实例(app)、模型(User, Role), 因此这些对象能直接导入 shell：</p>
+<pre><code>$ python hello.py shell
+&gt;&gt;&gt; app 
+&lt;Flask 'hello'&gt;
+&gt;&gt;&gt; db
+&lt;SQLAlchemy engine='sqlite:////home/flask/flasky/data.sqlite'&gt;
+&gt;&gt;&gt; User
+&lt;class 'app.User'&gt;
+</code></pre><p>这时你启动 hello.py, 输入名字进行查询, 如果数据库中已存在该名字网页就会显示：</p>
+<pre><code>hello, xxx
+Happy to see you again!
+</code></pre><p>如果该名字是首次被查询, 则会显示：</p>
+<pre><code>Hello, xxxxxx!
+Pleased to meet you!
+</code></pre><p>同时你在 Python shell 中可以查询数据库中是否已经插入了新值：</p>
+<pre><code>&gt;&gt;&gt; User.query.all()
+[&lt;User 'john'&gt;, &lt;User 'susan'&gt;, &lt;User 'david'&gt;, &lt;User 'chenyf'&gt;, &lt;User 'xxxxxx'&gt;]
+</code></pre><p>你也可以在这时把 Python shell 停掉, 然后提交网页, 也能正常运行。因为数据库中已经存在了相关的表了。如果先启动 hello.py 就进行查询会出现内部服务器错误, 因为数据库还没有准备好(里面什么也没有)。命令行中的 debug 信息显示 <code>no such table</code>。所以：</p>
+<blockquote>
+<p>注意， 在启动 hello.py 程序之前执行 python hello.py shell 初始化数据库, 实例化 Role 和 User 时就会创建roles表和 users 表。</p>
+</blockquote>
+<p>所以</p>
+<pre><code>$ python hello.py shell
+&gt;&gt;&gt; admin_role = Role(name='Admin')
+&gt;&gt;&gt; mod_role = Role(name='Moderator')
+&gt;&gt;&gt; user_role = Role(name='User')
+&gt;&gt;&gt; user_john = User(username='john', role=admin_role)
+&gt;&gt;&gt; user_susan = User(username='susan', role=user_role)
+&gt;&gt;&gt; user_david = User(username='david', role=user_role)
+&gt;&gt;&gt; db.session.add_all([admin_role, mod_role, user_role,user_john, user_susan, user_david])
+&gt;&gt;&gt; db.session.commit()
+&gt;&gt;&gt; User.query.all()
+[&lt;User 'john'&gt;, &lt;User 'susan'&gt;, &lt;User 'david'&gt;]
+</code></pre><h2 id="使用-flask-migrate-实现数据库迁移">使用 Flask-Migrate 实现数据库迁移</h2>
+<p>在开发程序的过程中, 你会发现有时候需要修改数据库模型(如为 User 增加 age 属性), 而且修改之后还需要更新数据库。</p>
+<p>仅当数据库表不存在时, Flask-SQLAlchemy 才会根据模型进行创建。因此, 更新表的<strong>唯一</strong>方式就是先删除旧表, 不过这样会丢失数据库中的所有数据, 傻狍子才这样做。</p>
+<p><strong>更新表</strong>的更好的方法是使用<em>数据库迁移</em>框架。源码版本控制工具(例如 git)可以跟踪源码文件的变化, 类似地, 数据库迁移框架能跟踪<strong>数据库模式的变化</strong>, 然后<strong>增量式</strong>的把变化应用到数据库中。</p>
+<p>SQLAlchemy 的主力开发人员编写了一个迁移框架，称为 <a href="https://alembic.readthedocs.org/en/latest/index.html">Alembic</a>。除了直接使用 Alembic 之外，Flask 程序还可使用 <a href="http://flask-migrate.readthedocs.org/en/latest/">Flask-Migrate</a> 扩展。这个扩展对 Alembic 做了轻量级包装，并集成到 Flask-Script 中，所有操作都通过 Flask-Script 命令完成。</p>
+<h3 id="创建迁移仓库">创建迁移仓库</h3>
+<p>首先在虚拟环境中安装 Flask-Migrate：</p>
+<pre><code>$ venv\Scripts\activate
+$ pip install Flask-Migrate
+</code></pre><p>这个扩展的初始化方法如下所示：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> flask_migrate <span style="color:#f92672">import</span> Migrate, MigrateCommand
+<span style="color:#75715e"># ...</span>
+migrate <span style="color:#f92672">=</span> Migrate(app, db)
+manager<span style="color:#f92672">.</span>add_command(<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">db</span><span style="color:#e6db74">&#39;</span>, MigrateCommand)
+</code></pre></div><p>为了导出数据库迁移命令, Flask-Migrate 提供了一个 MigrateCommand 类, 可附加到 Flask-Script 的 manager 对象上。在这里, MigrateCommand 类使用 db 命令附加。是不是很熟悉, 我们刚见过：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">manager<span style="color:#f92672">.</span>add_command(<span style="color:#e6db74"></span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">shell</span><span style="color:#e6db74">&#34;</span>, Shell(make_context<span style="color:#f92672">=</span>make_shell_context))
+</code></pre></div><p>在维护数据库迁移之前, 要使用 init 子命令创建迁移仓库:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">(venv) <span style="color:#960050;background-color:#1e0010">$</span> python hello<span style="color:#f92672">.</span>py db init
+Creating directory <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Creating directory <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>versions<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Generating <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>alembic<span style="color:#f92672">.</span>ini<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Generating <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>env<span style="color:#f92672">.</span>py<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Generating <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>env<span style="color:#f92672">.</span>pyc<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Generating <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>README<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Generating <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>flask<span style="color:#f92672">/</span>flasky<span style="color:#f92672">/</span>migrations<span style="color:#f92672">/</span>script<span style="color:#f92672">.</span>py<span style="color:#f92672">.</span>mako<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>done
+Please edit configuration<span style="color:#f92672">/</span>connection<span style="color:#f92672">/</span>logging settings <span style="color:#f92672">in</span>
+<span style="color:#e6db74"></span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">/home/flask/flasky/migrations/alembic.ini</span><span style="color:#e6db74">&#39;</span> before proceeding<span style="color:#f92672">.</span>
+</code></pre></div><p>这个命令会创建一个 migrations 文件夹，所有「迁移脚本」都存放其中</p>
+<blockquote>
+<p>数据库迁移仓库中的文件要和程序的其他文件一起纳入版本控制。</p>
+</blockquote>
+<h3 id="创建迁移脚本">创建迁移脚本</h3>
+<p>在 Alembic 中, 数据库迁移用<em>迁移脚本</em>表示。脚本中有两个<strong>函数</strong>, 分别是 <code>upgrade()</code> 和 <code>downgrade()</code>。 upgrade() 函数把迁移中的改动应用到数据库中, downgrade() 函数则将改动<strong>删除</strong>。Alembic 具有「添加改动」和「删除改动」的能力, 因此数据库可重设到修改历史的<strong>任意一点</strong>。</p>
+<p>我们可以使用 revision 命令手动创建 Alembic 迁移, 也可使用 migrate 命令自动创建。手动创建的迁移只是一个骨架, upgrade() 和 downgrade() 函数都是<strong>空的</strong>, 开发者要使用 Alembic 提供的 Operations 对象指令实现具体操作。自动创建的迁移会根据模型定义和<strong>数据库当前状态</strong>之间的「差异」生成 upgrade() 和 downgrade() 函数的内容。</p>
+<blockquote>
+<p>自动创建的迁移不一定总是正确的，有可能会漏掉一些细节。自动生成迁移脚本后一定要进行检查。</p>
+</blockquote>
+<p>migrate 子命令用来<strong>自动</strong>创建迁移脚本:</p>
+<pre><code>(venv) $ python hello.py db migrate -m &quot;initial migration&quot;
+INFO [alembic.migration] Context impl SQLiteImpl.
+INFO [alembic.migration] Will assume non-transactional DDL.
+INFO [alembic.autogenerate] Detected added table 'roles'
+INFO [alembic.autogenerate] Detected added table 'users'
+INFO [alembic.autogenerate.compare] Detected added index
+'ix_users_username' on '['username']'
+Generating /home/flask/flasky/migrations/versions/1bc
+594146bb5_initial_migration.py...done
+</code></pre><h3 id="更新数据库">更新数据库</h3>
+<p>检查并修正好迁移脚本之后, 我们可以使用 <code>db upgrade</code> 命令<strong>把迁移应用到数据库中</strong>：</p>
+<pre><code>(venv) $ python hello.py db upgrade
+INFO [alembic.migration] Context impl SQLiteImpl.
+INFO [alembic.migration] Will assume non-transactional DDL.
+INFO [alembic.migration] Running upgrade None -&gt; 1bc594146bb5, initial migration
+</code></pre><p>对第一个迁移来说, 其作用和调用 <code>db.create_all()</code> 方法一样。但在<strong>后续</strong>的迁移中, upgrade 命令能把改动应用到数据库中, 且不影响其中保存的数据。</p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#sql-数据库">SQL 数据库</a></li>
+    <li><a href="#nosql-数据库">NoSQL 数据库</a></li>
+    <li><a href="#使用sql还是nosql">使用SQL还是NoSQL</a></li>
+    <li><a href="#python-数据库框架-flask-sqlalchemy">Python 数据库框架 Flask-SQLAlchemy</a></li>
+    <li><a href="#定义模型">定义模型</a></li>
+    <li><a href="#关系">关系</a></li>
+    <li><a href="#数据库操作">数据库操作</a>
+      <ul>
+        <li><a href="#创建表">创建表</a></li>
+        <li><a href="#插入行">插入行</a></li>
+        <li><a href="#修改行">修改行</a></li>
+        <li><a href="#删除行">删除行</a></li>
+        <li><a href="#查询行">查询行</a></li>
+        <li><a href="#在视图函数中操作数据库">在视图函数中操作数据库</a></li>
+        <li><a href="#集成-python-shell">集成 Python shell</a></li>
+      </ul>
+    </li>
+    <li><a href="#使用-flask-migrate-实现数据库迁移">使用 Flask-Migrate 实现数据库迁移</a>
+      <ul>
+        <li><a href="#创建迁移仓库">创建迁移仓库</a></li>
+        <li><a href="#创建迁移脚本">创建迁移脚本</a></li>
+        <li><a href="#更新数据库">更新数据库</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&text=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&is_video=false&description=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&title=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&name=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93&description=%e6%96%87%e6%a1%a3%e6%95%b0%e6%8d%ae%e5%ba%93%e5%92%8c%e9%94%ae%e5%80%bc%e5%af%b9%e6%95%b0%e6%8d%ae%e5%ba%93%e8%bf%99%e4%b8%a4%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%88%e7%a7%b0%20NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e3%80%82%0aSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%20%e8%a1%a8%e4%b8%ad%e6%9c%89%e4%b8%aa%e7%89%b9%e6%ae%8a%e7%9a%84%e5%88%97%ef%bc%8c%e7%a7%b0%e4%b8%ba%e4%b8%bb%e9%94%ae%ef%bc%8c%e5%85%b6%e5%80%bc%e4%b8%ba%e8%a1%a8%e4%b8%ad%e5%90%84%e8%a1%8c%e7%9a%84%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%e7%ac%a6%e3%80%82%e8%a1%a8%e4%b8%ad%e8%bf%98%e5%8f%af%e4%bb%a5%e6%9c%89%e7%a7%b0%e4%b8%ba%e5%a4%96%e9%94%ae%e7%9a%84%e5%88%97%ef%bc%8c%e5%bc%95%e7%94%a8%e5%90%8c%e4%b8%80%e4%b8%aa%e8%a1%a8%e6%88%96%e4%b8%8d%e5%90%8c%e8%a1%a8%e4%b8%ad%e6%9f%90%e8%a1%8c%e7%9a%84%e4%b8%bb%e9%94%ae%e3%80%82%e8%a1%8c%e4%b9%8b%e9%97%b4%e7%9a%84%e8%bf%99%e7%a7%8d%e8%81%94%e7%b3%bb%e7%a7%b0%e4%b8%ba%e5%85%b3%e7%b3%bb%ef%bc%8c%e8%bf%99%e6%98%af%e5%85%b3%e7%b3%bb%e5%9e%8b%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a8%a1%e5%9e%8b%e7%9a%84%e5%9f%ba%e7%a1%80%e3%80%82%0aNoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%20NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e4%b8%80%e8%88%ac%e4%bd%bf%e7%94%a8%e9%9b%86%e5%90%88%e4%bb%a3%e6%9b%bf%e8%a1%a8%ef%bc%8c%e4%bd%bf%e7%94%a8%e6%96%87%e6%a1%a3%e4%bb%a3%e6%9b%bf%e8%ae%b0%e5%bd%95%e3%80%82NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e9%87%87%e7%94%a8%e7%9a%84%e8%ae%be%e8%ae%a1%e6%96%b9%e5%bc%8f%e4%bd%bf%e8%81%94%e7%bb%93%e5%8f%98%e5%be%97%e5%9b%b0%e9%9a%be%ef%bc%8c%e6%89%80%e4%bb%a5%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a0%b9%e6%9c%ac%e4%b8%8d%e6%94%af%e6%8c%81%e8%bf%99%e7%a7%8d%e6%93%8d%e4%bd%9c%e3%80%82%0a%e4%bd%bf%e7%94%a8SQL%e8%bf%98%e6%98%afNoSQL%20SQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%93%85%e4%ba%8e%e7%94%a8%e9%ab%98%e6%95%88%e4%b8%94%e7%b4%a7%e5%87%91%e7%9a%84%e5%bd%a2%e5%bc%8f%e5%ad%98%e5%82%a8%e7%bb%93%e6%9e%84%e5%8c%96%e6%95%b0%e6%8d%ae%e3%80%82%e8%bf%99%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e9%9c%80%e8%a6%81%e8%8a%b1%e8%b4%b9%e5%a4%a7%e9%87%8f%e7%b2%be%e5%8a%9b%e4%bf%9d%e8%af%81%e6%95%b0%e6%8d%ae%e7%9a%84%e4%b8%80%e8%87%b4%e6%80%a7%e3%80%82NoSQL%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%94%be%e5%ae%bd%e4%ba%86%e5%af%b9%e8%bf%99%e7%a7%8d%e4%b8%80%e8%87%b4%e6%80%a7%e7%9a%84%e8%a6%81%e6%b1%82%ef%bc%8c%e4%bb%8e%e8%80%8c%e8%8e%b7%e5%be%97%e6%80%a7%e8%83%bd%e4%b8%8a%e7%9a%84%e4%bc%98%e5%8a%bf%e3%80%82%0aPython%20%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a1%86%e6%9e%b6%20Flask-SQLAlchemy%20Flask-SQLAlchemy%20%e6%98%af%e4%b8%80%e4%b8%aa%20Flask%20%e6%89%a9%e5%b1%95%ef%bc%8c%e7%ae%80%e5%8c%96%e4%ba%86%e5%9c%a8%20Flask%20%e7%a8%8b%e5%ba%8f%e4%b8%ad%e4%bd%bf%e7%94%a8%20SQLAlchemy%20%e7%9a%84%e6%93%8d%e4%bd%9c%e3%80%82SQLAlchemy%20%e6%98%af%e4%b8%80%e4%b8%aa%e5%be%88%e5%bc%ba%e5%a4%a7%e7%9a%84%e5%85%b3%e7%b3%bb%e5%9e%8b%e6%95%b0%e6%8d%ae%e5%ba%93%e6%a1%86%e6%9e%b6%ef%bc%8c%e6%94%af%e6%8c%81%e5%a4%9a%e7%a7%8d%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%8e%e5%8f%b0%e3%80%82SQLAlchemy%20%e6%8f%90%e4%be%9b%e4%ba%86%e9%ab%98%e5%b1%82%20ORM%ef%bc%88Object-Relational%20Mapper%ef%bc%8c%e5%af%b9%e8%b1%a1%e5%85%b3%e7%b3%bb%e6%98%a0%e5%b0%84%ef%bc%89%ef%bc%8c%e4%b9%9f%e6%8f%90%e4%be%9b%e4%ba%86%e4%bd%bf%e7%94%a8%e6%95%b0%e6%8d%ae%e5%ba%93%e5%8e%9f%e7%94%9f%20SQL%20%e7%9a%84%e4%bd%8e%e5%b1%82%e5%8a%9f%e8%83%bd%e3%80%82%0a%28venv%29%20%24%20pip%20install%20flask-sqlalchemy%20%e5%9c%a8%20Flask-SQLAlchemy%20%e4%b8%ad%2c%20%e6%95%b0%e6%8d%ae%e5%ba%93%e4%bd%bf%e7%94%a8%20URL%20%e6%8c%87%e5%ae%9a%e3%80%82%20%e8%a1%a8%205-1%20Flask-SQLAlchemy%20%e6%95%b0%e6%8d%ae%e5%ba%93%20URL%0a%20%20%20%e6%95%b0%e6%8d%ae%e5%ba%93%e5%bc%95%e6%93%8e%20URL%20%20%20%20%20MySQL%20mysql%3a%2f%2fusername%3apassword%40hostname%2fdatabase%20%20%20Postgres%20postgresql%3a%2f%2fusername%3apassword%40hostname%2fdatabase%20%20%20SQLite%ef%bc%88Unix%ef%bc%89%20sqlite%3a%2f%2f%2f%2fabsolute%2fpath%2fto%2fdatabase%20%20%20SQLite%ef%bc%88Windows%ef%bc%89%20sqlite%3a%2f%2f%2fc%3a%2fabsolute%2fpath%2fto%2fdatabase%20%20%20%20%e5%9c%a8%e8%bf%99%e4%ba%9b%20URL%20%e4%b8%ad%ef%bc%8chostname%20%e8%a1%a8%e7%a4%ba%20MySQL%20%e6%9c%8d%e5%8a%a1%e6%89%80%e5%9c%a8%e7%9a%84%e4%b8%bb%e6%9c%ba%ef%bc%8c%e5%8f%af%e4%bb%a5%e6%98%af%e6%9c%ac%e5%9c%b0%e4%b8%bb%e6%9c%ba%ef%bc%88localhost%ef%bc%89%ef%bc%8c%e4%b9%9f%e5%8f%af%e4%bb%a5%e6%98%af%e8%bf%9c%e7%a8%8b%e6%9c%8d%e5%8a%a1%e5%99%a8%e3%80%82%e6%95%b0%e6%8d%ae%e5%ba%93%e6%9c%8d%e5%8a%a1%e5%99%a8%e4%b8%8a%e5%8f%af%e4%bb%a5%e6%89%98%e7%ae%a1%e5%a4%9a%e4%b8%aa%e6%95%b0%e6%8d%ae%e5%ba%93%ef%bc%8c%e5%9b%a0%e6%ad%a4%20database%20%e8%a1%a8%e7%a4%ba%e8%a6%81%e4%bd%bf%e7%94%a8%e7%9a%84%e6%95%b0%e6%8d%ae%e5%ba%93%e5%90%8d%e3%80%82%e5%a6%82%e6%9e%9c%e6%95%b0%e6%8d%ae%e5%ba%93%e9%9c%80%e8%a6%81%e8%bf%9b%e8%a1%8c%e8%ae%a4%e8%af%81%ef%bc%8cusername%20%e5%92%8c%20password%20%e8%a1%a8%e7%a4%ba%e6%95%b0%e6%8d%ae%e5%ba%93%e7%94%a8%e6%88%b7%e5%af%86%e4%bb%a4%e3%80%82">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f%25E7%25AC%25AC%25E4%25BA%2594%25E7%25AB%25A0-%25E6%2595%25B0%25E6%258D%25AE%25E5%25BA%2593%2f&t=Flask%20%e5%85%a5%e9%97%a8%20-%20%e6%95%b0%e6%8d%ae%e5%ba%93">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>

@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 使用 Spark Structured Streaming 解析 JSON </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="使用 Spark Structured Streaming 解析 JSON" />
+<meta property="og:description" content="Producer 发送 JSON 数据到 Kafka：
+from confluent_kafka import Producer p = Producer({&#39;bootstrap.servers&#39;: &#39;localhost:9092&#39;}) def delivery_report(err, msg): &quot;&quot;&quot; Called once for each message produced to indicate delivery result. Triggered by poll() or flush(). &quot;&quot;&quot; if err is not None: print(&#39;Message delivery failed: {}&#39;.format(err)) else: print(&#39;Message delivered to {} [{}]&#39;.format(msg.topic(), msg.partition())) with open(&quot;/Users/ohmycloud/bigdata/Spark/camelia.json&quot;) as f: data = f.read() p.poll(0) p.produce(&#39;net-logs&#39;, data.encode(&#39;utf-8&#39;), callback=delivery_report) p.flush() JSON 数据内容如下：
+{ &quot;metadata&quot;:{ &quot;access_token&quot;:&quot;c.FmDPkzyzaQe...&quot;, &quot;client_version&quot;:1 }, &quot;devices&quot;:{ &quot;thermostats&quot;:{ &quot;peyiJNo0IldT2YlIVtYaGQ&quot;:{ &quot;device_id&quot;:&quot;peyiJNo0IldT2YlIVtYaGQ&quot;, &quot;locale&quot;:&quot;en-US&quot;, &quot;software_version&quot;:&quot;4." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/" />
+<meta property="article:published_time" content="2017-03-15T16:36:25+00:00" />
+<meta property="article:modified_time" content="2017-03-15T16:36:25+00:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Spark Structured Streaming 解析 JSON"/>
+<meta name="twitter:description" content="Producer 发送 JSON 数据到 Kafka：
+from confluent_kafka import Producer p = Producer({&#39;bootstrap.servers&#39;: &#39;localhost:9092&#39;}) def delivery_report(err, msg): &quot;&quot;&quot; Called once for each message produced to indicate delivery result. Triggered by poll() or flush(). &quot;&quot;&quot; if err is not None: print(&#39;Message delivery failed: {}&#39;.format(err)) else: print(&#39;Message delivered to {} [{}]&#39;.format(msg.topic(), msg.partition())) with open(&quot;/Users/ohmycloud/bigdata/Spark/camelia.json&quot;) as f: data = f.read() p.poll(0) p.produce(&#39;net-logs&#39;, data.encode(&#39;utf-8&#39;), callback=delivery_report) p.flush() JSON 数据内容如下：
+{ &quot;metadata&quot;:{ &quot;access_token&quot;:&quot;c.FmDPkzyzaQe...&quot;, &quot;client_version&quot;:1 }, &quot;devices&quot;:{ &quot;thermostats&quot;:{ &quot;peyiJNo0IldT2YlIVtYaGQ&quot;:{ &quot;device_id&quot;:&quot;peyiJNo0IldT2YlIVtYaGQ&quot;, &quot;locale&quot;:&quot;en-US&quot;, &quot;software_version&quot;:&quot;4."/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/scalac-error-org-jetbrains-jps-incremental-scala-remote-serverexcept/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/spark-stuctured-streaming-%E8%A7%A3%E6%9E%90%E5%AD%97%E6%AE%B5%E4%B8%8D%E5%9B%BA%E5%AE%9A%E7%9A%84json/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON&description=Producer%20%e5%8f%91%e9%80%81%20JSON%20%e6%95%b0%e6%8d%ae%e5%88%b0%20Kafka%ef%bc%9a%0afrom%20confluent_kafka%20import%20Producer%20p%20%3d%20Producer%28%7b%27bootstrap.servers%27%3a%20%27localhost%3a9092%27%7d%29%20def%20delivery_report%28err%2c%20msg%29%3a%20%26quot%3b%26quot%3b%26quot%3b%20Called%20once%20for%20each%20message%20produced%20to%20indicate%20delivery%20result.%20Triggered%20by%20poll%28%29%20or%20flush%28%29.%20%26quot%3b%26quot%3b%26quot%3b%20if%20err%20is%20not%20None%3a%20print%28%27Message%20delivery%20failed%3a%20%7b%7d%27.format%28err%29%29%20else%3a%20print%28%27Message%20delivered%20to%20%7b%7d%20%5b%7b%7d%5d%27.format%28msg.topic%28%29%2c%20msg.partition%28%29%29%29%20with%20open%28%26quot%3b%2fUsers%2fohmycloud%2fbigdata%2fSpark%2fcamelia.json%26quot%3b%29%20as%20f%3a%20data%20%3d%20f.read%28%29%20p.poll%280%29%20p.produce%28%27net-logs%27%2c%20data.encode%28%27utf-8%27%29%2c%20callback%3ddelivery_report%29%20p.flush%28%29%20JSON%20%e6%95%b0%e6%8d%ae%e5%86%85%e5%ae%b9%e5%a6%82%e4%b8%8b%ef%bc%9a%0a%7b%20%26quot%3bmetadata%26quot%3b%3a%7b%20%26quot%3baccess_token%26quot%3b%3a%26quot%3bc.FmDPkzyzaQe...%26quot%3b%2c%20%26quot%3bclient_version%26quot%3b%3a1%20%7d%2c%20%26quot%3bdevices%26quot%3b%3a%7b%20%26quot%3bthermostats%26quot%3b%3a%7b%20%26quot%3bpeyiJNo0IldT2YlIVtYaGQ%26quot%3b%3a%7b%20%26quot%3bdevice_id%26quot%3b%3a%26quot%3bpeyiJNo0IldT2YlIVtYaGQ%26quot%3b%2c%20%26quot%3blocale%26quot%3b%3a%26quot%3ben-US%26quot%3b%2c%20%26quot%3bsoftware_version%26quot%3b%3a%26quot%3b4.">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#producer">Producer</a></li>
+    <li><a href="#代码">代码</a></li>
+    <li><a href="#jdbcsink">JDBCSink</a></li>
+    <li><a href="#写数据库">写数据库</a></li>
+    <li><a href="#one-more-example">one more example</a>
+      <ul>
+        <li><a href="#json">json</a></li>
+        <li><a href="#定义-schema">定义 schema</a></li>
+        <li><a href="#explode">explode</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        使用 Spark Structured Streaming 解析 JSON
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2017-03-15 16:36:25 &#43;0000 UTC" itemprop="datePublished">2017-03-15</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <h2 id="producer">Producer</h2>
+<p>发送 JSON 数据到 Kafka：</p>
+<pre><code>from confluent_kafka import Producer
+
+p = Producer({'bootstrap.servers': 'localhost:9092'})
+
+def delivery_report(err, msg):
+    &quot;&quot;&quot; Called once for each message produced to indicate delivery result.
+        Triggered by poll() or flush(). &quot;&quot;&quot;
+    if err is not None:
+        print('Message delivery failed: {}'.format(err))
+    else:
+        print('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
+
+with open(&quot;/Users/ohmycloud/bigdata/Spark/camelia.json&quot;) as f:
+  data = f.read()
+  p.poll(0)
+  p.produce('net-logs', data.encode('utf-8'), callback=delivery_report)
+
+p.flush()
+</code></pre><p><a href="https://developers.nest.com/documentation/api-reference">JSON</a> 数据内容如下：</p>
+<pre><code>{
+    &quot;metadata&quot;:{
+        &quot;access_token&quot;:&quot;c.FmDPkzyzaQe...&quot;,
+        &quot;client_version&quot;:1
+    },
+    &quot;devices&quot;:{
+        &quot;thermostats&quot;:{
+            &quot;peyiJNo0IldT2YlIVtYaGQ&quot;:{
+                &quot;device_id&quot;:&quot;peyiJNo0IldT2YlIVtYaGQ&quot;,
+                &quot;locale&quot;:&quot;en-US&quot;,
+                &quot;software_version&quot;:&quot;4.0&quot;,
+                &quot;structure_id&quot;:&quot;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&quot;,
+                &quot;name&quot;:&quot;Hallway (upstairs)&quot;,
+                &quot;name_long&quot;:&quot;Hallway Thermostat (upstairs)&quot;,
+                &quot;last_connection&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+                &quot;is_online&quot;:true,
+                &quot;can_cool&quot;:true,
+                &quot;can_heat&quot;:true,
+                &quot;is_using_emergency_heat&quot;:true,
+                &quot;has_fan&quot;:true,
+                &quot;fan_timer_active&quot;:true,
+                &quot;fan_timer_timeout&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+                &quot;has_leaf&quot;:true,
+                &quot;temperature_scale&quot;:&quot;C&quot;,
+                &quot;target_temperature_f&quot;:72,
+                &quot;target_temperature_c&quot;:21.5,
+                &quot;target_temperature_high_f&quot;:80,
+                &quot;target_temperature_high_c&quot;:24.5,
+                &quot;target_temperature_low_f&quot;:65,
+                &quot;target_temperature_low_c&quot;:19.5,
+                &quot;eco_temperature_high_f&quot;:80,
+                &quot;eco_temperature_high_c&quot;:24.5,
+                &quot;eco_temperature_low_f&quot;:65,
+                &quot;eco_temperature_low_c&quot;:19.5,
+                &quot;away_temperature_high_f&quot;:80,
+                &quot;away_temperature_high_c&quot;:24.5,
+                &quot;away_temperature_low_f&quot;:65,
+                &quot;away_temperature_low_c&quot;:19.5,
+                &quot;hvac_mode&quot;:&quot;heat&quot;,
+                &quot;previous_hvac_mode&quot;:&quot;heat&quot;,
+                &quot;ambient_temperature_f&quot;:72,
+                &quot;ambient_temperature_c&quot;:21.5,
+                &quot;humidity&quot;:40,
+                &quot;hvac_state&quot;:&quot;heating&quot;,
+                &quot;where_id&quot;:&quot;UNCBGUnN24...&quot;,
+                &quot;is_locked&quot;:true,
+                &quot;locked_temp_min_f&quot;:65,
+                &quot;locked_temp_max_f&quot;:80,
+                &quot;locked_temp_min_c&quot;:19.5,
+                &quot;locked_temp_max_c&quot;:24.5,
+                &quot;label&quot;:&quot;Pat's room&quot;,
+                &quot;where_name&quot;:&quot;Hallway&quot;,
+                &quot;sunlight_correction_enabled&quot;:true,
+                &quot;sunlight_correction_active&quot;:true,
+                &quot;fan_timer_duration&quot;:&quot;15&quot;,
+                &quot;time_to_target&quot;:&quot;~15&quot;,
+                &quot;time_to_target_training&quot;:&quot;training&quot;
+            }
+        },
+        &quot;smoke_co_alarms&quot;:{
+            &quot;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&quot;:{
+                &quot;device_id&quot;:&quot;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&quot;,
+                &quot;locale&quot;:&quot;en-US&quot;,
+                &quot;software_version&quot;:&quot;1.01&quot;,
+                &quot;structure_id&quot;:&quot;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&quot;,
+                &quot;name&quot;:&quot;Hallway (upstairs)&quot;,
+                &quot;name_long&quot;:&quot;Hallway Protect (upstairs)&quot;,
+                &quot;last_connection&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+                &quot;is_online&quot;:true,
+                &quot;battery_health&quot;:&quot;ok&quot;,
+                &quot;co_alarm_state&quot;:&quot;ok&quot;,
+                &quot;smoke_alarm_state&quot;:&quot;ok&quot;,
+                &quot;is_manual_test_active&quot;:true,
+                &quot;last_manual_test_time&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+                &quot;ui_color_state&quot;:&quot;gray&quot;,
+                &quot;where_id&quot;:&quot;UNCBGUnN24...&quot;,
+                &quot;where_name&quot;:&quot;Hallway&quot;
+            }
+        },
+        &quot;cameras&quot;:{
+            &quot;awJo6rH0IldT2YlIVtYaGQ&quot;:{
+                &quot;device_id&quot;:&quot;awJo6rH...&quot;,
+                &quot;software_version&quot;:&quot;4.0&quot;,
+                &quot;structure_id&quot;:&quot;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&quot;,
+                &quot;where_id&quot;:&quot;d6reb_OZTM...&quot;,
+                &quot;where_name&quot;:&quot;Hallway&quot;,
+                &quot;name&quot;:&quot;Hallway (upstairs)&quot;,
+                &quot;name_long&quot;:&quot;Hallway Camera (upstairs)&quot;,
+                &quot;is_online&quot;:true,
+                &quot;is_streaming&quot;:true,
+                &quot;is_audio_input_enabled&quot;:true,
+                &quot;last_is_online_change&quot;:&quot;2016-12-29T18:42:00.000Z&quot;,
+                &quot;is_video_history_enabled&quot;:true,
+                &quot;web_url&quot;:&quot;https://home.nest.com/cameras/device_id?auth=access_token&quot;,
+                &quot;app_url&quot;:&quot;nestmobile://cameras/device_id?auth=access_token&quot;,
+                &quot;is_public_share_enabled&quot;:true,
+                &quot;activity_zones&quot;:[
+                    {
+                        &quot;name&quot;:&quot;Walkway&quot;,
+                        &quot;id&quot;:&quot;244083&quot;
+                    },
+                    {
+                        &quot;name&quot;:&quot;Walkway2&quot;,
+                        &quot;id2&quot;:&quot;244084&quot;
+                    }
+                ],
+                &quot;public_share_url&quot;:&quot;https://video.nest.com/live/STRING1?STRING2&quot;,
+                &quot;snapshot_url&quot;:&quot;STRING1/device_id/STRING2?auth=access_token&quot;,
+                &quot;last_event&quot;:{
+                    &quot;has_sound&quot;:true,
+                    &quot;has_motion&quot;:true,
+                    &quot;has_person&quot;:true,
+                    &quot;start_time&quot;:&quot;2016-12-29T00:00:00.000Z&quot;,
+                    &quot;end_time&quot;:&quot;2016-12-29T18:42:00.000Z&quot;,
+                    &quot;urls_expire_time&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+                    &quot;web_url&quot;:&quot;https://home.nest.com/cameras/device_id/cuepoints/STRING?auth=access_token&quot;,
+                    &quot;app_url&quot;:&quot;nestmobile://cameras/device_id/cuepoints/STRING?auth=access_token&quot;,
+                    &quot;image_url&quot;:&quot;STRING1/device_id/STRING2?auth=access_token&quot;,
+                    &quot;animated_image_url&quot;:&quot;STRING1/device_id/STRING2?auth=access_token&quot;,
+                    &quot;activity_zone_ids&quot;:[
+                        &quot;244083&quot;,
+                        &quot;244084&quot;
+                    ]
+                }
+            }
+        }
+    },
+    &quot;structures&quot;:{
+        &quot;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&quot;:{
+            &quot;structure_id&quot;:&quot;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&quot;,
+            &quot;thermostats&quot;:[
+                &quot;peyiJNo0IldT2YlIVtYaGQ&quot;,
+                &quot;ggfgfdgrgrgg&quot;
+            ],
+            &quot;smoke_co_alarms&quot;:[
+                &quot;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&quot;,
+                &quot;ddddddddddd&quot;
+            ],
+            &quot;cameras&quot;:[
+                &quot;awJo6r...&quot;,
+                &quot;ddddddssssssss&quot;
+            ],
+            &quot;away&quot;:&quot;home&quot;,
+            &quot;name&quot;:&quot;Home&quot;,
+            &quot;country_code&quot;:&quot;US&quot;,
+            &quot;postal_code&quot;:&quot;94304&quot;,
+            &quot;peak_period_start_time&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+            &quot;peak_period_end_time&quot;:&quot;2016-10-31T23:59:59.000Z&quot;,
+            &quot;time_zone&quot;:&quot;America/Los_Angeles&quot;,
+            &quot;eta&quot;:{
+                &quot;trip_id&quot;:&quot;myTripHome1024&quot;,
+                &quot;estimated_arrival_window_begin&quot;:&quot;2016-10-31T22:42:59.000Z&quot;,
+                &quot;estimated_arrival_window_end&quot;:&quot;2016-10-31T23:59:59.000Z&quot;
+            },
+            &quot;eta_begin&quot;:&quot;2016-08-04T13:21:37-07:00&quot;,
+            &quot;co_alarm_state&quot;:&quot;ok&quot;,
+            &quot;smoke_alarm_state&quot;:&quot;ok&quot;,
+            &quot;rhr_enrollment&quot;:true,
+            &quot;wwn_security_state&quot;:&quot;ok&quot;,
+            &quot;wheres&quot;:{
+                &quot;Fqp6wJI...&quot;:{
+                    &quot;where_id&quot;:&quot;Fqp6wJI...&quot;,
+                    &quot;name&quot;:&quot;Bedroom&quot;
+                }
+            }
+        }
+    }
+}
+</code></pre><h2 id="代码">代码</h2>
+<pre><code>package wmdevice
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.streaming.OutputMode
+import org.apache.spark.sql.types._
+
+object CamerasStructedStreaming {
+  def main(args: Array[String]) {
+
+    val spark = SparkSession
+      .builder
+      .appName(&quot;Camelia&quot;)
+      .master(&quot;local[*]&quot;)
+      .getOrCreate()
+
+    val schema = new StructType()
+      .add(&quot;metadata&quot;, new StructType()
+        .add(&quot;access_token&quot;, StringType)
+        .add(&quot;client_version&quot;, IntegerType))
+      .add(&quot;devices&quot;, new StructType()
+        .add(&quot;thermostats&quot;, MapType(StringType, new StructType()
+          .add(&quot;device_id&quot;, StringType)
+          .add(&quot;locale&quot;, StringType)
+          .add(&quot;software_version&quot;, StringType)
+          .add(&quot;structure_id&quot;, StringType)
+          .add(&quot;name&quot;, StringType)
+          .add(&quot;name_long&quot;, StringType)
+          .add(&quot;last_connection&quot;, TimestampType)
+          .add(&quot;is_online&quot;, BooleanType)
+          .add(&quot;can_cool&quot;, BooleanType)
+          .add(&quot;can_heat&quot;, BooleanType)
+          .add(&quot;is_using_emergency_heat&quot;, BooleanType)
+          .add(&quot;has_fan&quot;, BooleanType)
+          .add(&quot;fan_timer_active&quot;, BooleanType)
+          .add(&quot;fan_timer_timeout&quot;, TimestampType)
+          .add(&quot;has_leaf&quot;, BooleanType)
+          .add(&quot;temperature_scale&quot;, StringType)
+          .add(&quot;target_temperature_f&quot;, StringType)
+          .add(&quot;target_temperature_c&quot;, StringType)
+          .add(&quot;target_temperature_high_f&quot;, StringType)
+          .add(&quot;target_temperature_high_c&quot;, StringType)
+          .add(&quot;target_temperature_low_f&quot;, StringType)
+          .add(&quot;target_temperature_low_c&quot;, StringType)
+          .add(&quot;eco_temperature_high_f&quot;, StringType)
+          .add(&quot;eco_temperature_high_c&quot;, StringType)
+          .add(&quot;eco_temperature_low_f&quot;, StringType)
+          .add(&quot;eco_temperature_low_c&quot;, StringType)
+          .add(&quot;away_temperature_high_f&quot;, StringType)
+          .add(&quot;away_temperature_high_c&quot;, StringType)
+          .add(&quot;away_temperature_low_f&quot;, StringType)
+          .add(&quot;away_temperature_low_c&quot;, StringType)
+          .add(&quot;hvac_mode&quot;, StringType)
+          .add(&quot;previous_hvac_mode&quot;, StringType)
+          .add(&quot;ambient_temperature_f&quot;, StringType)
+          .add(&quot;ambient_temperature_c&quot;, StringType)
+          .add(&quot;humidity&quot;, StringType)
+          .add(&quot;hvac_state&quot;, StringType)
+          .add(&quot;where_id&quot;, StringType)
+          .add(&quot;is_locked&quot;, BooleanType)
+          .add(&quot;locked_temp_min_f&quot;, StringType)
+          .add(&quot;locked_temp_max_f&quot;, StringType)
+          .add(&quot;locked_temp_min_c&quot;, StringType)
+          .add(&quot;locked_temp_max_c&quot;, StringType)
+          .add(&quot;label&quot;, StringType)
+          .add(&quot;where_name&quot;, StringType)
+          .add(&quot;sunlight_correction_enabled&quot;, BooleanType)
+          .add(&quot;sunlight_correction_active&quot;, BooleanType)
+          .add(&quot;fan_timer_duration&quot;, StringType)
+          .add(&quot;time_to_target&quot;, StringType)
+          .add(&quot;time_to_target_training&quot;, StringType))
+        )
+        .add(&quot;smoke_co_alarms&quot;, MapType(StringType, new StructType()
+          .add(&quot;device_id&quot;, StringType)
+          .add(&quot;locale&quot;, StringType)
+          .add(&quot;software_version&quot;, StringType)
+          .add(&quot;structure_id&quot;, StringType)
+          .add(&quot;name&quot;, StringType)
+          .add(&quot;name_long&quot;, StringType)
+          .add(&quot;last_connection&quot;, TimestampType)
+          .add(&quot;is_online&quot;, BooleanType)
+          .add(&quot;battery_health&quot;, StringType)
+          .add(&quot;co_alarm_state&quot;, StringType)
+          .add(&quot;smoke_alarm_state&quot;, StringType)
+          .add(&quot;is_manual_test_active&quot;, BooleanType)
+          .add(&quot;last_manual_test_time&quot;, TimestampType)
+          .add(&quot;ui_color_state&quot;, StringType)
+          .add(&quot;where_id&quot;, StringType)
+          .add(&quot;where_name&quot;, StringType))
+        )
+        .add(&quot;cameras&quot;, MapType(StringType, new StructType()
+          .add(&quot;device_id&quot;, StringType)
+          .add(&quot;software_version&quot;, StringType)
+          .add(&quot;structure_id&quot;, StringType)
+          .add(&quot;where_id&quot;, StringType)
+          .add(&quot;where_name&quot;, StringType)
+          .add(&quot;name&quot;, StringType)
+          .add(&quot;name_long&quot;, StringType)
+          .add(&quot;is_online&quot;, BooleanType)
+          .add(&quot;is_streaming&quot;, BooleanType)
+          .add(&quot;is_audio_input_enabled&quot;, BooleanType)
+          .add(&quot;last_is_online_change&quot;, TimestampType)
+          .add(&quot;is_video_history_enabled&quot;, BooleanType)
+          .add(&quot;web_url&quot;, StringType)
+          .add(&quot;app_url&quot;, StringType)
+          .add(&quot;is_public_share_enabled&quot;, BooleanType)
+          .add(&quot;activity_zones&quot;, ArrayType(new StructType().add(&quot;name&quot;, StringType).add(&quot;id&quot;, StringType), true))
+          .add(&quot;public_share_url&quot;, StringType)
+          .add(&quot;snapshot_url&quot;, StringType)
+            .add(&quot;last_event&quot;, new StructType()
+              .add(&quot;has_sound&quot;, BooleanType)
+              .add(&quot;has_motion&quot;, BooleanType)
+              .add(&quot;has_person&quot;, BooleanType)
+              .add(&quot;start_time&quot;, TimestampType)
+              .add(&quot;end_time&quot;, TimestampType)
+              .add(&quot;urls_expire_time&quot;, TimestampType)
+              .add(&quot;web_url&quot;, StringType)
+              .add(&quot;app_url&quot;, StringType)
+              .add(&quot;image_url&quot;, StringType)
+              .add(&quot;animated_image_url&quot;, StringType)
+              .add(&quot;activity_zone_ids&quot;, ArrayType(StringType, true))
+            )
+        )
+        )
+        )
+      .add(&quot;structures&quot;, MapType(StringType, new StructType()
+        .add(&quot;structure_id&quot;, StringType)
+        .add(&quot;thermostats&quot;, ArrayType(StringType, true))
+        .add(&quot;smoke_co_alarms&quot;, ArrayType(StringType, true))
+        .add(&quot;cameras&quot;, ArrayType(StringType, true))
+        .add(&quot;away&quot;, StringType)
+        .add(&quot;name&quot;, StringType)
+        .add(&quot;country_code&quot;, StringType)
+        .add(&quot;postal_code&quot;, StringType)
+        .add(&quot;peak_period_start_time&quot;, TimestampType)
+        .add(&quot;peak_period_end_time&quot;, TimestampType)
+        .add(&quot;time_zone&quot;, StringType)
+        .add(&quot;eta&quot;, new StructType()
+            .add(&quot;trip_id&quot;, StringType)
+            .add(&quot;estimated_arrival_window_begin&quot;, TimestampType)
+            .add(&quot;estimated_arrival_window_end&quot;, TimestampType)
+          )
+        .add(&quot;eta_begin&quot;, TimestampType)
+        .add(&quot;co_alarm_state&quot;, StringType)
+        .add(&quot;smoke_alarm_state&quot;, StringType)
+        .add(&quot;rhr_enrollment&quot;, BooleanType)
+        .add(&quot;wwn_security_state&quot;, StringType)
+        .add(&quot;wheres&quot;, MapType(StringType, new StructType()
+          .add(&quot;where_id&quot;, StringType)
+          .add(&quot;name&quot;, StringType))
+        ))
+      )
+
+    val nestTimestampFormat = &quot;yyyy-MM-dd'T'HH:mm:ss.sss'Z'&quot;
+    val jsonOptions =  Map(&quot;timestampFormat&quot; -&gt; nestTimestampFormat)
+
+    val parsed = spark.readStream
+      .format(&quot;kafka&quot;)
+      .option(&quot;kafka.bootstrap.servers&quot;, &quot;localhost:9092&quot;)
+      .option(&quot;subscribe&quot;, &quot;net-logs&quot;)
+      .option(&quot;startingOffsets&quot;, &quot;earliest&quot;)
+      .load()
+      .select(from_json(col(&quot;value&quot;).cast(&quot;string&quot;), schema, jsonOptions).alias(&quot;parsed_value&quot;))
+
+    import spark.implicits._
+    val camera = parsed
+      .select(explode($&quot;parsed_value.devices.cameras&quot;))
+      .select(&quot;value.*&quot;)
+
+    camera.printSchema()
+    val sightings = camera
+      .select(&quot;device_id&quot;, &quot;last_event.has_person&quot;, &quot;last_event.start_time&quot;)
+
+    val console = sightings.writeStream
+      .format(&quot;console&quot;)
+      .outputMode(OutputMode.Append())
+
+    val query = console.start()
+
+    query.awaitTermination()
+
+  }
+}
+</code></pre><h2 id="jdbcsink">JDBCSink</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> java.sql._
+
+<span style="color:#66d9ef">import</span> org.apache.spark.sql.<span style="color:#f92672">{</span><span style="color:#a6e22e">ForeachWriter</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">Row</span><span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span>  <span style="color:#a6e22e">JDBCSink</span><span style="color:#f92672">(</span>url<span style="color:#66d9ef">:</span><span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> user<span style="color:#66d9ef">:</span><span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> pwd<span style="color:#66d9ef">:</span><span style="color:#66d9ef">String</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">ForeachWriter</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Row</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">val</span> driver <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;com.mysql.jdbc.Driver&#34;</span>
+  <span style="color:#66d9ef">var</span> connection<span style="color:#66d9ef">:</span><span style="color:#66d9ef">Connection</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">_</span>
+  <span style="color:#66d9ef">var</span> statement<span style="color:#66d9ef">:</span><span style="color:#66d9ef">Statement</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">_</span>
+
+  <span style="color:#66d9ef">def</span> open<span style="color:#f92672">(</span>partitionId<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>version<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Boolean</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#a6e22e">Class</span><span style="color:#f92672">.</span>forName<span style="color:#f92672">(</span>driver<span style="color:#f92672">)</span>
+    connection <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">DriverManager</span><span style="color:#f92672">.</span>getConnection<span style="color:#f92672">(</span>url<span style="color:#f92672">,</span> user<span style="color:#f92672">,</span> pwd<span style="color:#f92672">)</span>
+    statement <span style="color:#66d9ef">=</span> connection<span style="color:#f92672">.</span>createStatement
+    <span style="color:#66d9ef">true</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">def</span> process<span style="color:#f92672">(</span>value<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Row</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+
+    statement<span style="color:#f92672">.</span>executeUpdate<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;INSERT INTO carema &#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;VALUES (&#34;</span> <span style="color:#f92672">+</span> value<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span><span style="color:#ae81ff">0</span><span style="color:#f92672">)</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;,&#34;</span> <span style="color:#f92672">+</span> value<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">)</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;,&#34;</span> <span style="color:#f92672">+</span> value<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span><span style="color:#ae81ff">2</span><span style="color:#f92672">)</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">)</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">def</span> close<span style="color:#f92672">(</span>errorOrNull<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Throwable</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    connection<span style="color:#f92672">.</span>close
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="写数据库">写数据库</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">    <span style="color:#75715e">// 写入数据库
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> url<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;jdbc:mysql://127.0.0.1:6606/test?useUnicode=true&amp;characterEncoding=utf-8&amp;autoReconnect=true&amp;failOverReadOnly=false&amp;useSSL=false&#34;</span>
+    <span style="color:#66d9ef">val</span> user <span style="color:#f92672">=</span><span style="color:#e6db74">&#34;root&#34;</span>
+    <span style="color:#66d9ef">val</span> pwd <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;111608&#34;</span>
+
+    <span style="color:#66d9ef">val</span> writer <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">JDBCSink</span><span style="color:#f92672">(</span>url<span style="color:#f92672">,</span>user<span style="color:#f92672">,</span> pwd<span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> query <span style="color:#66d9ef">=</span>
+      sightings
+        <span style="color:#f92672">.</span>writeStream
+        <span style="color:#f92672">.</span>foreach<span style="color:#f92672">(</span>writer<span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>outputMode<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;update&#34;</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>trigger<span style="color:#f92672">(</span><span style="color:#a6e22e">Trigger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTime</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;25 seconds&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>start<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+
+    query<span style="color:#f92672">.</span>awaitTermination<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+</code></pre></div><h2 id="one-more-example">one more example</h2>
+<h3 id="json">json</h3>
+<pre><code>{
+   &quot;createTime&quot; : 1536571926,
+   &quot;event&quot; : {
+      &quot;frequency&quot; : -1,
+      &quot;info&quot; : {
+         &quot;VCU_VacmPumpSta&quot; : {
+            &quot;diff_time&quot; : [ 2, 11 ],
+            &quot;value&quot; : [ 1, 0 ]
+         }
+      },
+      &quot;startTime&quot; : -1
+   },
+   &quot;iccid&quot; : &quot;89860117750045560712&quot;,
+   &quot;signal1s&quot; : {
+      &quot;frequency&quot; : 1,
+      &quot;info&quot; : {
+         &quot;APA_DistToparkslot&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;APA_Process_bar&quot; : [ 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127 ],
+         &quot;BMS_ActlExchgCurnt&quot; : [
+            10016,
+            10016,
+            10021,
+            10021,
+            10021,
+            10021,
+            10012,
+            10012,
+            10012,
+            10012,
+            10012,
+            10007,
+            10007
+         ],
+         &quot;BMS_BatSOC_Actl&quot; : [ 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355 ],
+         &quot;BMS_BatSOC_Rpt&quot; : [ 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355 ],
+         &quot;BMS_IsoResistance&quot; : [ 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120 ],
+         &quot;ESC_VehicleSpeed&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;HU_TargetSOC&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;ICU_DisplayVehicleSpeed&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;ICU_ICUTotalOdometer&quot; : [
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252
+         ],
+         &quot;LateralACC&quot; : [ 201, 202, 201, 201, 201, 201, 201, 202, 201, 201, 202, 200, 201 ],
+         &quot;LongitudeACC&quot; : [ 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124 ],
+         &quot;SAS_Angle&quot; : [
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767
+         ],
+         &quot;SAS_RotSpeed&quot; : [
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767
+         ],
+         &quot;VCU_AcclPedalPos&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;VCU_ActlMotorRotateSpd&quot; : [
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000
+         ],
+         &quot;VCU_Actl_MotorRotateSpd&quot; : [
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384
+         ],
+         &quot;VCU_Actl_MotorTorque&quot; : [
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000
+         ],
+         &quot;VCU_BrkPedalPos&quot; : [ 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 1, 2 ],
+         &quot;VCU_DrvRangeDistEst&quot; : [ 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63 ],
+         &quot;VCU_DrvReq_MotorTorq&quot; : [
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000
+         ],
+         &quot;VCU_MotorActualPower&quot; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &quot;VCU_VhclPwrCnsmpActl&quot; : [ 209, 209, 209, 209, 209, 209, 210, 210, 210, 210, 210, 210, 210 ],
+         &quot;YRS_YawRate&quot; : [
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18005,
+            18000,
+            18000
+         ]
+      },
+      &quot;startTime&quot; : 0
+   },
+   &quot;signal30s&quot; : {
+      &quot;frequency&quot; : 0.3333333432674408,
+      &quot;info&quot; : {
+         &quot;AC_ActTotalPower&quot; : [ 5 ],
+         &quot;AC_EnvirTemp&quot; : [ 136 ],
+         &quot;AC_HVHActlPwr_HVAC&quot; : [ 0 ],
+         &quot;AC_HVHDeviceInternTemp_HVAC&quot; : [ 63 ],
+         &quot;AC_InAirPM25Value&quot; : [ 36 ],
+         &quot;AC_IndoorTemp&quot; : [ 126 ],
+         &quot;AC_OutAirQualityLevel&quot; : [ 0 ],
+         &quot;AC_RefrgHiPressure&quot; : [ 8 ],
+         &quot;AC_SeatHeatTemp_FL_Rsrv&quot; : [ 0 ],
+         &quot;AC_SeatHeatTemp_FR_Rsrv&quot; : [ 0 ],
+         &quot;BAT_HVHActlPwr&quot; : [ -1 ],
+         &quot;BAT_HVHDeviceInternTemp&quot; : [ -1 ],
+         &quot;BAT_HighVolDCTolalPwr&quot; : [ -1 ],
+         &quot;BAT_PumpSpeedDutyRequest&quot; : [ -1 ],
+         &quot;BMS_AuxHeatReqPower_Reserved&quot; : [ 0 ],
+         &quot;BMS_BatCapacity&quot; : [ 198 ],
+         &quot;BMS_BatSOH&quot; : [ 1000 ],
+         &quot;BMS_BatteryDTC_Num&quot; : [ 1 ],
+         &quot;BMS_BatteryDTC_list&quot; : [
+            [ 13698951 ]
+         ],
+         &quot;BMS_BatterySubSysCod&quot; : [ 1 ],
+         &quot;BMS_BatterySubSysNum&quot; : [ 1 ],
+         &quot;BMS_BatteryType&quot; : [ 6 ],
+         &quot;BMS_CellVol&quot; : [
+            [
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3613,
+               3613,
+               3613,
+               3613,
+               3614,
+               3613,
+               3614,
+               3615,
+               3615,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3613,
+               3613,
+               3611,
+               3613,
+               3614,
+               3614,
+               3614,
+               3615,
+               3613,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3613,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3615,
+               3614,
+               3615,
+               3614,
+               3615,
+               3615,
+               3615,
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3614,
+               3613,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614
+            ]
+         ],
+         &quot;BMS_CellVolAve&quot; : [ 3613 ],
+         &quot;BMS_CellVolMax&quot; : [ 3615 ],
+         &quot;BMS_CellVolMin&quot; : [ 3611 ],
+         &quot;BMS_ContactorTempAve_DCCharger&quot; : [ 70 ],
+         &quot;BMS_ContactorTempAve_Negative&quot; : [ 73 ],
+         &quot;BMS_ContactorTempAve_Positive&quot; : [ 72 ],
+         &quot;BMS_DCS_ActlChrgCurrent&quot; : [ 0 ],
+         &quot;BMS_DCS_ActlChrgPower&quot; : [ 0 ],
+         &quot;BMS_DCS_ActlChrgVoltage&quot; : [ 0 ],
+         &quot;BMS_DC_AC_RemChrgTime&quot; : [ 600 ],
+         &quot;BMS_ESS_InletColantActtemp&quot; : [ 69 ],
+         &quot;BMS_ESS_InletColanttargettemp&quot; : [ 70 ],
+         &quot;BMS_ESS_outletColantActtemp&quot; : [ 70 ],
+         &quot;BMS_HVBatActlVoltage&quot; : [ 3252 ],
+         &quot;BMS_HVBatCellTempAve&quot; : [ 68 ],
+         &quot;BMS_HVBatCellTempMax&quot; : [ 69 ],
+         &quot;BMS_HVBatCellTempMin&quot; : [ 68 ],
+         &quot;BMS_HVcppltnTempAve&quot; : [ 69 ],
+         &quot;BMS_HVcppltnTempMin&quot; : [ 68 ],
+         &quot;BMS_HVcppltnTempmax&quot; : [ 70 ],
+         &quot;BMS_MaxCellTemp&quot; : [ 100 ],
+         &quot;BMS_MaxCellVol&quot; : [ 4310 ],
+         &quot;BMS_MaxConDisCurnt&quot; : [ 2000 ],
+         &quot;BMS_MaxInstanDisCurnt&quot; : [ 3920 ],
+         &quot;BMS_MaxTempProbeCod&quot; : [ 0 ],
+         &quot;BMS_MaxVolCellCod&quot; : [ 14 ],
+         &quot;BMS_MinCellTemp&quot; : [ 15 ],
+         &quot;BMS_MinCellVol&quot; : [ 3050 ],
+         &quot;BMS_MinTempProbeCod&quot; : [ 4 ],
+         &quot;BMS_MinVolCellCod&quot; : [ 30 ],
+         &quot;BMS_NomCellCap&quot; : [ 62 ],
+         &quot;BMS_PwrRecupMaxConChrgCurnt&quot; : [ 1860 ],
+         &quot;BMS_PwrRecupMaxInstanChrgCurnt&quot; : [ 3000 ],
+         &quot;BMS_TempProbe&quot; : [
+            [
+               89,
+               89,
+               89,
+               89,
+               88,
+               89,
+               88,
+               89,
+               88,
+               89,
+               88,
+               89,
+               89,
+               89,
+               88,
+               89,
+               88,
+               89
+            ]
+         ],
+         &quot;BMS_TotalCellNo&quot; : [ 90 ],
+         &quot;BMS_TotalTempProbe&quot; : [ 18 ],
+         &quot;GPS_Heading&quot; : [ 0 ],
+         &quot;GPS_Latitude&quot; : [ 0 ],
+         &quot;GPS_Longitude&quot; : [ 0 ],
+         &quot;GPS_Speed&quot; : [ 0 ],
+         &quot;ICU_AverageVehicleSpeed&quot; : [ 0 ],
+         &quot;ICU_ICUTripAOdometer&quot; : [ 0 ],
+         &quot;ICU_ICUTripBOdometer&quot; : [ 0 ],
+         &quot;ICU_WashLiquidLevelWarn&quot; : [ 0 ],
+         &quot;ICU_drive_time&quot; : [ 0 ],
+         &quot;PTG_DoorOpenRatio&quot; : [ 0 ],
+         &quot;TPMS_PressureValue_FL&quot; : [ 255 ],
+         &quot;TPMS_PressureValue_FR&quot; : [ 255 ],
+         &quot;TPMS_PressureValue_RL&quot; : [ 255 ],
+         &quot;TPMS_PressureValue_RR&quot; : [ 255 ],
+         &quot;TPMS_TireTempValue_FL&quot; : [ 255 ],
+         &quot;TPMS_TireTempValue_FR&quot; : [ 255 ],
+         &quot;TPMS_TireTempValue_RL&quot; : [ 255 ],
+         &quot;TPMS_TireTempValue_RR&quot; : [ 255 ],
+         &quot;VCU_AtmosPressure&quot; : [ 204 ],
+         &quot;VCU_CruiseCtrTgtSpd&quot; : [ 0 ],
+         &quot;VCU_MCU_Input_Curr&quot; : [ 1024 ],
+         &quot;VCU_MCU_Input_Vol&quot; : [ 648 ],
+         &quot;VCU_MCU_Temp&quot; : [ 72 ],
+         &quot;VCU_MotorActualPower&quot; : [ 0 ],
+         &quot;VCU_MotorDTC_Num&quot; : [ 1 ],
+         &quot;VCU_MotorDTC_list&quot; : [
+            [ 134293412 ]
+         ],
+         &quot;VCU_MotorTemp&quot; : [ 74 ],
+         &quot;VCU_PCUInletCooltTemp&quot; : [ 72 ],
+         &quot;VCU_PwrCoolFanSpdDuty&quot; : [ 2 ],
+         &quot;VCU_VacuumPressure&quot; : [ 81 ],
+         &quot;VCU_VhclPwrCnsmpAvrg&quot; : [ 144 ]
+      },
+      &quot;startTime&quot; : 0
+   },
+   &quot;tboxSn&quot; : &quot;VE70045900-J7U0077&quot;,
+   &quot;version&quot; : &quot;0.1.0.0&quot;,
+   &quot;vin&quot; : &quot;XXXX000000000XXXX&quot;
+}
+</code></pre><h3 id="定义-schema">定义 schema</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">package</span> ohmysummer.pipeline.schema
+
+<span style="color:#66d9ef">import</span> org.apache.spark.sql.types._
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DcSaleData</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">val</span> schema <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;createTime&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;iccid&#34;</span><span style="color:#f92672">,</span>      <span style="color:#a6e22e">StringType</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;tboxSn&#34;</span><span style="color:#f92672">,</span>     <span style="color:#a6e22e">StringType</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;version&#34;</span><span style="color:#f92672">,</span>    <span style="color:#a6e22e">StringType</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;vin&#34;</span><span style="color:#f92672">,</span>        <span style="color:#a6e22e">StringType</span><span style="color:#f92672">)</span>
+
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;event&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;frequency&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;info&#34;</span><span style="color:#f92672">,</span>      <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_VacmPumpSta&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+          <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;diff_time&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+          <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;value&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;startTime&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;signal1s&#34;</span><span style="color:#f92672">,</span><span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;frequency&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;info&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;APA_DistToparkslot&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;APA_Process_bar&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ActlExchgCurnt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatSOC_Actl&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatSOC_Rpt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_IsoResistance&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ESC_VehicleSpeed&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;HU_TargetSOC&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_DisplayVehicleSpeed&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_ICUTotalOdometer&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;LateralACC&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;LongitudeACC&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;SAS_Angle&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;SAS_RotSpeed&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_AcclPedalPos&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_ActlMotorRotateSpd&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_Actl_MotorRotateSpd&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_Actl_MotorTorque&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_BrkPedalPos&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_DrvRangeDistEst&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_DrvReq_MotorTorq&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MotorActualPower&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_VhclPwrCnsmpActl&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;YRS_YawRate&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;startTime&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+
+    <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;signal30s&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;frequency&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">FloatType</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;info&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">StructType</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_ActTotalPower&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_EnvirTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_HVHActlPwr_HVAC&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_HVHDeviceInternTemp_HVAC&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_InAirPM25Value&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_IndoorTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_OutAirQualityLevel&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_RefrgHiPressure&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_SeatHeatTemp_FL_Rsrv&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;AC_SeatHeatTemp_FR_Rsrv&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BAT_HVHActlPwr&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BAT_HVHDeviceInternTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BAT_HighVolDCTolalPwr&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BAT_PumpSpeedDutyRequest&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_AuxHeatReqPower_Reserved&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatCapacity&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatSOH&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatteryDTC_Num&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatteryDTC_list&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatterySubSysCod&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatterySubSysNum&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_BatteryType&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_CellVol&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_CellVolAve&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_CellVolMax&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_CellVolMin&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ContactorTempAve_DCCharger&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ContactorTempAve_Negative&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ContactorTempAve_Positive&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_DCS_ActlChrgCurrent&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_DCS_ActlChrgPower&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_DCS_ActlChrgVoltage&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_DC_AC_RemChrgTime&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ESS_InletColantActtemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ESS_InletColanttargettemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_ESS_outletColantActtemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVBatActlVoltage&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVBatCellTempAve&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVBatCellTempMax&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVBatCellTempMin&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVcppltnTempAve&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVcppltnTempMin&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_HVcppltnTempmax&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxCellTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxCellVol&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxConDisCurnt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxInstanDisCurnt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxTempProbeCod&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MaxVolCellCod&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MinCellTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MinCellVol&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MinTempProbeCod&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_MinVolCellCod&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_NomCellCap&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_PwrRecupMaxConChrgCurnt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_PwrRecupMaxInstanChrgCurnt&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_TempProbe&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span> <span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_TotalCellNo&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;BMS_TotalTempProbe&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;GPS_Heading&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;GPS_Latitude&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;GPS_Longitude&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;GPS_Speed&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_AverageVehicleSpeed&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_ICUTripAOdometer&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_ICUTripBOdometer&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_WashLiquidLevelWarn&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ICU_drive_time&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;PTG_DoorOpenRatio&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_PressureValue_FL&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_PressureValue_FR&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_PressureValue_RL&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_PressureValue_RR&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_TireTempValue_FL&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_TireTempValue_FR&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_TireTempValue_RL&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;TPMS_TireTempValue_RR&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_AtmosPressure&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_CruiseCtrTgtSpd&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MCU_Input_Curr&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MCU_Input_Vol&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MCU_Temp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MotorActualPower&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MotorDTC_Num&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MotorDTC_list&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span> <span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_MotorTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_PCUInletCooltTemp&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_PwrCoolFanSpdDuty&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_VacuumPressure&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;VCU_VhclPwrCnsmpAvrg&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ArrayType</span><span style="color:#f92672">(</span><span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>add<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;startTime&#34;</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">IntegerType</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">object</span> <span style="color:#a6e22e">DcSaleData</span> <span style="color:#f92672">{</span><span style="color:#f92672">}</span>
+</code></pre></div><h3 id="explode">explode</h3>
+<p><code>explode</code> 接收的参数是 Array 或 Map，如果是 Struct， 得先转换为 Array:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">package</span> ohmysummer
+
+<span style="color:#66d9ef">import</span> ohmysummer.pipeline.kafka.WmKafkaDeserializer
+<span style="color:#66d9ef">import</span> ohmysummer.pipeline.schema.DcSaleData
+<span style="color:#66d9ef">import</span> org.apache.spark.sql.<span style="color:#f92672">{</span><span style="color:#a6e22e">Dataset</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">SparkSession</span><span style="color:#f92672">}</span>
+<span style="color:#66d9ef">import</span> org.apache.spark.sql.streaming.OutputMode
+<span style="color:#66d9ef">import</span> org.apache.spark.sql.functions._
+
+<span style="color:#75715e">/*</span><span style="color:#75715e">*</span><span style="color:#75715e">
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e"> 从 Kafka 读取  JSON 数据
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e">  https:</span><span style="color:#75715e">/</span><span style="color:#75715e">/</span><span style="color:#75715e">spark.apache.org</span><span style="color:#75715e">/</span><span style="color:#75715e">docs</span><span style="color:#75715e">/</span><span style="color:#75715e">latest</span><span style="color:#75715e">/</span><span style="color:#75715e">structured-streaming-kafka-integration.html
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e">  https:</span><span style="color:#75715e">/</span><span style="color:#75715e">/</span><span style="color:#75715e">stackoverflow.com</span><span style="color:#75715e">/</span><span style="color:#75715e">questions</span><span style="color:#75715e">/</span><span style="color:#75715e">43297973</span><span style="color:#75715e">/</span><span style="color:#75715e">how-to-read-records-in-json-format-from-kafka-using-structured-streaming
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e">  https:</span><span style="color:#75715e">/</span><span style="color:#75715e">/</span><span style="color:#75715e">stackoverflow.com</span><span style="color:#75715e">/</span><span style="color:#75715e">questions</span><span style="color:#75715e">/</span><span style="color:#75715e">48361177</span><span style="color:#75715e">/</span><span style="color:#75715e">spark-structured-streaming-kafka-convert-json-without-schema-infer-schema
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e">  https:</span><span style="color:#75715e">/</span><span style="color:#75715e">/</span><span style="color:#75715e">databricks.com</span><span style="color:#75715e">/</span><span style="color:#75715e">blog</span><span style="color:#75715e">/</span><span style="color:#75715e">2017</span><span style="color:#75715e">/</span><span style="color:#75715e">04</span><span style="color:#75715e">/</span><span style="color:#75715e">26</span><span style="color:#75715e">/</span><span style="color:#75715e">processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2.html
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e">  https:</span><span style="color:#75715e">/</span><span style="color:#75715e">/</span><span style="color:#75715e">databricks.com</span><span style="color:#75715e">/</span><span style="color:#75715e">blog</span><span style="color:#75715e">/</span><span style="color:#75715e">2017</span><span style="color:#75715e">/</span><span style="color:#75715e">02</span><span style="color:#75715e">/</span><span style="color:#75715e">23</span><span style="color:#75715e">/</span><span style="color:#75715e">working-complex-data-formats-structured-streaming-apache-spark-2-1.html
+</span><span style="color:#75715e">  </span><span style="color:#75715e">*/</span>
+<span style="color:#66d9ef">object</span> <span style="color:#a6e22e">SparkStructuredStreaming</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">def</span> main<span style="color:#f92672">(</span>args<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">val</span> spark <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SparkSession</span>
+      <span style="color:#f92672">.</span>builder
+      <span style="color:#f92672">.</span>appName<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ReadFromKafka&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>master<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;local[*]&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>getOrCreate<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+
+    <span style="color:#66d9ef">object</span> <span style="color:#a6e22e">KafkaDeserializerWrapper</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">val</span> deser <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">WmKafkaDeserializer</span>
+<span style="color:#75715e">//      val deser = new WmJsonDeserializer
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+    spark<span style="color:#f92672">.</span>udf<span style="color:#f92672">.</span>register<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;deserialize&#34;</span><span style="color:#f92672">,</span> <span style="color:#f92672">(</span>topic<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> bytes<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Byte</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">=&gt;</span>
+      <span style="color:#a6e22e">KafkaDeserializerWrapper</span><span style="color:#f92672">.</span>deser<span style="color:#f92672">.</span>deserialize<span style="color:#f92672">(</span>topic<span style="color:#f92672">,</span> bytes<span style="color:#f92672">)</span>
+    <span style="color:#f92672">)</span>
+
+    <span style="color:#66d9ef">val</span> df <span style="color:#66d9ef">=</span> spark<span style="color:#f92672">.</span>readStream
+      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;kafka&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;kafka.bootstrap.servers&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;localhost:9092&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;subscribe&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;dc-sale-data&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;startingOffsets&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;earliest&#34;</span><span style="color:#f92672">)</span> <span style="color:#75715e">// 测试环境使用最早的数据
+</span><span style="color:#75715e"></span>      <span style="color:#f92672">.</span>load<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+
+    <span style="color:#66d9ef">import</span> spark.implicits._
+    <span style="color:#75715e">// 反序列化 value 中的字节数组, 得到原始 JSON
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> result<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Dataset</span><span style="color:#f92672">[</span><span style="color:#f92672">(</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">)</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> df<span style="color:#f92672">.</span>selectExpr<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;CAST(key AS STRING)&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;&#34;&#34;deserialize(&#34;dc-sale-data&#34;, value) AS message&#34;&#34;&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>as<span style="color:#f92672">[</span><span style="color:#f92672">(</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">)</span><span style="color:#f92672">]</span>
+
+    <span style="color:#66d9ef">val</span> schema <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> <span style="color:#a6e22e">DcSaleData</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>schema
+
+    <span style="color:#66d9ef">val</span> parsed <span style="color:#66d9ef">=</span> result<span style="color:#f92672">.</span>select<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;key&#34;</span><span style="color:#f92672">,</span> from_json<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;message&#34;</span><span style="color:#f92672">,</span> schema<span style="color:#f92672">)</span> as <span style="color:#e6db74">&#34;data&#34;</span><span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> event <span style="color:#66d9ef">=</span> parsed<span style="color:#f92672">.</span>select<span style="color:#f92672">(</span>explode<span style="color:#f92672">(</span>array<span style="color:#f92672">(</span>$<span style="color:#e6db74">&#34;data.signal1s.info&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>select<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;col.*&#34;</span><span style="color:#f92672">)</span>
+
+    event<span style="color:#f92672">.</span>printSchema<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> console <span style="color:#66d9ef">=</span> event<span style="color:#f92672">.</span>writeStream
+      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;console&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>outputMode<span style="color:#f92672">(</span><span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Append</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
+
+    <span style="color:#66d9ef">val</span> query <span style="color:#66d9ef">=</span> console<span style="color:#f92672">.</span>start<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+
+    query<span style="color:#f92672">.</span>awaitTermination<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>如果解析出来是空的， 可能就是 schema 定义的问题，多半是字段的类型弄错了。</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="https://databricks.com/blog/2017/04/26/processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2.html">processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2</a></li>
+<li><a href="https://juejin.im/entry/5902bbada0bb9f0065eb9262">用 Apache Spark 2.2 中的结构化流处理 API 处理 Kafka 数据</a></li>
+<li><a href="https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html">working-complex-data-formats-structured-streaming-apache-spark-2-1</a></li>
+</ul>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#producer">Producer</a></li>
+    <li><a href="#代码">代码</a></li>
+    <li><a href="#jdbcsink">JDBCSink</a></li>
+    <li><a href="#写数据库">写数据库</a></li>
+    <li><a href="#one-more-example">one more example</a>
+      <ul>
+        <li><a href="#json">json</a></li>
+        <li><a href="#定义-schema">定义 schema</a></li>
+        <li><a href="#explode">explode</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON&description=Producer%20%e5%8f%91%e9%80%81%20JSON%20%e6%95%b0%e6%8d%ae%e5%88%b0%20Kafka%ef%bc%9a%0afrom%20confluent_kafka%20import%20Producer%20p%20%3d%20Producer%28%7b%27bootstrap.servers%27%3a%20%27localhost%3a9092%27%7d%29%20def%20delivery_report%28err%2c%20msg%29%3a%20%26quot%3b%26quot%3b%26quot%3b%20Called%20once%20for%20each%20message%20produced%20to%20indicate%20delivery%20result.%20Triggered%20by%20poll%28%29%20or%20flush%28%29.%20%26quot%3b%26quot%3b%26quot%3b%20if%20err%20is%20not%20None%3a%20print%28%27Message%20delivery%20failed%3a%20%7b%7d%27.format%28err%29%29%20else%3a%20print%28%27Message%20delivered%20to%20%7b%7d%20%5b%7b%7d%5d%27.format%28msg.topic%28%29%2c%20msg.partition%28%29%29%29%20with%20open%28%26quot%3b%2fUsers%2fohmycloud%2fbigdata%2fSpark%2fcamelia.json%26quot%3b%29%20as%20f%3a%20data%20%3d%20f.read%28%29%20p.poll%280%29%20p.produce%28%27net-logs%27%2c%20data.encode%28%27utf-8%27%29%2c%20callback%3ddelivery_report%29%20p.flush%28%29%20JSON%20%e6%95%b0%e6%8d%ae%e5%86%85%e5%ae%b9%e5%a6%82%e4%b8%8b%ef%bc%9a%0a%7b%20%26quot%3bmetadata%26quot%3b%3a%7b%20%26quot%3baccess_token%26quot%3b%3a%26quot%3bc.FmDPkzyzaQe...%26quot%3b%2c%20%26quot%3bclient_version%26quot%3b%3a1%20%7d%2c%20%26quot%3bdevices%26quot%3b%3a%7b%20%26quot%3bthermostats%26quot%3b%3a%7b%20%26quot%3bpeyiJNo0IldT2YlIVtYaGQ%26quot%3b%3a%7b%20%26quot%3bdevice_id%26quot%3b%3a%26quot%3bpeyiJNo0IldT2YlIVtYaGQ%26quot%3b%2c%20%26quot%3blocale%26quot%3b%3a%26quot%3ben-US%26quot%3b%2c%20%26quot%3bsoftware_version%26quot%3b%3a%26quot%3b4.">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fspark-structured-streaming-%25E8%25A7%25A3%25E6%259E%2590-json%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%a7%a3%e6%9e%90%20JSON">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>

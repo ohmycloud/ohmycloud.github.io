@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 使用 Flink 进行行程划分 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="使用 Flink 进行行程划分" />
+<meta property="og:description" content="准备 ① 启动 Flink 本地模式
+/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/start-cluster.sh Starting cluster. Starting standalonesession daemon on host summer. Starting taskexecutor daemon on host summer. ② 模拟实时流数据
+raku fake-streaming.pl6 该脚本每隔秒打印一行数据, 每隔 15 秒暂停打印, 然后在继续每隔一秒打印一行, 然后在 sleep 15 秒, 模拟行程间隔。
+sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJA0000000000091&#39;; my $last_meter = 0; react { whenever IO::Socket::Async.listen($host, $port) -&gt; $conn { react { my Bool:D $ignore = True; whenever Supply.interval(15).rotor(1, 1 =&gt; 1) { $ignore = !" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/sub-trip-using-flink/" />
+<meta property="article:published_time" content="2019-02-27T17:25:58+08:00" />
+<meta property="article:modified_time" content="2019-02-27T17:25:58+08:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Flink 进行行程划分"/>
+<meta name="twitter:description" content="准备 ① 启动 Flink 本地模式
+/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/start-cluster.sh Starting cluster. Starting standalonesession daemon on host summer. Starting taskexecutor daemon on host summer. ② 模拟实时流数据
+raku fake-streaming.pl6 该脚本每隔秒打印一行数据, 每隔 15 秒暂停打印, 然后在继续每隔一秒打印一行, 然后在 sleep 15 秒, 模拟行程间隔。
+sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJA0000000000091&#39;; my $last_meter = 0; react { whenever IO::Socket::Async.listen($host, $port) -&gt; $conn { react { my Bool:D $ignore = True; whenever Supply.interval(15).rotor(1, 1 =&gt; 1) { $ignore = !"/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/extract-section-block/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/make-commandline-tools-in-raku/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&text=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&name=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e5%87%86%e5%a4%87%20%e2%91%a0%20%e5%90%af%e5%8a%a8%20Flink%20%e6%9c%ac%e5%9c%b0%e6%a8%a1%e5%bc%8f%0a%2fusr%2flocal%2fCellar%2fapache-flink%2f1.7.0%2flibexec%2fbin%2fstart-cluster.sh%20Starting%20cluster.%20Starting%20standalonesession%20daemon%20on%20host%20summer.%20Starting%20taskexecutor%20daemon%20on%20host%20summer.%20%e2%91%a1%20%e6%a8%a1%e6%8b%9f%e5%ae%9e%e6%97%b6%e6%b5%81%e6%95%b0%e6%8d%ae%0araku%20fake-streaming.pl6%20%e8%af%a5%e8%84%9a%e6%9c%ac%e6%af%8f%e9%9a%94%e7%a7%92%e6%89%93%e5%8d%b0%e4%b8%80%e8%a1%8c%e6%95%b0%e6%8d%ae%2c%20%e6%af%8f%e9%9a%94%2015%20%e7%a7%92%e6%9a%82%e5%81%9c%e6%89%93%e5%8d%b0%2c%20%e7%84%b6%e5%90%8e%e5%9c%a8%e7%bb%a7%e7%bb%ad%e6%af%8f%e9%9a%94%e4%b8%80%e7%a7%92%e6%89%93%e5%8d%b0%e4%b8%80%e8%a1%8c%2c%20%e7%84%b6%e5%90%8e%e5%9c%a8%20sleep%2015%20%e7%a7%92%2c%20%e6%a8%a1%e6%8b%9f%e8%a1%8c%e7%a8%8b%e9%97%b4%e9%9a%94%e3%80%82%0asub%20MAIN%28Str%20%3a%24host%20%3d%20%270.0.0.0%27%2c%20Int%20%3a%24port%20%3d%203333%29%20%7b%20my%20%24vin%20%3d%20%27LSJA0000000000091%27%3b%20my%20%24last_meter%20%3d%200%3b%20react%20%7b%20whenever%20IO%3a%3aSocket%3a%3aAsync.listen%28%24host%2c%20%24port%29%20-%26gt%3b%20%24conn%20%7b%20react%20%7b%20my%20Bool%3aD%20%24ignore%20%3d%20True%3b%20whenever%20Supply.interval%2815%29.rotor%281%2c%201%20%3d%26gt%3b%201%29%20%7b%20%24ignore%20%3d%20%21">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&t=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#准备">准备</a></li>
+    <li><a href="#行程划分程序">行程划分程序</a></li>
+  </ul>
+</nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        使用 Flink 进行行程划分
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2019-02-27 17:25:58 &#43;0800 CST" itemprop="datePublished">2019-02-27</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <h2 id="准备">准备</h2>
+<p>① 启动 Flink 本地模式</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/start-cluster.sh 
+</code></pre></div><pre><code>Starting cluster.
+Starting standalonesession daemon on host summer.
+Starting taskexecutor daemon on host summer.
+</code></pre><p>② 模拟实时流数据</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">raku fake-streaming.pl6 
+</code></pre></div><p>该脚本每隔秒打印一行数据, 每隔 15 秒暂停打印, 然后在继续每隔一秒打印一行, 然后在 sleep 15 秒, 模拟行程间隔。</p>
+<pre><code class="language-raku" data-lang="raku">sub MAIN(Str :$host = '0.0.0.0', Int :$port = 3333) {
+
+    my $vin = 'LSJA0000000000091';
+    my $last_meter = 0;
+
+    react {
+        whenever IO::Socket::Async.listen($host, $port) -&gt; $conn {
+            react {
+                my Bool:D $ignore = True;
+
+                whenever Supply.interval(15).rotor(1, 1 =&gt; 1) {
+                    $ignore = !$ignore;
+                }
+
+                whenever Supply.interval(1) {
+                    next if $ignore;
+                    print sprintf(&quot;\{'vin':'%s','createTime':%s,'mileage':%s}\n&quot;, $vin, DateTime.now.posix, $last_meter);
+                    $conn.print: sprintf(&quot;\{'vin':'%s','createTime':%s,'mileage':%s}\n&quot;, $vin, DateTime.now.posix, $last_meter++);
+                }
+
+                whenever signal(SIGINT) {
+                    say &quot;Done.&quot;;
+                    done;
+                }
+            }
+        }
+        CATCH {
+            default {
+                say .^name, ': ', .Str;
+                say &quot;handled in $?LINE&quot;;
+            }
+        }
+    }
+}
+</code></pre><p>③ 运行 Flink 程序</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">flink run -c ohmysummer.YetAnotherSubTrip  ./target/sub-trip-1.0-SNAPSHOT.jar
+</code></pre></div><p>④ 查看输出</p>
+<pre><code>tail -f /usr/local/Cellar/apache-flink/1.7.0/libexec/log/flink-ohmycloud-taskexecutor-0-summer.out
+</code></pre><p>有个坑就是, 当我把 flink-ohmycloud-taskexecutor-0-summer.out 清空后, 再次运行 Flink 程序, 结果什么也不打印。因为更改了日志文件, Flink 可能不知道。重启一下 Flink cluster 就可以了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/stop-cluster.sh 
+</code></pre></div><h2 id="行程划分程序">行程划分程序</h2>
+<p>⑤ SourceData</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">package</span> ohmysummer.model
+
+<span style="color:#75715e">// 原始数据
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SourceData</span> <span style="color:#f92672">(</span>
+   vin<span style="color:#66d9ef">:</span>        <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> <span style="color:#75715e">// 车架号
+</span><span style="color:#75715e"></span>   createTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>   <span style="color:#75715e">// 信号发生时间
+</span><span style="color:#75715e"></span>   mileage<span style="color:#66d9ef">:</span>    <span style="color:#66d9ef">Long</span>    <span style="color:#75715e">// 当前里程数
+</span><span style="color:#75715e"></span><span style="color:#f92672">)</span>
+
+<span style="color:#66d9ef">object</span> <span style="color:#a6e22e">SourceData</span> <span style="color:#f92672">{</span>
+
+<span style="color:#f92672">}</span>
+</code></pre></div><p>⑥ YetAnotherSubTrip</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">package</span> ohmysummer
+<span style="color:#66d9ef">import</span> com.alibaba.fastjson.JSON
+<span style="color:#66d9ef">import</span> ohmysummer.model.<span style="color:#f92672">{</span><span style="color:#a6e22e">SourceData</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">TripResult</span><span style="color:#f92672">}</span>
+<span style="color:#66d9ef">import</span> org.apache.flink.api.common.functions.RichFlatMapFunction
+<span style="color:#66d9ef">import</span> org.apache.flink.api.common.state.<span style="color:#f92672">{</span><span style="color:#a6e22e">ValueState</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ValueStateDescriptor</span><span style="color:#f92672">}</span>
+<span style="color:#66d9ef">import</span> org.apache.flink.configuration.Configuration
+<span style="color:#66d9ef">import</span> org.apache.flink.streaming.api.scala._
+<span style="color:#66d9ef">import</span> org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+<span style="color:#66d9ef">import</span> org.apache.flink.util.Collector
+
+<span style="color:#66d9ef">object</span> <span style="color:#a6e22e">YetAnotherSubTrip</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">App</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">val</span> port<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3333</span>
+  <span style="color:#66d9ef">val</span> host<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;localhost&#34;</span>
+
+  <span style="color:#75715e">// get the execution environment
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">val</span> env<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">StreamExecutionEnvironment</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">StreamExecutionEnvironment</span><span style="color:#f92672">.</span>getExecutionEnvironment
+
+  <span style="color:#75715e">// get input data by connecting to the socket
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">val</span> text <span style="color:#66d9ef">=</span> env<span style="color:#f92672">.</span>socketTextStream<span style="color:#f92672">(</span>host<span style="color:#f92672">,</span> port<span style="color:#f92672">,</span> <span style="color:#e6db74">&#39;\n&#39;</span><span style="color:#f92672">)</span>
+
+  <span style="color:#75715e">// parse the data
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">val</span> stream <span style="color:#66d9ef">=</span> text<span style="color:#f92672">.</span>map <span style="color:#f92672">{</span> l <span style="color:#66d9ef">=&gt;</span>
+    <span style="color:#66d9ef">val</span> data <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">JSON</span><span style="color:#f92672">.</span>parseObject<span style="color:#f92672">(</span>l<span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> vin <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getString<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;vin&#34;</span><span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> createTime <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getLong<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;createTime&#34;</span><span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">val</span> mileage <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getLong<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mileage&#34;</span><span style="color:#f92672">)</span>
+
+    <span style="color:#a6e22e">SourceData</span><span style="color:#f92672">(</span>vin<span style="color:#f92672">,</span> createTime<span style="color:#f92672">,</span> mileage<span style="color:#f92672">)</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">val</span> keyedSourceData<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">KeyedStream</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> stream<span style="color:#f92672">.</span>keyBy<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>vin<span style="color:#f92672">)</span>
+  <span style="color:#66d9ef">val</span> subTrip<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">DataStream</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> keyedSourceData
+    <span style="color:#f92672">.</span>flatMap<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> <span style="color:#a6e22e">SubTripFunction</span><span style="color:#f92672">)</span>
+
+  <span style="color:#75715e">// print result stream to standard out
+</span><span style="color:#75715e"></span>  subTrip<span style="color:#f92672">.</span>print<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+  env<span style="color:#f92672">.</span>execute<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Sub Trip&#34;</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SubTripFunction</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">RichFlatMapFunction</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span>, <span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+
+  <span style="color:#75715e">// state 句柄对象
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">var</span> lastTripState<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ValueState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">_</span>
+
+  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> open<span style="color:#f92672">(</span>parameters<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Configuration</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// 创建 state 描述符
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> lastTripDescriptor <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">ValueStateDescriptor</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;lastTrip&#34;</span><span style="color:#f92672">,</span> classOf<span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span>
+
+    <span style="color:#75715e">// 获取 state 句柄
+</span><span style="color:#75715e"></span>    lastTripState <span style="color:#66d9ef">=</span> getRuntimeContext<span style="color:#f92672">.</span>getState<span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">(</span>lastTripDescriptor<span style="color:#f92672">)</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> flatMap<span style="color:#f92672">(</span>in<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SourceData</span><span style="color:#f92672">,</span> out<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Collector</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">var</span> lastState <span style="color:#66d9ef">=</span> getLastState<span style="color:#f92672">(</span>in<span style="color:#f92672">,</span> lastTripState<span style="color:#f92672">)</span>
+
+    <span style="color:#75715e">// 从 state 中读取上一次行程
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> lastTripEndTime <span style="color:#66d9ef">=</span> lastState<span style="color:#f92672">.</span>tripEndTime
+
+    <span style="color:#75715e">// 检测是否需要进行行程划分
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span> <span style="color:#f92672">(</span>in<span style="color:#f92672">.</span>createTime <span style="color:#f92672">-</span> lastTripEndTime<span style="color:#f92672">)</span>  <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">10</span> <span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+
+      lastState<span style="color:#f92672">.</span>tripStatus <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;1&#34;</span>
+      <span style="color:#66d9ef">val</span> endMileage<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> in<span style="color:#f92672">.</span>mileage
+      lastState<span style="color:#f92672">.</span>tripDistance <span style="color:#66d9ef">=</span> endMileage <span style="color:#f92672">-</span> lastState<span style="color:#f92672">.</span>startMileage
+
+      initState<span style="color:#f92672">(</span>in<span style="color:#f92672">,</span> lastTripState<span style="color:#f92672">)</span>
+
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>lastState<span style="color:#f92672">.</span>tripDistance <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.5</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        out<span style="color:#f92672">.</span>collect<span style="color:#f92672">(</span>lastState<span style="color:#f92672">)</span>
+      <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+        <span style="color:#a6e22e">None</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+      lastState <span style="color:#66d9ef">=</span> getUpdatedState<span style="color:#f92672">(</span>in<span style="color:#f92672">,</span> lastState<span style="color:#f92672">)</span>
+      <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span>lastTripState<span style="color:#f92672">.</span>update<span style="color:#f92672">(</span>lastState<span style="color:#f92672">)</span>
+      <span style="color:#75715e">// out.collect(lastTripState.value())
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">None</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">def</span> getUpdatedState<span style="color:#f92672">(</span>in<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SourceData</span><span style="color:#f92672">,</span> lastState<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TripResult</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TripResult</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    lastState<span style="color:#f92672">.</span>tripEndTime  <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>createTime <span style="color:#75715e">// 行程正在进行, 将上一个行程的行程结束时间置为新的源数据的 createTime
+</span><span style="color:#75715e"></span>    lastState<span style="color:#f92672">.</span>tripStatus   <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;0&#34;</span>           <span style="color:#75715e">// 行程正在进行, 将这种类型的行程的状态置为 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> endMileage<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span>   <span style="color:#f92672">=</span> in<span style="color:#f92672">.</span>mileage
+    lastState<span style="color:#f92672">.</span>tripDistance <span style="color:#66d9ef">=</span> endMileage <span style="color:#f92672">-</span> lastState<span style="color:#f92672">.</span>startMileage <span style="color:#75715e">// 行程正在进行, 更新当前行程的行驶里程数
+</span><span style="color:#75715e"></span>    lastState
+  <span style="color:#f92672">}</span>
+
+
+  <span style="color:#66d9ef">def</span> getLastState<span style="color:#f92672">(</span>in<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SourceData</span><span style="color:#f92672">,</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ValueState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TripResult</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>state<span style="color:#f92672">.</span>value<span style="color:#f92672">(</span><span style="color:#f92672">)</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      state<span style="color:#f92672">.</span>value<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+      <span style="color:#a6e22e">TripResult</span><span style="color:#f92672">(</span>
+        vin           <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>vin<span style="color:#f92672">,</span>
+        tripStartTime <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>createTime<span style="color:#f92672">,</span> <span style="color:#75715e">// 将新的源数据中的 createTime 作为行程开始时间
+</span><span style="color:#75715e"></span>        tripEndTime   <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>createTime<span style="color:#f92672">,</span> <span style="color:#75715e">// 将新的源数据中的 createTime 作为行程结束时间
+</span><span style="color:#75715e"></span>        startMileage  <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>mileage<span style="color:#f92672">,</span>    <span style="color:#75715e">// 将新的源数据中的 mileage 作为行程的当前里程数
+</span><span style="color:#75715e"></span>        tripDistance  <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">,</span>             <span style="color:#75715e">// 行程刚开始, 将行程的行驶距离置为 0
+</span><span style="color:#75715e"></span>        tripStatus    <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;0&#34;</span>            <span style="color:#75715e">// 这种类型的行程是刚开始的行程, 将行程状态设置为 0
+</span><span style="color:#75715e"></span>      <span style="color:#f92672">)</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">def</span> initState<span style="color:#f92672">(</span>in<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SourceData</span><span style="color:#f92672">,</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ValueState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripResult</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">val</span> initTripState <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">TripResult</span><span style="color:#f92672">(</span>
+      vin           <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>vin<span style="color:#f92672">,</span>
+      tripStartTime <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>createTime<span style="color:#f92672">,</span> <span style="color:#75715e">// 用新的源数据中的 createTime 初始化行程开始时间
+</span><span style="color:#75715e"></span>      tripEndTime   <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>createTime<span style="color:#f92672">,</span> <span style="color:#75715e">// 用新的源数据中的 createTime 初始化行程结束时间
+</span><span style="color:#75715e"></span>      startMileage  <span style="color:#66d9ef">=</span> in<span style="color:#f92672">.</span>mileage<span style="color:#f92672">,</span>    <span style="color:#75715e">// 用新的源数据中的 mileage 初始化行程中的行程开始里程
+</span><span style="color:#75715e"></span>      tripDistance  <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">,</span>             <span style="color:#75715e">// 初始行驶距离置为 0
+</span><span style="color:#75715e"></span>      tripStatus    <span style="color:#66d9ef">=</span> <span style="color:#e6db74">&#34;0&#34;</span>            <span style="color:#75715e">// 这种类型的行程是刚开始的行程, 将行程状态设置为 0
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span>lastTripState<span style="color:#f92672">.</span>update<span style="color:#f92672">(</span>initTripState<span style="color:#f92672">)</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>完整项目在 <a href="">GitHub</a>, 欢迎 Star。</p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#准备">准备</a></li>
+    <li><a href="#行程划分程序">行程划分程序</a></li>
+  </ul>
+</nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&text=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&title=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&name=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e5%87%86%e5%a4%87%20%e2%91%a0%20%e5%90%af%e5%8a%a8%20Flink%20%e6%9c%ac%e5%9c%b0%e6%a8%a1%e5%bc%8f%0a%2fusr%2flocal%2fCellar%2fapache-flink%2f1.7.0%2flibexec%2fbin%2fstart-cluster.sh%20Starting%20cluster.%20Starting%20standalonesession%20daemon%20on%20host%20summer.%20Starting%20taskexecutor%20daemon%20on%20host%20summer.%20%e2%91%a1%20%e6%a8%a1%e6%8b%9f%e5%ae%9e%e6%97%b6%e6%b5%81%e6%95%b0%e6%8d%ae%0araku%20fake-streaming.pl6%20%e8%af%a5%e8%84%9a%e6%9c%ac%e6%af%8f%e9%9a%94%e7%a7%92%e6%89%93%e5%8d%b0%e4%b8%80%e8%a1%8c%e6%95%b0%e6%8d%ae%2c%20%e6%af%8f%e9%9a%94%2015%20%e7%a7%92%e6%9a%82%e5%81%9c%e6%89%93%e5%8d%b0%2c%20%e7%84%b6%e5%90%8e%e5%9c%a8%e7%bb%a7%e7%bb%ad%e6%af%8f%e9%9a%94%e4%b8%80%e7%a7%92%e6%89%93%e5%8d%b0%e4%b8%80%e8%a1%8c%2c%20%e7%84%b6%e5%90%8e%e5%9c%a8%20sleep%2015%20%e7%a7%92%2c%20%e6%a8%a1%e6%8b%9f%e8%a1%8c%e7%a8%8b%e9%97%b4%e9%9a%94%e3%80%82%0asub%20MAIN%28Str%20%3a%24host%20%3d%20%270.0.0.0%27%2c%20Int%20%3a%24port%20%3d%203333%29%20%7b%20my%20%24vin%20%3d%20%27LSJA0000000000091%27%3b%20my%20%24last_meter%20%3d%200%3b%20react%20%7b%20whenever%20IO%3a%3aSocket%3a%3aAsync.listen%28%24host%2c%20%24port%29%20-%26gt%3b%20%24conn%20%7b%20react%20%7b%20my%20Bool%3aD%20%24ignore%20%3d%20True%3b%20whenever%20Supply.interval%2815%29.rotor%281%2c%201%20%3d%26gt%3b%201%29%20%7b%20%24ignore%20%3d%20%21">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-using-flink%2f&t=%e4%bd%bf%e7%94%a8%20Flink%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>

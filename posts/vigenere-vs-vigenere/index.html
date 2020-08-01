@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 加密 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="加密" />
+<meta property="og:description" content="第15周挑战赛的第二个任务是实现 Vigenère 密码的编码器和解码器。但这比看起来要复杂一些，因为以 Blaise de Vigenère 命名的密码其实并不是他发明的，而 Vigenère 真正发明的密码也不是以他的名字命名的。
+所以我们应该实现维根埃密码&hellip;还是维根埃的密码？为什么不两者兼而有之呢!
+Vigenère 密码是由 Giovan Battista Bellaso 在1553年设计的，然后在大约三百年后被误认为是 Vigenère 发明的。它使用了一个 tabula rēcta 来将信息文本翻译成密码文本，然后再翻译回来。
+给定一个用户提供的密钥（如 &ldquo;BELLASO&rdquo;），我们通过匹配密钥和信息中各自的字母来加密信息（如 &ldquo;VIGENEREDIDNOTINVENTTHIS&rdquo;），然后用它们作为两个索引，在 tabula rēcta 的相应列和行中查找相应的密文字符。而如果密钥比信息短，我们只需回收密钥，次数不限。
+比如说:
+ Key: B E L L A S O B E L L A S O B E L L A S O B E L L A... Text: V I G E N E R E D I D N O T I N V E N T T H I S Table: ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ Cipher: W M R P N W F F H T O N G H J R G P N L H I M D  换句话说，tabula rēcta 的每一列都是一个独立的凯撒密码（或 ROT-N 转录），钥匙的每一个连续字母都会选择对信息中的相应字母进行哪种替换。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/vigenere-vs-vigenere/" />
+<meta property="article:published_time" content="2020-07-03T20:27:15+00:00" />
+<meta property="article:modified_time" content="2020-07-03T20:27:15+00:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="加密"/>
+<meta name="twitter:description" content="第15周挑战赛的第二个任务是实现 Vigenère 密码的编码器和解码器。但这比看起来要复杂一些，因为以 Blaise de Vigenère 命名的密码其实并不是他发明的，而 Vigenère 真正发明的密码也不是以他的名字命名的。
+所以我们应该实现维根埃密码&hellip;还是维根埃的密码？为什么不两者兼而有之呢!
+Vigenère 密码是由 Giovan Battista Bellaso 在1553年设计的，然后在大约三百年后被误认为是 Vigenère 发明的。它使用了一个 tabula rēcta 来将信息文本翻译成密码文本，然后再翻译回来。
+给定一个用户提供的密钥（如 &ldquo;BELLASO&rdquo;），我们通过匹配密钥和信息中各自的字母来加密信息（如 &ldquo;VIGENEREDIDNOTINVENTTHIS&rdquo;），然后用它们作为两个索引，在 tabula rēcta 的相应列和行中查找相应的密文字符。而如果密钥比信息短，我们只需回收密钥，次数不限。
+比如说:
+ Key: B E L L A S O B E L L A S O B E L L A S O B E L L A... Text: V I G E N E R E D I D N O T I N V E N T T H I S Table: ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ Cipher: W M R P N W F F H T O N G H J R G P N L H I M D  换句话说，tabula rēcta 的每一列都是一个独立的凯撒密码（或 ROT-N 转录），钥匙的每一个连续字母都会选择对信息中的相应字母进行哪种替换。"/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/infinite-work-is-lesss-work/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/coding-with-a-full-toolset/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&text=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&is_video=false&description=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e5%8a%a0%e5%af%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&name=%e5%8a%a0%e5%af%86&description=%e7%ac%ac15%e5%91%a8%e6%8c%91%e6%88%98%e8%b5%9b%e7%9a%84%e7%ac%ac%e4%ba%8c%e4%b8%aa%e4%bb%bb%e5%8a%a1%e6%98%af%e5%ae%9e%e7%8e%b0%20Vigen%c3%a8re%20%e5%af%86%e7%a0%81%e7%9a%84%e7%bc%96%e7%a0%81%e5%99%a8%e5%92%8c%e8%a7%a3%e7%a0%81%e5%99%a8%e3%80%82%e4%bd%86%e8%bf%99%e6%af%94%e7%9c%8b%e8%b5%b7%e6%9d%a5%e8%a6%81%e5%a4%8d%e6%9d%82%e4%b8%80%e4%ba%9b%ef%bc%8c%e5%9b%a0%e4%b8%ba%e4%bb%a5%20Blaise%20de%20Vigen%c3%a8re%20%e5%91%bd%e5%90%8d%e7%9a%84%e5%af%86%e7%a0%81%e5%85%b6%e5%ae%9e%e5%b9%b6%e4%b8%8d%e6%98%af%e4%bb%96%e5%8f%91%e6%98%8e%e7%9a%84%ef%bc%8c%e8%80%8c%20Vigen%c3%a8re%20%e7%9c%9f%e6%ad%a3%e5%8f%91%e6%98%8e%e7%9a%84%e5%af%86%e7%a0%81%e4%b9%9f%e4%b8%8d%e6%98%af%e4%bb%a5%e4%bb%96%e7%9a%84%e5%90%8d%e5%ad%97%e5%91%bd%e5%90%8d%e7%9a%84%e3%80%82%0a%e6%89%80%e4%bb%a5%e6%88%91%e4%bb%ac%e5%ba%94%e8%af%a5%e5%ae%9e%e7%8e%b0%e7%bb%b4%e6%a0%b9%e5%9f%83%e5%af%86%e7%a0%81%26hellip%3b%e8%bf%98%e6%98%af%e7%bb%b4%e6%a0%b9%e5%9f%83%e7%9a%84%e5%af%86%e7%a0%81%ef%bc%9f%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e4%b8%a4%e8%80%85%e5%85%bc%e8%80%8c%e6%9c%89%e4%b9%8b%e5%91%a2%21%0aVigen%c3%a8re%20%e5%af%86%e7%a0%81%e6%98%af%e7%94%b1%20Giovan%20Battista%20Bellaso%20%e5%9c%a81553%e5%b9%b4%e8%ae%be%e8%ae%a1%e7%9a%84%ef%bc%8c%e7%84%b6%e5%90%8e%e5%9c%a8%e5%a4%a7%e7%ba%a6%e4%b8%89%e7%99%be%e5%b9%b4%e5%90%8e%e8%a2%ab%e8%af%af%e8%ae%a4%e4%b8%ba%e6%98%af%20Vigen%c3%a8re%20%e5%8f%91%e6%98%8e%e7%9a%84%e3%80%82%e5%ae%83%e4%bd%bf%e7%94%a8%e4%ba%86%e4%b8%80%e4%b8%aa%20tabula%20r%c4%93cta%20%e6%9d%a5%e5%b0%86%e4%bf%a1%e6%81%af%e6%96%87%e6%9c%ac%e7%bf%bb%e8%af%91%e6%88%90%e5%af%86%e7%a0%81%e6%96%87%e6%9c%ac%ef%bc%8c%e7%84%b6%e5%90%8e%e5%86%8d%e7%bf%bb%e8%af%91%e5%9b%9e%e6%9d%a5%e3%80%82%0a%e7%bb%99%e5%ae%9a%e4%b8%80%e4%b8%aa%e7%94%a8%e6%88%b7%e6%8f%90%e4%be%9b%e7%9a%84%e5%af%86%e9%92%a5%ef%bc%88%e5%a6%82%20%26ldquo%3bBELLASO%26rdquo%3b%ef%bc%89%ef%bc%8c%e6%88%91%e4%bb%ac%e9%80%9a%e8%bf%87%e5%8c%b9%e9%85%8d%e5%af%86%e9%92%a5%e5%92%8c%e4%bf%a1%e6%81%af%e4%b8%ad%e5%90%84%e8%87%aa%e7%9a%84%e5%ad%97%e6%af%8d%e6%9d%a5%e5%8a%a0%e5%af%86%e4%bf%a1%e6%81%af%ef%bc%88%e5%a6%82%20%26ldquo%3bVIGENEREDIDNOTINVENTTHIS%26rdquo%3b%ef%bc%89%ef%bc%8c%e7%84%b6%e5%90%8e%e7%94%a8%e5%ae%83%e4%bb%ac%e4%bd%9c%e4%b8%ba%e4%b8%a4%e4%b8%aa%e7%b4%a2%e5%bc%95%ef%bc%8c%e5%9c%a8%20tabula%20r%c4%93cta%20%e7%9a%84%e7%9b%b8%e5%ba%94%e5%88%97%e5%92%8c%e8%a1%8c%e4%b8%ad%e6%9f%a5%e6%89%be%e7%9b%b8%e5%ba%94%e7%9a%84%e5%af%86%e6%96%87%e5%ad%97%e7%ac%a6%e3%80%82%e8%80%8c%e5%a6%82%e6%9e%9c%e5%af%86%e9%92%a5%e6%af%94%e4%bf%a1%e6%81%af%e7%9f%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%aa%e9%9c%80%e5%9b%9e%e6%94%b6%e5%af%86%e9%92%a5%ef%bc%8c%e6%ac%a1%e6%95%b0%e4%b8%8d%e9%99%90%e3%80%82%0a%e6%af%94%e5%a6%82%e8%af%b4%3a%0a%20Key%3a%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A...%20Text%3a%20V%20I%20G%20E%20N%20E%20R%20E%20D%20I%20D%20N%20O%20T%20I%20N%20V%20E%20N%20T%20T%20H%20I%20S%20Table%3a%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20Cipher%3a%20W%20M%20R%20P%20N%20W%20F%20F%20H%20T%20O%20N%20G%20H%20J%20R%20G%20P%20N%20L%20H%20I%20M%20D%20%20%e6%8d%a2%e5%8f%a5%e8%af%9d%e8%af%b4%ef%bc%8ctabula%20r%c4%93cta%20%e7%9a%84%e6%af%8f%e4%b8%80%e5%88%97%e9%83%bd%e6%98%af%e4%b8%80%e4%b8%aa%e7%8b%ac%e7%ab%8b%e7%9a%84%e5%87%af%e6%92%92%e5%af%86%e7%a0%81%ef%bc%88%e6%88%96%20ROT-N%20%e8%bd%ac%e5%bd%95%ef%bc%89%ef%bc%8c%e9%92%a5%e5%8c%99%e7%9a%84%e6%af%8f%e4%b8%80%e4%b8%aa%e8%bf%9e%e7%bb%ad%e5%ad%97%e6%af%8d%e9%83%bd%e4%bc%9a%e9%80%89%e6%8b%a9%e5%af%b9%e4%bf%a1%e6%81%af%e4%b8%ad%e7%9a%84%e7%9b%b8%e5%ba%94%e5%ad%97%e6%af%8d%e8%bf%9b%e8%a1%8c%e5%93%aa%e7%a7%8d%e6%9b%bf%e6%8d%a2%e3%80%82">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&t=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents"></nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        加密
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2020-07-03 20:27:15 &#43;0000 UTC" itemprop="datePublished">2020-07-03</time>
+          
+        </div>
+        
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <p><a href="https://perlweeklychallenge.org/blog/perl-weekly-challenge-015/">第15周挑战赛</a>的第二个任务是实现 Vigenère 密码的编码器和解码器。但这比看起来要复杂一些，因为以 Blaise de Vigenère 命名的密码其实并不是他发明的，而 Vigenère 真正发明的密码也不是以他的名字命名的。</p>
+<p>所以我们应该实现维根埃密码&hellip;还是维根埃的密码？为什么不两者兼而有之呢!</p>
+<p>Vigenère 密码是由 Giovan Battista Bellaso 在1553年设计的，然后在大约三百年后被误认为是 Vigenère 发明的。它使用了一个 <a href="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Vigen%C3%A8re_square_shading.svg/800px-Vigen%C3%A8re_square_shading.svg.png">tabula rēcta</a> 来将信息文本翻译成密码文本，然后再翻译回来。</p>
+<p>给定一个用户提供的密钥（如 &ldquo;BELLASO&rdquo;），我们通过匹配密钥和信息中各自的字母来加密信息（如 &ldquo;VIGENEREDIDNOTINVENTTHIS&rdquo;），然后用它们作为两个索引，在 tabula rēcta 的相应列和行中<a href="https://s3-eu1.ixquick.com/cgi-bin/serveimage?url=http:%2F%2Fcrypto.interactive-maths.com%2Fuploads%2F1%2F1%2F3%2F4%2F11345755%2F2756220_orig.jpg&amp;sp=66e4579b7c3e415cfddd9ad0ff0a31ca">查找</a>相应的密文字符。而如果密钥比信息短，我们只需回收密钥，次数不限。</p>
+<p>比如说:</p>
+<pre><code>   Key:  B E L L A S O B E L L A S O B E L L A S O B E L L A...
+  Text:  V I G E N E R E D I D N O T I N V E N T T H I S
+ Table:  ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓ ↓
+Cipher:  W M R P N W F F H T O N G H J R G P N L H I M D
+</code></pre>
+<p>换句话说，tabula rēcta 的每一列都是一个独立的<a href="https://en.wikipedia.org/wiki/Caesar_cipher">凯撒密码</a>（或 <a href="https://en.wikipedia.org/wiki/ROT13">ROT-N</a> 转录），钥匙的每一个连续字母都会选择对信息中的相应字母进行哪种替换。</p>
+<p>这种方法早在15世纪就被广泛地认为是&quot;不可能的&rdquo;，尽管查尔斯-巴贝奇在1854年&quot;重新发现 &ldquo;后的两周内就打破了这种方法的范例，而弗里德里希-卡西斯基则在不到十年后发表了对这种方法的可靠的总攻击。尽管如此，Vigenère 密码还是提供了合理的安全性，只要所选的密钥足够长，足够不寻常，就可以防止简单的字典攻击。具有讽刺意味的是，正如我们在后面看到的，Vigenère 的实际密码优雅地解决了 Vigenère 密码的这两个问题。</p>
+<p>为了实现 Vigenère 密码，我们首先需要建立一个 tabula rēcta。在 Raku 中，这只是:</p>
+<pre><code class="language-raku" data-lang="raku">constant @alphabet = ['A'...'Z'];
+
+constant @𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎
+    = @alphabet, *.rotate ... *.head eq @alphabet.tail;
+</code></pre><p>该表只是一个数组序列，其中第一个数组是原始字母，其余数组的构造是将前一个数组循环旋转一个字符（<code>*.rotate</code>）。所以 <code>['A'...'Z']</code> 后面是 <code>['B'...'Z', 'A']</code>，后面依次是 <code>['C'...'Z', 'A'...'B']</code>。循环往复，直到我们最终生成一个旋转，其中第一个字母(<code>*.head</code>)是原始字母表(<code>@alphabet.tail</code>)的最后一个字母。换句话说，我们生成每一次旋转，直到达到 <code>['Z', 'A'...'Y']</code>。</p>
+<p>请注意，我们可以简单地通过替换 <code>@alphabet</code> 的内容来改变我们正在使用的字母表。例如，如果我们希望能够用 &ldquo;I❤️Bellaso&rdquo; 这样的键来编码 &ldquo;Vigenère did NOT invent this!&rdquo; 这样的信息，那么我们就会像这样重新配置我们的字母表:</p>
+<pre><code class="language-raku" data-lang="raku"># Valid message characters are all printable Latin-1 + lurve...
+constant @alphabet = [' '...'ÿ', '❤️'];
+</code></pre><p>Raku 是一种现代语言，在数据和源代码中都内置了对完整 Unicode 字符集的支持，所以完全可以使用带有表情符号的字符串，比如 &ldquo;I❤️Bellaso&rdquo;，或者声明一个变量，比如 <code>@𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎</code>，它的名字中包含了那些奇怪的 <a href="https://unicode-search.net/unicode-namesearch.pl?term=MATHEMATICAL%20ITALIC">Unicode 数学斜体字符</a>和 <code>ēvēn ā cōmbīnīng mārk</code>.</p>
+<p>使用斜体的 Unicode 变量名似乎是一件疯狂的事情，但这也意味着我们不再受制于英语帝国主义。而不是被迫命名一个关键变量 <code>$cipher-text</code>，我们可以用我们通常使用的语言自然地命名它：<code>$texte-chiffré</code> 或 <code>$النص-المشفر</code> 或 <code>$加密文字</code> 或 <code>$Κρυπτογραφημένο-κείμενο</code> 甚至 <code>$ĉifrita-teksto</code>。 Raku 的目标是为世界上100%的程序员赋能。</p>
+<p>我们可以直接使用我们的 <code>@𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎</code> 数组来查找给定文本/密钥字符对的密文字符，但这样做有点不方便。我们需要将每个字符转换回它的整数 ASCII 码(通过内置的 <code>.ord</code> 方法)，然后将其归一化为 <code>0..25</code> 范围的表索引，就像这样:</p>
+<pre><code class="language-raku" data-lang="raku">my $key-index   = $key-char.ord  - 'A'.ord;
+my $text-index  = $text-char.ord - 'A'.ord;
+
+my $cipher-char = @𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎[$key-index][$text-index];
+</code></pre><p>而如果我们以后改用非连续的字母表，比如包括 &lsquo;❤️&rsquo; 在内的字母表，那么这个代码就会变得非常复杂。</p>
+<p>如果二维查询表是一个二维字典（Raku 术语：哈希），并且可以直接以我们字母表中的实际字符为索引，而不是以零开始的整数为索引，那就简单多了。</p>
+<p>而这很容易安排：</p>
+<pre><code class="language-raku" data-lang="raku">constant %encoder
+    = @𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎.map:
+        { @^cipher.head =&gt; hash @alphabet Z=&gt; @^cipher }
+</code></pre><p>在这里，对于 tabula rēcta 的每一个密文行（<code>@^cipher</code>），我们建立一个哈希条目，其键是旋转字母表的第一个字母（<code>@^cipher.head</code>），其值是一个嵌套的哈希，将字母表的每个字母映射到密文行中的相应字母（<code>@alphabet Z=&gt; @^cipher</code>）。</p>
+<p><code>Z=&gt;</code> 运算符将其两个列表参数中的对应元素压缩在一起，将每两个参数传递给 <code>=&gt;</code> 对构造函数，因此映射操作产生的哈希条目如下：</p>
+<pre><code class="language-raku" data-lang="raku"># Key     Text-&gt;Cipher, etc.
+
+'M' =&gt; %('A'=&gt;'M', 'B'=&gt;'N', 'C'=&gt;'O' ... 'Y'=&gt;'K', 'Z'=&gt;'L')
+</code></pre><p>所以现在当我们要查询相应的密文字符时，顶层哈希索引选择关键列，二级哈希索引选择明文字符的行。就像这样：</p>
+<pre><code class="language-raku" data-lang="raku">my $ciphertext-char = %encoder{$key-char}{$plaintext-char};
+</code></pre><p>更好的是，使用这种基于哈希的方法来构建二维解码字典也同样简单，只需将字母字符到密码字符的嵌套映射反转即可。</p>
+<pre><code class="language-raku" data-lang="raku">constant %decoder
+    = @𝑡𝑎𝑏𝑢𝑙𝑎-𝑟𝑒̄𝑐𝑡𝑎.map: 
+        { @^cipher.head =&gt; hash @^cipher Z=&gt; @alphabet }
+</code></pre><p>之后，我们可以像这样解码一个加密字符：</p>
+<pre><code class="language-raku" data-lang="raku">my $plaintext-char = %encoder{$key-char}{$ciphertext-char};
+</code></pre><p>一旦我们有了这两个二维字典，Vigenère 密码就很容易实现了：</p>
+<pre><code class="language-raku" data-lang="raku">sub Vigenère (Str :$text!, Str :$key!, Bool :$decode --&gt; Str) {
+
+    # Extract lists of table indices from the two strings...
+    my @textchars =  $text.comb;
+    my @keychars  = |$key.comb xx ∞;
+
+    # Chose our trancoder...
+    my %recoder = $decode ?? %decoder !! %encoder;
+
+    # Pair up indices, transcode, and concatenate the results...
+    (@keychars Z=&gt; @textchars)
+        .map({ %recoder{.key}{.value} // 0.chr })
+        .join;
+}
+</code></pre><p>该子程序需要两个命名的字符串参数：一个文本（明文或加密）和加密/解密密钥。两个参数名称后面的感叹号告诉 Raku 编译器这两个参数是必需的。还有一个可选的命名为布尔参数（后面没有感叹号），表示我们是否要解码。签名末尾的长箭头(<code>--&gt; Str</code>)指定子程序返回一个字符串。</p>
+<p>在子程序中，我们首先将文本字符串和密钥拆分为单个字符的列表（<code>$text.comb</code> 和 <code>$key.comb</code>）。我们还需要重复键字符序列，使键至少与文本字符串一样长。我们可以精确地计算出需要重复多少次，但只需让键无限次地重复(<code>|$key.comb xx ∞</code>)就容易多了。开头的竖条是用来压平键字符列表的。否则，我们最终得到的将不是一个重复的键字符列表，而是一个重复的键字符列表。</p>
+<p>然后，我们根据是否要解码，选择我们需要的两个编码字典中的哪一个。在 Raku 中，三元选择操作符是 <code>?? true-value !! false-value</code>,
+而不是 <code>test ? true-value : false-value</code>。</p>
+<p>一旦我们把一切都设置好了，实际的编码或解码就很琐碎了:</p>
+<pre><code class="language-raku" data-lang="raku">(@keychars Z=&gt; @textchars)
+    .map({ %recoder{.key}{.value} // 0.chr })
+    .join;
+</code></pre><p>我们首先将文本中的每个字符与重复键中的下一个连续字符进行匹配，再次在两个列表之间使用 zip-into-a-list-of-pairs 操作符(<code>Z=&gt;</code>)。(<code>@keychars Z=&gt; @textchars</code>)。</p>
+<p>然后，我们将该对列表映射到加密/解密字符列表，通过在查找表中查找每个密钥字符（<code>.key</code>）和每个对应的文本字符（<code>.value</code>）。如果对字符组合没有可用的转换，我们只用一个空字符（<code>0.chr</code>）作为占位符。这确保了指定字母表之外的任何字符都能干净利落地从加密字符串中映射出来，而不会影响其未来的解密。</p>
+<p>一旦所有的字符都被转换，列表就会被简单地连接起来（<code>.join</code>）以产生最终的字符串。</p>
+<p>这就是 Vigenère 密码。</p>
+<p>那么，Vigenère 的加密技术又是怎样的呢？</p>
+<p>上面讨论的加密技术作为密码有一些严重的弱点。1863年，Friedrich Kasiski 观察到，为了生成一个足够长的密钥而重复使用密钥串，这意味着一个单一的加密信息有时可能会重复使用 tabula rēcta 的相同列来编码后来在原始信息中重新出现的相同明文字符序列。</p>
+<p>因此，如果我们截取一个加密字符串，如。</p>
+<pre><code>LLGMMZWRGIIVATJVVBKRVMMZWRGIILLEDCIVATJVV
+</code></pre>
+<p>&hellip;那么就比较容易发现，明文电文中重复的两个地方，显然是用两个相同的关键字符的独立副本进行加密的。</p>
+<pre><code>LLGMMZWRGIIVATJVVBKRVMMZWRGIILLEDCIVATJVV
+
+LLGMMZWRGIIVATJVVBKRVMMZWRGIILLEDCIVATJVV
+</code></pre>
+<p>第一个明显的单词重复发生在18个字符之间，所以如果两个单词使用相同的密钥字符进行编码，密钥必须在18个字符之后重复。这意味着密钥长度必须是18或18的某个整数因子（即9、6、3、2或1）。第二个重复发生在24个字符之间，所以键长必须同时是24的某个系数（即12、8、6、4、3、2或1）。由于两种情况下都是同一个键，因此键长必须是18和24的共同因子：6、3、2或1。</p>
+<p>考虑到这些可能性，密钥很可能是6个字符长，因为从心理学上讲，其他长度都太短了。在这种情况下，我们也许可以简单地通过使用所有17706个英语六字母单词尝试字典攻击来解码信息。</p>
+<p>要做到这一点，我们首先要知道最有可能的密钥长度是多少。</p>
+<pre><code class="language-raku" data-lang="raku">sub large-factors ($n) { set (4..$n).grep($n %% *) }
+
+my $gap
+    = any keys [∩] map {large-factors(.&lt;gap&gt;.chars)},
+      $encoded ~~ m:ex/$&lt;gap&gt;=[ $&lt;seq&gt;=[. ** 3..*] .+] $&lt;seq&gt;/;
+</code></pre><p>在这里，我们详尽地将(<code>m:ex</code>)编码文本与定位任何三个或更多连续字符序列的 regex 进行匹配(<code>$&lt;seq&gt;=[. ** 3..* ]</code>)，然后是一个空隙(<code>.+</code>)，然后再是之前的字符序列(<code>$&lt;seq&gt;</code>)。然后我们确定每个间隙的长度(<code>.&lt;gap&gt;.chars</code>)，建立一个每个长度的显著因子集(<code>map {large-factors(...)}</code>)，并取这些集合的交集(<code>[∩]</code>)来寻找共同因子。最后，我们将得到的公因子集用任意结转换为一个值。随后，我们就可以将字长与该结点进行匹配，选择适当长度的潜在关键词。</p>
+<p>一旦我们知道了解密密钥的长度，我们就可以加载一个合适的字典，并筛选出合适的候选密钥。</p>
+<pre><code class="language-raku" data-lang="raku">my @candidate-keys
+    = '/usr/share/dict/words'.IO.lines.grep(*.chars==$gap)».uc;
+
+my @common-words
+    = '/usr/share/dict/common'.IO.lines.grep(*.chars &gt; 2)».uc;
+</code></pre><p>我们只保留那些长度合适的词：<code>.grep(*.chars==$gap)</code>。我们还加载了第二个较小的常用词库，我们将用它来检测可信的解密。</p>
+<p>然后，我们用每一个可能的长度合适的密钥对密文进行解密，并打印出任何看起来包含合理数量的英文单词的解密。</p>
+<pre><code class="language-raku" data-lang="raku">    # Request text to be deciphered...
+    my $encoded = prompt &quot;Ciphertext: &quot;;
+
+    # Try each potential key...
+    for @candidate-keys -&gt; $key {
+
+        # Decrypt with that key...
+        my $candidate = Vigenère( :text($encoded), :$key, :decode);
+
+        # Count any real words found in the decryption...
+        my $found = 0;
+        for @common-words -&gt; $word {
+
+            # Report any plausible decryptions found...
+            if $candidate.contains($word) &amp;&amp; ++$found &gt; 3 {
+                say &quot;$key --&gt; $candidate&quot;;
+                last;
+            }
+        }
+    }
+</code></pre><p>在短短不到20秒的时间里，产生了:</p>
+<pre><code>Ciphertext: LLGMMZWRGIIVATJVVBKRVMMZWRGIILLEDCIVATJVV
+
+HYDROA --&gt; ENDVYZPTDRUVTVGEHBDTSVYZPTDRULEGALUVTVGEH
+HYDROA --&gt; ENDVYZPTDRUVTVGEHBDTSVYZPTDRULEGALUVTVGEH
+HOGGIE --&gt; EXAGEVPDACARTFDPNXDDPGEVPDACAHEQXWARTFDPN
+SECRET --&gt; THEVIGENERECIPHERISNTVIGENERESTABLECIPHER
+STRICH --&gt; TSPEKSEYPAGOIASNTUSYEEKSEYPAGETLMUGOIASNT
+WAGGIE --&gt; PLAGEVARACARETDPNXORPGEVARACAHPEXWARETDPN
+WEDGIE --&gt; PHDGEVANDCAREPGPNXONSGEVANDCAHPAAWAREPGPN
+</code></pre>
+<p>这里的根本问题（和许多密码技术一样）是密钥太短。我们可以坚持要求用户提供一个至少和实际信息一样长的密钥：</p>
+<pre><code class="language-raku" data-lang="raku">sub Vigenère (
+    Str  :$text!,
+    Str  :$key! where { $key.chars &gt;= $text.chars },
+    Bool :$decode
+    --&gt; Str)
+    {...}
+</code></pre><p>然而，在1586年，Blaise de Vigenère 找到了一个简单得多的解决方案：无论他们提供什么密钥，与其用额外的副本来扩展它本身，不如用信息的&quot;随机&quot;字符来扩展密钥。</p>
+<p>也就是说，与其:</p>
+<pre><code>   Key: SECRETSECRETSECRETSECRETSECRETSECRETSECRET...
+  Text: THEVIGENERECIPHERISNTVIGENERESTABLECIPHER
+ Table: ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+Cipher: LLGMMZWRGIIVATJVVBKRVMMZWRGIILLEDCIVATJVV
+</code></pre>
+<p>&hellip;我们不如使用:</p>
+<pre><code>   Key: SECRETTHEVIGENERECIPHERISNTVIGENERESTABLECIPHER
+  Text: THEVIGENERECIPHERISNTVIGENERESTABLECIPHER
+ Table: ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+Cipher: LLGMMZXUIMMIMCLVVKACAZZOWAXMMYXNFCIUBPIPV
+</code></pre>
+<p>这样就不会在密文中产生明显的重复，因为明文中的重复词不再是用一个短密钥的重复来加密。这种方法被称为<a href="https://en.wikipedia.org/wiki/Autokey_cipher">自动密钥密码</a>，因为完整的密钥是由消息本身为我们自动生成的。</p>
+<p>假设我们想扩展我们之前的 Vigenère 子程序，让它也提供自动密钥加密。我们可能只是在签名中添加另一个参数，然后根据实际提供的参数选择合适的行为。</p>
+<pre><code class="language-raku" data-lang="raku">sub Vigenère (
+    Str :$text!,
+    Str :$key,
+    Str :$autokey,
+    Bool :$decode
+    --&gt; Str
+) {
+    if    $autokey {...}
+    elsif $key     {...}
+    else           { fail 'Must specify :key or :autokey' }
+}
+</code></pre><p>但是 Raku 支持多重分派，所以有一个更干净的方法可以给 Vigenère 子程序增加另一个互斥行为。我们简单的将现有的代码从 <code>sub</code> 改为 <code>multi</code>:</p>
+<pre><code class="language-raku" data-lang="raku">multi Vigenère (Str :$text!, Str :$key!, Bool :$decode --&gt; Str)
+{
+    # Body exactly as before
+}
+</code></pre><p>然后，我们再添加第二个乘法派发的变体，有不同的参数集和不同的主体:</p>
+<pre><code class="language-raku" data-lang="raku">multi Vigenère (Str :$text!, Str :$autokey! --&gt; Str) {
+    Vigenère( :$text, :key($autokey ~ $text) );
+}
+</code></pre><p>这个版本需要一个 <code>:autokey</code> 参数，而不是 <code>:key</code> 参数。然后，它立即重新分配到原来的(Bellaso)变体，直接通过文本不变(<code>:$text</code>)，但通过将所提供的自动键与文本连接起来，构建一个新的(非自动)键： <code>:key($autokey ~ $text)</code>。</p>
+<p>解释器总是知道在任何时候都要调用 Vigenère 的哪个变体，因为它检查每次调用中传递的实际参数，并从考虑中排除任何参数列表不接受这些特定参数的变体。这意味着，如果我们传递一个 <code>:key</code> 参数，解释器将总是调用原来的 (Bellaso) 变体，而如果我们传递一个 <code>:autokey</code> 参数，解释器将总是调用我们新的 (Vigenère) 变体。</p>
+<p>请注意，Vigenère 子程序的这个新的 autokey 变体不允许使用 <code>:decode</code> 参数。这是因为，使用 autokey 对文本进行编码只是 Bellaso 算法的一个小变化，而再次解码则要复杂一些。</p>
+<p>要对经过自动密钥加密的文本进行解码，我们显然需要原始加密密钥。但在自动密钥系统中，大部分密钥都是由未加密的原始文本提供的。所以为了取回未加密的文本，我们必须向解码器提供&hellip;未加密的文本。嗯，嗯。</p>
+<p>当然，除了自动密钥的最初几个字符并不是原始明文的一部分，它们只是指定的常规密钥（如 &ldquo;BELLASO&rdquo;、&ldquo;SECRET&rdquo; 等）的字符。</p>
+<p>给定这个部分密钥，我们至少可以破译出加密文本的那么几个初始字符。这就给了我们原始信息的前几个字符，所以我们可以立即使用这些字符作为下一部分密钥，使我们能够解密更多的加密文本，从而给我们提供更多的几个信息字符，这就给了我们一些额外的密钥字符，有了这些字符，我们可以再提取几个明文字符，这&hellip;等等，等等，直到整个文本被解码。</p>
+<p>在 Raku 中，这看起来像这样：</p>
+<pre><code class="language-raku" data-lang="raku">multi Vigenère (Str :$text!, Str :$autokey!, :$decode! --&gt; Str)
+{
+    # Break out text that was enciphered by the original key...
+    my ($cipherkey, $ciphertext)
+        = $text.split: /&lt;?at: $autokey.chars&gt;/;
+
+    # Decipher that key-enciphered initial text...
+    my @autokey
+        = Vigenère( :text($cipherkey), :key($autokey), :decode )
+             .comb;
+
+    # Progressively decipher the rest...
+    [~] flat gather for $ciphertext.comb {
+        FIRST take @autokey;
+        @autokey.push:
+           take %decoder{@autokey.shift}{$^cipherchar} // 0.chr;
+    }
+}
+</code></pre><p>Vigenère multisub 的第三个变体需要三个必要的参数：文本、原始自动密钥和 <code>:decode</code> 标志。所以这个变体只有在解码一个自动密钥加密时才会被调用。</p>
+<p>我们首先需要将文本分解成两个字符串：使用原始密钥加密的初始N个字符(<code>$cipherkey</code>)，以及使用未加密消息本身加密的文本的剩余部分(<code>$ciphertext</code>)。要做到这一点，我们调用文本字符串的 <code>.split</code> 方法，并传递给它一个 regex。只要 regex 匹配，文本就会被分割，所以我们在 regex 中使用 <code>&lt;?at: position&gt;</code> 断言，强制它只匹配原始密钥的长度：<code>/&lt;?at: $autokey.chars&gt;/</code>。</p>
+<p>一旦我们在 <code>$cipherkey</code> 中得到了前N个字符，我们就可以通过调用原始的（Bellaso）解码变体来简单地用原始密钥（在 <code>$autokey</code> 中）对它们进行解密，我们通过将原始密钥作为一个 <code>:key</code> 参数，而不是作为 <code>:autokey</code> 来调用。像这样：</p>
+<pre><code class="language-raku" data-lang="raku">Vigenère( :text($cipherkey), :key($autokey), :decode )
+</code></pre><p>然后我们使用 <code>.comb</code> 方法将解密后的明文转换成一个字符列表，并将其存储在 <code>@autokey</code> 中。</p>
+<p>现在我们已经解密了前 N 个明文字符，我们可以开始从剩余的加密文本中迭代字符列表 (对于 <code>$ciphertext.com {...}</code>)，使用下一个已知的自动密钥字符 (<code>@autokey.shift</code>) 来解密下一个消息字符 (<code>%decoder{@autokey.shift}{$^cipherchar}</code>)。新解密的字符会被保存下来，作为后续的自动密钥字符使用（<code>@autokey.push:</code>）。</p>
+<p>当我们在解密时，我们还需要捕获每一个被解密的字符，这样我们就可以最终将它们连接起来并作为解密后的文本返回.最简单的方法是使用一个 <code>gather</code> 块，它可以自动记住我们在它里面获取(<code>take</code>)的任何东西。</p>
+<p>在本例中，我们首先要收集所有用原始密钥解密后存储在 <code>@autokey</code> 中的初始字符。因此，我们告诉 <code>for</code> 循环去获取(<code>take</code>)它们，但只在它的第一次迭代中:</p>
+<pre><code class="language-raku" data-lang="raku">FIRST take @autokey;
+</code></pre><p>然后每次我们在循环中解密另一个字符时，我们也要把它取走，就在我们把它推到 <code>@autokey</code> 数组之前。</p>
+<pre><code class="language-raku" data-lang="raku">@autokey.push:
+    take %decoder{@autokey.shift}{$^cipherchar} // 0.chr;
+</code></pre><p>一旦解密 <code>for</code> 循环终止，<code>gather</code> 将返回一个我们传递给 <code>take</code> 的所有内容的列表。我们将这些字符（<code>[~] flat</code>）连成一个单一的字符串&hellip;就完成了。</p>
+<p>所以现在，当我们想要 Vigenère 密码的时候，我们这样写：</p>
+<pre><code class="language-raku" data-lang="raku">$ciphertext
+  = Vigenère( :text($plaintext), :key($secret) );
+
+# and later...
+
+$plaintext
+  = Vigenère( :text($ciphertext), :key($secret), :decode );
+</code></pre><p>而当我们想要 Vigenère 的实际密码时，我们这样写：</p>
+<pre><code class="language-raku" data-lang="raku">$ciphertext
+  = Vigenère( :text($plaintext), :autokey($secret) );
+
+# and later...
+
+$plaintext
+  = Vigenère( :text($ciphertext), :autokey($secret), :decode );
+</code></pre><p>如果你接受现代<a href="https://en.wikipedia.org/wiki/Linguistic_relativity#Renewed_examination">语言学相对论</a>，那么我们思考的语言可以塑造我们思考的方式，甚至可能限制我们思考的方式。</p>
+<p>编程语言是程序员思考解决方案的工具。所以，你对编程语言的选择可能会塑造你思考解决方案的方式，甚至可能制约你思考解决方案的可能。</p>
+<p>当你在一个像 Vigenère 世界（或者我们的世界！）这样一个语言模糊、计算复杂的世界里思考解决方案的时候，你需要一种语言足够复杂、计算能力足够强的语言，让你能够清晰有效地思考。</p>
+<p>这也是我用 Raku 编程的原因。</p>
+<p>by <a href="http://blogs.perl.org/users/damian_conway/2019/07/vigenere-vs-vigenere.html">Damian</a></p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents"></nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&text=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&is_video=false&description=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e5%8a%a0%e5%af%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&title=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&name=%e5%8a%a0%e5%af%86&description=%e7%ac%ac15%e5%91%a8%e6%8c%91%e6%88%98%e8%b5%9b%e7%9a%84%e7%ac%ac%e4%ba%8c%e4%b8%aa%e4%bb%bb%e5%8a%a1%e6%98%af%e5%ae%9e%e7%8e%b0%20Vigen%c3%a8re%20%e5%af%86%e7%a0%81%e7%9a%84%e7%bc%96%e7%a0%81%e5%99%a8%e5%92%8c%e8%a7%a3%e7%a0%81%e5%99%a8%e3%80%82%e4%bd%86%e8%bf%99%e6%af%94%e7%9c%8b%e8%b5%b7%e6%9d%a5%e8%a6%81%e5%a4%8d%e6%9d%82%e4%b8%80%e4%ba%9b%ef%bc%8c%e5%9b%a0%e4%b8%ba%e4%bb%a5%20Blaise%20de%20Vigen%c3%a8re%20%e5%91%bd%e5%90%8d%e7%9a%84%e5%af%86%e7%a0%81%e5%85%b6%e5%ae%9e%e5%b9%b6%e4%b8%8d%e6%98%af%e4%bb%96%e5%8f%91%e6%98%8e%e7%9a%84%ef%bc%8c%e8%80%8c%20Vigen%c3%a8re%20%e7%9c%9f%e6%ad%a3%e5%8f%91%e6%98%8e%e7%9a%84%e5%af%86%e7%a0%81%e4%b9%9f%e4%b8%8d%e6%98%af%e4%bb%a5%e4%bb%96%e7%9a%84%e5%90%8d%e5%ad%97%e5%91%bd%e5%90%8d%e7%9a%84%e3%80%82%0a%e6%89%80%e4%bb%a5%e6%88%91%e4%bb%ac%e5%ba%94%e8%af%a5%e5%ae%9e%e7%8e%b0%e7%bb%b4%e6%a0%b9%e5%9f%83%e5%af%86%e7%a0%81%26hellip%3b%e8%bf%98%e6%98%af%e7%bb%b4%e6%a0%b9%e5%9f%83%e7%9a%84%e5%af%86%e7%a0%81%ef%bc%9f%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e4%b8%a4%e8%80%85%e5%85%bc%e8%80%8c%e6%9c%89%e4%b9%8b%e5%91%a2%21%0aVigen%c3%a8re%20%e5%af%86%e7%a0%81%e6%98%af%e7%94%b1%20Giovan%20Battista%20Bellaso%20%e5%9c%a81553%e5%b9%b4%e8%ae%be%e8%ae%a1%e7%9a%84%ef%bc%8c%e7%84%b6%e5%90%8e%e5%9c%a8%e5%a4%a7%e7%ba%a6%e4%b8%89%e7%99%be%e5%b9%b4%e5%90%8e%e8%a2%ab%e8%af%af%e8%ae%a4%e4%b8%ba%e6%98%af%20Vigen%c3%a8re%20%e5%8f%91%e6%98%8e%e7%9a%84%e3%80%82%e5%ae%83%e4%bd%bf%e7%94%a8%e4%ba%86%e4%b8%80%e4%b8%aa%20tabula%20r%c4%93cta%20%e6%9d%a5%e5%b0%86%e4%bf%a1%e6%81%af%e6%96%87%e6%9c%ac%e7%bf%bb%e8%af%91%e6%88%90%e5%af%86%e7%a0%81%e6%96%87%e6%9c%ac%ef%bc%8c%e7%84%b6%e5%90%8e%e5%86%8d%e7%bf%bb%e8%af%91%e5%9b%9e%e6%9d%a5%e3%80%82%0a%e7%bb%99%e5%ae%9a%e4%b8%80%e4%b8%aa%e7%94%a8%e6%88%b7%e6%8f%90%e4%be%9b%e7%9a%84%e5%af%86%e9%92%a5%ef%bc%88%e5%a6%82%20%26ldquo%3bBELLASO%26rdquo%3b%ef%bc%89%ef%bc%8c%e6%88%91%e4%bb%ac%e9%80%9a%e8%bf%87%e5%8c%b9%e9%85%8d%e5%af%86%e9%92%a5%e5%92%8c%e4%bf%a1%e6%81%af%e4%b8%ad%e5%90%84%e8%87%aa%e7%9a%84%e5%ad%97%e6%af%8d%e6%9d%a5%e5%8a%a0%e5%af%86%e4%bf%a1%e6%81%af%ef%bc%88%e5%a6%82%20%26ldquo%3bVIGENEREDIDNOTINVENTTHIS%26rdquo%3b%ef%bc%89%ef%bc%8c%e7%84%b6%e5%90%8e%e7%94%a8%e5%ae%83%e4%bb%ac%e4%bd%9c%e4%b8%ba%e4%b8%a4%e4%b8%aa%e7%b4%a2%e5%bc%95%ef%bc%8c%e5%9c%a8%20tabula%20r%c4%93cta%20%e7%9a%84%e7%9b%b8%e5%ba%94%e5%88%97%e5%92%8c%e8%a1%8c%e4%b8%ad%e6%9f%a5%e6%89%be%e7%9b%b8%e5%ba%94%e7%9a%84%e5%af%86%e6%96%87%e5%ad%97%e7%ac%a6%e3%80%82%e8%80%8c%e5%a6%82%e6%9e%9c%e5%af%86%e9%92%a5%e6%af%94%e4%bf%a1%e6%81%af%e7%9f%ad%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%aa%e9%9c%80%e5%9b%9e%e6%94%b6%e5%af%86%e9%92%a5%ef%bc%8c%e6%ac%a1%e6%95%b0%e4%b8%8d%e9%99%90%e3%80%82%0a%e6%af%94%e5%a6%82%e8%af%b4%3a%0a%20Key%3a%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A%20S%20O%20B%20E%20L%20L%20A...%20Text%3a%20V%20I%20G%20E%20N%20E%20R%20E%20D%20I%20D%20N%20O%20T%20I%20N%20V%20E%20N%20T%20T%20H%20I%20S%20Table%3a%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20%e2%86%93%20Cipher%3a%20W%20M%20R%20P%20N%20W%20F%20F%20H%20T%20O%20N%20G%20H%20J%20R%20G%20P%20N%20L%20H%20I%20M%20D%20%20%e6%8d%a2%e5%8f%a5%e8%af%9d%e8%af%b4%ef%bc%8ctabula%20r%c4%93cta%20%e7%9a%84%e6%af%8f%e4%b8%80%e5%88%97%e9%83%bd%e6%98%af%e4%b8%80%e4%b8%aa%e7%8b%ac%e7%ab%8b%e7%9a%84%e5%87%af%e6%92%92%e5%af%86%e7%a0%81%ef%bc%88%e6%88%96%20ROT-N%20%e8%bd%ac%e5%bd%95%ef%bc%89%ef%bc%8c%e9%92%a5%e5%8c%99%e7%9a%84%e6%af%8f%e4%b8%80%e4%b8%aa%e8%bf%9e%e7%bb%ad%e5%ad%97%e6%af%8d%e9%83%bd%e4%bc%9a%e9%80%89%e6%8b%a9%e5%af%b9%e4%bf%a1%e6%81%af%e4%b8%ad%e7%9a%84%e7%9b%b8%e5%ba%94%e5%ad%97%e6%af%8d%e8%bf%9b%e8%a1%8c%e5%93%aa%e7%a7%8d%e6%9b%bf%e6%8d%a2%e3%80%82">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fvigenere-vs-vigenere%2f&t=%e5%8a%a0%e5%af%86">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>
