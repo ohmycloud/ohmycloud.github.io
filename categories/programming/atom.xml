@@ -10,12 +10,212 @@
             <link href="https://ohmyweekly.github.io/categories/programming/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/programming/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/programming/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-08-05T11:46:08+08:00</updated>
+    <updated>2020-08-17T14:23:46+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/programming/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Python API 指南]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-17-python-api-tutorial/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-05-connectors-in-flink/?utm_source=atom_feed" rel="related" type="text/html" title="Flink 中的 Connectors" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-17-python-api-tutorial/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-17T00:00:00+08:00</published>
+            <updated>2020-08-17T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Python API Tutorial</blockquote><h2 id="python-api-指南">Python API 指南</h2>
+<p>本演练将快速让你开始构建一个纯 Python Flink 项目。</p>
+<p>关于如何设置 Python 执行环境，请参考 Python Table API <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/python/installation.html">安装指南</a>。</p>
+<h3 id="设置一个-python-项目">设置一个 Python 项目</h3>
+<p>您可以先创建一个 Python 项目，然后按照<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/python/installation.html#installation-of-pyflink">安装指南</a>安装 PyFlink 包。</p>
+<h3 id="编写一个-flink-python-table-api-程序">编写一个 Flink Python Table API 程序</h3>
+<p>Table API 应用程序通过声明一个表环境开始；对于批处理应用程序，可以是 BatchTableEvironment，对于流式应用程序，可以是 StreamTableEnvironment。这作为与 Flink 运行时交互的主要入口点。它可以用来设置执行参数，如重启策略、默认并行度等。表配置允许设置 Table API 的具体配置。</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">exec_env</span> <span class="o">=</span> <span class="n">ExecutionEnvironment</span><span class="o">.</span><span class="n">get_execution_environment</span><span class="p">(</span><span class="p">)</span>
+<span class="n">exec_env</span><span class="o">.</span><span class="n">set_parallelism</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">t_config</span> <span class="o">=</span> <span class="n">TableConfig</span><span class="p">(</span><span class="p">)</span>
+<span class="n">t_env</span> <span class="o">=</span> <span class="n">BatchTableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">exec_env</span><span class="p">,</span> <span class="n">t_config</span><span class="p">)</span>
+</code></pre></div><p>在创建的表环境中，可以声明 source/sink 表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">t_env</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">FileSystem</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">/tmp/input</span><span class="s1">&#39;</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_format</span><span class="p">(</span><span class="n">OldCsv</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_schema</span><span class="p">(</span><span class="n">Schema</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">create_temporary_table</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySource</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">FileSystem</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">/tmp/output</span><span class="s1">&#39;</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_format</span><span class="p">(</span><span class="n">OldCsv</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field_delimiter</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">count</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">BIGINT</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_schema</span><span class="p">(</span><span class="n">Schema</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">count</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">BIGINT</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">create_temporary_table</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySink</span><span class="s1">&#39;</span><span class="p">)</span>
+</code></pre></div><p>你也可以使用 <code>TableEnvironment.sql_update()</code> 方法来注册 DDL 中定义的 source/sink 表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">my_source_ddl</span> <span class="o">=</span> <span class="sa"></span><span class="s2">&#34;&#34;&#34;</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    create table mySource (</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        word VARCHAR</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    ) with (</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">connector.type</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">filesystem</span><span class="s2">&#39;</span><span class="s2">,</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">format.type</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">csv</span><span class="s2">&#39;</span><span class="s2">,</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">connector.path</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">/tmp/input</span><span class="s2">&#39;</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    )</span><span class="s2">
+</span><span class="s2"></span><span class="s2">&#34;&#34;&#34;</span>
+
+<span class="n">my_sink_ddl</span> <span class="o">=</span> <span class="sa"></span><span class="s2">&#34;&#34;&#34;</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    create table mySink (</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        word VARCHAR,</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        `count` BIGINT</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    ) with (</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">connector.type</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">filesystem</span><span class="s2">&#39;</span><span class="s2">,</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">format.type</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">csv</span><span class="s2">&#39;</span><span class="s2">,</span><span class="s2">
+</span><span class="s2"></span><span class="s2">        </span><span class="s2">&#39;</span><span class="s2">connector.path</span><span class="s2">&#39;</span><span class="s2"> = </span><span class="s2">&#39;</span><span class="s2">/tmp/output</span><span class="s2">&#39;</span><span class="s2">
+</span><span class="s2"></span><span class="s2">    )</span><span class="s2">
+</span><span class="s2"></span><span class="s2">&#34;&#34;&#34;</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">sql_update</span><span class="p">(</span><span class="n">my_source_ddl</span><span class="p">)</span>
+<span class="n">t_env</span><span class="o">.</span><span class="n">sql_update</span><span class="p">(</span><span class="n">my_sink_ddl</span><span class="p">)</span>
+</code></pre></div><p>这将在执行环境中注册一个名为 <strong>mySource</strong> 的表和一个名为 <strong>mySink</strong> 的表。表 <strong>mySource</strong> 只有一列，即 <strong>word</strong>，它消耗从文件 <code>/tmp/input</code> 中读取的字符串。表 <strong>mySink</strong> 有两列，分别是 <strong>word</strong> 和 <strong>count</strong>，将数据写入文件 <code>/tmp/output</code>，用 <code>/t</code> 作为字段分隔符。</p>
+<p>现在，你可以创建一个作业(job)，它从表 <strong>mySource</strong> 中读取输入，预先执行一些转换，并将结果写入表 <strong>mySink</strong>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">t_env</span><span class="o">.</span><span class="n">from_path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySource</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word, count(1)</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">insert_into</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySink</span><span class="s1">&#39;</span><span class="p">)</span>
+</code></pre></div><p>最后你必须执行实际的 Flink Python Table API 作业。所有的操作，如创建源、转换和 sink 都是懒惰的。只有当 <code>t_env.execute(job_name)</code> 被调用时，作业才会被运行。</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">t_env</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">tutorial_job</span><span class="s2">&#34;</span><span class="p">)</span>
+</code></pre></div><p>到目前为止，完整的代码如下:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">pyflink.dataset</span> <span class="kn">import</span> <span class="n">ExecutionEnvironment</span>
+<span class="kn">from</span> <span class="nn">pyflink.table</span> <span class="kn">import</span> <span class="n">TableConfig</span><span class="p">,</span> <span class="n">DataTypes</span><span class="p">,</span> <span class="n">BatchTableEnvironment</span>
+<span class="kn">from</span> <span class="nn">pyflink.table.descriptors</span> <span class="kn">import</span> <span class="n">Schema</span><span class="p">,</span> <span class="n">OldCsv</span><span class="p">,</span> <span class="n">FileSystem</span>
+
+<span class="n">exec_env</span> <span class="o">=</span> <span class="n">ExecutionEnvironment</span><span class="o">.</span><span class="n">get_execution_environment</span><span class="p">(</span><span class="p">)</span>
+<span class="n">exec_env</span><span class="o">.</span><span class="n">set_parallelism</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">t_config</span> <span class="o">=</span> <span class="n">TableConfig</span><span class="p">(</span><span class="p">)</span>
+<span class="n">t_env</span> <span class="o">=</span> <span class="n">BatchTableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">exec_env</span><span class="p">,</span> <span class="n">t_config</span><span class="p">)</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">FileSystem</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">/tmp/input</span><span class="s1">&#39;</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_format</span><span class="p">(</span><span class="n">OldCsv</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_schema</span><span class="p">(</span><span class="n">Schema</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">create_temporary_table</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySource</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">FileSystem</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">/tmp/output</span><span class="s1">&#39;</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_format</span><span class="p">(</span><span class="n">OldCsv</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field_delimiter</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">count</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">BIGINT</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">with_schema</span><span class="p">(</span><span class="n">Schema</span><span class="p">(</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">STRING</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+                 <span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">count</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="n">BIGINT</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">create_temporary_table</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySink</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">from_path</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySource</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">word, count(1)</span><span class="s1">&#39;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">insert_into</span><span class="p">(</span><span class="sa"></span><span class="s1">&#39;</span><span class="s1">mySink</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="n">t_env</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">tutorial_job</span><span class="s2">&#34;</span><span class="p">)</span>
+</code></pre></div><h3 id="执行-flink-python-table-api-程序">执行 Flink Python Table API 程序</h3>
+<p>首先，你需要在 &ldquo;/tmp/input&rdquo; 文件中准备输入数据。你可以选择以下命令行来准备输入数据。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ <span class="nb">echo</span> -e  <span class="s2">&#34;flink\npyflink\nflink&#34;</span> &gt; /tmp/input
+</code></pre></div><p>接下来，你可以在命令行上运行这个例子（注意：如果结果文件 &ldquo;/tmp/output&rdquo; 已经存在，你需要在运行这个例子之前删除该文件）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ python WordCount.py
+</code></pre></div><p>该命令在本地小型集群中构建并运行 Python Table API 程序。你也可以将 Python Table API 程序提交到远程集群，详情可以参考 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/cli.html#job-submission-examples">Job Submission Examples</a>。</p>
+<p>最后，您可以在命令行中看到执行结果。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cat /tmp/output
+flink	<span class="m">2</span>
+pyflink	<span class="m">1</span>
+</code></pre></div><p>这应该可以让你开始编写自己的 Flink Python Table API 程序。要了解更多关于 Python Table API 的信息，你可以参考 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/api/python">Flink Python Table API Docs</a> 了解更多细节。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/python" term="python" label="Python" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Flink 中的 Connectors]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-05-connectors-in-flink/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-05-connectors-in-flink/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-07T00:00:00+08:00</published>
+            <updated>2020-08-07T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>连接器</blockquote><h1 id="apache-kafka-connector">Apache Kafka Connector</h1>
+<h2 id="kafka-consumer">Kafka Consumer</h2>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">properties</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Properties</span><span class="o">(</span><span class="o">)</span>
+<span class="n">properties</span><span class="o">.</span><span class="n">setProperty</span><span class="o">(</span><span class="s">&#34;bootstrap.servers&#34;</span><span class="o">,</span> <span class="s">&#34;localhost:9092&#34;</span><span class="o">)</span>
+<span class="n">properties</span><span class="o">.</span><span class="n">setProperty</span><span class="o">(</span><span class="s">&#34;group.id&#34;</span><span class="o">,</span> <span class="s">&#34;test&#34;</span><span class="o">)</span>
+<span class="n">stream</span> <span class="k">=</span> <span class="n">env</span>
+    <span class="o">.</span><span class="n">addSource</span><span class="o">(</span><span class="k">new</span> <span class="nc">FlinkKafkaConsumer</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span><span class="o">(</span><span class="s">&#34;topic&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">SimpleStringSchema</span><span class="o">(</span><span class="o">)</span><span class="o">,</span> <span class="n">properties</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/connector" term="connector" label="Connector" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>
