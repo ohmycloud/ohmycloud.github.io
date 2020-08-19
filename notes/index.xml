@@ -10,10 +10,529 @@
         <description>Recent content  in Notes
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Mon, 17 Aug 2020 14:23:46 +0800</lastBuildDate>
+        <lastBuildDate>Wed, 19 Aug 2020 10:54:04 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/notes/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Flink 操作游乐场</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-17-flink-operations-playground/</link>
+                
+                
+                <description>&lt;blockquote&gt;Flink Operations Playground&lt;/blockquote&gt;&lt;h2 id=&#34;flink-操作游乐场&#34;&gt;Flink 操作游乐场&lt;/h2&gt;
+&lt;p&gt;在各种环境中部署和操作 Apache Flink 的方法有很多。无论这种多样性如何，Flink 集群的基本构件保持不变，类似的操作原则也适用。&lt;/p&gt;
+&lt;p&gt;在这个操场上，你将学习如何管理和运行 Flink Jobs。您将看到如何部署和监控应用程序，体验 Flink 如何从 Job 故障中恢复，并执行日常操作任务，如升级和重新缩放。&lt;/p&gt;
+&lt;h3 id=&#34;这个游乐场的解剖&#34;&gt;这个游乐场的解剖&lt;/h3&gt;
+&lt;p&gt;这个游乐场由一个持久的 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-session-cluster&#34;&gt;Flink Session Cluster&lt;/a&gt;和一个 Kafka Cluster 组成。&lt;/p&gt;
+&lt;p&gt;一个 Flink Cluster 总是由一个 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-jobmanager&#34;&gt;JobManager&lt;/a&gt; 和一个或多个 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-taskmanager&#34;&gt;Flink TaskManager&lt;/a&gt; 组成。JobManager 负责处理 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job&#34;&gt;Job&lt;/a&gt; 提交，监督 Job 以及资源管理。Flink TaskManager 是 worker 进程，负责执行构成 Flink Job 的实际&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task&#34;&gt;任务&lt;/a&gt;。在这个游戏场中，你将从一个单一的 TaskManager 开始，但以后会扩展到更多的 TaskManager。此外，这个游乐场还带有一个专门的客户端容器，我们使用它来提交 Flink Job，并在以后执行各种操作任务。客户端容器不是 Flink Cluster 本身需要的，只是为了方便使用才包含在里面。&lt;/p&gt;
+&lt;p&gt;Kafka 集群由一个 Zookeeper 服务器和一个 Kafka Broker 组成。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/flink-docker-playground.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;当游乐场启动时，一个名为 Flink Event Count 的 Flink Job 将被提交给 JobManager。此外，还会创建两个 Kafka 主题 &lt;em&gt;input&lt;/em&gt; 和 &lt;em&gt;output&lt;/em&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/click-event-count-example.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;该作业从 &lt;em&gt;input&lt;/em&gt; 主题中消耗点击事件(&lt;strong&gt;ClickEvent&lt;/strong&gt;)，每个点击事件(&lt;strong&gt;ClickEvent&lt;/strong&gt;)都有一个时间戳(&lt;strong&gt;timestamp&lt;/strong&gt;)和一个页面(&lt;strong&gt;page&lt;/strong&gt;)。然后按页面对事件进行分组(&lt;strong&gt;keyed by&lt;/strong&gt;)，并在 15 秒的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html&#34;&gt;窗口&lt;/a&gt;中进行计数。结果被写入 &lt;em&gt;output&lt;/em&gt; 主题。&lt;/p&gt;
+&lt;p&gt;有6个不同的页面，我们在每个页面和15秒内产生1000个点击事件。因此，Flink 作业的输出应该显示每个页面和窗口有1000个浏览量。&lt;/p&gt;
+&lt;h3 id=&#34;启动游乐场&#34;&gt;启动游乐场&lt;/h3&gt;
+&lt;p&gt;游戏场环境的设置只需几步。我们将引导你完成必要的命令，并展示如何验证一切都在正确运行。&lt;/p&gt;
+&lt;p&gt;我们假设你的机器上安装了 &lt;a href=&#34;https://docs.docker.com/&#34;&gt;Docker&lt;/a&gt;（1.12+）和 &lt;a href=&#34;https://docs.docker.com/compose/&#34;&gt;docker-compose&lt;/a&gt;（2.1+）。&lt;/p&gt;
+&lt;p&gt;所需的配置文件可以在 &lt;a href=&#34;https://github.com/apache/flink-playgrounds&#34;&gt;flink-playgrounds&lt;/a&gt; 仓库中找到。检查一下，然后对齐环境。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;git clone --branch release-1.11 https://github.com/apache/flink-playgrounds.git
+&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; flink-playgrounds/operations-playground
+docker-compose build
+docker-compose up -d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;之后，你可以用以下命令检查正在运行的 Docker 容器。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose ps
+
+                    Name                                  Command               State                   Ports                
+-----------------------------------------------------------------------------------------------------------------------------
+operations-playground_clickevent-generator_1   /docker-entrypoint.sh java ...   Up       6123/tcp, 8081/tcp                  
+operations-playground_client_1                 /docker-entrypoint.sh flin ...   Exit &lt;span class=&#34;m&#34;&gt;0&lt;/span&gt;                                       
+operations-playground_jobmanager_1             /docker-entrypoint.sh jobm ...   Up       6123/tcp, 0.0.0.0:8081-&amp;gt;8081/tcp    
+operations-playground_kafka_1                  start-kafka.sh                   Up       0.0.0.0:9094-&amp;gt;9094/tcp              
+operations-playground_taskmanager_1            /docker-entrypoint.sh task ...   Up       6123/tcp, 8081/tcp                  
+operations-playground_zookeeper_1              /bin/sh -c /usr/sbin/sshd  ...   Up       2181/tcp, 22/tcp, 2888/tcp, 3888/tcp
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这表明客户端容器已经成功提交了 Flink Job（Exit 0），所有集群组件以及数据生成器都在运行（Up）。&lt;/p&gt;
+&lt;p&gt;您可以通过调用来停止游乐场环境。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose down -v
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;进入游乐场&#34;&gt;进入游乐场&lt;/h3&gt;
+&lt;p&gt;在这个游乐场中，有很多东西你可以尝试和检查。在下面的两节中，我们将向您展示如何与 Flink 集群进行交互，并展示 Flink 的一些关键功能。&lt;/p&gt;
+&lt;h4 id=&#34;flink-webui&#34;&gt;Flink WebUI&lt;/h4&gt;
+&lt;p&gt;观察你的 Flink 集群最自然的出发点是在 &lt;a href=&#34;http://localhost:8081/&#34;&gt;http://localhost:8081&lt;/a&gt; 下暴露的 WebUI。如果一切顺利，你会看到集群最初由一个任务管理器组成，并执行一个名为 Click Event Count 的 Job。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/playground-webui.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Flink WebUI 包含了很多关于 Flink 集群和它的工作的有用和有趣的信息（JobGraph, Metrics, Checkpointing Statistics, TaskManager Status, &amp;hellip;）。&lt;/p&gt;
+&lt;h4 id=&#34;日志&#34;&gt;日志&lt;/h4&gt;
+&lt;h5 id=&#34;jobmanager&#34;&gt;JobManager&lt;/h5&gt;
+&lt;p&gt;可以通过 &lt;code&gt;docker-compose&lt;/code&gt; 对 JobManager 日志进行跟踪。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose logs -f jobmanager
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在初始启动后，你应该主要看到每一个检查点完成的日志信息。&lt;/p&gt;
+&lt;h5 id=&#34;taskmanager&#34;&gt;TaskManager&lt;/h5&gt;
+&lt;p&gt;TaskManager 的日志也可以用同样的方式进行 tail。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose logs -f taskmanager
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在初始启动后，你应该主要看到每个检查点完成的日志信息。&lt;/p&gt;
+&lt;h4 id=&#34;flink-cli&#34;&gt;Flink CLI&lt;/h4&gt;
+&lt;p&gt;Flink CLI 可以在客户端容器中使用。例如，要打印 Flink CLI 的帮助信息，你可以运行以下命令&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose run --no-deps client flink --help
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;flink-rest-api&#34;&gt;Flink REST API&lt;/h4&gt;
+&lt;p&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/rest_api.html#api&#34;&gt;Flink REST API&lt;/a&gt; 通过主机上的 localhost:8081 或客户端容器中的 jobmanager:8081 暴露出来，例如，要列出所有当前正在运行的作业，你可以运行:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;curl localhost:8081/jobs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;kafka-topics&#34;&gt;Kafka Topics&lt;/h4&gt;
+&lt;p&gt;你可以通过运行以下命令来查看写入 Kafka 主题的记录&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;//input topic &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;1000&lt;/span&gt; records/s&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+docker-compose &lt;span class=&#34;nb&#34;&gt;exec&lt;/span&gt; kafka kafka-console-consumer.sh &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap-server localhost:9092 --topic input
+
+//output topic &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;24&lt;/span&gt; records/min&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+docker-compose &lt;span class=&#34;nb&#34;&gt;exec&lt;/span&gt; kafka kafka-console-consumer.sh &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap-server localhost:9092 --topic output
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;time-to-play&#34;&gt;Time to Play!&lt;/h4&gt;
+&lt;p&gt;现在你已经学会了如何与 Flink 和 Docker 容器进行交互，让我们来看看一些常见的操作任务，你可以在我们的游乐场上尝试一下。所有这些任务都是相互独立的，即你可以以任何顺序执行它们。大多数任务可以通过 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#flink-cli&#34;&gt;CLI&lt;/a&gt; 和 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#flink-rest-api&#34;&gt;REST API&lt;/a&gt; 来执行。&lt;/p&gt;
+&lt;h5 id=&#34;列出正在运行的-job&#34;&gt;列出正在运行的 Job&lt;/h5&gt;
+&lt;ul&gt;
+&lt;li&gt;CLI&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;命令&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose run --no-deps client flink list
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;期望的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Waiting for response...
+------------------ Running/Restarting Jobs -------------------
+16.07.2019 16:37:55 : &amp;lt;job-id&amp;gt; : Click Event Count (RUNNING)
+--------------------------------------------------------------
+No scheduled jobs.
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;REST API&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;curl localhost:8081/jobs
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;期待的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;jobs&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;job-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;JobID 在提交时被分配给作业(Job)，并且需要通过 CLI 或 REST API 对作业(Job)执行操作。&lt;/p&gt;
+&lt;h5 id=&#34;观察故障和恢复&#34;&gt;观察故障和恢复&lt;/h5&gt;
+&lt;p&gt;Flink 在(部分)失败下提供了精确的一次处理保证。在这个游乐场中，你可以观察并在一定程度上验证这种行为。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;步骤1：观察输出&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#anatomy-of-this-playground&#34;&gt;如上所述&lt;/a&gt;，在这个游乐场中的事件是这样生成的，每个窗口正好包含一千条记录。因此，为了验证 Flink 是否成功地从 TaskManager 故障中恢复，而没有数据丢失或重复，你可以跟踪 &lt;em&gt;output&lt;/em&gt; 主题，并检查恢复后所有的窗口都存在，而且计数是正确的。&lt;/p&gt;
+&lt;p&gt;为此，从 &lt;em&gt;output&lt;/em&gt; 主题开始读取，并让这个命令运行到恢复后（步骤3）。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose &lt;span class=&#34;nb&#34;&gt;exec&lt;/span&gt; kafka kafka-console-consumer.sh &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap-server localhost:9092 --topic output
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;第二步：引入故障&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;为了模拟部分故障，你可以杀死一个 TaskManager，在生产设置中，这可能对应于 TaskManager 进程、TaskManager 机器的丢失，或者仅仅是框架或用户代码抛出的瞬时异常（例如由于暂时不可用）。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose &lt;span class=&#34;nb&#34;&gt;kill&lt;/span&gt; taskmanager
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;几秒钟后，JobManager 会注意到 TaskManager 的丢失，取消受影响的 Job，并立即重新提交它进行恢复。当 Job 被重新启动后，其任务仍处于 &lt;strong&gt;SCHEDULED&lt;/strong&gt; 状态，由紫色的方块表示（见下面的截图）。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/playground-webui-failure.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;注意：即使作业(Job)的任务(Task)处于 &lt;strong&gt;SCHEDULED&lt;/strong&gt; 状态而不是 &lt;strong&gt;RUNNING&lt;/strong&gt; 状态，作业(Job)的整体状态也会显示为 &lt;strong&gt;RUNNING&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;此时，Job 的任务(Task)不能从 &lt;strong&gt;SCHEDULED&lt;/strong&gt; 状态转为 &lt;strong&gt;RUNNING&lt;/strong&gt; 状态，因为没有资源(&lt;strong&gt;TaskManager&lt;/strong&gt; 提供的 &lt;strong&gt;TaskSlots&lt;/strong&gt;）来运行这些任务。在新的 TaskManager 可用之前，Job 将经历一个取消和重新提交的循环。&lt;/p&gt;
+&lt;p&gt;同时，数据生成器会不断地将 ClickEvents 推送到 &lt;em&gt;input&lt;/em&gt; 主题中。这类似于真正的生产设置，在生产数据的同时，要处理数据的 Job 却宕机了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;步骤3：恢复&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;一旦你重新启动 TaskManager，它就会重新连接到 JobManager。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose up -d taskmanager
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当 JobManager 被通知到新的 TaskManager 时，它将恢复中的 Job 的任务(tasks)调度到新的可用 TaskSlots。重新启动后，任务会从故障前最后一次成功的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/fault_tolerance.html&#34;&gt;检查点&lt;/a&gt;恢复其状态，并切换到 RUNNING 状态。&lt;/p&gt;
+&lt;p&gt;Job 将快速处理来自 Kafka 的全部积压输入事件(在故障期间积累的)，并以更高的速度(&amp;gt;24条记录/分钟)产生输出，直到到达流的头部。在输出中，你会看到所有的键(页面)都存在于所有的时间窗口中，而且每个计数都是精确的 1000。由于我们是在&amp;quot;至少一次&amp;quot;模式下使用 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/kafka.html#kafka-producers-and-fault-tolerance&#34;&gt;FlinkKafkaProducer&lt;/a&gt;，所以你有可能会看到一些重复的输出记录。&lt;/p&gt;
+&lt;p&gt;注意：大多数生产设置依赖于资源管理器(Kubernetes、Yarn、Mesos)来自动重启失败的进程。&lt;/p&gt;
+&lt;h5 id=&#34;升级和重新缩放作业&#34;&gt;升级和重新缩放作业&lt;/h5&gt;
+&lt;p&gt;升级 Flink 作业总是涉及两个步骤。首先，用一个&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/state/savepoints.html&#34;&gt;保存点&lt;/a&gt;优雅地停止 Flink Job。保存点是在一个明确定义的、全局一致的时间点(类似于检查点)上的完整应用状态的一致快照。其次，升级后的 Flink Job 从 Savepoint 开始。在这种情况下，&amp;ldquo;升级&amp;quot;可以意味着不同的事情，包括以下内容:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;配置的升级（包括作业的并行性）。&lt;/li&gt;
+&lt;li&gt;对 Job 的拓扑结构进行升级（增加/删除 Operator）。&lt;/li&gt;
+&lt;li&gt;对 Job 的用户定义的函数进行升级。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在开始升级之前，你可能要开始 tailing &lt;em&gt;output&lt;/em&gt; 主题，以观察在升级过程中没有数据丢失或损坏。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose &lt;span class=&#34;nb&#34;&gt;exec&lt;/span&gt; kafka kafka-console-consumer.sh &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap-server localhost:9092 --topic output
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;第一步：停止工作&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;要优雅地停止作业，您需要使用 CLI 或 REST API 的 &amp;ldquo;stop&amp;rdquo; 命令。为此，您需要该作业的 JobID，您可以通过&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#listing-running-jobs&#34;&gt;列出所有正在运行的 Job&lt;/a&gt; 或从 WebUI 中获得。有了 JobID，您就可以继续停止该作业:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CLI&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;命令&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose run --no-deps client flink stop &amp;lt;job-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Suspending job &amp;quot;&amp;lt;job-id&amp;gt;&amp;quot; with a savepoint.
+Suspended job &amp;quot;&amp;lt;job-id&amp;gt;&amp;quot; with a savepoint.
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Savepoint 已经被存储到 flink-conf.yaml 中配置的 state.savepoint.dir 中，它被安装在本地机器的 /tmp/flink-savepoints-directory/ 下。在下一步中，你将需要这个 Savepoint 的路径。在 REST API 的情况下，这个路径已经是响应的一部分，你将需要直接查看文件系统。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;命令&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;ls -lia /tmp/flink-savepoints-directory
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;total &lt;span class=&#34;m&#34;&gt;0&lt;/span&gt;
+  &lt;span class=&#34;m&#34;&gt;17&lt;/span&gt; drwxr-xr-x   &lt;span class=&#34;m&#34;&gt;3&lt;/span&gt; root root   &lt;span class=&#34;m&#34;&gt;60&lt;/span&gt; &lt;span class=&#34;m&#34;&gt;17&lt;/span&gt; jul 17:05 .
+   &lt;span class=&#34;m&#34;&gt;2&lt;/span&gt; drwxrwxrwt &lt;span class=&#34;m&#34;&gt;135&lt;/span&gt; root root &lt;span class=&#34;m&#34;&gt;3420&lt;/span&gt; &lt;span class=&#34;m&#34;&gt;17&lt;/span&gt; jul 17:09 ..
+&lt;span class=&#34;m&#34;&gt;1002&lt;/span&gt; drwxr-xr-x   &lt;span class=&#34;m&#34;&gt;2&lt;/span&gt; root root  &lt;span class=&#34;m&#34;&gt;140&lt;/span&gt; &lt;span class=&#34;m&#34;&gt;17&lt;/span&gt; jul 17:05 savepoint-&amp;lt;short-job-id&amp;gt;-&amp;lt;uuid&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;REST API&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# triggering stop&lt;/span&gt;
+curl -X POST localhost:8081/jobs/&amp;lt;job-id&amp;gt;/stop -d &lt;span class=&#34;s1&#34;&gt;&amp;#39;{&amp;#34;drain&amp;#34;: false}&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;request-id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;trigger-id&amp;gt;&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# check status of stop action and retrieve savepoint path&lt;/span&gt;
+curl localhost:8081/jobs/&amp;lt;job-id&amp;gt;/savepoints/&amp;lt;trigger-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;COMPLETED&amp;#34;&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;operation&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;location&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;savepoint-path&amp;gt;&amp;#34;&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;步骤2a: 重启 Job，不做任何改变&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;现在您可以从该保存点重新启动升级后的作业(Job)。为了简单起见，您可以在不做任何更改的情况下重新启动它。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CLI&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;命令&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose run --no-deps client flink run -s &amp;lt;savepoint-path&amp;gt; &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -d /opt/ClickCountJob.jar &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap.servers kafka:9092 --checkpointing --event-time
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Starting execution of program
+Job has been submitted with JobID &amp;lt;job-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;REST API&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# Uploading the JAR from the Client container&lt;/span&gt;
+docker-compose run --no-deps client curl -X POST -H &lt;span class=&#34;s2&#34;&gt;&amp;#34;Expect:&amp;#34;&lt;/span&gt; &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -F &lt;span class=&#34;s2&#34;&gt;&amp;#34;jarfile=@/opt/ClickCountJob.jar&amp;#34;&lt;/span&gt; http://jobmanager:8081/jars/upload
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;filename&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;/tmp/flink-web-&amp;lt;uuid&amp;gt;/flink-web-upload/&amp;lt;jar-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;success&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# Submitting the Job&lt;/span&gt;
+curl -X POST http://localhost:8081/jars/&amp;lt;jar-id&amp;gt;/run &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -d &lt;span class=&#34;s1&#34;&gt;&amp;#39;{&amp;#34;programArgs&amp;#34;: &amp;#34;--bootstrap.servers kafka:9092 --checkpointing --event-time&amp;#34;, &amp;#34;savepointPath&amp;#34;: &amp;#34;&amp;lt;savepoint-path&amp;gt;&amp;#34;}&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;jobid&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;job-id&amp;gt;&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;一旦 Job 再次 RUNNING，你会在 &lt;em&gt;output&lt;/em&gt; 主题中看到，当 Job 在处理中断期间积累的积压时，记录以较高的速度产生。此外，你会看到在升级过程中没有丢失任何数据：所有窗口都存在，数量正好是 1000。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;步骤2b: 用不同的并行度重新启动作业（重新缩放）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;另外，您也可以在重新提交时通过传递不同的并行性，从这个保存点重新缩放作业。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CLI&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose run --no-deps client flink run -p &lt;span class=&#34;m&#34;&gt;3&lt;/span&gt; -s &amp;lt;savepoint-path&amp;gt; &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -d /opt/ClickCountJob.jar &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  --bootstrap.servers kafka:9092 --checkpointing --event-time
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的输出&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Starting execution of program
+Job has been submitted with JobID &amp;lt;job-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;REST API&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# Uploading the JAR from the Client container&lt;/span&gt;
+docker-compose run --no-deps client curl -X POST -H &lt;span class=&#34;s2&#34;&gt;&amp;#34;Expect:&amp;#34;&lt;/span&gt; &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -F &lt;span class=&#34;s2&#34;&gt;&amp;#34;jarfile=@/opt/ClickCountJob.jar&amp;#34;&lt;/span&gt; http://jobmanager:8081/jars/upload
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;filename&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;/tmp/flink-web-&amp;lt;uuid&amp;gt;/flink-web-upload/&amp;lt;jar-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;success&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# Submitting the Job&lt;/span&gt;
+curl -X POST http://localhost:8081/jars/&amp;lt;jar-id&amp;gt;/run &lt;span class=&#34;se&#34;&gt;\
+&lt;/span&gt;&lt;span class=&#34;se&#34;&gt;&lt;/span&gt;  -d &lt;span class=&#34;s1&#34;&gt;&amp;#39;{&amp;#34;parallelism&amp;#34;: 3, &amp;#34;programArgs&amp;#34;: &amp;#34;--bootstrap.servers kafka:9092 --checkpointing --event-time&amp;#34;, &amp;#34;savepointPath&amp;#34;: &amp;#34;&amp;lt;savepoint-path&amp;gt;&amp;#34;}&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;jobid&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;job-id&amp;gt;&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;现在，作业(Job)已经被重新提交，但它不会启动，因为没有足够的 TaskSlots 在增加的并行度下执行它（2个可用，需要3个）。使用:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;docker-compose scale &lt;span class=&#34;nv&#34;&gt;taskmanager&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;2&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你可以在 Flink 集群中添加一个带有两个 TaskSlots 的第二个 TaskManager，它将自动注册到 JobManager 中。添加 TaskManager 后不久，该任务(Job)应该再次开始运行。&lt;/p&gt;
+&lt;p&gt;一旦 Job 再次 &amp;ldquo;RUNNING&amp;rdquo;，你会在 &lt;em&gt;output&lt;/em&gt; Topic 中看到在重新缩放过程中没有丢失数据：所有的窗口都存在，计数正好是 1000。&lt;/p&gt;
+&lt;h5 id=&#34;查询作业job的指标&#34;&gt;查询作业(Job)的指标&lt;/h5&gt;
+&lt;p&gt;JobManager 通过其 REST API 公开系统和用户&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/metrics.html&#34;&gt;指标&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;端点取决于这些指标的范围。可以通过 &lt;code&gt;jobs/&amp;lt;job-id&amp;gt;/metrics&lt;/code&gt; 来列出一个作业的范围内的度量。指标的实际值可以通过 get query 参数进行查询。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-shells&#34; data-lang=&#34;shells&#34;&gt;curl &amp;quot;localhost:8081/jobs/&amp;lt;jod-id&amp;gt;/metrics?get=lastCheckpointSize&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印; 没有占位符)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;lastCheckpointSize&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;value&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;9378&amp;#34;&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;REST API 不仅可以用来查询指标，还可以检索运行中的作业状态的详细信息。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;请求&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# find the vertex-id of the vertex of interest&lt;/span&gt;
+curl localhost:8081/jobs/&amp;lt;jod-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;预期的响应(美化了打印)&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;jid&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;job-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;Click Event Count&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;isStoppable&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;false&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;state&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;start-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066026&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;end-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;-1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;374793&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;now&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467440819&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;timestamps&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066026&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;SUSPENDED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELLING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066126&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;RESTARTING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;vertices&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEvent Source&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;start-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066423&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;end-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;-1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;374396&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;tasks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;DEPLOYING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;SCHEDULED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;metrics&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;5033461&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;166351&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;Timestamps/Watermarks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;start-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066441&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;end-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;-1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;374378&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;tasks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;DEPLOYING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;SCHEDULED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;metrics&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;5066280&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;5033496&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;166349&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;166349&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEvent Counter&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;start-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066469&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;end-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;-1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;374350&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;tasks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;DEPLOYING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;SCHEDULED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;metrics&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;5085332&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;316&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;166305&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;6&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEventStatistics Sink&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;status&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;start-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1564467066476&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;end-time&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;-1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;duration&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;374343&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;tasks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;DEPLOYING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;SCHEDULED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nt&#34;&gt;&amp;#34;metrics&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;20668&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-bytes-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;6&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;read-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;write-records-complete&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;true&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;status-counts&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CREATED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;FINISHED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;DEPLOYING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;RUNNING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;4&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;FAILED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;CANCELED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;RECONCILING&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;SCHEDULED&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;plan&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;jid&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;job-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;Click Event Count&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nt&#34;&gt;&amp;#34;nodes&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;description&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEventStatistics Sink&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;inputs&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;num&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;ship_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;FORWARD&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;exchange&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;pipelined_bounded&amp;#34;&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+        &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;optimizer_properties&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;description&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEvent Counter&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;inputs&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;num&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;ship_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;HASH&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;exchange&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;pipelined_bounded&amp;#34;&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+        &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;optimizer_properties&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;description&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;Timestamps/Watermarks&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;inputs&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;num&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;ship_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;FORWARD&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;nt&#34;&gt;&amp;#34;exchange&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;pipelined_bounded&amp;#34;&lt;/span&gt;
+          &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+        &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;optimizer_properties&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;lt;vertex-id&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;parallelism&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;operator_strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;description&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;ClickEvent Source&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+        &lt;span class=&#34;nt&#34;&gt;&amp;#34;optimizer_properties&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+      &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请查阅 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/rest_api.html#api&#34;&gt;REST API 参考资料&lt;/a&gt;，了解可能查询的完整列表，包括如何查询不同作用域的指标（如 TaskManager 指标）。&lt;/p&gt;
+&lt;h4 id=&#34;变体&#34;&gt;变体&lt;/h4&gt;
+&lt;p&gt;你可能已经注意到，Click Event Count 应用程序总是以 &lt;code&gt;--checkpointing&lt;/code&gt; 和 &lt;code&gt;--event-time&lt;/code&gt; 程序参数启动。通过在 docker-compose.yaml 的客户端容器的命令中省略这些，你可以改变 Job 的行为。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;--checkpointing&lt;/code&gt; 启用了 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/fault_tolerance.html&#34;&gt;checkpoint&lt;/a&gt;，这是 Flink 的容错机制。如果你在没有它的情况下运行，并通过&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#observing-failure--recovery&#34;&gt;故障和恢复&lt;/a&gt;，你应该会看到数据实际上已经丢失了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;--event-time&lt;/code&gt; 启用了你的 Job 的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间语义&lt;/a&gt;。当禁用时，作业将根据挂钟时间而不是 ClickEvent 的时间戳将事件分配给窗口。因此，每个窗口的事件数量将不再是精确的 1000。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Click Event Count 应用程序还有另一个选项，默认情况下是关闭的，你可以启用这个选项来探索这个作业在背压下的行为。你可以在 &lt;code&gt;docker-compose.yaml&lt;/code&gt; 的客户端容器的命令中添加这个选项。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;--backpressure&lt;/code&gt; 在作业中间增加了一个额外的 operator，在偶数分钟内会造成严重的背压（例如，在10:12期间，但在10:13期间不会）。这可以通过检查各种&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/metrics.html#default-shuffle-service&#34;&gt;网络指标&lt;/a&gt;（如 outputQueueLength 和 outPoolUsage）和/或使用 WebUI 中的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/back_pressure.html#monitoring-back-pressure&#34;&gt;背压监控&lt;/a&gt;来观察。&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/programming">programming</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/playground">Playground</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-17-flink-operations-playground/</guid>
+                <pubDate>Mon, 17 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -4002,143 +4521,6 @@ file &#39;./data_3.ts&#39;
                 
                 <guid>https://ohmyweekly.github.io/notes/ffmpeg-notes/</guid>
                 <pubDate>Sat, 04 Jul 2020 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>创建包</title>
-                <link>https://ohmyweekly.github.io/notes/creating-packages/</link>
-                
-                
-                <description>&lt;blockquote&gt;Creating packages&lt;/blockquote&gt;&lt;p&gt;Dart 生态系统使用&lt;a href=&#34;https://dart.dev/guides/packages&#34;&gt;包&lt;/a&gt;来共享软件，如库和工具。本页告诉你如何创建一个包，重点是最常见的一种包，&lt;a href=&#34;https://dart.dev/tools/pub/glossary#library-package&#34;&gt;库包&lt;/a&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;是什么造就了一个库包&#34;&gt;是什么造就了一个库包&lt;/h2&gt;
-&lt;p&gt;下图是最简单的库包的布局:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://dart.dev/assets/libraries/simple-lib2-81ebdc20fdb53d3abbc4364956141eb0f6f8f275d1636064fc3e1db959b93c1a.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;一个库的最低要求是&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;pubspec 文件&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;库的 &lt;code&gt;pubspec.yaml&lt;/code&gt; 文件和应用程序包的文件是一样的-没有特别的名称来表示这个包是一个库。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;lib 目录&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;正如你所期望的那样，库代码存在于 &lt;code&gt;lib&lt;/code&gt; 目录下，对其他包是公开的。你可以根据需要在 &lt;code&gt;lib&lt;/code&gt; 下创建任何层次结构。按照惯例，实现代码被放在 &lt;code&gt;lib/src&lt;/code&gt; 下。&lt;code&gt;lib/src&lt;/code&gt; 下的代码被认为是私有的；其他包不应该需要导入 &lt;code&gt;src/...&lt;/code&gt;。要使 &lt;code&gt;lib/src&lt;/code&gt; 下的 API 公开，您可以从直接位于 &lt;code&gt;lib&lt;/code&gt; 下的文件导出 &lt;code&gt;lib/src&lt;/code&gt; 文件。&lt;/p&gt;
-&lt;p&gt;注意：当没有指定 &lt;code&gt;library&lt;/code&gt; 指令时，会根据每个库的路径和文件名为其生成一个唯一的标签。因此，我们建议您从代码中省略 &lt;code&gt;library&lt;/code&gt; 指令，除非您计划&lt;a href=&#34;https://dart.dev/guides/libraries/create-library-packages#documenting-a-library&#34;&gt;生成库级文档&lt;/a&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;组织一个库包&#34;&gt;组织一个库包&lt;/h2&gt;
-&lt;p&gt;当你创建小的、单独的库（称为迷你库）时，库包的维护、扩展和测试是最容易的。在大多数情况下，每个类都应该在自己的迷你库中，除非你有两个类是紧密耦合的情况。&lt;/p&gt;
-&lt;p&gt;注意：你可能听说过 &lt;code&gt;part&lt;/code&gt; 指令，它允许你将一个库分割成多个 Dart 文件。我们建议你避免使用 &lt;code&gt;part&lt;/code&gt; 指令，而是创建迷你库。&lt;/p&gt;
-&lt;p&gt;直接在 &lt;code&gt;lib&lt;/code&gt; 下创建一个&amp;quot;主&amp;quot;库文件，&lt;code&gt;lib/&amp;lt;package-name&amp;gt;.dart&lt;/code&gt;，导出所有的公共 API。这样用户就可以通过导入一个文件来获得一个库的所有功能。&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;lib&lt;/code&gt; 目录也可能包含其他可导入的、非src的库。例如，也许你的主库可以跨平台使用，但是你创建了单独的库，这些库依赖于 &lt;code&gt;dart:io&lt;/code&gt; 或者 &lt;code&gt;dart:html&lt;/code&gt;。有些包有单独的库，这些库是要用前缀导入的，而主库不是。&lt;/p&gt;
-&lt;p&gt;让我们来看看一个现实世界中的库包的组织： shelf。&lt;a href=&#34;https://github.com/dart-lang/shelf&#34;&gt;shelf&lt;/a&gt; 包提供了一种使用 Dart 创建 web 服务器的简单方法，它的布局结构是 Dart 库包常用的:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://dart.dev/assets/libraries/shelf-02e5fd43b660fcef7dbe6a883c40159e0379c8ee2088288ca60ed7dc8781bafd.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;直接在 &lt;code&gt;lib&lt;/code&gt; 下，主库文件 &lt;code&gt;shelf.dart&lt;/code&gt; 从 &lt;code&gt;lib/src&lt;/code&gt; 导出几个文件:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/cascade.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/handler.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/handlers/logger.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/hijack_exception.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/middleware.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/pipeline.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/request.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/response.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/server.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/server_handler.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;shelf 包还包含一个迷你库： &lt;code&gt;shelf_io&lt;/code&gt;。这个适配器处理来自 &lt;code&gt;dart:io&lt;/code&gt; 的 &lt;code&gt;HttpRequest&lt;/code&gt; 对象。&lt;/p&gt;
-&lt;p&gt;对网络应用的提示: 为了在使用 &lt;a href=&#34;https://dart.dev/tools/dartdevc&#34;&gt;dartdevc&lt;/a&gt; 开发时获得最佳性能，请将&lt;a href=&#34;https://dart.dev/tools/pub/package-layout#implementation-files&#34;&gt;实现文件&lt;/a&gt;放在 &lt;code&gt;/lib/src&lt;/code&gt; 下，而不是放在 &lt;code&gt;/lib&lt;/code&gt; 下的其他地方。同时，避免导入 &lt;code&gt;package:package_name/src/...&lt;/code&gt; 的文件。&lt;/p&gt;
-&lt;h2 id=&#34;导入库文件&#34;&gt;导入库文件&lt;/h2&gt;
-&lt;p&gt;当从其他包中导入一个库文件时，使用 &lt;code&gt;package:&lt;/code&gt; 指令来指定该文件的 URI。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;package:utilities/utilities.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当从自己的包中导入一个库文件时，当两个文件都在 lib 内，或者两个文件都在 lib 外时，使用相对路径。使用 &lt;code&gt;:package&lt;/code&gt; 当导入的文件在 lib 内，而导入者在 lib 外时。&lt;/p&gt;
-&lt;p&gt;下图显示了如何从 lib 和 web 中导入 &lt;code&gt;lib/foo/a.dart&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://dart.dev/assets/libraries/import-lib-rules-e1777e235dd56aa23f770babcccedb6a12be80af2c3e63065640b889d78be595.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;h2 id=&#34;有条件地导入和导出库文件&#34;&gt;有条件地导入和导出库文件&lt;/h2&gt;
-&lt;p&gt;如果你的库支持多个平台，那么你可能需要有条件地导入或导出库文件。一个常见的用例是一个同时支持 web 和原生平台的库。&lt;/p&gt;
-&lt;p&gt;要有条件的导入或导出，你需要检查 &lt;code&gt;dart:*&lt;/code&gt; 库的存在。下面是一个有条件导出代码的例子，它检查 &lt;code&gt;dart:io&lt;/code&gt; 和 &lt;code&gt;dart:html&lt;/code&gt; 的存在:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;k&#34;&gt;export&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/hw_none.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Stub&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;implementation&lt;/span&gt;
-    &lt;span class=&#34;n&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dart&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;library&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;io&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/hw_io.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;dart&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;io&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;implementation&lt;/span&gt;
-    &lt;span class=&#34;n&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dart&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;library&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;html&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;src/hw_html.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// dart:html implementation
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;下面是这段代码的作用。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;在一个可以使用 &lt;code&gt;dart:io&lt;/code&gt; 的应用程序中(例如，一个命令行应用程序)，导出 &lt;code&gt;src/hw_io.dart&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;在一个可以使用 &lt;code&gt;dart:html&lt;/code&gt; 的应用程序中(一个 web 应用程序)，导出 &lt;code&gt;src/hw_html.dart&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;否则，导出 &lt;code&gt;src/hw_none.dart&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;要有条件地导入一个文件，使用与上面相同的代码，但将 &lt;code&gt;exporrt&lt;/code&gt; 改为 &lt;code&gt;import&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;注意：有条件的导入或导出只检查库在当前平台上是否可用，而不是检查是否实际导入或使用。&lt;/p&gt;
-&lt;p&gt;所有有条件导出的库都必须实现相同的 API。例如，这里是 &lt;code&gt;dart:io&lt;/code&gt; 的实现:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;dart:io&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-
-&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;alarm&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;text&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;n&#34;&gt;stderr&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;writeln&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;text&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;?&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;?&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;message&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
-
-&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;get&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;message&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;Hello World from the VM!&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里是默认的实现，它是一个抛出 UnsupportedErrors 的 stub。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;alarm&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;text&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;throw&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;UnsupportedError&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;hw_none alarm&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-
-&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;get&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;message&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;throw&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;UnsupportedError&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;hw_none message&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在任何平台上，你都可以导入有条件导出代码的库。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;package:hw_mp/hw_mp.dart&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-
-&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;n&#34;&gt;print&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;message&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;提供补充文件&#34;&gt;提供补充文件&lt;/h2&gt;
-&lt;p&gt;一个设计良好的库包是很容易测试的。我们建议你使用 &lt;a href=&#34;https://github.com/dart-lang/test&#34;&gt;test&lt;/a&gt; 包来编写测试，将测试代码放在测试包顶部的 &lt;code&gt;test&lt;/code&gt; 目录中。&lt;/p&gt;
-&lt;p&gt;如果你创建了任何旨在供公众使用的命令行工具，请将这些工具放在 &lt;code&gt;bin&lt;/code&gt; 目录下，这是公共的。启用从命令行运行工具，使用 &lt;a href=&#34;https://dart.dev/tools/pub/cmd/pub-global#activating-a-package&#34;&gt;pub global activate&lt;/a&gt;。将工具列在 pubspec 的&lt;a href=&#34;https://dart.dev/tools/pub/pubspec#executables&#34;&gt;可执行文件部分&lt;/a&gt;，允许用户直接运行它，而无需调用 &lt;a href=&#34;https://dart.dev/tools/pub/cmd/pub-global#running-a-script-using-pub-global-run&#34;&gt;pub global run&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;如果你包含了一个如何使用你的库的例子，这将会很有帮助。这将被放入软件包顶部的 &lt;code&gt;example&lt;/code&gt; 目录中。&lt;/p&gt;
-&lt;p&gt;你在开发过程中创建的任何工具或可执行文件，如果不是公开使用的，都会进入 &lt;code&gt;tool&lt;/code&gt; 目录。&lt;/p&gt;
-&lt;p&gt;如果你把你的库发布到 pub.dev 站点，其他需要的文件，如 &lt;code&gt;README.md&lt;/code&gt; 和 &lt;code&gt;CHANGELOG.md&lt;/code&gt;，将在&lt;a href=&#34;https://dart.dev/tools/pub/publishing&#34;&gt;发布软件包&lt;/a&gt;中描述。有关如何组织包目录的更多信息，请参见 &lt;a href=&#34;https://dart.dev/tools/pub/package-layout&#34;&gt;pub 包布局惯例&lt;/a&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;编写库文档&#34;&gt;编写库文档&lt;/h2&gt;
-&lt;p&gt;你可以使用 &lt;a href=&#34;https://github.com/dart-lang/dartdoc#dartdoc&#34;&gt;dartdoc&lt;/a&gt; 工具为你的库生成 API 文档。Dartdoc 解析源码寻找&lt;a href=&#34;https://dart.dev/guides/language/effective-dart/documentation#doc-comments&#34;&gt;文档注释&lt;/a&gt;，其中使用了 &lt;code&gt;///&lt;/code&gt; 语法:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-dart&#34; data-lang=&#34;dart&#34;&gt;&lt;span class=&#34;c1&#34;&gt;/// The event handler responsible for updating the badge in the UI.
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;updateBadge&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;关于生成文档的例子，请看 &lt;a href=&#34;https://pub.dev/documentation/shelf/latest&#34;&gt;shelf 文档&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;注意：要在生成的文档中包含任何库级文档，你必须指定 &lt;code&gt;library&lt;/code&gt; 指令。请参阅 &lt;a href=&#34;https://github.com/dart-lang/dartdoc/issues/1082&#34;&gt;问题 1082&lt;/a&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;分发一个开源库&#34;&gt;分发一个开源库&lt;/h2&gt;
-&lt;p&gt;如果你的库是开源的，我们建议在 &lt;a href=&#34;https://pub.dev/&#34;&gt;pub.dev&lt;/a&gt; 站点上分享它。要发布或更新库，请使用 &lt;a href=&#34;https://dart.dev/tools/pub/cmd/pub-lish&#34;&gt;pub publish&lt;/a&gt;，它可以上传您的包并创建或更新其页面。例如，请看 &lt;a href=&#34;https://pub.dev/packages/shelf&#34;&gt;shelf 包&lt;/a&gt;的页面。有关如何准备发布软件包的详细信息，请参见&lt;a href=&#34;https://dart.dev/tools/pub/publishing&#34;&gt;发布包&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;pub.dev 站点不仅托管您的软件包，而且还生成和托管您软件包的 API 参考文档。最新生成的文档的链接在软件包的 &lt;strong&gt;About&lt;/strong&gt; 框中；例如，请看 shelf 包的 &lt;a href=&#34;https://pub.dev/documentation/shelf&#34;&gt;API 文档&lt;/a&gt;。到以前版本的文档的链接在软件包页面的版本选项卡中。&lt;/p&gt;
-&lt;p&gt;要确保你的软件包的 API 文档在 pub.dev 网站上看起来不错，请按照以下步骤进行。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;在发布你的软件包之前，运行 &lt;a href=&#34;https://github.com/dart-lang/dartdoc#dartdoc&#34;&gt;dartdoc&lt;/a&gt; 工具，以确保你的 docs 成功生成，并且看起来符合预期。&lt;/li&gt;
-&lt;li&gt;发布软件包后，检查 &lt;strong&gt;Versions&lt;/strong&gt; 选项卡以确保文档成功生成。&lt;/li&gt;
-&lt;li&gt;如果文档根本没有生成，点击 &lt;strong&gt;Verrsions&lt;/strong&gt; 选项卡中的 &lt;strong&gt;failed&lt;/strong&gt;，查看 dartdoc 的输出。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id=&#34;资源&#34;&gt;资源&lt;/h2&gt;
-&lt;p&gt;使用以下资源了解更多关于库包的信息。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&#34;https://dart.dev/guides/language/language-tour&#34;&gt;语言之旅&lt;/a&gt;中的&lt;a href=&#34;https://dart.dev/guides/language/language-tour#libraries-and-visibility&#34;&gt;库和可见性&lt;/a&gt;包括使用库文件。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://dart.dev/guides/packages&#34;&gt;包&lt;/a&gt;文档很有用，特别是&lt;a href=&#34;https://dart.dev/tools/pub/package-layout&#34;&gt;包的布局约定&lt;/a&gt;。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://dart.dev/guides/libraries/private-files&#34;&gt;不应提交的内容&lt;/a&gt;涵盖了哪些不应该被检查到源代码库中。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://github.com/dart-lang&#34;&gt;dart-lang&lt;/a&gt; 组织下的较新的库包倾向于展示最佳实践。可以考虑研究这些例子：&lt;a href=&#34;https://github.com/dart-lang/dart_style&#34;&gt;dart_style&lt;/a&gt;、&lt;a href=&#34;https://github.com/dart-lang/path&#34;&gt;path&lt;/a&gt;、&lt;a href=&#34;https://github.com/dart-lang/shelf&#34;&gt;shelf&lt;/a&gt;、&lt;a href=&#34;https://github.com/dart-lang/source_gen&#34;&gt;source_gen&lt;/a&gt; 和 &lt;a href=&#34;https://github.com/dart-lang/test&#34;&gt;test&lt;/a&gt;。&lt;/li&gt;
-&lt;/ul&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/programming">programming</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flutter">flutter</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/packages">packages</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/creating-packages/</guid>
-                <pubDate>Tue, 30 Jun 2020 00:00:00 +0800</pubDate>
             </item>
         
     </channel>
