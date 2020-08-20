@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.63.2">Hugo</generator><title type="html"><![CDATA[architecture on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/architecture/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/architecture/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/architecture/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/architecture/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2020-08-20T22:57:39+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/architecture/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Flink 的架构]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-20-flink-architecture/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-glossary/?utm_source=atom_feed" rel="related" type="text/html" title="术语表" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-timely-stream-processing/?utm_source=atom_feed" rel="related" type="text/html" title="及时的流处理" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-stateful-stream-processing/?utm_source=atom_feed" rel="related" type="text/html" title="有状态的流处理" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-concepts-overview/?utm_source=atom_feed" rel="related" type="text/html" title="概念" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-19-intro-to-the-datastream-api/?utm_source=atom_feed" rel="related" type="text/html" title="DataStream API 介绍" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-20-flink-architecture/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-20T00:00:00+08:00</published>
+            <updated>2020-08-20T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Flink Architecture</blockquote><p>Flink 是一个分布式系统，为了执行流式应用，需要对计算资源进行有效的分配和管理。它集成了所有常见的集群资源管理器，如 <a href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html">Hadoop YARN</a>、<a href="https://mesos.apache.org/">Apache Mesos</a> 和 <a href="https://kubernetes.io/">Kubernetes</a>，但也可以设置为独立集群甚至作为库运行。</p>
+<p>本节包含 Flink 架构的概述，并描述了其主要组件如何交互执行应用程序并从故障中恢复。</p>
+<h2 id="flink-集群的解剖">Flink 集群的解剖</h2>
+<p>Flink 运行时由两种类型的进程组成：一个 JobManager 和一个或多个 TaskManagers。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/processes.svg" alt="img"></p>
+<p>客户端不是运行时和程序执行的一部分，而是用来准备并向 JobManager 发送数据流。之后，客户端可以断开连接（分离模式），或者保持连接以接收进度报告（附加模式）。客户端既可以作为触发执行的 Java/Scala 程序的一部分运行，也可以在命令行进程 <code>./bin/flink run</code> &hellip;中运行。</p>
+<p>JobManager 和 TaskManagers 可以以各种方式启动：直接在机器上作为一个<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/deployment/cluster_setup.html">独立的集群</a>，在容器中，或由 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/deployment/yarn_setup.html">YARN</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/deployment/mesos.html">Mesos</a> 等资源框架管理。TaskManagers 连接到 JobManagers，宣布自己可用，并被分配工作。</p>
+<h3 id="jobmanager">JobManager</h3>
+<p>JobManager 有一些与协调 Flink 应用的分布式执行有关的职责：它决定何时安排下一个任务（或一组任务），对已完成的任务或执行失败作出反应，协调检查点，并协调失败时的恢复等。这个过程由三个不同的组件组成。</p>
+<ul>
+<li><strong>资源管理器(ResourceManager)</strong></li>
+</ul>
+<p>ResourceManager 负责 Flink 集群中的资源去/分配和供应&ndash;它管理任务槽(<strong>task slots</strong>)，任务槽是 Flink 集群中资源调度的单位（见 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/flink-architecture.html#taskmanagers">TaskManagers</a>）。Flink 针对不同的环境和资源提供者（如 YARN、Mesos、Kubernetes 和独立部署）实现了多个 ResourceManagers。在独立设置中，ResourceManager 只能分配可用的 TaskManagers 的槽位，不能自行启动新的 TaskManagers。</p>
+<ul>
+<li><strong>Dispatcher</strong></li>
+</ul>
+<p>Dispatcher 提供了一个 REST 接口来提交 Flink 应用执行，并为每个提交的作业启动一个新的 JobMaster。它还运行 Flink WebUI 来提供作业执行的信息。</p>
+<ul>
+<li><strong>JobMaster</strong></li>
+</ul>
+<p>一个 JobMaster 负责管理一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#logical-graph">JobGraph</a> 的执行。在一个 Flink 集群中可以同时运行多个作业，每个作业都有自己的 JobMaster。</p>
+<p>总是至少有一个 JobManager。一个高可用性设置可能有多个 JobManagers，其中一个总是领导者，其他的是备用的（见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/jobmanager_high_availability.html">高可用性（HA）</a>）。</p>
+<h3 id="taskmanagers">TaskManagers</h3>
+<p>任务管理器（TaskManagers）（也叫 worker）执行数据流的任务，并缓冲和交换数据流。</p>
+<p>必须始终有至少一个TaskManager。TaskManager中资源调度的最小单位是一个任务槽。一个任务管理器中任务槽的数量表示并发处理任务的数量。请注意，一个任务槽中可以执行多个操作者（参见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/flink-architecture.html#tasks-and-operator-chains">Tasks 和 Operator 链</a>）。</p>
+<h3 id="tasks-和-operator-chains">Tasks 和 Operator Chains</h3>
+<p>对于分布式执行，Flink 将操作者的子任务链成任务。每个任务由一个线程执行。将运算符一起链入任务是一种有用的优化：它减少了线程到线程的交接和缓冲的开销，增加了整体的吞吐量，同时降低了延迟。链锁行为可以配置，详情请看<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/#task-chaining-and-resource-groups">chaining 文档</a>。</p>
+<p>下图中的示例数据流是以五个子任务，也就是五个并行线程来执行的。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tasks_chains.svg" alt="img"></p>
+<h2 id="任务槽和资源task-slots-和-resources">任务槽和资源(Task Slots 和 Resources)</h2>
+<p>每个 worker（TaskManager）都是一个 JVM 进程，可以在单独的线程中执行一个或多个子任务。为了控制一个任务管理器接受多少任务，它有所谓的任务槽（至少一个）。</p>
+<p>每个任务槽代表任务管理器的一个固定的资源子集。例如，一个有三个槽的任务管理器，将把其管理内存的1/3奉献给每个槽。槽位资源意味着一个子任务不会与其他任务的子任务争夺管理内存，而是拥有一定量的预留管理内存。需要注意的是，这里并没有发生 CPU 隔离，目前插槽只是将任务的管理内存分开。</p>
+<p>通过调整任务槽的数量，用户可以定义子任务之间的隔离方式。每个任务管理器有一个插槽意味着每个任务组都在一个单独的 JVM 中运行（例如可以在一个单独的容器中启动）。拥有多个插槽意味着更多的子任务共享同一个 JVM。同一 JVM 中的任务共享 TCP 连接（通过多路复用）和心跳消息。它们还可以共享数据集和数据结构，从而减少每个任务的开销。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tasks_slots.svg" alt="img"></p>
+<p>默认情况下，Flink 允许子任务共享槽，即使它们是不同任务的子任务，只要它们来自同一个作业。其结果是，一个槽可以容纳整个作业的流水线。允许这种槽位共享有两个主要好处。</p>
+<ul>
+<li>
+<p>一个 Flink 集群需要的任务槽数量正好与作业中使用的最高并行度相同。不需要计算一个程序总共包含多少个任务（具有不同的并行度）。</p>
+</li>
+<li>
+<p>更容易获得更好的资源利用率。如果没有槽位共享，非密集型的 <code>source/map()</code> 子任务和资源密集型的 window 子任务一样，会阻塞很多资源。有了槽位共享，在我们的例子中，将基础并行度从2个增加到6个，就会产生槽位资源的充分利用，同时确保重度子任务在 TaskManager 中公平分配。</p>
+</li>
+</ul>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/slot_sharing.svg" alt="img"></p>
+<h2 id="flink-应用执行">Flink 应用执行</h2>
+<p>Flink 应用程序是任何从其 <code>main()</code> 方法中生成一个或多个 Flink 作业的用户程序。这些作业的执行可以发生在本地 JVM（LocalEnvironment）中，也可以发生在多台机器的远程集群设置（RemoteEnvironment）中。对于每个程序，ExecutionEnvironment 提供了控制作业执行的方法（例如设置并行性）和与外界交互的方法（参见 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/datastream_api.html#anatomy-of-a-flink-program">Anatomy of a Flink Program</a>）。</p>
+<p>Flink 应用的作业可以提交到一个长期运行的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-session-cluster">Flink 会话集群</a>、一个专门的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job-cluster">Flink 作业集群</a>或一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application-cluster">Flink 应用集群</a>。这些选项之间的区别主要与集群的生命周期和资源隔离保证有关。</p>
+<h3 id="flink-会话集群">Flink 会话集群</h3>
+<ul>
+<li>
+<p>集群生命周期：在 Flink 会话集群中，客户端连接到一个预先存在的、长期运行的集群，可以接受多个作业提交。即使在所有作业完成后，集群（和 JobManager）将继续运行，直到会话被手动停止。因此，一个 Flink 会话集群的寿命不受任何 Flink 作业寿命的约束。</p>
+</li>
+<li>
+<p>资源隔离。TaskManager 插槽由 ResourceManager 在作业提交时分配，作业完成后释放。因为所有作业都共享同一个集群，所以对集群资源有一定的竞争&ndash;比如提交作业阶段的网络带宽。这种共享设置的一个限制是，如果一个任务管理器崩溃，那么所有在这个任务管理器上有任务运行的作业都会失败；同样，如果在作业管理器上发生一些致命的错误，也会影响集群中运行的所有作业。</p>
+</li>
+<li>
+<p>其他考虑因素：拥有一个预先存在的集群，可以节省大量申请资源和启动 TaskManagers 的时间。这在作业的执行时间非常短，高启动时间会对端到端的用户体验产生负面影响的场景中非常重要&ndash;就像对短查询的交互式分析一样，希望作业能够利用现有资源快速执行计算。</p>
+</li>
+</ul>
+<p>注：以前，Flink 会话集群也被称为会话模式下的 Flink 集群。</p>
+<h3 id="flink-作业集群">Flink 作业集群</h3>
+<ul>
+<li>
+<p>集群生命周期：在 Flink Job Cluster 中，可用的集群管理器（如 YARN 或 Kubernetes）为每个提交的作业旋转一个集群，这个集群只对该作业可用。在这里，客户端首先向集群管理器请求资源来启动 JobManager，并将作业提交给运行在这个进程内部的 Dispatcher。然后根据作业的资源需求，懒惰地分配 TaskManager。作业完成后，Flink Job Cluster 就会被拆掉。</p>
+</li>
+<li>
+<p>资源隔离：JobManager 的致命错误只影响该 Flink Job Cluster 中运行的一个作业。</p>
+</li>
+</ul>
+<p>其他考虑因素：由于 ResourceManager 需要申请并等待外部资源管理组件来启动 TaskManager 进程并分配资源，因此 Flink Job Cluster 更适合运行时间长、稳定性要求高、对启动时间较长不敏感的大型作业。</p>
+<p>注：以前，Flink Job Cluster 也被称为作业（或每作业）模式下的 Flink Cluster。</p>
+<h3 id="flink-应用集群flink-application-cluster">Flink 应用集群(Flink Application Cluster)</h3>
+<ul>
+<li>
+<p>集群生命周期：Flink 应用集群是一个专用的 Flink 集群，它只执行来自一个 Flink 应用的作业，并且 <code>main()</code> 方法运行在集群上而不是客户端上。作业提交是一个一步到位的过程：你不需要先启动一个 Flink 集群，然后向现有的集群会话提交作业，而是将你的应用逻辑和依赖关系打包成一个可执行的作业 JAR，集群入口点(ApplicationClusterEntryPoint)负责调用 <code>main()</code> 方法来提取作业图。这样你就可以像在 Kubernetes 上部署其他应用一样部署 Flink 应用，例如。因此，Flink Application Cluster 的寿命与 Flink Application 的寿命是绑定的。</p>
+</li>
+<li>
+<p>资源隔离：在 Flink Application Cluster 中，ResourceManager 和 Dispatcher 的范围是单一的 Flink Application，这比 Flink Session Cluster 提供了更好的分离关注点。</p>
+</li>
+</ul>
+<p>注：Flink Job Cluster 可以看作是 Flink Application Cluster 的 &ldquo;run-on-client&rdquo; 替代品。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/architecture" term="architecture" label="architecture" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[术语表]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-20-glossary/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-flink-architecture/?utm_source=atom_feed" rel="related" type="text/html" title="Flink 的架构" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-timely-stream-processing/?utm_source=atom_feed" rel="related" type="text/html" title="及时的流处理" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-stateful-stream-processing/?utm_source=atom_feed" rel="related" type="text/html" title="有状态的流处理" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-20-concepts-overview/?utm_source=atom_feed" rel="related" type="text/html" title="概念" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-19-intro-to-the-datastream-api/?utm_source=atom_feed" rel="related" type="text/html" title="DataStream API 介绍" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-20-glossary/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-20T00:00:00+08:00</published>
+            <updated>2020-08-20T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Glossary</blockquote><p><strong>Flink Application Cluster</strong></p>
+<p>Flink 应用集群是一个专用的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink 集群</a>，它只执行一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application">Flink 应用</a>的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink 作业</a>。<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink 集群</a>的寿命与 Flink 应用的寿命绑定。</p>
+<p><strong>Flink Job Cluster</strong></p>
+<p>Flink Job Cluster 是一个专用的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink Cluster</a>，它只执行一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink Job</a>。<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink Cluster</a> 的寿命与 Flink Job 的寿命绑定。</p>
+<p><strong>Flink Cluster</strong></p>
+<p>一个分布式系统由（通常）一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-jobmanager">JobManager</a> 和一个或多个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-taskmanager">Flink TaskManager</a> 进程组成。</p>
+<p><strong>Event</strong></p>
+<p>事件是关于应用程序所模拟的域的状态变化的声明。事件可以是流或批处理应用程序的输入和/或输出。事件是特殊类型的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#Record">记录</a>。</p>
+<p><strong>ExecutionGraph</strong></p>
+<p>参见物理图(<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#physical-graph">Physical Graph</a>)</p>
+<p><strong>Function</strong></p>
+<p>函数由用户实现，封装了 Flink 程序的应用逻辑。大多数 Functions 都由相应的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 封装。</p>
+<p><strong>Instance</strong></p>
+<p>术语 instance 用于描述运行时特定类型（通常是 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#function">Function</a>）的具体实例。由于 Apache Flink 大部分是用 Java 编写的，所以对应于 Java 中的 Instance 或 Object 的定义。在 Apache Flink 的上下文中，并行实例这个术语也经常被用来强调同一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#function">Function</a> 类型的多个实例在并行运行。</p>
+<p><strong>Flink Application</strong></p>
+<p>Flink 应用程序是一个 Java 应用程序，它从 <code>main()</code> 方法(或通过其他方式)提交一个或多个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink 作业</a>。提交作业通常是通过调用执行环境上的 <code>execute()</code> 来完成的。</p>
+<p>应用程序的作业可以提交到一个长期运行的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-session-cluster">Flink 会话集群</a>，也可以提交到一个专门的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application-cluster">Flink 应用集群</a>，或者提交到一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job-cluster">Flink 作业集群</a>。</p>
+<p><strong>Flink Job</strong></p>
+<p>Flink Job 是指在 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application">Flink 应用</a>中通过调用 <code>execute()</code> 来创建和提交的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#logical-graph">逻辑图</a>（也常称为数据流图）的运行时表示。</p>
+<p><strong>JobGraph</strong></p>
+<p>参见逻辑图(<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#logical-graph">Logical Graph</a>)</p>
+<p><strong>Flink JobManager</strong></p>
+<p>JobManager 是 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink 集群</a>的协调器。它包含了三个不同的组件：Flink 资源管理器、Flink 调度器和每个运行的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink 作业</a> 一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-jobmaster">Flink JobMaster</a>。</p>
+<p><strong>Flink JobMaster</strong></p>
+<p>JobMasters 是运行在 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-jobmanager">JobManager</a> 中的组件之一。一个 JobMaster 负责监督单个作业的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task">Tasks</a> 的执行情况。</p>
+<p><strong>Logical Graph</strong></p>
+<p>逻辑图是一个有向图，其中节点是 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operators</a>，边缘定义了 operator 的输入/输出关系，并对应数据流或数据集。逻辑图是通过从 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application">Flink 应用程序</a>提交作业来创建的。</p>
+<p>逻辑图也常被称为数据流图。</p>
+<p><strong>Managed State</strong></p>
+<p>Managed State 描述的是已经在框架中注册的应用状态。对于托管状态，Apache Flink 将负责处理持久性和重新缩放等问题。</p>
+<p><strong>Operator</strong></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#logical-graph">逻辑图</a>的节点。Operator 执行某种操作，通常由 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#function">Function</a> 执行。源和接收器是数据摄入和数据输出的特殊 Operator。</p>
+<p><strong>Operator Chain</strong></p>
+<p>一个 Operator 链由两个或多个连续的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 组成，中间没有任何重新分区。同一 Operator 链内的 operattor 直接相互转发记录，而不需要经过序列化或 Flink 的网络栈。</p>
+<p><strong>Partition</strong></p>
+<p>分区是整个数据流或数据集的一个独立子集。通过将每条<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#Record">记录</a>分配到一个或多个分区，将数据流或数据集划分为多个分区。数据流或数据集的分区在运行时由<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task">Tasks</a>消耗。改变数据流或数据集分区方式的转换通常称为重新分区。</p>
+<p><strong>Physical Graph</strong></p>
+<p>物理图是翻译<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#logical-graph">逻辑图</a>的结果，以便在分布式运行时执行。节点是<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task">Tasks</a>，边缘表示输入/输出关系或数据流或数据集的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#partition">分区</a>。</p>
+<p><strong>Record</strong></p>
+<p>记录是数据集或数据流的组成元素。<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 和 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#Function">Functions</a> 接收记录作为输入，并发出记录作为输出。</p>
+<p><strong>Flink Session Cluster</strong></p>
+<p>一个长期运行的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink Cluster</a>，它接受多个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink Job</a> 的执行。该  Flink Cluster 的寿命不受任何 Flink Job 寿命的约束。以前，Flink Session Cluster 也被称为会话模式下的 Flink Cluster。与 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-application-cluster">Flink Application Cluster</a> 比较。</p>
+<p><strong>State Backend</strong></p>
+<p>对于流处理程序来说，<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-job">Flink Job</a> 的状态后端决定了它的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#managed-state">状态</a>如何存储在每个 TaskManager 上（TaskManager 的 Java 堆或（嵌入式）RocksDB），以及它在检查点时的写入位置（<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-jobmanager">JobManager</a> 的 Java 堆或 Filesystem）。</p>
+<p><strong>Sub-Task</strong></p>
+<p>子任务( Sub-Task)是指负责处理数据流的一个<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#partition">分区</a>的任务(<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task">Task</a>)。术语&quot;子任务&quot;强调同一 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator-chain">Operator 链</a>有多个并行的 Task。</p>
+<p><strong>Task</strong></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#physical-graph">物理图</a>的节点。Task 是工作的基本单位，由 Flink 的运行时执行。任务正好封装了一个 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator-chain">Operator 链</a> 的一个并行实例。</p>
+<p><strong>Flink TaskManager</strong></p>
+<p>TaskManager 是 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#flink-cluster">Flink Cluster</a> 的工作进程。<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#task">Tasks</a> 被安排给 TaskManagers 执行。它们相互通信，在后续的 Task 之间交换数据。</p>
+<p><strong>Transformation</strong></p>
+<p>变换应用于一个或多个数据流或数据集，并产生一个或多个输出数据流或数据集。变换可能会在每条记录的基础上改变数据流或数据集，但也可能只改变其分区或执行聚合。<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 或 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#function">Functions</a>是 Flink 的 API 的 &ldquo;物理&quot;部分，而变换只是一个 API 概念。具体来说，大多数变换是由某些 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/glossary.html#operator">Operator</a> 实现的。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/architecture" term="architecture" label="architecture" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>
