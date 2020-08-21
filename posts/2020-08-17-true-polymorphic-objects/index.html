@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title> 真正的多态对象 </title>
+  <meta name="description" content="墨写旧时光">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="all,follow">
+  <meta name="googlebot" content="index,follow,snippet,archive">
+  <meta property="og:title" content="真正的多态对象" />
+<meta property="og:description" content="关于多态性 RFC159 引入了真正的多态对象的概念。
+ 对象可以按需变形为数字、字符串、布尔值和更多其它的东西。因此，对象可以自由地传递和操作，而不必关心它们包含的内容（甚至不必关心它们是对象）。
+ 当我们看看 42，&quot;foo&quot;，now 在 Raku 中是如何工作的，我们只能看到这种设想已经实现的差不多了。因为大多数时候，人们并不关心 42 真的是一个 Int 对象，&ldquo;foo&rdquo; 真的是一个 Str 对象，而每次调用 now 的时候，它都代表一个新的 Instant 对象。人们唯一关心的，是它们可以在表达式中使用。
+say &quot;foo&quot; ~ &quot;bar&quot;; # foobar say 42 &#43; 666; # 708 say now - INIT now; # 0.0005243 RFC159 列出了一些方法名称，用于指示对象在某些情况下应该如何行事，如果对象的类没有提供该方法，则系统会提供一个回退方法。在大多数情况下，这些方法没有进入 Raku，但其中一些方法用不同的名字进入了 Raku。
+   Name in RFC Name in Raku When     STRING Str 在字符串上下文中调用   NUMBER Numeric 在数值上下文中调用   BOOLEAN Bool 在布尔上下文中调用    而他们中的一些甚至还保留了自己的名字:" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/2020-08-17-true-polymorphic-objects/" />
+<meta property="article:published_time" content="2020-08-17T11:10:40+08:00" />
+<meta property="article:modified_time" content="2020-08-17T11:10:40+08:00" />
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="真正的多态对象"/>
+<meta name="twitter:description" content="关于多态性 RFC159 引入了真正的多态对象的概念。
+ 对象可以按需变形为数字、字符串、布尔值和更多其它的东西。因此，对象可以自由地传递和操作，而不必关心它们包含的内容（甚至不必关心它们是对象）。
+ 当我们看看 42，&quot;foo&quot;，now 在 Raku 中是如何工作的，我们只能看到这种设想已经实现的差不多了。因为大多数时候，人们并不关心 42 真的是一个 Int 对象，&ldquo;foo&rdquo; 真的是一个 Str 对象，而每次调用 now 的时候，它都代表一个新的 Instant 对象。人们唯一关心的，是它们可以在表达式中使用。
+say &quot;foo&quot; ~ &quot;bar&quot;; # foobar say 42 &#43; 666; # 708 say now - INIT now; # 0.0005243 RFC159 列出了一些方法名称，用于指示对象在某些情况下应该如何行事，如果对象的类没有提供该方法，则系统会提供一个回退方法。在大多数情况下，这些方法没有进入 Raku，但其中一些方法用不同的名字进入了 Raku。
+   Name in RFC Name in Raku When     STRING Str 在字符串上下文中调用   NUMBER Numeric 在数值上下文中调用   BOOLEAN Bool 在布尔上下文中调用    而他们中的一些甚至还保留了自己的名字:"/>
+
+  
+  
+    
+  
+  
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+  
+<link rel="icon" type="image/png" href="https://ohmycloud.github.io/images/favicon.ico" />
+
+  
+  
+  
+</head>
+<body class="max-width mx-auto px3 ltr">
+  <div class="content index py4">
+
+  <div id="header-post">
+  <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li>
+          <a class="icon" href=" https://ohmycloud.github.io/posts/2020-08-03-failed-to-find-dependencies-sqlite-from-native/">
+            <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
+          </a>
+        </li>
+        
+        
+        <li>
+          <a class="icon" href="https://ohmycloud.github.io/posts/2020-08-21-rfc200-revamp-tie-to-support-extensibility/">
+            <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
+          </a>
+        </li>
+        
+        <li>
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+            <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
+          </a>
+        </li>
+        <li>
+          <a class="icon" href="#">
+            <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
+          </a>
+        </li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f">
+      <i class="fab fa-facebook " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&text=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-twitter " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-linkedin " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&is_video=false&description=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-pinterest " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f">
+      <i class="fas fa-envelope " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-get-pocket " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-reddit " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-digg " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&name=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1&description=%e5%85%b3%e4%ba%8e%e5%a4%9a%e6%80%81%e6%80%a7%20RFC159%20%e5%bc%95%e5%85%a5%e4%ba%86%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1%e7%9a%84%e6%a6%82%e5%bf%b5%e3%80%82%0a%20%e5%af%b9%e8%b1%a1%e5%8f%af%e4%bb%a5%e6%8c%89%e9%9c%80%e5%8f%98%e5%bd%a2%e4%b8%ba%e6%95%b0%e5%ad%97%e3%80%81%e5%ad%97%e7%ac%a6%e4%b8%b2%e3%80%81%e5%b8%83%e5%b0%94%e5%80%bc%e5%92%8c%e6%9b%b4%e5%a4%9a%e5%85%b6%e5%ae%83%e7%9a%84%e4%b8%9c%e8%a5%bf%e3%80%82%e5%9b%a0%e6%ad%a4%ef%bc%8c%e5%af%b9%e8%b1%a1%e5%8f%af%e4%bb%a5%e8%87%aa%e7%94%b1%e5%9c%b0%e4%bc%a0%e9%80%92%e5%92%8c%e6%93%8d%e4%bd%9c%ef%bc%8c%e8%80%8c%e4%b8%8d%e5%bf%85%e5%85%b3%e5%bf%83%e5%ae%83%e4%bb%ac%e5%8c%85%e5%90%ab%e7%9a%84%e5%86%85%e5%ae%b9%ef%bc%88%e7%94%9a%e8%87%b3%e4%b8%8d%e5%bf%85%e5%85%b3%e5%bf%83%e5%ae%83%e4%bb%ac%e6%98%af%e5%af%b9%e8%b1%a1%ef%bc%89%e3%80%82%0a%20%e5%bd%93%e6%88%91%e4%bb%ac%e7%9c%8b%e7%9c%8b%2042%ef%bc%8c%26quot%3bfoo%26quot%3b%ef%bc%8cnow%20%e5%9c%a8%20Raku%20%e4%b8%ad%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%aa%e8%83%bd%e7%9c%8b%e5%88%b0%e8%bf%99%e7%a7%8d%e8%ae%be%e6%83%b3%e5%b7%b2%e7%bb%8f%e5%ae%9e%e7%8e%b0%e7%9a%84%e5%b7%ae%e4%b8%8d%e5%a4%9a%e4%ba%86%e3%80%82%e5%9b%a0%e4%b8%ba%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%97%b6%e5%80%99%ef%bc%8c%e4%ba%ba%e4%bb%ac%e5%b9%b6%e4%b8%8d%e5%85%b3%e5%bf%83%2042%20%e7%9c%9f%e7%9a%84%e6%98%af%e4%b8%80%e4%b8%aa%20Int%20%e5%af%b9%e8%b1%a1%ef%bc%8c%26ldquo%3bfoo%26rdquo%3b%20%e7%9c%9f%e7%9a%84%e6%98%af%e4%b8%80%e4%b8%aa%20Str%20%e5%af%b9%e8%b1%a1%ef%bc%8c%e8%80%8c%e6%af%8f%e6%ac%a1%e8%b0%83%e7%94%a8%20now%20%e7%9a%84%e6%97%b6%e5%80%99%ef%bc%8c%e5%ae%83%e9%83%bd%e4%bb%a3%e8%a1%a8%e4%b8%80%e4%b8%aa%e6%96%b0%e7%9a%84%20Instant%20%e5%af%b9%e8%b1%a1%e3%80%82%e4%ba%ba%e4%bb%ac%e5%94%af%e4%b8%80%e5%85%b3%e5%bf%83%e7%9a%84%ef%bc%8c%e6%98%af%e5%ae%83%e4%bb%ac%e5%8f%af%e4%bb%a5%e5%9c%a8%e8%a1%a8%e8%be%be%e5%bc%8f%e4%b8%ad%e4%bd%bf%e7%94%a8%e3%80%82%0asay%20%26quot%3bfoo%26quot%3b%20~%20%26quot%3bbar%26quot%3b%3b%20%23%20foobar%20say%2042%20%2b%20666%3b%20%23%20708%20say%20now%20-%20INIT%20now%3b%20%23%200.0005243%20RFC159%20%e5%88%97%e5%87%ba%e4%ba%86%e4%b8%80%e4%ba%9b%e6%96%b9%e6%b3%95%e5%90%8d%e7%a7%b0%ef%bc%8c%e7%94%a8%e4%ba%8e%e6%8c%87%e7%a4%ba%e5%af%b9%e8%b1%a1%e5%9c%a8%e6%9f%90%e4%ba%9b%e6%83%85%e5%86%b5%e4%b8%8b%e5%ba%94%e8%af%a5%e5%a6%82%e4%bd%95%e8%a1%8c%e4%ba%8b%ef%bc%8c%e5%a6%82%e6%9e%9c%e5%af%b9%e8%b1%a1%e7%9a%84%e7%b1%bb%e6%b2%a1%e6%9c%89%e6%8f%90%e4%be%9b%e8%af%a5%e6%96%b9%e6%b3%95%ef%bc%8c%e5%88%99%e7%b3%bb%e7%bb%9f%e4%bc%9a%e6%8f%90%e4%be%9b%e4%b8%80%e4%b8%aa%e5%9b%9e%e9%80%80%e6%96%b9%e6%b3%95%e3%80%82%e5%9c%a8%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%83%85%e5%86%b5%e4%b8%8b%ef%bc%8c%e8%bf%99%e4%ba%9b%e6%96%b9%e6%b3%95%e6%b2%a1%e6%9c%89%e8%bf%9b%e5%85%a5%20Raku%ef%bc%8c%e4%bd%86%e5%85%b6%e4%b8%ad%e4%b8%80%e4%ba%9b%e6%96%b9%e6%b3%95%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e5%90%8d%e5%ad%97%e8%bf%9b%e5%85%a5%e4%ba%86%20Raku%e3%80%82%0a%20%20%20Name%20in%20RFC%20Name%20in%20Raku%20When%20%20%20%20%20STRING%20Str%20%e5%9c%a8%e5%ad%97%e7%ac%a6%e4%b8%b2%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20NUMBER%20Numeric%20%e5%9c%a8%e6%95%b0%e5%80%bc%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20BOOLEAN%20Bool%20%e5%9c%a8%e5%b8%83%e5%b0%94%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20%20%e8%80%8c%e4%bb%96%e4%bb%ac%e4%b8%ad%e7%9a%84%e4%b8%80%e4%ba%9b%e7%94%9a%e8%87%b3%e8%bf%98%e4%bf%9d%e7%95%99%e4%ba%86%e8%87%aa%e5%b7%b1%e7%9a%84%e5%90%8d%e5%ad%97%3a">
+      <i class="fab fa-tumblr " aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&t=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-hacker-news " aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#关于多态性">关于多态性</a></li>
+    <li><a href="#只有少数几条被列入">只有少数几条被列入</a></li>
+    <li><a href="#destroy-方法">DESTROY 方法</a></li>
+    <li><a href="#对标量值进行-storefetch-处理">对标量值进行 STORE/FETCH 处理</a></li>
+    <li><a href="#对复合值进行-store">对复合值进行 STORE</a></li>
+    <li><a href="#build">BUILD</a></li>
+    <li><a href="#结束语">结束语</a></li>
+  </ul>
+</nav>
+    </div>
+  </span>
+</div>
+
+
+  <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+    <header>
+      <h1 class="posttitle" itemprop="name headline">
+        真正的多态对象
+      </h1>
+      <div class="meta">
+        
+        <div class="postdate">
+          
+          <time datetime="2020-08-17 11:10:40 &#43;0800 CST" itemprop="datePublished">2020-08-17</time>
+          
+        </div>
+        
+        
+        <div class="article-tag">
+            <i class="fas fa-tag"></i>
+            
+            
+            <a class="tag-link" href="/tags/rfc" rel="tag">RFC</a>
+            
+            
+            <a class="tag-link" href="/tags/raku" rel="tag">Raku</a>
+            
+        </div> 
+        
+      </div>
+    </header>
+
+  
+    <div class="content" itemprop="articleBody">
+      <h2 id="关于多态性">关于多态性</h2>
+<p><a href="https://raku.org/archive/rfc/159.html">RFC159</a> 引入了真正的多态对象的概念。</p>
+<blockquote>
+<p>对象可以按需变形为数字、字符串、布尔值和更多其它的东西。因此，对象可以自由地传递和操作，而不必关心它们包含的内容（甚至不必关心它们是对象）。</p>
+</blockquote>
+<p>当我们看看 <code>42</code>，<code>&quot;foo&quot;</code>，<code>now</code> 在 Raku 中是如何工作的，我们只能看到这种设想已经实现的差不多了。因为大多数时候，人们并不关心 42 真的是一个 <strong>Int</strong> 对象，&ldquo;foo&rdquo; 真的是一个 <strong>Str</strong> 对象，而每次调用 <strong>now</strong> 的时候，它都代表一个新的 <strong>Instant</strong> 对象。人们唯一关心的，是它们可以在表达式中使用。</p>
+<pre><code class="language-raku" data-lang="raku">say &quot;foo&quot; ~ &quot;bar&quot;;  # foobar
+say 42 + 666;       # 708
+say now - INIT now; # 0.0005243
+</code></pre><p>RFC159 列出了一些方法名称，用于指示对象在某些情况下应该如何行事，如果对象的类没有提供该方法，则系统会提供一个回退方法。在大多数情况下，这些方法没有进入 Raku，但其中一些方法用不同的名字进入了 Raku。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Name in RFC</th>
+<th align="left">Name in Raku</th>
+<th align="left">When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">STRING</td>
+<td align="left">Str</td>
+<td align="left">在字符串上下文中调用</td>
+</tr>
+<tr>
+<td align="left">NUMBER</td>
+<td align="left">Numeric</td>
+<td align="left">在数值上下文中调用</td>
+</tr>
+<tr>
+<td align="left">BOOLEAN</td>
+<td align="left">Bool</td>
+<td align="left">在布尔上下文中调用</td>
+</tr>
+</tbody>
+</table>
+<p>而他们中的一些甚至还保留了自己的名字:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Name in RFC</th>
+<th align="left">When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">BUILD</td>
+<td align="left">在对象祝福中调用</td>
+</tr>
+<tr>
+<td align="left">STORE</td>
+<td align="left">在 lvalue = 上下文中调用</td>
+</tr>
+<tr>
+<td align="left">FETCH</td>
+<td align="left">在 rvalue = 上下文中调用</td>
+</tr>
+<tr>
+<td align="left">DESTROY</td>
+<td align="left">在对象销毁时调用</td>
+</tr>
+</tbody>
+</table>
+<p>但有时与 RFC 的语义有微妙的不同。</p>
+<h2 id="只有少数几条被列入">只有少数几条被列入</h2>
+<p>最后，只为 Raku 决定了一组有限的特殊方法。RFC159 中的所有其他方法都是由多态操作符实现的，这些操作符在需要时进行强制。例如，所提出的 <strong>PLUS</strong> 方法已经被实现为一个 <a href="https://docs.raku.org/routine/infix:%3C+%3E">infix +</a> 运算符，它有一个&quot;默认&quot;的候选者，将其操作数强转为一个数字。</p>
+<p>因此，实际上，如果你有一个 <strong>Foo</strong> 类的对象，并且你想让它作为一个数字，你只需要为这个类添加一个 <strong>Numeric</strong> 方法。一个表达式，如:</p>
+<pre><code class="language-raku" data-lang="raku">my $foo = Foo.new;
+say $foo + 42;
+</code></pre><p>正是有效地执行:</p>
+<pre><code class="language-raku" data-lang="raku">say infix:&lt;+&gt;( $foo, 42 );
+</code></pre><p>而 <code>infix:&lt;+&gt;</code> 候选者，接受 <strong>Any</strong> 对象，这样做:</p>
+<pre><code class="language-raku" data-lang="raku">return infix:&lt;+&gt;( $foo.Numeric, 42.Numeric );
+</code></pre><p>而如果这样的类 <strong>Foo</strong> 没有提供 <strong>Numeric</strong> 方法，那么它就会抛出一个异常。</p>
+<h2 id="destroy-方法">DESTROY 方法</h2>
+<p>在 Raku 中，对象的销毁是非决定性的。如果一个对象不再使用，它可能会被垃圾收集。可能的部分是因为 Raku 不知道全局销毁阶段，不像 Perl。所以当一个程序完成后，它只是做了一个退出（虽然这个逻辑会尊重任何 <strong>END</strong> 块）。</p>
+<p>当一个对象不能再被&quot;访问&quot;时，它被标记为&quot;准备移除&rdquo;。然后，当垃圾收集逻辑启动时，它的 <strong>DESTROY</strong> 方法就会被调用。这可以是在它变得无法到达后的任何时间量。</p>
+<p>如果你需要 <strong>DESTROY</strong> 方法的确定性调用，你可以使用 <a href="https://docs.raku.org/syntax/LEAVE">LEAVE</a> phaser。或者，如果这不能让你搔到你的痒处，你可以可能使用 <a href="https://modules.raku.org/dist/FINALIZER">FINALIZER</a> 模块。</p>
+<h2 id="对标量值进行-storefetch-处理">对标量值进行 STORE/FETCH 处理</h2>
+<p>从概念上讲，你可以把 Raku 中的容器看作是一个有 <strong>STORE</strong> 和 <strong>FETCH</strong> 方法的对象。每当你在容器中设置一个值的时候，它在概念上就会调用 <strong>STORE</strong> 方法。而每当需要容器内的值时，它在概念上就会调用 <strong>FETCH</strong> 方法。在伪代码中:</p>
+<pre><code class="language-raku" data-lang="raku">my $foo = 42;  # Scalar.new(:name&lt;$foo&gt;).STORE(42)
+</code></pre><p>但是如果你想控制对一个标量值的访问，类似于 Perl 的 <strong>tie</strong> 呢？好吧，在 Raku 中，你可以使用一种特殊类型的容器类，叫做 <a href="https://docs.raku.org/type/Proxy">Proxy</a>。它的一个使用实例如下:</p>
+<pre><code class="language-raku" data-lang="raku">sub proxier($value? is copy) {
+    return-rw Proxy.new(
+        FETCH =&gt; method { $value },
+        STORE =&gt; method ($new) {
+            say &quot;storing&quot;;
+            $value = $new
+        }
+    )
+}
+
+my $a := proxier(42);
+say $a;    # 42
+$a = 666;  # storing
+say $a;    # 666
+</code></pre><p>子程序在默认情况下返回其结果值时是去容器化的。基本上有两种方法可以确保实际的容器被返回：使用 <a href="https://docs.raku.org/syntax/return-rw">return-rw</a>（像本例中那样），或者用 <a href="https://docs.raku.org/routine/is%20rw#class_Routine">is rw trait</a> 标记子程序。</p>
+<h2 id="对复合值进行-store">对复合值进行 STORE</h2>
+<p>由于 <strong>FETCH</strong> 只有在标量值上才有意义，所以在 Raku 中不支持 <strong>FETCH</strong> 在复合值上的应用，比如哈希和数组。我想可以考虑在这种情况下调用 <strong>FETCH</strong> 是<a href="https://docs.raku.org/language/subscripts#index-entry-Zen_slices">禅切</a>，但我们决定那只是返回复合值本身。</p>
+<p>然而，复合值上的 <strong>STORE</strong> 方法可以实现一些有趣的功能。每当有整个复合值的初始化时，就会调用 <strong>STORE</strong> 方法。比如说:</p>
+<pre><code class="language-raku" data-lang="raku">@a = 1,2,3;
+</code></pre><p>基本上是这样执行的:</p>
+<pre><code class="language-raku" data-lang="raku">@a := @a.STORE( (1,2,3) );
+</code></pre><p>但是如果你还没有初始化的 <code>@a</code> 怎么办？那么 <strong>STORE</strong> 方法实际上应该是创建一个新的对象，并用给定的值来初始化这个对象。而 <strong>STORE</strong> 方法可以知道，因为这样它也会收到一个名为 <strong>INITIALIZE</strong> 的参数，其值为 <strong>True</strong>。所以当你写下这句话的时候:</p>
+<pre><code class="language-raku" data-lang="raku">my @b = 1,2,3;
+</code></pre><p>基本上被执行的是:</p>
+<pre><code class="language-raku" data-lang="raku">@b := Array.new.STORE( (1,2,3), :INITIALIZE );
+</code></pre><p>现在，如果你意识到这一点:</p>
+<pre><code class="language-raku" data-lang="raku">my @b;
+</code></pre><p>实际上是下面这种写法的简写:</p>
+<pre><code class="language-raku" data-lang="raku">my @b is Array;
+</code></pre><p>这只是一小步，你可以意识到，你可以创建自己的类，定制数组逻辑，可以用自己的数组逻辑代替标准的数组逻辑。观察一下:</p>
+<pre><code class="language-raku" data-lang="raku">class Foo {
+    has @!array;
+    method STORE(@!array) {
+        say &quot;STORED @!array[]&quot;;
+        self
+    }
+}
+
+my @b is Foo = 1,2,3;  # STORED 1 2 3
+</code></pre><p>然而，当你真正开始使用这样一个数组时，你会面临一些奇怪的结果:</p>
+<pre><code class="language-raku" data-lang="raku">say @b[0]; # Foo.new
+say @b[1]; # Index out of range. Is: 1, should be in 0..0
+</code></pre><p>不谈这些结果的原因，应该清楚的是，要完全模仿一个Array，还需要很多东西。幸运的是，有一些生态系统模块可以帮助你解决这个问题。对于数组, 使用 <a href="https://modules.raku.org/dist/Array::Agnostic">Array::Agnostic</a> 而对于散列, 使用 <a href="https://modules.raku.org/dist/Hash::Agnostic">Hash::Agnostic</a>。</p>
+<h2 id="build">BUILD</h2>
+<p><strong>BUILD</strong> 方法的语义也发生了微妙的变化。在 Raku 中，<strong>BUILD</strong> 方法将作为对象方法被调用，并接收所有给 <strong>.new</strong> 的参数，之后它将完全负责初始化对象属性。当你使用内部助手模块 <strong>BUILDPLAN</strong> 时，这一点会变得更加明显。该模块显示了用默认的 <strong>.new</strong> 方法构建类的对象时，将对其进行的操作。</p>
+<pre><code class="language-raku" data-lang="raku">class Bar {
+    has $.score = 42;
+}
+use BUILDPLAN Bar;
+# class Bar BUILDPLAN:
+#  0: nqp::getattr(obj,Foo,'$!score') = :$score if possible
+#  1: nqp::getattr(obj,Foo,'$!score') = 42 if not set
+</code></pre><p>这是内部的说法 - 把可选的命名参数 <code>score</code> 的值分配给 <code>$!score</code> 属性 - 把 42 的值分配给 <code>$!score</code> 属性，如果它还没有被设置的话。</p>
+<p>现在，如果我们在类中添加一个 <strong>BUILD</strong> 方法，构建计划就会改变:</p>
+<pre><code class="language-raku" data-lang="raku">class Bar {
+    has $.score = 42;
+    method BUILD() { }
+}
+use BUILDPLAN Bar;
+# class Bar BUILDPLAN:
+#  0: call obj.BUILD
+#  1: nqp::getattr(obj,Foo,'$!score') = 42 if not set
+</code></pre><p>请注意，现在已经没有自动尝试取名为参数的 <strong>score</strong> 值了。这意味着，如果你有很多命名参数，而且只有一个参数需要特殊处理，你需要在你的自定义 <strong>BUILD</strong> 方法中做很多工作。这就是为什么要加入 <strong>TWEAK</strong> 方法的原因:</p>
+<pre><code class="language-raku" data-lang="raku">class Bar {
+    has $.score = 42;
+    method TWEAK() { }
+}
+use BUILDPLAN Bar;
+# class Bar BUILDPLAN:
+#  0: nqp::getattr(obj,Foo,'$!score') = :$score if possible
+#  1: nqp::getattr(obj,Foo,'$!score') = 42 if not set
+#  2: call obj.TWEAK
+</code></pre><p>请注意，<strong>TWEAK</strong> 方法是在所有正常检查和初始化之后被调用的。这在大多数情况下是更有用的。</p>
+<h2 id="结束语">结束语</h2>
+<p>虽然真正的多态对象的想法已经在 Raku 中实现了，但结果却与最初的设想大相径庭。事后看来，我们可以看到为什么决定为所有对象支持一个不断增加的特殊方法列表是不切实际的。相反，我们选择了只实现提案中的几个关键方法，而对其他方法则采取了自动强制的方法。</p>
+<p>原文: <a href="https://raku-advent.blog/2020/08/17/rfc-159-by-nathan-wiger-true-polymorphic-objects/">https://raku-advent.blog/2020/08/17/rfc-159-by-nathan-wiger-true-polymorphic-objects/</a></p>
+
+    </div>
+  </article>
+
+  
+  
+
+
+
+
+  
+    <div class="blog-post-comments">
+        <div id="disqus_thread">
+          <script type="text/javascript">
+          
+          (function() {
+              
+              
+              
+              
+          
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              var disqus_shortname = 'ohmysummer';
+              dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </div>
+    </div>
+
+  
+
+
+  <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/posts">Writings</a></li>
+         
+          <li><a href="/tags">Tags</a></li>
+         
+          <li><a href="/about">About</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#关于多态性">关于多态性</a></li>
+    <li><a href="#只有少数几条被列入">只有少数几条被列入</a></li>
+    <li><a href="#destroy-方法">DESTROY 方法</a></li>
+    <li><a href="#对标量值进行-storefetch-处理">对标量值进行 STORE/FETCH 处理</a></li>
+    <li><a href="#对复合值进行-store">对复合值进行 STORE</a></li>
+    <li><a href="#build">BUILD</a></li>
+    <li><a href="#结束语">结束语</a></li>
+  </ul>
+</nav>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      
+      <ul>
+  
+  
+    
+  
+  
+  <li>
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f">
+      <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&text=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&is_video=false&description=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="mailto:?subject=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f">
+      <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&title=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&name=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1&description=%e5%85%b3%e4%ba%8e%e5%a4%9a%e6%80%81%e6%80%a7%20RFC159%20%e5%bc%95%e5%85%a5%e4%ba%86%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1%e7%9a%84%e6%a6%82%e5%bf%b5%e3%80%82%0a%20%e5%af%b9%e8%b1%a1%e5%8f%af%e4%bb%a5%e6%8c%89%e9%9c%80%e5%8f%98%e5%bd%a2%e4%b8%ba%e6%95%b0%e5%ad%97%e3%80%81%e5%ad%97%e7%ac%a6%e4%b8%b2%e3%80%81%e5%b8%83%e5%b0%94%e5%80%bc%e5%92%8c%e6%9b%b4%e5%a4%9a%e5%85%b6%e5%ae%83%e7%9a%84%e4%b8%9c%e8%a5%bf%e3%80%82%e5%9b%a0%e6%ad%a4%ef%bc%8c%e5%af%b9%e8%b1%a1%e5%8f%af%e4%bb%a5%e8%87%aa%e7%94%b1%e5%9c%b0%e4%bc%a0%e9%80%92%e5%92%8c%e6%93%8d%e4%bd%9c%ef%bc%8c%e8%80%8c%e4%b8%8d%e5%bf%85%e5%85%b3%e5%bf%83%e5%ae%83%e4%bb%ac%e5%8c%85%e5%90%ab%e7%9a%84%e5%86%85%e5%ae%b9%ef%bc%88%e7%94%9a%e8%87%b3%e4%b8%8d%e5%bf%85%e5%85%b3%e5%bf%83%e5%ae%83%e4%bb%ac%e6%98%af%e5%af%b9%e8%b1%a1%ef%bc%89%e3%80%82%0a%20%e5%bd%93%e6%88%91%e4%bb%ac%e7%9c%8b%e7%9c%8b%2042%ef%bc%8c%26quot%3bfoo%26quot%3b%ef%bc%8cnow%20%e5%9c%a8%20Raku%20%e4%b8%ad%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84%ef%bc%8c%e6%88%91%e4%bb%ac%e5%8f%aa%e8%83%bd%e7%9c%8b%e5%88%b0%e8%bf%99%e7%a7%8d%e8%ae%be%e6%83%b3%e5%b7%b2%e7%bb%8f%e5%ae%9e%e7%8e%b0%e7%9a%84%e5%b7%ae%e4%b8%8d%e5%a4%9a%e4%ba%86%e3%80%82%e5%9b%a0%e4%b8%ba%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%97%b6%e5%80%99%ef%bc%8c%e4%ba%ba%e4%bb%ac%e5%b9%b6%e4%b8%8d%e5%85%b3%e5%bf%83%2042%20%e7%9c%9f%e7%9a%84%e6%98%af%e4%b8%80%e4%b8%aa%20Int%20%e5%af%b9%e8%b1%a1%ef%bc%8c%26ldquo%3bfoo%26rdquo%3b%20%e7%9c%9f%e7%9a%84%e6%98%af%e4%b8%80%e4%b8%aa%20Str%20%e5%af%b9%e8%b1%a1%ef%bc%8c%e8%80%8c%e6%af%8f%e6%ac%a1%e8%b0%83%e7%94%a8%20now%20%e7%9a%84%e6%97%b6%e5%80%99%ef%bc%8c%e5%ae%83%e9%83%bd%e4%bb%a3%e8%a1%a8%e4%b8%80%e4%b8%aa%e6%96%b0%e7%9a%84%20Instant%20%e5%af%b9%e8%b1%a1%e3%80%82%e4%ba%ba%e4%bb%ac%e5%94%af%e4%b8%80%e5%85%b3%e5%bf%83%e7%9a%84%ef%bc%8c%e6%98%af%e5%ae%83%e4%bb%ac%e5%8f%af%e4%bb%a5%e5%9c%a8%e8%a1%a8%e8%be%be%e5%bc%8f%e4%b8%ad%e4%bd%bf%e7%94%a8%e3%80%82%0asay%20%26quot%3bfoo%26quot%3b%20~%20%26quot%3bbar%26quot%3b%3b%20%23%20foobar%20say%2042%20%2b%20666%3b%20%23%20708%20say%20now%20-%20INIT%20now%3b%20%23%200.0005243%20RFC159%20%e5%88%97%e5%87%ba%e4%ba%86%e4%b8%80%e4%ba%9b%e6%96%b9%e6%b3%95%e5%90%8d%e7%a7%b0%ef%bc%8c%e7%94%a8%e4%ba%8e%e6%8c%87%e7%a4%ba%e5%af%b9%e8%b1%a1%e5%9c%a8%e6%9f%90%e4%ba%9b%e6%83%85%e5%86%b5%e4%b8%8b%e5%ba%94%e8%af%a5%e5%a6%82%e4%bd%95%e8%a1%8c%e4%ba%8b%ef%bc%8c%e5%a6%82%e6%9e%9c%e5%af%b9%e8%b1%a1%e7%9a%84%e7%b1%bb%e6%b2%a1%e6%9c%89%e6%8f%90%e4%be%9b%e8%af%a5%e6%96%b9%e6%b3%95%ef%bc%8c%e5%88%99%e7%b3%bb%e7%bb%9f%e4%bc%9a%e6%8f%90%e4%be%9b%e4%b8%80%e4%b8%aa%e5%9b%9e%e9%80%80%e6%96%b9%e6%b3%95%e3%80%82%e5%9c%a8%e5%a4%a7%e5%a4%9a%e6%95%b0%e6%83%85%e5%86%b5%e4%b8%8b%ef%bc%8c%e8%bf%99%e4%ba%9b%e6%96%b9%e6%b3%95%e6%b2%a1%e6%9c%89%e8%bf%9b%e5%85%a5%20Raku%ef%bc%8c%e4%bd%86%e5%85%b6%e4%b8%ad%e4%b8%80%e4%ba%9b%e6%96%b9%e6%b3%95%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e5%90%8d%e5%ad%97%e8%bf%9b%e5%85%a5%e4%ba%86%20Raku%e3%80%82%0a%20%20%20Name%20in%20RFC%20Name%20in%20Raku%20When%20%20%20%20%20STRING%20Str%20%e5%9c%a8%e5%ad%97%e7%ac%a6%e4%b8%b2%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20NUMBER%20Numeric%20%e5%9c%a8%e6%95%b0%e5%80%bc%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20BOOLEAN%20Bool%20%e5%9c%a8%e5%b8%83%e5%b0%94%e4%b8%8a%e4%b8%8b%e6%96%87%e4%b8%ad%e8%b0%83%e7%94%a8%20%20%20%20%e8%80%8c%e4%bb%96%e4%bb%ac%e4%b8%ad%e7%9a%84%e4%b8%80%e4%ba%9b%e7%94%9a%e8%87%b3%e8%bf%98%e4%bf%9d%e7%95%99%e4%ba%86%e8%87%aa%e5%b7%b1%e7%9a%84%e5%90%8d%e5%ad%97%3a">
+      <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+  <li>
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2f2020-08-17-true-polymorphic-objects%2f&t=%e7%9c%9f%e6%ad%a3%e7%9a%84%e5%a4%9a%e6%80%81%e5%af%b9%e8%b1%a1">
+      <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
+    </a>
+  </li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+      
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+          <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+          <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+          <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+
+  <footer id="footer">
+  <div class="footer-left">
+    Copyright  &copy; 2020  ❤ 焉知非鱼 
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+         
+        <li><a href="/">Home</a></li>
+         
+        <li><a href="/posts">Writings</a></li>
+         
+        <li><a href="/tags">Tags</a></li>
+         
+        <li><a href="/about">About</a></li>
+        
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+
+  </div>
+</body>
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+<script src="/lib/jquery/jquery.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+</html>
