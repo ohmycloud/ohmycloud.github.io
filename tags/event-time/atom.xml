@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.63.2">Hugo</generator><title type="html"><![CDATA[Event Time on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/event-time/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/event-time/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/event-time/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/event-time/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2020-09-03T17:12:30+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/event-time/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Generating Watermarks]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-event-time/?utm_source=atom_feed" rel="related" type="text/html" title="Event Time" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/?utm_source=atom_feed" rel="related" type="text/html" title="Flink Datastream API 编程指南" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-working-with-state/?utm_source=atom_feed" rel="related" type="text/html" title="使用状态" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/?utm_source=atom_feed" rel="related" type="text/html" title="内置的水印生成器" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-state-and-fault-tolerance/?utm_source=atom_feed" rel="related" type="text/html" title="状态和容错性" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-21T00:00:00+08:00</published>
+            <updated>2020-08-21T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Generating Watermarks</blockquote><h2 id="生成水印httpsciapacheorgprojectsflinkflink-docs-release-111devevent_timestamps_watermarkshtml"><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html">生成水印</a></h2>
+<p>在本节中，您将了解 Flink 提供的 API，用于处理事件时间时间戳和水印。关于事件时间、处理时间和摄取时间的介绍，请参考<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间的介绍</a>。</p>
+<h3 id="水印策略介绍">水印策略介绍</h3>
+<p>为了使用事件时间，Flink 需要知道事件的时间戳，这意味着流中的每个元素都需要分配其事件时间戳(event timestamp)。这通常是通过使用 <code>TimestampAssigner</code> 从元素中的某个字段访问/提取时间戳(timestamp)来完成的。</p>
+<p>时间戳分配与生成水印是同步进行的，水印告诉系统事件时间的进展。你可以通过指定一个 <code>WatermarkGenerator</code> 来配置。</p>
+<p>Flink API 期望一个 <code>WatermarkStrategy</code>，其中包含一个 <code>TimestampAssigner</code> 和 <code>WatermarkGenerator</code>。一些常见的策略作为 <code>WatermarkStrategy</code> 上的静态方法是开箱即用的，但用户也可以在需要时建立自己的策略。</p>
+<p>为了完整起见，这里是接口:</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">WatermarkStrategy</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">TimestampAssignerSupplier</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">,</span> <span class="n">WatermarkGeneratorSupplier</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">{</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Instantiates a {@link TimestampAssigner} for assigning timestamps according to this
+</span><span class="cm">     * strategy.
+</span><span class="cm">     */</span>
+    <span class="nd">@Override</span>
+    <span class="n">TimestampAssigner</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">createTimestampAssigner</span><span class="o">(</span><span class="n">TimestampAssignerSupplier</span><span class="o">.</span><span class="na">Context</span> <span class="n">context</span><span class="o">)</span><span class="o">;</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Instantiates a WatermarkGenerator that generates watermarks according to this strategy.
+</span><span class="cm">     */</span>
+    <span class="nd">@Override</span>
+    <span class="n">WatermarkGenerator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">createWatermarkGenerator</span><span class="o">(</span><span class="n">WatermarkGeneratorSupplier</span><span class="o">.</span><span class="na">Context</span> <span class="n">context</span><span class="o">)</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div><p>如前所述，你通常不会自己实现这个接口，而是使用 <code>WatermarkStrategy</code> 上的静态帮助方法来实现常见的水印策略，或者将自定义的 <code>TimestampAssigner</code> 与 <code>WatermarkGenerator</code> 捆绑在一起。例如，要使用有界无序水印和 lambda 函数作为时间戳分配器，你可以使用这个方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span>
+  <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">withTimestampAssigner</span><span class="o">(</span><span class="k">new</span> <span class="nc">SerializableTimestampAssigner</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span> <span class="o">{</span>
+    <span class="k">override</span> <span class="k">def</span> <span class="n">extractTimestamp</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">String</span><span class="o">)</span><span class="o">,</span> <span class="n">recordTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">_1</span>
+  <span class="o">}</span><span class="o">)</span>
+</code></pre></div><p>(在这里使用 Scala Lambdas 目前是行不通的，因为 Scala 很笨，很难支持这个。#fus)</p>
+<p>指定一个 <code>TimestampAssigner</code> 是可选的，在大多数情况下，你其实并不想指定一个。例如，当使用 Kafka 或 Kinesis 时，你会直接从 Kafka/Kinesis 记录中获取时间戳。</p>
+<p>我们将在后面的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#writing-watermarkgenerators">Writing WatermarkGenerator</a>中查看 <code>WatermarkGenerator</code> 接口。</p>
+<p>注意：时间戳和水印都被指定为自 1970-01-01T00:00:00Z 的 Java 纪元以来的毫秒。</p>
+<h3 id="使用水印策略">使用水印策略</h3>
+<p>在 Flink 应用中，有两个地方可以使用 <code>WatermarkStrategy</code>。1）直接在源上使用，2）在非源操作后使用。</p>
+<p>第一个选项是比较好的，因为它允许源在水印逻辑中利用关于碎片/分区/分割的知识。源通常可以更精细地跟踪水印，源产生的整体水印也会更准确。直接在源上指定 <code>WatermarkStrategy</code> 通常意味着你必须使用源的特定接口/请参阅 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#watermark-strategies-and-the-kafka-connector">Watermark Strategies 和 Kafka Connector</a>，以了解在 Kafka Connector 上如何工作，以及关于每个分区水印如何工作的更多细节。</p>
+<p>第二个选项（在任意操作后设置 <code>WatermarkStrategy</code>）只应在不能直接在源上设置策略时使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">getExecutionEnvironment</span>
+<span class="n">env</span><span class="o">.</span><span class="n">setStreamTimeCharacteristic</span><span class="o">(</span><span class="nc">TimeCharacteristic</span><span class="o">.</span><span class="nc">EventTime</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">readFile</span><span class="o">(</span>
+         <span class="n">myFormat</span><span class="o">,</span> <span class="n">myFilePath</span><span class="o">,</span> <span class="nc">FileProcessingMode</span><span class="o">.</span><span class="nc">PROCESS_CONTINUOUSLY</span><span class="o">,</span> <span class="mi">100</span><span class="o">,</span>
+         <span class="nc">FilePathFilter</span><span class="o">.</span><span class="n">createDefaultFilter</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">withTimestampsAndWatermarks</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="k">=</span> <span class="n">stream</span>
+        <span class="o">.</span><span class="n">filter</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">severity</span> <span class="o">==</span> <span class="nc">WARNING</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">assignTimestampsAndWatermarks</span><span class="o">(</span><span class="o">&lt;</span><span class="n">watermark</span> <span class="n">strategy</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="n">withTimestampsAndWatermarks</span>
+        <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">getGroup</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">)</span>
+        <span class="o">.</span><span class="n">reduce</span><span class="o">(</span> <span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="n">b</span><span class="o">)</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">addSink</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+</code></pre></div><p>以这种方式使用 <code>WatermarkStrategy</code>，可以获取一个流并生成一个带有时间戳元素和水印的新流。如果原始流已经有时间戳和/或水印了，时间戳分配器就会覆盖它们。</p>
+<h3 id="处理闲置源">处理闲置源</h3>
+<p>如果其中一个输入分割/分区/碎片在一段时间内没有携带事件，这意味着 <code>WatermarkGenerator</code> 也没有得到任何新的信息来作为水印的基础。我们称之为空闲输入或空闲源。这是一个问题，因为有可能发生你的一些分区仍然携带事件。在这种情况下，水印将被保留下来，因为它是作为所有不同的并行水印的最小值计算的。</p>
+<p>为了处理这个问题，你可以使用 <code>WatermarkStrategy</code> 来检测空闲，并将一个输入标记为空闲。<code>WatermarkStrategy</code> 为此提供了一个方便的助手。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span>
+  <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">withIdleness</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofMinutes</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div><h3 id="编写水印生成器">编写水印生成器</h3>
+<p>时间戳分配器(TimestampAssigner)是一个从事件中提取字段的简单函数，因此我们不需要详细研究它们。而 <code>WatermarkGenerator</code> 的编写就比较复杂了，我们将在接下来的两节中看如何做。这就是 <code>WatermarkGenerator</code> 的接口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="cm">/**
+</span><span class="cm"> * The {@code WatermarkGenerator} generates watermarks either based on events or
+</span><span class="cm"> * periodically (in a fixed interval).
+</span><span class="cm"> *
+</span><span class="cm"> * &lt;p&gt;&lt;b&gt;Note:&lt;/b&gt; This WatermarkGenerator subsumes the previous distinction between the
+</span><span class="cm"> * {@code AssignerWithPunctuatedWatermarks} and the {@code AssignerWithPeriodicWatermarks}.
+</span><span class="cm"> */</span>
+<span class="nd">@Public</span>
+<span class="kd">public</span> <span class="kd">interface</span> <span class="nc">WatermarkGenerator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Called for every event, allows the watermark generator to examine and remember the
+</span><span class="cm">     * event timestamps, or to emit a watermark based on the event itself.
+</span><span class="cm">     */</span>
+    <span class="kt">void</span> <span class="nf">onEvent</span><span class="o">(</span><span class="n">T</span> <span class="n">event</span><span class="o">,</span> <span class="kt">long</span> <span class="n">eventTimestamp</span><span class="o">,</span> <span class="n">WatermarkOutput</span> <span class="n">output</span><span class="o">)</span><span class="o">;</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Called periodically, and might emit a new watermark, or not.
+</span><span class="cm">     *
+</span><span class="cm">     * &lt;p&gt;The interval in which this method is called and Watermarks are generated
+</span><span class="cm">     * depends on {@link ExecutionConfig#getAutoWatermarkInterval()}.
+</span><span class="cm">     */</span>
+    <span class="kt">void</span> <span class="nf">onPeriodicEmit</span><span class="o">(</span><span class="n">WatermarkOutput</span> <span class="n">output</span><span class="o">)</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div><p>有两种不同风格的水印生成器：周期性和打点式。</p>
+<p>周期性生成器通常通过 <code>onEvent()</code> 观察到传入的事件，然后当框架调用 <code>onPeriodicEmit()</code> 时，发射水印。</p>
+<p>标点式生成器会观察 <code>onEvent()</code> 中的事件，并等待流中携带水印信息的特殊标记事件或标点。当它看到这些事件之一时，就会立即发出一个水印。通常，标点生成器不会从 <code>onPeriodicEmit()</code> 发出水印。</p>
+<p>接下来我们将看看如何实现每种样式的生成器。</p>
+<h4 id="编写周期性水印生成器">编写周期性水印生成器</h4>
+<p>周期性生成器观察流事件并周期性地生成水印（可能取决于流元素，或者纯粹基于处理时间）。</p>
+<p>生成水印的间隔（每n毫秒）通过 <code>ExecutionConfig.setAutoWatermarkInterval(...)</code> 来定义。每次都会调用生成器的 <code>onPeriodicEmit()</code> 方法，如果返回的水印是非空的，并且大于前一个水印，就会发出一个新的水印。</p>
+<p>这里我们展示了两个使用周期性水印生成器的简单例子。请注意，Flink 提供了 <code>BoundedOutfOrdernessWatermarks</code>，这是一个 <code>WatermarkGenerator</code>，它的工作原理与下面所示的 <code>BoundedOutfOrdernessGenerator</code> 类似。你可以在<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-allowing-a-fixed-amount-of-lateness">这里</a>阅读关于如何使用它。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> This generator generates watermarks assuming that elements arrive out of order,
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> but only to a certain degree. The latest elements for a certain timestamp t will arrive
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> at most n milliseconds after the earliest elements for timestamp t.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">BoundedOutOfOrdernessGenerator</span> <span class="k">extends</span> <span class="nc">AssignerWithPeriodicWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">val</span> <span class="n">maxOutOfOrderness</span> <span class="k">=</span> <span class="mi">3500L</span> <span class="c1">// 3.5 seconds
+</span><span class="c1"></span>
+    <span class="k">var</span> <span class="n">currentMaxTimestamp</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="k">_</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="n">currentMaxTimestamp</span> <span class="k">=</span> <span class="n">max</span><span class="o">(</span><span class="n">eventTimestamp</span><span class="o">,</span> <span class="n">currentMaxTimestamp</span><span class="o">)</span>
+    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// emit the watermark as current highest timestamp minus the out-of-orderness bound
+</span><span class="c1"></span>        <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="n">currentMaxTimestamp</span> <span class="o">-</span> <span class="n">maxOutOfOrderness</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> This generator generates watermarks that are lagging behind processing time by a fixed amount.
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> It assumes that elements arrive in Flink after a bounded delay.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">TimeLagWatermarkGenerator</span> <span class="k">extends</span> <span class="nc">AssignerWithPeriodicWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">val</span> <span class="n">maxTimeLag</span> <span class="k">=</span> <span class="mi">5000L</span> <span class="c1">// 5 seconds
+</span><span class="c1"></span>
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// don&#39;t need to do anything because we work on processing time
+</span><span class="c1"></span>    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">(</span><span class="o">)</span> <span class="o">-</span> <span class="n">maxTimeLag</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h4 id="编写一个标点水印生成器">编写一个标点水印生成器</h4>
+<p>标点水印生成器将观察事件流，每当它看到一个携带水印信息的特殊元素时，就会发出一个水印。</p>
+<p>这就是如何实现一个标点水印生成器，每当一个事件表明它携带某个标记时，它就会发射一个水印。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">PunctuatedAssigner</span> <span class="k">extends</span> <span class="nc">AssignerWithPunctuatedWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="n">hasWatermarkMarker</span><span class="o">(</span><span class="o">)</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="n">getWatermarkTimestamp</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// don&#39;t need to do anything because we emit in reaction to events above
+</span><span class="c1"></span>    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>注：可以对每个事件生成一个水印。然而，由于每个水印都会引起下游的一些计算，因此过多的水印会降低性能。</p>
+<h3 id="水印策略和-kafka-连接器">水印策略和 Kafka 连接器</h3>
+<p>当使用 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/kafka.html">Apache Kafka</a> 作为数据源时，每个 Kafka 分区可能有一个简单的事件时间模式（升序时间戳或有界失序）。然而，当消耗来自 Kafka 的流时，多个分区经常会被并行消耗，交织来自分区的事件，并破坏每个分区的模式（这是 Kafka 的消费者客户端的固有工作方式）。</p>
+<p>在这种情况下，你可以使用 Flink 的 Kafka-partition-aware 水印生成功能。使用该功能，在 Kafka 消费者内部，按 Kafka 分区生成水印，每个分区水印的合并方式与流洗牌的水印合并方式相同。</p>
+<p>例如，如果每个 Kafka 分区的事件时间戳是严格的升序，那么用<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-with-ascending-timestamps">升序时间戳水印生成器</a>生成每个分区的水印，会得到完美的整体水印。请注意，我们在示例中并没有提供 TimestampAssigner，而是使用 Kafka 记录本身的时间戳。</p>
+<p>下面的插图展示了如何使用 per-Kafka-partition 水印生成器，以及在这种情况下水印如何通过流式数据流传播。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">kafkaSource</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">FlinkKafkaConsumer</span><span class="o">[</span><span class="kt">MyType</span><span class="o">]</span><span class="o">(</span><span class="s">&#34;myTopic&#34;</span><span class="o">,</span> <span class="n">schema</span><span class="o">,</span> <span class="n">props</span><span class="o">)</span>
+<span class="n">kafkaSource</span><span class="o">.</span><span class="n">assignTimestampsAndWatermarks</span><span class="o">(</span>
+  <span class="nc">WatermarkStrategy</span>
+    <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyType</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">addSource</span><span class="o">(</span><span class="n">kafkaSource</span><span class="o">)</span>
+</code></pre></div><p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/parallel_kafka_watermarks.svg" alt="img"></p>
+<h3 id="运算符如何处理水印">运算符如何处理水印</h3>
+<p>作为一般规则，运算符(operator)在向下游转发一个给定的水印之前，需要对其进行完全处理。例如，<code>WindowOperator</code> 将首先评估所有应该被发射的窗口，只有在产生所有由水印触发的输出之后，水印本身才会被发送到下游。换句话说，所有因发生水印而产生的元素将在水印之前被发射。</p>
+<p>同样的规则也适用于 <code>TwoInputStreamOperator</code>。然而，在这种情况下，运算符的当前水印被定义为其两个输入的最小值。</p>
+<p>这种行为的细节由 <code>OneInputStreamOperator#processWatermark</code>、<code>TwoInputStreamOperator#processWatermark1</code> 和 <code>TwoInputStreamOperator#processWatermark2</code> 方法的实现来定义。</p>
+<h3 id="废弃的-assignerwithperiodicwatermarks-和-assignerwithpunctuatedwatermarks-方法">废弃的 AssignerWithPeriodicWatermarks 和 AssignerWithPunctuatedWatermarks 方法</h3>
+<p>在引入当前的 <code>WatermarkStrategy</code>、<code>TimestampAssigner</code> 和 <code>WatermarkGenerator</code> 抽象之前，Flink 使用了 <code>AssignerWithPeriodicWatermarks</code> 和 <code>AssignerWithPeriodicWatermarks</code>。你仍然会在 API 中看到它们，但建议使用新的接口，因为它们提供了更清晰的分离关注点，也统一了水印生成的周期和标点样式。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/event-time" term="event-time" label="Event Time" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

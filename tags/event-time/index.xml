@@ -1,0 +1,227 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    Event Time on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/event-time/</link>
+        <description>Recent content  in Event Time
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Thu, 03 Sep 2020 17:12:30 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/event-time/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Generating Watermarks</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/</link>
+                
+                
+                <description>&lt;blockquote&gt;Generating Watermarks&lt;/blockquote&gt;&lt;h2 id=&#34;生成水印httpsciapacheorgprojectsflinkflink-docs-release-111devevent_timestamps_watermarkshtml&#34;&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html&#34;&gt;生成水印&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在本节中，您将了解 Flink 提供的 API，用于处理事件时间时间戳和水印。关于事件时间、处理时间和摄取时间的介绍，请参考&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间的介绍&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;水印策略介绍&#34;&gt;水印策略介绍&lt;/h3&gt;
+&lt;p&gt;为了使用事件时间，Flink 需要知道事件的时间戳，这意味着流中的每个元素都需要分配其事件时间戳(event timestamp)。这通常是通过使用 &lt;code&gt;TimestampAssigner&lt;/code&gt; 从元素中的某个字段访问/提取时间戳(timestamp)来完成的。&lt;/p&gt;
+&lt;p&gt;时间戳分配与生成水印是同步进行的，水印告诉系统事件时间的进展。你可以通过指定一个 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 来配置。&lt;/p&gt;
+&lt;p&gt;Flink API 期望一个 &lt;code&gt;WatermarkStrategy&lt;/code&gt;，其中包含一个 &lt;code&gt;TimestampAssigner&lt;/code&gt; 和 &lt;code&gt;WatermarkGenerator&lt;/code&gt;。一些常见的策略作为 &lt;code&gt;WatermarkStrategy&lt;/code&gt; 上的静态方法是开箱即用的，但用户也可以在需要时建立自己的策略。&lt;/p&gt;
+&lt;p&gt;为了完整起见，这里是接口:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;interface&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;TimestampAssignerSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;WatermarkGeneratorSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * Instantiates a {@link TimestampAssigner} for assigning timestamps according to this
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * strategy.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     */&lt;/span&gt;
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;TimestampAssigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;createTimestampAssigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;TimestampAssignerSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;Context&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * Instantiates a WatermarkGenerator that generates watermarks according to this strategy.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     */&lt;/span&gt;
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;WatermarkGenerator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;createWatermarkGenerator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;WatermarkGeneratorSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;Context&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如前所述，你通常不会自己实现这个接口，而是使用 &lt;code&gt;WatermarkStrategy&lt;/code&gt; 上的静态帮助方法来实现常见的水印策略，或者将自定义的 &lt;code&gt;TimestampAssigner&lt;/code&gt; 与 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 捆绑在一起。例如，要使用有界无序水印和 lambda 函数作为时间戳分配器，你可以使用这个方法。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;forBoundedOutOfOrderness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ofSeconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;20&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withTimestampAssigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;SerializableTimestampAssigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;extractTimestamp&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;recordTimestamp&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;(在这里使用 Scala Lambdas 目前是行不通的，因为 Scala 很笨，很难支持这个。#fus)&lt;/p&gt;
+&lt;p&gt;指定一个 &lt;code&gt;TimestampAssigner&lt;/code&gt; 是可选的，在大多数情况下，你其实并不想指定一个。例如，当使用 Kafka 或 Kinesis 时，你会直接从 Kafka/Kinesis 记录中获取时间戳。&lt;/p&gt;
+&lt;p&gt;我们将在后面的 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#writing-watermarkgenerators&#34;&gt;Writing WatermarkGenerator&lt;/a&gt;中查看 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 接口。&lt;/p&gt;
+&lt;p&gt;注意：时间戳和水印都被指定为自 1970-01-01T00:00:00Z 的 Java 纪元以来的毫秒。&lt;/p&gt;
+&lt;h3 id=&#34;使用水印策略&#34;&gt;使用水印策略&lt;/h3&gt;
+&lt;p&gt;在 Flink 应用中，有两个地方可以使用 &lt;code&gt;WatermarkStrategy&lt;/code&gt;。1）直接在源上使用，2）在非源操作后使用。&lt;/p&gt;
+&lt;p&gt;第一个选项是比较好的，因为它允许源在水印逻辑中利用关于碎片/分区/分割的知识。源通常可以更精细地跟踪水印，源产生的整体水印也会更准确。直接在源上指定 &lt;code&gt;WatermarkStrategy&lt;/code&gt; 通常意味着你必须使用源的特定接口/请参阅 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#watermark-strategies-and-the-kafka-connector&#34;&gt;Watermark Strategies 和 Kafka Connector&lt;/a&gt;，以了解在 Kafka Connector 上如何工作，以及关于每个分区水印如何工作的更多细节。&lt;/p&gt;
+&lt;p&gt;第二个选项（在任意操作后设置 &lt;code&gt;WatermarkStrategy&lt;/code&gt;）只应在不能直接在源上设置策略时使用。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;StreamExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getExecutionEnvironment&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setStreamTimeCharacteristic&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TimeCharacteristic&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;EventTime&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;readFile&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+         &lt;span class=&#34;n&#34;&gt;myFormat&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;myFilePath&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;FileProcessingMode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;PROCESS_CONTINUOUSLY&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;100&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+         &lt;span class=&#34;nc&#34;&gt;FilePathFilter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;createDefaultFilter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;withTimestampsAndWatermarks&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;severity&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;==&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WARNING&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;assignTimestampsAndWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;watermark&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;strategy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;withTimestampsAndWatermarks&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getGroup&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;timeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;reduce&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;add&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;addSink&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;以这种方式使用 &lt;code&gt;WatermarkStrategy&lt;/code&gt;，可以获取一个流并生成一个带有时间戳元素和水印的新流。如果原始流已经有时间戳和/或水印了，时间戳分配器就会覆盖它们。&lt;/p&gt;
+&lt;h3 id=&#34;处理闲置源&#34;&gt;处理闲置源&lt;/h3&gt;
+&lt;p&gt;如果其中一个输入分割/分区/碎片在一段时间内没有携带事件，这意味着 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 也没有得到任何新的信息来作为水印的基础。我们称之为空闲输入或空闲源。这是一个问题，因为有可能发生你的一些分区仍然携带事件。在这种情况下，水印将被保留下来，因为它是作为所有不同的并行水印的最小值计算的。&lt;/p&gt;
+&lt;p&gt;为了处理这个问题，你可以使用 &lt;code&gt;WatermarkStrategy&lt;/code&gt; 来检测空闲，并将一个输入标记为空闲。&lt;code&gt;WatermarkStrategy&lt;/code&gt; 为此提供了一个方便的助手。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;forBoundedOutOfOrderness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ofSeconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;20&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withIdleness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ofMinutes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;编写水印生成器&#34;&gt;编写水印生成器&lt;/h3&gt;
+&lt;p&gt;时间戳分配器(TimestampAssigner)是一个从事件中提取字段的简单函数，因此我们不需要详细研究它们。而 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 的编写就比较复杂了，我们将在接下来的两节中看如何做。这就是 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 的接口。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * The {@code WatermarkGenerator} generates watermarks either based on events or
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * periodically (in a fixed interval).
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; *
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * &amp;lt;p&amp;gt;&amp;lt;b&amp;gt;Note:&amp;lt;/b&amp;gt; This WatermarkGenerator subsumes the previous distinction between the
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * {@code AssignerWithPunctuatedWatermarks} and the {@code AssignerWithPeriodicWatermarks}.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; */&lt;/span&gt;
+&lt;span class=&#34;nd&#34;&gt;@Public&lt;/span&gt;
+&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;interface&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WatermarkGenerator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * Called for every event, allows the watermark generator to examine and remember the
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * event timestamps, or to emit a watermark based on the event itself.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     */&lt;/span&gt;
+    &lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;onEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;event&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;long&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;eventTimestamp&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;WatermarkOutput&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;output&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * Called periodically, and might emit a new watermark, or not.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     *
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * &amp;lt;p&amp;gt;The interval in which this method is called and Watermarks are generated
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     * depends on {@link ExecutionConfig#getAutoWatermarkInterval()}.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     */&lt;/span&gt;
+    &lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;onPeriodicEmit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;WatermarkOutput&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;output&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;有两种不同风格的水印生成器：周期性和打点式。&lt;/p&gt;
+&lt;p&gt;周期性生成器通常通过 &lt;code&gt;onEvent()&lt;/code&gt; 观察到传入的事件，然后当框架调用 &lt;code&gt;onPeriodicEmit()&lt;/code&gt; 时，发射水印。&lt;/p&gt;
+&lt;p&gt;标点式生成器会观察 &lt;code&gt;onEvent()&lt;/code&gt; 中的事件，并等待流中携带水印信息的特殊标记事件或标点。当它看到这些事件之一时，就会立即发出一个水印。通常，标点生成器不会从 &lt;code&gt;onPeriodicEmit()&lt;/code&gt; 发出水印。&lt;/p&gt;
+&lt;p&gt;接下来我们将看看如何实现每种样式的生成器。&lt;/p&gt;
+&lt;h4 id=&#34;编写周期性水印生成器&#34;&gt;编写周期性水印生成器&lt;/h4&gt;
+&lt;p&gt;周期性生成器观察流事件并周期性地生成水印（可能取决于流元素，或者纯粹基于处理时间）。&lt;/p&gt;
+&lt;p&gt;生成水印的间隔（每n毫秒）通过 &lt;code&gt;ExecutionConfig.setAutoWatermarkInterval(...)&lt;/code&gt; 来定义。每次都会调用生成器的 &lt;code&gt;onPeriodicEmit()&lt;/code&gt; 方法，如果返回的水印是非空的，并且大于前一个水印，就会发出一个新的水印。&lt;/p&gt;
+&lt;p&gt;这里我们展示了两个使用周期性水印生成器的简单例子。请注意，Flink 提供了 &lt;code&gt;BoundedOutfOrdernessWatermarks&lt;/code&gt;，这是一个 &lt;code&gt;WatermarkGenerator&lt;/code&gt;，它的工作原理与下面所示的 &lt;code&gt;BoundedOutfOrdernessGenerator&lt;/code&gt; 类似。你可以在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-allowing-a-fixed-amount-of-lateness&#34;&gt;这里&lt;/a&gt;阅读关于如何使用它。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; This generator generates watermarks assuming that elements arrive out of order,
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; but only to a certain degree. The latest elements for a certain timestamp t will arrive
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; at most n milliseconds after the earliest elements for timestamp t.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;BoundedOutOfOrdernessGenerator&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AssignerWithPeriodicWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;maxOutOfOrderness&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;3500L&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// 3.5 seconds
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;var&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;currentMaxTimestamp&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;eventTimestamp&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;currentMaxTimestamp&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;max&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;eventTimestamp&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;currentMaxTimestamp&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onPeriodicEmit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// emit the watermark as current highest timestamp minus the out-of-orderness bound
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;n&#34;&gt;output&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;emitWatermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Watermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;currentMaxTimestamp&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;maxOutOfOrderness&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; This generator generates watermarks that are lagging behind processing time by a fixed amount.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; It assumes that elements arrive in Flink after a bounded delay.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;TimeLagWatermarkGenerator&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AssignerWithPeriodicWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;maxTimeLag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;5000L&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// 5 seconds
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;eventTimestamp&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// don&amp;#39;t need to do anything because we work on processing time
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onPeriodicEmit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;output&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;emitWatermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Watermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;System&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;currentTimeMillis&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;maxTimeLag&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;编写一个标点水印生成器&#34;&gt;编写一个标点水印生成器&lt;/h4&gt;
+&lt;p&gt;标点水印生成器将观察事件流，每当它看到一个携带水印信息的特殊元素时，就会发出一个水印。&lt;/p&gt;
+&lt;p&gt;这就是如何实现一个标点水印生成器，每当一个事件表明它携带某个标记时，它就会发射一个水印。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;PunctuatedAssigner&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AssignerWithPunctuatedWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;MyEvent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;eventTimestamp&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;event&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hasWatermarkMarker&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;output&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;emitWatermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Watermark&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;event&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getWatermarkTimestamp&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;onPeriodicEmit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// don&amp;#39;t need to do anything because we emit in reaction to events above
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;注：可以对每个事件生成一个水印。然而，由于每个水印都会引起下游的一些计算，因此过多的水印会降低性能。&lt;/p&gt;
+&lt;h3 id=&#34;水印策略和-kafka-连接器&#34;&gt;水印策略和 Kafka 连接器&lt;/h3&gt;
+&lt;p&gt;当使用 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/kafka.html&#34;&gt;Apache Kafka&lt;/a&gt; 作为数据源时，每个 Kafka 分区可能有一个简单的事件时间模式（升序时间戳或有界失序）。然而，当消耗来自 Kafka 的流时，多个分区经常会被并行消耗，交织来自分区的事件，并破坏每个分区的模式（这是 Kafka 的消费者客户端的固有工作方式）。&lt;/p&gt;
+&lt;p&gt;在这种情况下，你可以使用 Flink 的 Kafka-partition-aware 水印生成功能。使用该功能，在 Kafka 消费者内部，按 Kafka 分区生成水印，每个分区水印的合并方式与流洗牌的水印合并方式相同。&lt;/p&gt;
+&lt;p&gt;例如，如果每个 Kafka 分区的事件时间戳是严格的升序，那么用&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-with-ascending-timestamps&#34;&gt;升序时间戳水印生成器&lt;/a&gt;生成每个分区的水印，会得到完美的整体水印。请注意，我们在示例中并没有提供 TimestampAssigner，而是使用 Kafka 记录本身的时间戳。&lt;/p&gt;
+&lt;p&gt;下面的插图展示了如何使用 per-Kafka-partition 水印生成器，以及在这种情况下水印如何通过流式数据流传播。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;kafkaSource&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;FlinkKafkaConsumer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;myTopic&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;schema&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;props&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;kafkaSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;assignTimestampsAndWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+  &lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;forBoundedOutOfOrderness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ofSeconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;20&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;MyType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;addSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;kafkaSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/parallel_kafka_watermarks.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;运算符如何处理水印&#34;&gt;运算符如何处理水印&lt;/h3&gt;
+&lt;p&gt;作为一般规则，运算符(operator)在向下游转发一个给定的水印之前，需要对其进行完全处理。例如，&lt;code&gt;WindowOperator&lt;/code&gt; 将首先评估所有应该被发射的窗口，只有在产生所有由水印触发的输出之后，水印本身才会被发送到下游。换句话说，所有因发生水印而产生的元素将在水印之前被发射。&lt;/p&gt;
+&lt;p&gt;同样的规则也适用于 &lt;code&gt;TwoInputStreamOperator&lt;/code&gt;。然而，在这种情况下，运算符的当前水印被定义为其两个输入的最小值。&lt;/p&gt;
+&lt;p&gt;这种行为的细节由 &lt;code&gt;OneInputStreamOperator#processWatermark&lt;/code&gt;、&lt;code&gt;TwoInputStreamOperator#processWatermark1&lt;/code&gt; 和 &lt;code&gt;TwoInputStreamOperator#processWatermark2&lt;/code&gt; 方法的实现来定义。&lt;/p&gt;
+&lt;h3 id=&#34;废弃的-assignerwithperiodicwatermarks-和-assignerwithpunctuatedwatermarks-方法&#34;&gt;废弃的 AssignerWithPeriodicWatermarks 和 AssignerWithPunctuatedWatermarks 方法&lt;/h3&gt;
+&lt;p&gt;在引入当前的 &lt;code&gt;WatermarkStrategy&lt;/code&gt;、&lt;code&gt;TimestampAssigner&lt;/code&gt; 和 &lt;code&gt;WatermarkGenerator&lt;/code&gt; 抽象之前，Flink 使用了 &lt;code&gt;AssignerWithPeriodicWatermarks&lt;/code&gt; 和 &lt;code&gt;AssignerWithPeriodicWatermarks&lt;/code&gt;。你仍然会在 API 中看到它们，但建议使用新的接口，因为它们提供了更清晰的分离关注点，也统一了水印生成的周期和标点样式。&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/programming">programming</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/datastream-api">DataStream API</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/event-time">Event Time</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/</guid>
+                <pubDate>Fri, 21 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+

@@ -1,0 +1,320 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    Data Sources on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/data-sources/</link>
+        <description>Recent content  in Data Sources
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Thu, 03 Sep 2020 17:12:30 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/data-sources/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>数据源</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-22-data-sources/</link>
+                
+                
+                <description>&lt;blockquote&gt;Data Sources&lt;/blockquote&gt;&lt;p&gt;注：这描述了新的数据源 API ，作为 FLIP-27 的一部分在 Flink 1.11 中引入。这个新的 API 目前处于 BETA 状态。
+大多数现有的源连接器还没有（截至 Flink 1.11 ）使用这个新的 API 实现，而是使用以前的 API ，基于 SourceFunction 。
+本页介绍了 Flink 的数据源 API 及其背后的概念和架构。如果你对 Flink 中的数据源是如何工作的，或者你想实现一个新的数据源，请阅读本页面。&lt;/p&gt;
+&lt;p&gt;如果您正在寻找预定义的源连接器，请查看&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/&#34;&gt;连接器文档&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;数据源概念&#34;&gt;数据源概念&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;核心部件&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;一个数据源有三个核心组件。&lt;code&gt;Split&lt;/code&gt;、&lt;code&gt;SplitEnumerator&lt;/code&gt; 和 &lt;code&gt;SourceReader&lt;/code&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Split&lt;/code&gt; 是数据源所消耗的一部分数据，就像一个文件或一个日志分区。&lt;code&gt;Split&lt;/code&gt; 是源分配工作和并行读取数据的粒度。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;SourceReader&lt;/code&gt; 请求 &lt;code&gt;Split&lt;/code&gt; 并进行处理，例如读取 &lt;code&gt;Split&lt;/code&gt; 所代表的文件或日志分区。&lt;code&gt;SourceReader&lt;/code&gt; 在 &lt;code&gt;SourceOperators&lt;/code&gt; 的 Task Manager 上并行运行，并产生事件/记录的并行流。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;SplitEnumerator&lt;/code&gt; 生成 &lt;code&gt;Split&lt;/code&gt; 并将它们分配给 &lt;code&gt;SourceReader&lt;/code&gt; 。它作为单个实例在任务管理器上运行，负责维护待处理的 &lt;code&gt;Split&lt;/code&gt; 的积压，并以平衡的方式将它们分配给读者。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;Source&lt;/code&gt; 类是将上述三个组件联系在一起的 API 入口点。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/source_components.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;统一的跨流和批处理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;数据源 API 以统一的方式支持无界流源和有界批处理源。&lt;/p&gt;
+&lt;p&gt;这两种情况的区别很小：在有界/批处理的情况下，枚举器生成一组固定的 split ，而且每个 split 必然是有限的。在无界流的情况下，这两种情况中的一种是不正确的（ split 不是有限的，或者枚举器不断产生新的 split ）。&lt;/p&gt;
+&lt;h3 id=&#34;例子&#34;&gt;例子&lt;/h3&gt;
+&lt;p&gt;下面是一些简化的概念性例子，以说明在流式和批处理情况下，数据源组件如何交互。&lt;/p&gt;
+&lt;p&gt;请注意，这并不能准确地描述 Kafka 和 File 源的实现是如何工作的；部分内容是简化的，用于说明目的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;绑定的文件源&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;源有一个要读取的目录的 URI/路径，以及一个定义如何解析文件的格式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;Split&lt;/code&gt; 是一个文件，或者一个文件的一个区域（如果数据格式支持分割文件）。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SplitEnumerator&lt;/code&gt; 列出了给定目录路径下的所有文件。它将 &lt;code&gt;Split&lt;/code&gt; 分配给下一个请求 &lt;code&gt;Split&lt;/code&gt; 的读者。一旦所有的 &lt;code&gt;Split&lt;/code&gt; 都分配完毕，它就会用 &lt;code&gt;NoMoreSplits&lt;/code&gt; 来响应请求。&lt;/li&gt;
+&lt;li&gt;SourceReader 请求一个 &lt;code&gt;Split&lt;/code&gt; ，并读取被分配的 &lt;code&gt;Split&lt;/code&gt; （文件或文件区域），并使用给定的格式进行解析。如果它没有得到另一个 &lt;code&gt;Split&lt;/code&gt; ，而是得到一个 &lt;code&gt;NoMoreSplits&lt;/code&gt; 消息，它就结束了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;非绑定流文件源&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个源的工作方式和上面描述的一样，除了 &lt;code&gt;SplitEnumerator&lt;/code&gt; 从不响应 &lt;code&gt;NoMoreSplits&lt;/code&gt; ，而是周期性地列出给定 &lt;code&gt;URI/Path&lt;/code&gt; 下的内容以检查新文件。一旦发现新文件，它就会为它们生成新的 &lt;code&gt;Splits&lt;/code&gt; ，并可以将它们分配给可用的 &lt;code&gt;SourceReaders&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;无界流 Kafka 源&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;该源有一个 Kafka Topic （或 Topic 列表或 Topic regex ）和一个 Deserializer 来解析记录。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;一个 Split 就是一个 Kafka Topic 分区。&lt;/li&gt;
+&lt;li&gt;SplitEnumerator 连接到 brokers ，以列出所有涉及订阅的主题分区。枚举器可以选择重复这个操作来发现新添加的主题/分区。&lt;/li&gt;
+&lt;li&gt;SourceReader 使用 KafkaConsumer 读取分配的 split （主题分区），并使用提供的 Deserializer 反序列化记录。分割(Topic Partitions) 没有终点，所以读取器永远不会到达数据的终点。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;绑定的 Kafka 源&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;和上面一样，只是每个 Split （主题分区）有一个定义的结束偏移量。一旦 SourceReader 达到一个 Split 的结束偏移量，它就会完成该 Split 。一旦所有分配的 Split 结束， SourceReader 就结束了。&lt;/p&gt;
+&lt;h2 id=&#34;数据源-api&#34;&gt;数据源 API&lt;/h2&gt;
+&lt;p&gt;本节介绍了 FLIP-27 中新引入的 Source API 的主要接口，并为开发者提供了 Source 开发的技巧。&lt;/p&gt;
+&lt;h3 id=&#34;source&#34;&gt;Source&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/connector/source/Source.java&#34;&gt;Source&lt;/a&gt; API 是一个工厂风格的接口，用于创建以下组件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Split Enumerator&lt;/li&gt;
+&lt;li&gt;源读取器&lt;/li&gt;
+&lt;li&gt;分离式序列器&lt;/li&gt;
+&lt;li&gt;枚举器检查点序列器&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;除此之外， Source 还提供了源的&lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/connector/source/Boundedness.java&#34;&gt;边界&lt;/a&gt;属性，这样 Flink 可以选择合适的模式来运行 Flink 作业。&lt;/p&gt;
+&lt;p&gt;Source 的实现应该是可序列化的，因为 Source 实例在运行时被序列化并上传到 Flink 集群。&lt;/p&gt;
+&lt;h3 id=&#34;splitenumerator&#34;&gt;SplitEnumerator&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/connector/source/SplitEnumerator.java&#34;&gt;SplitEnumerator&lt;/a&gt; 有望成为 Source 的&amp;quot;大脑&amp;rdquo;。SplitEnumerator 的典型实现会做以下工作。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SourceReader 注册处理&lt;/li&gt;
+&lt;li&gt;SourceReader 失败处理
+&lt;ul&gt;
+&lt;li&gt;当 SourceReader 失败时，将调用 &lt;code&gt;addSplitsBack()&lt;/code&gt; 方法。SplitEnumerator 应该收回未被失败的 SourceReader 承认的分割分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;SourceEvent 处理
+&lt;ul&gt;
+&lt;li&gt;SourceEvents 是在 SplitEnumerator 和 SourceReader 之间发送的自定义事件。实现可以利用这种机制来进行复杂的协调。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;分割发现和分配
+&lt;ul&gt;
+&lt;li&gt;SplitEnumerator 可以根据各种事件将 split 分配给 SourceReaders ，包括发现新的 split 、新的 SourceReader 注册、 SourceReader 失败等。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;SplitEnumerator 可以借助 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/connector/source/SplitEnumeratorContext.java&#34;&gt;SplitEnumeratorContext&lt;/a&gt; 完成上述工作， SplitEnumeratorContext 是在创建或恢复 SplitEnumerator 时提供给 Source 的。SplitEnumeratorContext 允许 SplitEnumerator 检索读取器的必要信息并执行协调动作。Source 实现应该将 SplitEnumeratorContext 传递给 SplitEnumerator 实例。&lt;/p&gt;
+&lt;p&gt;虽然 SplitEnumerator 实现可以通过只在它的方法被调用时采取协调动作的被动方式很好地工作，但一些 SplitEnumerator 实现可能希望主动采取行动。例如，一个 SplitEnumerator 可能希望定期运行 split discovery ，并将新的 split 分配给 SourceReaders 。这样的实现可能会发现调用 Async() 方法 SplitEnumeratorContext 很方便。下面的代码片段展示了 SplitEnumerator 实现如何在不维护自己的线程的情况下实现这一点。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MySplitEnumerator&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;implements&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;SplitEnumerator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;MySplit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;private&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;final&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;long&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;DISCOVER_INTERVAL&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;60&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_000L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; A method to discover the splits.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;     &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;private&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;List&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;MySplit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;discoverSplits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;start&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;enumContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;callAsync&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;this&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;discoverSplits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splits&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;nc&#34;&gt;Map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;List&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;MockSourceSplit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assignments&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;HashMap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;parallelism&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;enumContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;currentParallelism&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+            &lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;MockSourceSplit&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;split&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;splits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;owner&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;splitId&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hashCode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;%&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;parallelism&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;assignments&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;computeIfAbsent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;owner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ArrayList&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;add&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+            &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;enumContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;assignSplits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;SplitsAssignment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;assignments&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;DISCOVER_INTERVAL&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;sourcereader&#34;&gt;SourceReader&lt;/h2&gt;
+&lt;p&gt;SourceReader 是一个运行在 Task Manager 中的组件，用于消耗来自 Splits 的记录。&lt;/p&gt;
+&lt;p&gt;SourceReader 暴露了一个基于拉的消费接口。一个 Flink 任务在循环中不断调用 pollNext(ReaderOutput) 来轮询 SourceReader 的记录。pollNext(ReaderOutput) 方法的返回值表示源阅读器的状态。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MORE_AVAILABLE - SourceReader 立即有更多的记录可用。&lt;/li&gt;
+&lt;li&gt;NOTHING_AVAILABLE - SourceReader 此时没有更多的记录可用，但将来可能会有更多的记录。&lt;/li&gt;
+&lt;li&gt;END_OF_INPUT - SourceReader 已经用完了所有的记录，达到了数据的终点。这意味着 SourceReader 可以被关闭。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了保证性能，会给 pollNext(ReaderOutput) 方法提供一个 ReaderOutput ，所以如果有必要， SourceReader 可以在一次调用 pollNext() 的过程中发出多条记录。例如，有时外部系统的工作粒度是块。一个块可能包含多条记录，但源码只能在块的边界处进行检查点。在这种情况下， SourceReader 可以一次将一个块中的所有记录排放到 ReaderOutput 。但是，除非必要， SourceReader 的实现应该避免在一次 pollNext(ReaderOutput) 的调用中发射多条记录。这是因为从 SourceReader 中进行轮询的任务线程是在事件循环中工作的，不能阻塞。&lt;/p&gt;
+&lt;p&gt;SourceReader 的所有状态都应该维护在 SourceSplits 里面，这些状态在 snapshotState() 调用时返回。这样做可以在需要时将 SourceSplits 重新分配给其他 SourceReaders 。&lt;/p&gt;
+&lt;p&gt;在创建 SourceReader 时，会向 Source 提供一个 SourceReaderContext 。预计 Source 将把上下文传递给 SourceReader 实例。SourceReader 可以通过 SourceReaderContext 向其 SplitEnumerator 发送 SourceEvent 。Source 的一个典型的设计模式是让 SourceReaders 向 SplitEnumerator 报告它们的本地信息， SplitEnumerator 有一个全局视图来做决策。&lt;/p&gt;
+&lt;p&gt;SourceReader API 是一个低级的 API ，它允许用户手动处理 split ，并有自己的线程模型来获取和交接记录。为了方便 SourceReader 的实现， Flink 提供了一个 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/SourceReaderBase.java&#34;&gt;SourceReaderBase&lt;/a&gt; 类，大大减少了编写 SourceReader 的工作量。强烈建议连接器开发人员利用 SourceReaderBase ，而不是从头开始编写 SourceReaders 。更多细节请查看 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/sources.html#the-split-reader-api&#34;&gt;Split Reader API&lt;/a&gt; 部分。&lt;/p&gt;
+&lt;h3 id=&#34;使用-source&#34;&gt;使用 Source&lt;/h3&gt;
+&lt;p&gt;为了从 Source 创建 DataStream ，需要将 Source 传递给 StreamExecutionEnvironment。例如:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;StreamExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;mySource&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MySource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;mySource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;noWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;s&#34;&gt;&amp;#34;MySourceName&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;split-读取器-api&#34;&gt;Split 读取器 API&lt;/h2&gt;
+&lt;p&gt;核心的 SourceReader API 是完全异步的，需要实现者手动管理异步拆分读取。然而，在实践中，大多数 Source 使用执行阻塞操作，比如在客户端（例如 KafkaConsumer ）上阻塞 poll() 调用，或者在分布式文件系统（ HDFS ， S3 ，&amp;hellip;）上阻塞 I/O 操作。为了与异步的 Source API 兼容，这些阻塞（同步）操作需要发生在单独的线程中，线程将数据交给异步部分的阅读器。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/splitreader/SplitReader.java&#34;&gt;SplitReader&lt;/a&gt; 是用于简单的基于同步读取/轮询的源码实现的高级 API ，比如文件读取、 Kafka 等。&lt;/p&gt;
+&lt;p&gt;核心是 SourceReaderBase 类，它接收一个 SplitReader 并创建运行 SplitReader 的 fetcher 线程，支持不同的消费线程模型。&lt;/p&gt;
+&lt;h3 id=&#34;splitreader&#34;&gt;SplitReader&lt;/h3&gt;
+&lt;p&gt;SplitReader API 只有三个方法。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;一个阻塞获取方法，返回一个 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/RecordsWithSplitIds.java&#34;&gt;RecordsWithSplitIds&lt;/a&gt; 。&lt;/li&gt;
+&lt;li&gt;一种非阻塞方法，用于处理拆分变化。&lt;/li&gt;
+&lt;li&gt;一个非阻塞的唤醒方法，用于唤醒阻塞的获取操作。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;SplitReader 只专注于从外部系统读取记录，因此比 SourceReader 简单得多。详情请查看该类的 Java 文档。&lt;/p&gt;
+&lt;h3 id=&#34;sourcereaderbase&#34;&gt;SourceReaderBase&lt;/h3&gt;
+&lt;p&gt;SourceReader 的实现很常见，它做了以下工作。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;拥有一个线程池，以阻塞的方式从外部系统的分割处获取数据。&lt;/li&gt;
+&lt;li&gt;处理内部获取线程和其他方法调用之间的同步，如 pollNext(ReaderOutput) 。&lt;/li&gt;
+&lt;li&gt;维护每个 split 的水印，以便进行水印对齐。&lt;/li&gt;
+&lt;li&gt;维护每个分身的状态，以便检查点。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了减少编写一个新的 SourceReader 的工作， Flink 提供了一个 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/SourceReaderBase.java&#34;&gt;SourceReaderBase&lt;/a&gt; 类作为 SourceReader 的基础实现。SourceReaderBase 开箱即完成了上述所有工作。如果要编写一个新的 SourceReader ，只需要让 SourceReader 实现继承 SourceReaderBase ，填充一些方法，然后实现一个高级的 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/splitreader/SplitReader.java&#34;&gt;SplitReader&lt;/a&gt; 就可以了。&lt;/p&gt;
+&lt;h3 id=&#34;splitfetchermanager&#34;&gt;SplitFetcherManager&lt;/h3&gt;
+&lt;p&gt;SourceReaderBase 支持一些开箱即用的线程模型，这取决于与之合作的 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-connectors/flink-connector-base/src/main/java/org/apache/flink/connector/base/source/reader/fetcher/SplitFetcherManager.java&#34;&gt;SplitFetcherManager&lt;/a&gt; 的行为。SplitFetcherManager 帮助创建和维护一个 SplitFetcher 池，每个 SplitFetcher 用一个 SplitReader 来获取。它还决定了如何将 split 分配给每个 split fetcher 。&lt;/p&gt;
+&lt;p&gt;举个例子，如下图所示，一个 SplitFetcherManager 可能有固定数量的线程，每个线程从分配给 SourceReader 的一些 split 中获取。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/source_reader.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;下面的代码片段实现了这个线程模型。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * A SplitFetcherManager that has a fixed size of split fetchers and assign splits 
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * to the split fetchers based on the hash code of split IDs.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; */&lt;/span&gt;
+&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;FixedSizeSplitFetcherManager&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SourceSplit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; 
+        &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitFetcherManager&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;kd&#34;&gt;private&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;final&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;numFetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+    &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;FixedSizeSplitFetcherManager&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+            &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;numFetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;FutureNotifier&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;futureNotifier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;FutureCompletingBlockingQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;RecordsWithSplitIds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;elementsQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;Supplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SplitReader&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitReaderSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;kd&#34;&gt;super&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;futureNotifier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;elementsQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitReaderSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;this&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;numFetchers&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;numFetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// Create numFetchers split fetchers.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;numFetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;startFetcher&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;createSplitFetcher&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;addSplits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;List&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitsToAdd&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// Group splits by their owner fetchers.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;n&#34;&gt;Map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;List&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitsByFetcherIndex&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;HashMap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;splitsToAdd&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;forEach&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;split&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ownerFetcherIndex&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;hashCode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;%&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;numFetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;splitsByFetcherIndex&lt;/span&gt;
+                    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;computeIfAbsent&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ownerFetcherIndex&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;s&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ArrayList&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+                    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;add&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// Assign the splits to their owner fetcher.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;n&#34;&gt;splitsByFetcherIndex&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;forEach&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fetcherIndex&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitsForFetcher&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;fetchers&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;get&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fetcherIndex&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;addSplits&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;splitsForFetcher&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;而使用这个线程模型的 SourceReader 可以创建如下。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;FixedFetcherSizeSourceReader&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SourceSplit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitStateT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SourceReaderBase&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitStateT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;FixedFetcherSizeSourceReader&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;FutureNotifier&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;futureNotifier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;FutureCompletingBlockingQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;RecordsWithSplitIds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;elementsQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;Supplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SplitReader&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitFetcherSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;RecordEmitter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitStateT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;recordEmitter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;Configuration&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+            &lt;span class=&#34;n&#34;&gt;SourceReaderContext&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;kd&#34;&gt;super&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;futureNotifier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;elementsQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;FixedSizeSplitFetcherManager&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+                        &lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getInteger&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SourceConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;NUM_FETCHERS&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                        &lt;span class=&#34;n&#34;&gt;futureNotifier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                        &lt;span class=&#34;n&#34;&gt;elementsQueue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                        &lt;span class=&#34;n&#34;&gt;splitFetcherSupplier&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;recordEmitter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+                &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;kd&#34;&gt;protected&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;onSplitFinished&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Collection&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;finishedSplitIds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// Do something in the callback for the finished splits.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;kd&#34;&gt;protected&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitStateT&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;initializedState&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+    &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
+    &lt;span class=&#34;kd&#34;&gt;protected&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitT&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;toSplitType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitId&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SplitStateT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;splitState&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;显然， SourceReader 的实现也可以在 SplitFetcherManager 和 SourceReaderBase 之上轻松实现自己的线程模型。&lt;/p&gt;
+&lt;h2 id=&#34;事件时间和水印&#34;&gt;事件时间和水印&lt;/h2&gt;
+&lt;p&gt;事件时间分配和水印生成作为数据源的一部分发生。离开源读取器的事件流具有事件时间戳，并且（在流执行期间）包含水印。有关事件时间和水印的介绍，请参见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/timely-stream-processing.html&#34;&gt;及时流处理&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;重要事项 基于传统 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-streaming-java/src/main/java/org/apache/flink/streaming/api/functions/source/SourceFunction.java&#34;&gt;SourceFunction&lt;/a&gt; 的应用程序通常会在后面单独的步骤中通过 stream.assignTimestampsAndWatermarks(WatermarkStrategy) 生成时间戳和水印。这个函数不应该被用于新的源，因为时间戳将被分配，并且它将覆盖之前的分割感知水印。&lt;/p&gt;
+&lt;h3 id=&#34;api&#34;&gt;API&lt;/h3&gt;
+&lt;p&gt;在 DataStream API 创建期间， WatermarkStrategy 被传递给 Source，并创建 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/common/eventtime/TimestampAssigner.java&#34;&gt;TimestampAssigner&lt;/a&gt; 和 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/common/eventtime/WatermarkGenerator.java&#34;&gt;WatermarkGenerator&lt;/a&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;n&#34;&gt;environment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+    &lt;span class=&#34;nc&#34;&gt;Source&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;OUT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;?&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nc&#34;&gt;WatermarkStrategy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;OUT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;timestampsAndWatermarks&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;nc&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;sourceName&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;TimestampAssigner 和 WatermarkGenerator 作为 ReaderOutput(或 SourceOutput) 的一部分透明地运行，因此源码实现者不必实现任何时间戳提取和水印生成代码。&lt;/p&gt;
+&lt;h3 id=&#34;事件时间戳&#34;&gt;事件时间戳&lt;/h3&gt;
+&lt;p&gt;事件时间戳的分配有两个步骤。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;SourceReader 可以通过调用 SourceOutput.collect(event, timestamp) 将源记录时间戳附加到事件上。这只与基于记录且有时间戳的数据源有关，如 Kafka 、 Kinesis 、 Pulsar 或 Pravega 。不基于记录且有时间戳的数据源（如文件）没有源记录时间戳。这一步是源连接器实现的一部分，而不是由使用源的应用程序参数化。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;由应用程序配置的 TimestampAssigner 分配最终的时间戳。TimestampAssigner 看到原始源记录时间戳和事件。分配者可以使用源记录时间戳或访问事件的一个字段获得最终的事件时间戳。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这种两步法允许用户同时引用源系统的时间戳和事件数据中的时间戳作为事件时间戳。&lt;/p&gt;
+&lt;p&gt;注意：当使用没有源记录时间戳的数据源（如文件），并选择源记录时间戳作为最终的事件时间戳时，事件将得到一个默认的时间戳，等于 LONG_MIN （=-9,223,372,036,854,775,808 ）。&lt;/p&gt;
+&lt;h3 id=&#34;水印生成&#34;&gt;水印生成&lt;/h3&gt;
+&lt;p&gt;水印生成器仅在流式执行期间激活。批量执行会停用水印生成器；下面描述的所有相关操作都将成为有效的无操作。&lt;/p&gt;
+&lt;p&gt;数据源 API 支持每次拆分单独运行水印生成器。这使得 Flink 可以单独观察每个分体的事件时间进度，这对于正确处理事件时间偏斜和防止空闲分区拖累整个应用的事件时间进度非常重要。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/per_split_watermarks.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;当使用 Split Reader API 实现一个源连接器时，会自动处理这个问题。所有基于 Split Reader API 的实现都具有开箱即用的 split-aware 水印。&lt;/p&gt;
+&lt;p&gt;对于一个低级别的 SourceReader API 的实现来说，要使用 split-aware 水印的生成，该实现必须将不同的 split 事件输出到不同的输出中： Split-local SourceOutputs 。分割本地输出可以通过 createOutputForSplit(splitId) 和 releaseOutputForSplit(splitId) 方法在主 &lt;a href=&#34;https://github.com/apache/flink/blob/master/flink-core/src/main/java/org/apache/flink/api/connector/source/ReaderOutput.java&#34;&gt;ReaderOutput&lt;/a&gt; 上创建和释放。详情请参考该类和方法的 JavaDocs 。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/sources.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/sources.html&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/datastream-api">DataStream API</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/data-sources">Data Sources</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-22-data-sources/</guid>
+                <pubDate>Sat, 22 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+

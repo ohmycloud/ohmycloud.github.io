@@ -10,12 +10,642 @@
             <link href="https://ohmyweekly.github.io/categories/programming/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/programming/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/programming/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-08-20T22:57:39+08:00</updated>
+    <updated>2020-09-03T17:12:30+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/programming/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Event Time]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-21-event-time/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/?utm_source=atom_feed" rel="related" type="text/html" title="Flink Datastream API 编程指南" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/?utm_source=atom_feed" rel="related" type="text/html" title="Generating Watermarks" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-working-with-state/?utm_source=atom_feed" rel="related" type="text/html" title="使用状态" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/?utm_source=atom_feed" rel="related" type="text/html" title="内置的水印生成器" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-state-and-fault-tolerance/?utm_source=atom_feed" rel="related" type="text/html" title="状态和容错性" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-21-event-time/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-21T00:00:00+08:00</published>
+            <updated>2020-08-21T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Event Time</blockquote><h2 id="event-timehttpsciapacheorgprojectsflinkflink-docs-release-111devevent_timehtml"><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">Event Time</a></h2>
+<p>在本节中，您将学习如何编写时间感知(time-aware)的 Flink 程序。请看一下<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/timely-stream-processing.html">及时流处理</a>，了解及时流处理背后的概念。</p>
+<p>关于如何在 Flink 程序中使用时间的信息请参考 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html">windowing</a> 和 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/process_function.html">ProcessFunction</a>。</p>
+<p>使用事件时间处理的先决条件是设置正确的时间特性(<em>time characteristic</em>)。该设置定义了数据流源的行为（例如，它们是否会分配时间戳），以及像 <code>KeyedStream.timeWindow(Time.seconds(30))</code> 这样的窗口操作应该使用什么时间概念。</p>
+<p>你可以使用 <code>StreamExecutionEnvironment.setStreamTimeCharacteristic()</code> 设置时间特性:</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">getExecutionEnvironment</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">setStreamTimeCharacteristic</span><span class="o">(</span><span class="nc">TimeCharacteristic</span><span class="o">.</span><span class="nc">EventTime</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">addSource</span><span class="o">(</span><span class="k">new</span> <span class="nc">FlinkKafkaConsumer</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span><span class="o">(</span><span class="n">topic</span><span class="o">,</span> <span class="n">schema</span><span class="o">,</span> <span class="n">props</span><span class="o">)</span><span class="o">)</span>
+
+<span class="n">stream</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">getUser</span> <span class="o">)</span>
+    <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">hours</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">reduce</span><span class="o">(</span> <span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="n">b</span><span class="o">)</span> <span class="o">)</span>
+    <span class="o">.</span><span class="n">addSink</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+</code></pre></div><p>需要注意的是，为了在事件时间(<em>event time</em>)中运行这个例子，程序需要使用直接为数据定义事件时间并自己发射水印的源，或者程序必须在源之后注入一个时间戳分配器(<em>Timestamp Assigner</em>)与水印生成器(<em>Watermark Generator</em>)。这些函数描述了如何访问事件时间戳，以及事件流表现出何种程度的无序性。</p>
+<h2 id="下一步该怎么走">下一步该怎么走？</h2>
+<ul>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html">生成水印</a>。展示了如何编写时间戳分配器和水印生成器，这些都是事件时间(event-time)感知 Flink 应用所需要的。</li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html">内置的水印生成器</a>。概述了内置的水印生成器。</li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/debugging_event_time.html">调试窗口和事件时间</a>：展示如何调试事件时间 Flink 应用程序中围绕水印和时间戳的问题。</li>
+</ul>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Flink Datastream API 编程指南]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-event-time/?utm_source=atom_feed" rel="related" type="text/html" title="Event Time" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/?utm_source=atom_feed" rel="related" type="text/html" title="Generating Watermarks" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-working-with-state/?utm_source=atom_feed" rel="related" type="text/html" title="使用状态" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/?utm_source=atom_feed" rel="related" type="text/html" title="内置的水印生成器" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-state-and-fault-tolerance/?utm_source=atom_feed" rel="related" type="text/html" title="状态和容错性" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-21T00:00:00+08:00</published>
+            <updated>2020-08-21T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Flink Datastream API Programming Guide</blockquote><h2 id="flink-datastream-api-编程指南httpsciapacheorgprojectsflinkflink-docs-release-111devdatastream_apihtml"><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/datastream_api.html">Flink DataStream API 编程指南</a></h2>
+<p>Flink 中的 DataStream 程序是对数据流实现转换的常规程序（如过滤、更新状态、定义窗口、聚合）。数据流最初是由各种源（如消息队列、套接字流、文件）创建的。结果通过接收器(sink)返回，例如可以将数据写入文件，或标准输出（例如命令行终端）。Flink 程序可以在各种环境下运行，独立运行，或者嵌入到其他程序中。执行可以发生在本地 JVM 中，也可以发生在许多机器的集群中。</p>
+<p>为了创建你自己的 Flink DataStream 程序，我们鼓励你从<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/datastream_api.html#anatomy-of-a-flink-program">一个 Flink 程序的骨架</a>开始，并逐步添加你自己的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/index.html">流转换</a>。其余部分作为额外操作和高级功能的参考。</p>
+<h2 id="什么是-datastream">什么是 DataStream？</h2>
+<p>DataStream API 的名字来自于特殊的 <code>DataStream</code> 类，它用于表示 Flink 程序中的数据集合。你可以把它们看作是不可改变的数据集合，可以包含重复的数据。这些数据既可以是有限的，也可以是无边界的，你用来处理它们的 API 是一样的。</p>
+<p>DataStream 在用法上与普通的 Java Collection 类似，但在一些关键方面却有很大不同。它们是不可改变的，这意味着一旦它们被创建，你就不能添加或删除元素。你也不能简单地检查里面的元素，而只能使用 DataStream API 操作对它们进行操作，这也被称为转换。</p>
+<p>你可以通过在 Flink 程序中添加一个源来创建一个初始的 DataStream。然后你可以从中派生新的流，并通过使用 API 方法，如 <code>map</code>、<code>filter</code> 等来组合它们。</p>
+<h2 id="flink-程序的骨架">Flink 程序的骨架</h2>
+<p>Flink 程序看起来就像转换 DataStream 的普通程序。每个程序由相同的基本部分组成。</p>
+<ol>
+<li>获取一个执行环境</li>
+<li>加载/创建初始数据。</li>
+<li>指定该数据的转换。</li>
+<li>指定计算结果的位置。</li>
+<li>触发程序执行</li>
+</ol>
+<p>现在我们将对其中的每一个步骤进行概述，更多细节请参考相关章节。注意，Scala DataStream API 的所有核心类都可以在 <a href="https://github.com/apache/flink/blob/master//flink-streaming-scala/src/main/scala/org/apache/flink/streaming/api/scala">org.apache.flink.stream.api.scala</a> 中找到。</p>
+<p><code>StreamExecutionEnvironment</code> 是所有 Flink 程序的基础。你可以使用 <code>StreamExecutionEnvironment</code> 上的这些静态方法获得一个。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="n">getExecutionEnvironment</span><span class="o">(</span><span class="o">)</span>
+
+<span class="n">createLocalEnvironment</span><span class="o">(</span><span class="o">)</span>
+
+<span class="n">createRemoteEnvironment</span><span class="o">(</span><span class="n">host</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">port</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">jarFiles</span><span class="k">:</span> <span class="kt">String</span><span class="kt">*</span><span class="o">)</span>
+</code></pre></div><p>通常情况下，你只需要使用 <code>getExecutionEnvironment()</code>，因为这将根据上下文做正确的事情：如果你在 IDE 里面执行你的程序，或者作为一个普通的 Java 程序，它将创建一个本地环境，在你的本地机器上执行你的程序。如果你从你的程序中创建了一个 JAR 文件，并通过<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/cli.html">命令行</a>调用它，Flink 集群管理器将执行你的主方法，并且 <code>getExecutionEnvironment()</code> 将返回一个在集群上执行你的程序的执行环境。</p>
+<p>对于指定数据源，执行环境有几种方法可以使用不同的方法从文件中读取数据：你可以只是逐行读取，作为 CSV 文件，或者使用任何其他提供的数据源。如果只是将文本文件作为一个行的序列来读取，你可以使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">getExecutionEnvironment</span><span class="o">(</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">text</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">readTextFile</span><span class="o">(</span><span class="s">&#34;file:///path/to/file&#34;</span><span class="o">)</span>
+</code></pre></div><p>这将为您提供一个 DataStream，然后您可以在其上应用转换来创建新的派生 DataStream。</p>
+<p>你可以通过调用 DataStream 上的方法和转换函数来应用转换。例如，一个 <code>map</code> 转换看起来像这样。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataSet</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">mapped</span> <span class="k">=</span> <span class="n">input</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="n">x</span> <span class="k">=&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">toInt</span> <span class="o">}</span>
+</code></pre></div><p>这将通过将原始集合中的每一个字符串转换为一个 Integer 来创建一个新的 DataStream。</p>
+<p>一旦你有了一个包含最终结果的 DataStream，你就可以通过创建一个接收器(sink)将其写入外部系统。这些只是创建接收器的一些示例方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="n">writeAsText</span><span class="o">(</span><span class="n">path</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+
+<span class="n">print</span><span class="o">(</span><span class="o">)</span>
+</code></pre></div><p>一旦你指定了完整的程序，你需要通过调用 <code>StreamExecutionEnvironment</code> 上的 <code>execution()</code> 来触发程序的执行。根据 <code>ExecutionEnvironment</code> 的类型，将在你的本地机器上触发执行，或者将你的程序提交到集群上执行。</p>
+<p><code>execute()</code> 方法将等待作业完成，然后返回一个 <code>JobExecutionResult</code>，这个包含执行时间和累加器结果。</p>
+<p>如果你不想等待作业完成，你可以在 <code>StreamExecutionEnvironment</code> 上调用 <code>executeAysnc()</code> 来触发异步作业执行。它将返回一个 <code>JobClient</code>，你可以用它与刚刚提交的作业进行通信。例如，下面是如何通过使用 <code>executeAsync()</code> 来实现 <code>execute()</code> 的语义。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">final</span> <span class="n">JobClient</span> <span class="n">jobClient</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="na">executeAsync</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+
+<span class="kd">final</span> <span class="n">JobExecutionResult</span> <span class="n">jobExecutionResult</span> <span class="o">=</span> <span class="n">jobClient</span><span class="o">.</span><span class="na">getJobExecutionResult</span><span class="o">(</span><span class="n">userClassloader</span><span class="o">)</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+</code></pre></div><p>最后这部分关于程序执行的内容对于理解 Flink 操作何时以及如何执行至关重要。所有的 Flink 程序都是懒惰地执行的。当程序的主方法被执行时，数据加载和转换不会直接发生。相反，每个操作都被创建并添加到一个数据流图(dataflow graph)中。当执行环境上的 <code>execute()</code> 调用明确触发执行时，这些操作才会被实际执行。程序是在本地执行还是在集群上执行，取决于执行环境的类型</p>
+<p>惰性求值可以让您构建复杂的程序，Flink 作为一个整体规划的单元来执行。</p>
+<h2 id="示例程序">示例程序</h2>
+<p>下面的程序是一个完整的，工作的流媒体窗口单词计数应用程序的例子，它可以在5秒的窗口中计算来自 Web Socket 的单词。你可以复制和粘贴代码在本地运行它。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.scala._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.time.Time</span>
+
+<span class="k">object</span> <span class="nc">WindowWordCount</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">main</span><span class="o">(</span><span class="n">args</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">getExecutionEnvironment</span>
+    <span class="k">val</span> <span class="n">text</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">socketTextStream</span><span class="o">(</span><span class="s">&#34;localhost&#34;</span><span class="o">,</span> <span class="mi">9999</span><span class="o">)</span>
+
+    <span class="k">val</span> <span class="n">counts</span> <span class="k">=</span> <span class="n">text</span><span class="o">.</span><span class="n">flatMap</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">toLowerCase</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&#34;\\W+&#34;</span><span class="o">)</span> <span class="n">filter</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">nonEmpty</span> <span class="o">}</span> <span class="o">}</span>
+      <span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span> <span class="o">}</span>
+      <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+      <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span>
+      <span class="o">.</span><span class="n">sum</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+
+    <span class="n">counts</span><span class="o">.</span><span class="n">print</span><span class="o">(</span><span class="o">)</span>
+
+    <span class="n">env</span><span class="o">.</span><span class="n">execute</span><span class="o">(</span><span class="s">&#34;Window Stream WordCount&#34;</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>To run the example program, start the input stream with netcat first from a terminal:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">nc -lk <span class="m">9999</span>
+</code></pre></div><p>只需输入一些单词，按回车键输入一个新单词。这些词将被输入到单词计数程序中。如果你想看到大于1的计数，请在5秒内反复输入同一个单词（如果你打字没那么快，请从5秒开始增加窗口大小☺）。</p>
+<h2 id="数据源">数据源</h2>
+<p>源是你的程序读取其输入的地方。你可以通过使用 <code>StreamExecutionEnvironment.addSource(sourceFunction)</code> 将一个源附加到你的程序中。Flink 提供了许多预先实现的 <code>SourceFunction</code>，但是你可以通过实现非并行源的 <code>SourceFunction</code>，或者实现并行源的 <code>ParallelSourceFunction</code> 接口或扩展 <code>RichParallelSourceFunction</code> 来编写自己的自定义源。</p>
+<p>有几种预定义的流源(stream sources)可以从 <code>StreamExecutionEnvironment</code> 中访问。</p>
+<p>基于文件的。</p>
+<ul>
+<li>
+<p><code>readTextFile(path)</code> - 逐行读取文本文件，即遵循 <code>TextInputFormat</code> 规范的文件，并将其作为字符串返回。</p>
+</li>
+<li>
+<p><code>readFile(fileInputFormat, path)</code> - 根据指定的文件输入格式读取（一次）文件。</p>
+</li>
+<li>
+<p><code>readFile(fileInputFormat, path, watchType, interval, pathFilter)</code> - 这是前面两个方法内部调用的方法。它根据给定的 <code>fileInputFormat</code> 读取路径中的文件。根据所提供的 <code>watchType</code>，这个源可能会周期性地监视(每隔 interval 毫秒)路径中的新数据(<code>FileProcessingMode.PROCESS_CONTINUOUSLY</code>)，或者处理一次当前路径中的数据并退出(<code>FileProcessingMode.PROCESS_ONCE</code>)。使用 <code>pathFilter</code>，用户可以进一步排除被处理的文件。</p>
+</li>
+</ul>
+<p><em>实现</em>:</p>
+<p>在底层下，Flink 将文件读取过程分成两个子任务(sub-tasks)，即目录监控和数据读取。这些子任务中的每一个都是由一个单独的实体实现的。监控由一个单一的、非并行（并行度=1）的任务实现，而读取则由多个任务(task)并行运行。后者的并行度等于作业的并行度(job parallelism)。单个监控任务的作用是扫描目录（根据 <code>watchType</code> 的不同，定期或只扫描一次），找到要处理的文件，将其分割，并将这些分割的文件分配给下游的读取器。读取器是那些将读取实际数据的东西。每个分片只能由一个读取器读取，而一个读取器可以读取多个分片，一个接一个。</p>
+<p><em>重要提示</em>:</p>
+<ol>
+<li>
+<p>如果 <code>watchType</code> 被设置为 <code>FileProcessingMode.PROCESS_CONTINUOUSLY</code>，当一个文件被修改时，它的内容会被完全重新处理。这可能会打破&quot;精确地一次&rdquo;(exactly-once)的语义，因为在文件末尾追加数据会导致其所有内容被重新处理。</p>
+</li>
+<li>
+<p>如果 <code>watchType</code> 被设置为 <code>FileProcessingMode.PROCESS_ONCE</code>，那么源就会对路径扫描一次并退出，而不会等待读取器完成对文件内容的读取。当然，读取器会继续读取，直到读取完所有文件内容。关闭源会导致在这之后不再有检查点。这可能会导致节点故障后的恢复速度变慢，因为作业(job)将从最后一个检查点开始恢复读取。</p>
+</li>
+</ol>
+<p>基于 Socket 的:</p>
+<ul>
+<li><code>socketTextStream</code> - 从套接字读取。元素可以用定界符分开。</li>
+</ul>
+<p>基于集合的:</p>
+<ul>
+<li>
+<p><code>fromCollection(Seq)</code> - 从 <code>Java Java.util.Collection</code> 中创建数据流。集合中的所有元素必须是相同的类型。</p>
+</li>
+<li>
+<p><code>fromCollection(Iterator)</code> - 从迭代器中创建一个数据流。该类指定迭代器返回的元素的数据类型。</p>
+</li>
+<li>
+<p><code>fromElements(elements: _*)</code> - 从给定的对象序列中创建一个数据流。所有对象必须是相同的类型。</p>
+</li>
+<li>
+<p><code>fromParallelCollection(SplittableIterator)</code> - 从迭代器中并行创建数据流。该类指定了迭代器返回的元素的数据类型。</p>
+</li>
+<li>
+<p><code>generateSequence(from, to)</code> - 在给定的区间内并行生成数字序列。</p>
+</li>
+</ul>
+<p>自定义的:</p>
+<ul>
+<li><code>addSource</code> - 附加一个新的源函数。例如，要从 Apache Kafka 读取数据，你可以使用 <code>addSource(new FlinkKafkaConsumer010&lt;&gt;(...))</code>。更多细节请参见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/">连接器</a>。</li>
+</ul>
+<h2 id="数据流转换">数据流转换</h2>
+<p>请参阅 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/index.html">operators</a> 以了解可用的流转换的概述。</p>
+<h2 id="数据接收器">数据接收器</h2>
+<p>数据接收器消耗 DataStream，并将其转发到文件、套接字、外部系统或打印。Flink 带有各种内置的输出格式，这些格式被封装在 DataStream 的操作后面。</p>
+<ul>
+<li>
+<p><code>writeAsText()</code> / <code>TextOutputFormat</code> - 将元素逐行写入字符串。这些字符串是通过调用每个元素的 <code>toString()</code> 方法获得的。</p>
+</li>
+<li>
+<p><code>writeAsCsv(...)</code> / <code>CsvOutputFormat</code> - 将元组写成逗号分隔的值文件。行和字段定界符是可配置的。每个字段的值来自对象的 <code>toString()</code> 方法。</p>
+</li>
+<li>
+<p><code>print()</code> / <code>printToErr()</code> - 将每个元素的 <code>toString()</code> 值打印在标准输出/标准错误流上。可以选择提供一个前缀(msg)，这个前缀被添加到输出中。这可以帮助区分不同的 <code>print</code> 调用。如果并行度大于1，输出也将被预置为产生输出的任务(task)的标识符。</p>
+</li>
+<li>
+<p><code>writeUsingOutputFormat()</code> / <code>FileOutputFormat</code> - 用于自定义文件输出的方法和基类。支持自定义对象到字节的转换。</p>
+</li>
+<li>
+<p><code>writeToSocket</code> - 根据 <code>SerializationSchema</code> 将元素写入 socket。</p>
+</li>
+<li>
+<p>addSink - 调用一个自定义的 sink 函数。Flink 捆绑了连接其他系统（如 Apache Kafka）的连接器，这些连接器被实现为 sink 函数。</p>
+</li>
+</ul>
+<p>请注意，DataStream 上的 <code>write*()</code> 方法主要是为了调试的目的。它们不参与 Flink 的检查点，这意味着这些函数通常具有最多一次(at-least-once)的语义。数据冲洗到目标系统取决于 <code>OutputFormat</code> 的实现。这意味着并非所有发送到 <code>OutputFormat</code> 的元素都会立即在目标系统中显示出来。另外，在失败的情况下，这些记录可能会丢失。</p>
+<p>为了可靠地、精确地一次性将流传送到文件系统中，请使用 <code>flink-connector-filesystem</code>。此外，通过 <code>.addSink(...)</code> 方法的自定义实现可以参与 Flink 的检查点，以实现精确的一次语义。</p>
+<h2 id="迭代">迭代</h2>
+<p>迭代流程序实现了一个步骤函数，并将其嵌入到 <code>IterativeStream</code> 中。由于 DataStream 程序可能永远不会结束，所以没有最大的迭代次数。相反，你需要指定流的哪一部分被馈入到迭代中，哪一部分使用 <code>split</code> 转换或 <code>filter</code> 转发到下游。在这里，我们展示了一个迭代的例子，其中主体（重复计算的部分）是一个简单的 <code>map</code> 转换，而反馈回来的元素是通过使用 <code>filter</code> 转发到下游的元素来区分的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">iteratedStream</span> <span class="k">=</span> <span class="n">someDataStream</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span>
+  <span class="n">iteration</span> <span class="k">=&gt;</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">iterationBody</span> <span class="k">=</span> <span class="n">iteration</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="cm">/*</span><span class="cm"> this is executed many times </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">iterationBody</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="cm">/*</span><span class="cm"> one part of the stream </span><span class="cm">*/</span><span class="o">)</span><span class="o">,</span> <span class="n">iterationBody</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="cm">/*</span><span class="cm"> some other part of the stream </span><span class="cm">*/</span><span class="o">)</span><span class="o">)</span>
+<span class="o">}</span><span class="o">)</span>
+</code></pre></div><p>例如，这里的程序是从一系列整数中连续减去1，直到它们达到零。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">someIntegers</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">generateSequence</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">1000</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">iteratedStream</span> <span class="k">=</span> <span class="n">someIntegers</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span>
+  <span class="n">iteration</span> <span class="k">=&gt;</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">minusOne</span> <span class="k">=</span> <span class="n">iteration</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="n">v</span> <span class="k">=&gt;</span> <span class="n">v</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">stillGreaterThanZero</span> <span class="k">=</span> <span class="n">minusOne</span><span class="o">.</span><span class="n">filter</span> <span class="o">(</span><span class="k">_</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">lessThanZero</span> <span class="k">=</span> <span class="n">minusOne</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="k">_</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">stillGreaterThanZero</span><span class="o">,</span> <span class="n">lessThanZero</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">)</span>
+</code></pre></div><h2 id="执行参数">执行参数</h2>
+<p><code>StreamExecutionEnvironment</code> 包含了 <code>ExecutionConfig</code>，它允许为运行时设置作业特定(job specific)的配置值。</p>
+<p>请参考<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/execution_configuration.html">执行配置</a>，了解大多数参数的解释。这些参数专门与 DataStream API 有关。</p>
+<ul>
+<li><code>setAutoWatermarkInterval(long milliseconds)</code>: 设置自动发射水印的时间间隔。你可以通过 <code>long getAutoWatermarkInterval()</code> 来获取当前值。</li>
+</ul>
+<h3 id="容错">容错</h3>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/state/checkpointing.html">状态和检查点</a>介绍了如何启用和配置 Flink 的检查点机制。</p>
+<h3 id="控制延迟">控制延迟</h3>
+<p>默认情况下，元素不会在网络上逐一传输（会造成不必要的网络流量），而是被缓冲。缓冲区（实际在机器之间传输）的大小可以在 Flink 配置文件中设置。虽然这种方法有利于优化吞吐量，但当传入的数据流速度不够快时，会造成延迟问题。为了控制吞吐量和延迟，你可以在执行环境上（或者在单个 operator 上）使用 <code>env.setBufferTimeout(timeoutMillis)</code> 来设置缓冲区填满的最大等待时间。过了这个时间，即使缓冲区没有满，也会自动发送。该超时的默认值为 100 ms。</p>
+<p>使用方法:</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span><span class="k">:</span> <span class="kt">LocalStreamEnvironment</span> <span class="o">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">createLocalEnvironment</span>
+<span class="n">env</span><span class="o">.</span><span class="n">setBufferTimeout</span><span class="o">(</span><span class="n">timeoutMillis</span><span class="o">)</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">generateSequence</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">10</span><span class="o">)</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">myMap</span><span class="o">)</span><span class="o">.</span><span class="n">setBufferTimeout</span><span class="o">(</span><span class="n">timeoutMillis</span><span class="o">)</span>
+</code></pre></div><p>为了最大限度地提高吞吐量，设置 <code>setBufferTimeout(-1)</code>，这将消除超时，缓冲区只有在满时才会被刷新。为了最大限度地减少延迟，将超时设置为接近0的值（例如5或10毫秒）。应该避免缓冲区超时为0，因为它会导致严重的性能下降。</p>
+<h2 id="调试">调试</h2>
+<p>在分布式集群中运行一个流程序之前，最好先确保实现的算法能够按照预期的方式运行。因此，实现数据分析程序通常是一个检查结果、调试和改进的渐进过程。</p>
+<p>Flink 提供了一些功能，通过支持 IDE 内的本地调试、测试数据的注入和结果数据的收集，大大简化了数据分析程序的开发过程。本节给出一些提示，如何简化 Flink 程序的开发。</p>
+<h3 id="本地执行环境">本地执行环境</h3>
+<p><code>LocalStreamEnvironment</code> 在它创建的同一个 JVM 进程中启动 Flink 系统。如果你从 IDE 中启动 <code>LocalEnvironment</code>，你可以在代码中设置断点，轻松调试你的程序。</p>
+<p><code>LocalEnvironment</code> 的创建和使用方法如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">createLocalEnvironment</span><span class="o">(</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">lines</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">addSource</span><span class="o">(</span><span class="cm">/*</span><span class="cm"> some source </span><span class="cm">*/</span><span class="o">)</span>
+<span class="c1">// build your program
+</span><span class="c1"></span>
+<span class="n">env</span><span class="o">.</span><span class="n">execute</span><span class="o">(</span><span class="o">)</span>
+</code></pre></div><h3 id="收集数据源">收集数据源</h3>
+<p>Flink 提供了特殊的数据源，这些数据源由 Java 集合支持，以方便测试。一旦程序被测试，源和接收器就可以很容易地被从外部系统读取/写入的源和接收器所替代。</p>
+<p>集合数据源的使用方法如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">createLocalEnvironment</span><span class="o">(</span><span class="o">)</span>
+
+<span class="c1">// 从元素列表中创建一个 DataStream
+</span><span class="c1"></span><span class="k">val</span> <span class="n">myInts</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">fromElements</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+
+<span class="c1">// 从任何集合中创建一个 DataStream
+</span><span class="c1"></span><span class="k">val</span> <span class="n">data</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">myTuples</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">fromCollection</span><span class="o">(</span><span class="n">data</span><span class="o">)</span>
+
+<span class="c1">// 从迭代器中创建一个 DataStream
+</span><span class="c1"></span><span class="k">val</span> <span class="n">longIt</span><span class="k">:</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">myLongs</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">fromCollection</span><span class="o">(</span><span class="n">longIt</span><span class="o">)</span>
+</code></pre></div><p>注：目前，集合数据源要求数据类型和迭代器实现 <code>Serializable</code>。此外，集合数据源不能并行执行( parallelism = 1)。</p>
+<h3 id="迭代器数据接收器">迭代器数据接收器</h3>
+<p>Flink 还提供了一个收集 DataStream 结果的接收器(sink)，用于测试和调试目的。它的使用方法如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.experimental.DataStreamUtils</span>
+<span class="k">import</span> <span class="nn">scala.collection.JavaConverters.asScalaIteratorConverter</span>
+
+<span class="k">val</span> <span class="n">myResult</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">myOutput</span><span class="k">:</span> <span class="kt">Iterator</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="nc">DataStreamUtils</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="n">myResult</span><span class="o">.</span><span class="n">javaStream</span><span class="o">)</span><span class="o">.</span><span class="n">asScala</span>
+</code></pre></div><p>注意：<code>flink-streaming-contrib</code> 模块从 Flink 1.5.0 中移除。它的类被移到 <code>flink-streaming-java</code> 和 <code>flink-streaming-scala</code> 中。</p>
+<h2 id="下一步怎么走">下一步怎么走？</h2>
+<ul>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/index.html">运算符</a>: 规范可用的流式运算符。</li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间</a>: 介绍 Flink 的时间概念。</li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/state/index.html">状态和容错</a>: 解释如何开发有状态的应用。</li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/index.html">连接器</a>: 描述可用的输入和输出连接器。</li>
+</ul>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Generating Watermarks]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-event-time/?utm_source=atom_feed" rel="related" type="text/html" title="Event Time" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/?utm_source=atom_feed" rel="related" type="text/html" title="Flink Datastream API 编程指南" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-working-with-state/?utm_source=atom_feed" rel="related" type="text/html" title="使用状态" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/?utm_source=atom_feed" rel="related" type="text/html" title="内置的水印生成器" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-state-and-fault-tolerance/?utm_source=atom_feed" rel="related" type="text/html" title="状态和容错性" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-21T00:00:00+08:00</published>
+            <updated>2020-08-21T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Generating Watermarks</blockquote><h2 id="生成水印httpsciapacheorgprojectsflinkflink-docs-release-111devevent_timestamps_watermarkshtml"><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html">生成水印</a></h2>
+<p>在本节中，您将了解 Flink 提供的 API，用于处理事件时间时间戳和水印。关于事件时间、处理时间和摄取时间的介绍，请参考<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间的介绍</a>。</p>
+<h3 id="水印策略介绍">水印策略介绍</h3>
+<p>为了使用事件时间，Flink 需要知道事件的时间戳，这意味着流中的每个元素都需要分配其事件时间戳(event timestamp)。这通常是通过使用 <code>TimestampAssigner</code> 从元素中的某个字段访问/提取时间戳(timestamp)来完成的。</p>
+<p>时间戳分配与生成水印是同步进行的，水印告诉系统事件时间的进展。你可以通过指定一个 <code>WatermarkGenerator</code> 来配置。</p>
+<p>Flink API 期望一个 <code>WatermarkStrategy</code>，其中包含一个 <code>TimestampAssigner</code> 和 <code>WatermarkGenerator</code>。一些常见的策略作为 <code>WatermarkStrategy</code> 上的静态方法是开箱即用的，但用户也可以在需要时建立自己的策略。</p>
+<p>为了完整起见，这里是接口:</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">WatermarkStrategy</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">TimestampAssignerSupplier</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">,</span> <span class="n">WatermarkGeneratorSupplier</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">{</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Instantiates a {@link TimestampAssigner} for assigning timestamps according to this
+</span><span class="cm">     * strategy.
+</span><span class="cm">     */</span>
+    <span class="nd">@Override</span>
+    <span class="n">TimestampAssigner</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">createTimestampAssigner</span><span class="o">(</span><span class="n">TimestampAssignerSupplier</span><span class="o">.</span><span class="na">Context</span> <span class="n">context</span><span class="o">)</span><span class="o">;</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Instantiates a WatermarkGenerator that generates watermarks according to this strategy.
+</span><span class="cm">     */</span>
+    <span class="nd">@Override</span>
+    <span class="n">WatermarkGenerator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">createWatermarkGenerator</span><span class="o">(</span><span class="n">WatermarkGeneratorSupplier</span><span class="o">.</span><span class="na">Context</span> <span class="n">context</span><span class="o">)</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div><p>如前所述，你通常不会自己实现这个接口，而是使用 <code>WatermarkStrategy</code> 上的静态帮助方法来实现常见的水印策略，或者将自定义的 <code>TimestampAssigner</code> 与 <code>WatermarkGenerator</code> 捆绑在一起。例如，要使用有界无序水印和 lambda 函数作为时间戳分配器，你可以使用这个方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span>
+  <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">withTimestampAssigner</span><span class="o">(</span><span class="k">new</span> <span class="nc">SerializableTimestampAssigner</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span> <span class="o">{</span>
+    <span class="k">override</span> <span class="k">def</span> <span class="n">extractTimestamp</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">String</span><span class="o">)</span><span class="o">,</span> <span class="n">recordTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">_1</span>
+  <span class="o">}</span><span class="o">)</span>
+</code></pre></div><p>(在这里使用 Scala Lambdas 目前是行不通的，因为 Scala 很笨，很难支持这个。#fus)</p>
+<p>指定一个 <code>TimestampAssigner</code> 是可选的，在大多数情况下，你其实并不想指定一个。例如，当使用 Kafka 或 Kinesis 时，你会直接从 Kafka/Kinesis 记录中获取时间戳。</p>
+<p>我们将在后面的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#writing-watermarkgenerators">Writing WatermarkGenerator</a>中查看 <code>WatermarkGenerator</code> 接口。</p>
+<p>注意：时间戳和水印都被指定为自 1970-01-01T00:00:00Z 的 Java 纪元以来的毫秒。</p>
+<h3 id="使用水印策略">使用水印策略</h3>
+<p>在 Flink 应用中，有两个地方可以使用 <code>WatermarkStrategy</code>。1）直接在源上使用，2）在非源操作后使用。</p>
+<p>第一个选项是比较好的，因为它允许源在水印逻辑中利用关于碎片/分区/分割的知识。源通常可以更精细地跟踪水印，源产生的整体水印也会更准确。直接在源上指定 <code>WatermarkStrategy</code> 通常意味着你必须使用源的特定接口/请参阅 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html#watermark-strategies-and-the-kafka-connector">Watermark Strategies 和 Kafka Connector</a>，以了解在 Kafka Connector 上如何工作，以及关于每个分区水印如何工作的更多细节。</p>
+<p>第二个选项（在任意操作后设置 <code>WatermarkStrategy</code>）只应在不能直接在源上设置策略时使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">StreamExecutionEnvironment</span><span class="o">.</span><span class="n">getExecutionEnvironment</span>
+<span class="n">env</span><span class="o">.</span><span class="n">setStreamTimeCharacteristic</span><span class="o">(</span><span class="nc">TimeCharacteristic</span><span class="o">.</span><span class="nc">EventTime</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">readFile</span><span class="o">(</span>
+         <span class="n">myFormat</span><span class="o">,</span> <span class="n">myFilePath</span><span class="o">,</span> <span class="nc">FileProcessingMode</span><span class="o">.</span><span class="nc">PROCESS_CONTINUOUSLY</span><span class="o">,</span> <span class="mi">100</span><span class="o">,</span>
+         <span class="nc">FilePathFilter</span><span class="o">.</span><span class="n">createDefaultFilter</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">withTimestampsAndWatermarks</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="k">=</span> <span class="n">stream</span>
+        <span class="o">.</span><span class="n">filter</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">severity</span> <span class="o">==</span> <span class="nc">WARNING</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">assignTimestampsAndWatermarks</span><span class="o">(</span><span class="o">&lt;</span><span class="n">watermark</span> <span class="n">strategy</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="n">withTimestampsAndWatermarks</span>
+        <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">getGroup</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">)</span>
+        <span class="o">.</span><span class="n">reduce</span><span class="o">(</span> <span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">a</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="n">b</span><span class="o">)</span> <span class="o">)</span>
+        <span class="o">.</span><span class="n">addSink</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+</code></pre></div><p>以这种方式使用 <code>WatermarkStrategy</code>，可以获取一个流并生成一个带有时间戳元素和水印的新流。如果原始流已经有时间戳和/或水印了，时间戳分配器就会覆盖它们。</p>
+<h3 id="处理闲置源">处理闲置源</h3>
+<p>如果其中一个输入分割/分区/碎片在一段时间内没有携带事件，这意味着 <code>WatermarkGenerator</code> 也没有得到任何新的信息来作为水印的基础。我们称之为空闲输入或空闲源。这是一个问题，因为有可能发生你的一些分区仍然携带事件。在这种情况下，水印将被保留下来，因为它是作为所有不同的并行水印的最小值计算的。</p>
+<p>为了处理这个问题，你可以使用 <code>WatermarkStrategy</code> 来检测空闲，并将一个输入标记为空闲。<code>WatermarkStrategy</code> 为此提供了一个方便的助手。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span>
+  <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">withIdleness</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofMinutes</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div><h3 id="编写水印生成器">编写水印生成器</h3>
+<p>时间戳分配器(TimestampAssigner)是一个从事件中提取字段的简单函数，因此我们不需要详细研究它们。而 <code>WatermarkGenerator</code> 的编写就比较复杂了，我们将在接下来的两节中看如何做。这就是 <code>WatermarkGenerator</code> 的接口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="cm">/**
+</span><span class="cm"> * The {@code WatermarkGenerator} generates watermarks either based on events or
+</span><span class="cm"> * periodically (in a fixed interval).
+</span><span class="cm"> *
+</span><span class="cm"> * &lt;p&gt;&lt;b&gt;Note:&lt;/b&gt; This WatermarkGenerator subsumes the previous distinction between the
+</span><span class="cm"> * {@code AssignerWithPunctuatedWatermarks} and the {@code AssignerWithPeriodicWatermarks}.
+</span><span class="cm"> */</span>
+<span class="nd">@Public</span>
+<span class="kd">public</span> <span class="kd">interface</span> <span class="nc">WatermarkGenerator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Called for every event, allows the watermark generator to examine and remember the
+</span><span class="cm">     * event timestamps, or to emit a watermark based on the event itself.
+</span><span class="cm">     */</span>
+    <span class="kt">void</span> <span class="nf">onEvent</span><span class="o">(</span><span class="n">T</span> <span class="n">event</span><span class="o">,</span> <span class="kt">long</span> <span class="n">eventTimestamp</span><span class="o">,</span> <span class="n">WatermarkOutput</span> <span class="n">output</span><span class="o">)</span><span class="o">;</span>
+
+    <span class="cm">/**
+</span><span class="cm">     * Called periodically, and might emit a new watermark, or not.
+</span><span class="cm">     *
+</span><span class="cm">     * &lt;p&gt;The interval in which this method is called and Watermarks are generated
+</span><span class="cm">     * depends on {@link ExecutionConfig#getAutoWatermarkInterval()}.
+</span><span class="cm">     */</span>
+    <span class="kt">void</span> <span class="nf">onPeriodicEmit</span><span class="o">(</span><span class="n">WatermarkOutput</span> <span class="n">output</span><span class="o">)</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div><p>有两种不同风格的水印生成器：周期性和打点式。</p>
+<p>周期性生成器通常通过 <code>onEvent()</code> 观察到传入的事件，然后当框架调用 <code>onPeriodicEmit()</code> 时，发射水印。</p>
+<p>标点式生成器会观察 <code>onEvent()</code> 中的事件，并等待流中携带水印信息的特殊标记事件或标点。当它看到这些事件之一时，就会立即发出一个水印。通常，标点生成器不会从 <code>onPeriodicEmit()</code> 发出水印。</p>
+<p>接下来我们将看看如何实现每种样式的生成器。</p>
+<h4 id="编写周期性水印生成器">编写周期性水印生成器</h4>
+<p>周期性生成器观察流事件并周期性地生成水印（可能取决于流元素，或者纯粹基于处理时间）。</p>
+<p>生成水印的间隔（每n毫秒）通过 <code>ExecutionConfig.setAutoWatermarkInterval(...)</code> 来定义。每次都会调用生成器的 <code>onPeriodicEmit()</code> 方法，如果返回的水印是非空的，并且大于前一个水印，就会发出一个新的水印。</p>
+<p>这里我们展示了两个使用周期性水印生成器的简单例子。请注意，Flink 提供了 <code>BoundedOutfOrdernessWatermarks</code>，这是一个 <code>WatermarkGenerator</code>，它的工作原理与下面所示的 <code>BoundedOutfOrdernessGenerator</code> 类似。你可以在<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-allowing-a-fixed-amount-of-lateness">这里</a>阅读关于如何使用它。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> This generator generates watermarks assuming that elements arrive out of order,
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> but only to a certain degree. The latest elements for a certain timestamp t will arrive
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> at most n milliseconds after the earliest elements for timestamp t.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">BoundedOutOfOrdernessGenerator</span> <span class="k">extends</span> <span class="nc">AssignerWithPeriodicWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">val</span> <span class="n">maxOutOfOrderness</span> <span class="k">=</span> <span class="mi">3500L</span> <span class="c1">// 3.5 seconds
+</span><span class="c1"></span>
+    <span class="k">var</span> <span class="n">currentMaxTimestamp</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="k">_</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="n">currentMaxTimestamp</span> <span class="k">=</span> <span class="n">max</span><span class="o">(</span><span class="n">eventTimestamp</span><span class="o">,</span> <span class="n">currentMaxTimestamp</span><span class="o">)</span>
+    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// emit the watermark as current highest timestamp minus the out-of-orderness bound
+</span><span class="c1"></span>        <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="n">currentMaxTimestamp</span> <span class="o">-</span> <span class="n">maxOutOfOrderness</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> This generator generates watermarks that are lagging behind processing time by a fixed amount.
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> It assumes that elements arrive in Flink after a bounded delay.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">TimeLagWatermarkGenerator</span> <span class="k">extends</span> <span class="nc">AssignerWithPeriodicWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">val</span> <span class="n">maxTimeLag</span> <span class="k">=</span> <span class="mi">5000L</span> <span class="c1">// 5 seconds
+</span><span class="c1"></span>
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// don&#39;t need to do anything because we work on processing time
+</span><span class="c1"></span>    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">(</span><span class="o">)</span> <span class="o">-</span> <span class="n">maxTimeLag</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h4 id="编写一个标点水印生成器">编写一个标点水印生成器</h4>
+<p>标点水印生成器将观察事件流，每当它看到一个携带水印信息的特殊元素时，就会发出一个水印。</p>
+<p>这就是如何实现一个标点水印生成器，每当一个事件表明它携带某个标记时，它就会发射一个水印。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">PunctuatedAssigner</span> <span class="k">extends</span> <span class="nc">AssignerWithPunctuatedWatermarks</span><span class="o">[</span><span class="kt">MyEvent</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onEvent</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">MyEvent</span><span class="o">,</span> <span class="n">eventTimestamp</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="n">hasWatermarkMarker</span><span class="o">(</span><span class="o">)</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">emitWatermark</span><span class="o">(</span><span class="k">new</span> <span class="nc">Watermark</span><span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="n">getWatermarkTimestamp</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">onPeriodicEmit</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// don&#39;t need to do anything because we emit in reaction to events above
+</span><span class="c1"></span>    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>注：可以对每个事件生成一个水印。然而，由于每个水印都会引起下游的一些计算，因此过多的水印会降低性能。</p>
+<h3 id="水印策略和-kafka-连接器">水印策略和 Kafka 连接器</h3>
+<p>当使用 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/kafka.html">Apache Kafka</a> 作为数据源时，每个 Kafka 分区可能有一个简单的事件时间模式（升序时间戳或有界失序）。然而，当消耗来自 Kafka 的流时，多个分区经常会被并行消耗，交织来自分区的事件，并破坏每个分区的模式（这是 Kafka 的消费者客户端的固有工作方式）。</p>
+<p>在这种情况下，你可以使用 Flink 的 Kafka-partition-aware 水印生成功能。使用该功能，在 Kafka 消费者内部，按 Kafka 分区生成水印，每个分区水印的合并方式与流洗牌的水印合并方式相同。</p>
+<p>例如，如果每个 Kafka 分区的事件时间戳是严格的升序，那么用<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html#assigners-with-ascending-timestamps">升序时间戳水印生成器</a>生成每个分区的水印，会得到完美的整体水印。请注意，我们在示例中并没有提供 TimestampAssigner，而是使用 Kafka 记录本身的时间戳。</p>
+<p>下面的插图展示了如何使用 per-Kafka-partition 水印生成器，以及在这种情况下水印如何通过流式数据流传播。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">kafkaSource</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">FlinkKafkaConsumer</span><span class="o">[</span><span class="kt">MyType</span><span class="o">]</span><span class="o">(</span><span class="s">&#34;myTopic&#34;</span><span class="o">,</span> <span class="n">schema</span><span class="o">,</span> <span class="n">props</span><span class="o">)</span>
+<span class="n">kafkaSource</span><span class="o">.</span><span class="n">assignTimestampsAndWatermarks</span><span class="o">(</span>
+  <span class="nc">WatermarkStrategy</span>
+    <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">20</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">MyType</span><span class="o">]</span> <span class="k">=</span> <span class="n">env</span><span class="o">.</span><span class="n">addSource</span><span class="o">(</span><span class="n">kafkaSource</span><span class="o">)</span>
+</code></pre></div><p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/parallel_kafka_watermarks.svg" alt="img"></p>
+<h3 id="运算符如何处理水印">运算符如何处理水印</h3>
+<p>作为一般规则，运算符(operator)在向下游转发一个给定的水印之前，需要对其进行完全处理。例如，<code>WindowOperator</code> 将首先评估所有应该被发射的窗口，只有在产生所有由水印触发的输出之后，水印本身才会被发送到下游。换句话说，所有因发生水印而产生的元素将在水印之前被发射。</p>
+<p>同样的规则也适用于 <code>TwoInputStreamOperator</code>。然而，在这种情况下，运算符的当前水印被定义为其两个输入的最小值。</p>
+<p>这种行为的细节由 <code>OneInputStreamOperator#processWatermark</code>、<code>TwoInputStreamOperator#processWatermark1</code> 和 <code>TwoInputStreamOperator#processWatermark2</code> 方法的实现来定义。</p>
+<h3 id="废弃的-assignerwithperiodicwatermarks-和-assignerwithpunctuatedwatermarks-方法">废弃的 AssignerWithPeriodicWatermarks 和 AssignerWithPunctuatedWatermarks 方法</h3>
+<p>在引入当前的 <code>WatermarkStrategy</code>、<code>TimestampAssigner</code> 和 <code>WatermarkGenerator</code> 抽象之前，Flink 使用了 <code>AssignerWithPeriodicWatermarks</code> 和 <code>AssignerWithPeriodicWatermarks</code>。你仍然会在 API 中看到它们，但建议使用新的接口，因为它们提供了更清晰的分离关注点，也统一了水印生成的周期和标点样式。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/event-time" term="event-time" label="Event Time" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[内置的水印生成器]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-event-time/?utm_source=atom_feed" rel="related" type="text/html" title="Event Time" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-flink-datastream-api-programming-guide/?utm_source=atom_feed" rel="related" type="text/html" title="Flink Datastream API 编程指南" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-generating-watermarks/?utm_source=atom_feed" rel="related" type="text/html" title="Generating Watermarks" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-working-with-state/?utm_source=atom_feed" rel="related" type="text/html" title="使用状态" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-state-and-fault-tolerance/?utm_source=atom_feed" rel="related" type="text/html" title="状态和容错性" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-21-built-in-watermark-generators/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-21T00:00:00+08:00</published>
+            <updated>2020-08-21T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Builtin Watermark Generators</blockquote><h2 id="内置水印生成器httpsciapacheorgprojectsflinkflink-docs-release-111devevent_timestamp_extractorshtml"><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamp_extractors.html">内置水印生成器</a></h2>
+<p>正如在 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_timestamps_watermarks.html">Generating Watermarks</a> 一文中所描述的，Flink 提供了抽象，允许程序员分配自己的时间戳和发射自己的水印。更具体地说，可以通过实现 WatermarkGenerator 接口来实现。</p>
+<p>为了进一步简化此类任务的编程工作，Flink 自带了一些预先实现的时间戳分配器。本节提供了它们的列表。除了它们的开箱即用的功能外，它们的实现可以作为自定义实现的范例。</p>
+<h2 id="单调地增加时间戳">单调地增加时间戳</h2>
+<p>周期性水印生成的最简单的特殊情况是当给定源任务(task)看到的时间戳以升序出现时。在这种情况下，当前的时间戳总是可以作为水印，因为不会有更早的时间戳到达。</p>
+<p>请注意，只需要每个并行数据源任务的时间戳是升序的。例如，如果在一个特定的设置中，一个 Kafka 分区被一个并行数据源实例读取，那么只需要在每个 Kafka 分区中时间戳是升序的。每当并行流被洗牌、联合、连接(connected)或合并时，Flink 的水印合并机制都会生成正确的水印。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span><span class="o">.</span><span class="n">forMonotonousTimestamps</span><span class="o">(</span><span class="o">)</span>
+</code></pre></div><h2 id="固定的延迟量">固定的延迟量</h2>
+<p>周期性水印生成的另一个例子是，当水印滞后于流中看到的最大（事件时间）时间戳的固定时间量时。这种情况涵盖了预先知道流中可能遇到的最大延迟的场景，例如，当创建一个包含时间戳分布在固定时间段内的元素的自定义源进行测试时。对于这些情况，Flink 提供了 BoundedOutOfOrdernessWatermarks 生成器，它以 maxOutOfOrderness 作为参数，即在计算给定窗口的最终结果时，一个元素在被忽略之前允许迟到的最大时间。Lateness 对应于 <em>t - t_w</em> 的结果，其中 <em>t</em> 是一个元素的（事件-时间）时间戳，<em>t_w</em> 是之前的水印。如果 <em>lateness &gt; 0</em>，那么该元素被认为是迟到的，并且默认情况下，在计算其对应窗口的作业结果时被忽略。请参阅关于允许延迟的文档，以获得更多关于处理迟到元素的信息。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="nc">WatermarkStrategy</span>
+  <span class="o">.</span><span class="n">forBoundedOutOfOrderness</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="n">ofSeconds</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/programming" term="programming" label="programming" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>
@@ -1026,6 +1656,7 @@
 <p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/local-state.png" alt="img"></p>
 <h2 id="通过状态快照进行容错">通过状态快照进行容错</h2>
 <p>Flink 能够通过状态快照和流重放的组合，提供容错、精确的一次性语义。这些快照捕获了分布式管道的整个状态，记录了进入输入队列的偏移以及整个作业图(job graph)中因摄取了该点数据而产生的状态。当发生故障时，源会被重放，状态被恢复，并恢复处理。如上所述，这些状态快照是异步捕获的，不会妨碍正在进行的处理。</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/">https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/</a></p>
 ]]></content>
             
                  
@@ -1628,6 +2259,7 @@ DataStream&lt;Tuple2&lt;Integer, Minutes&gt;&gt; minutesByStartCell = enrichedNY
 <li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/timely-stream-processing.html">及时的流处理</a></li>
 <li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html">窗口</a></li>
 </ul>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/streaming_analytics.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/learn-flink/streaming_analytics.html</a></p>
 ]]></content>
             
                  
@@ -3425,6 +4057,7 @@ mysql&gt; <span class="k">select</span> count<span class="o">(</span>*<span clas
 <span class="p">|</span>      <span class="m">110</span> <span class="p">|</span>
 +----------+
 </code></pre></div><p>最后，去 <a href="http://localhost:3000/d/FOe0PbmGk/walkthrough?viewPanel=2&amp;orgId=1&amp;refresh=5s">Grafana</a> 看看完全可视化的结果吧!</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/table_api.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/table_api.html</a></p>
 ]]></content>
             
                  

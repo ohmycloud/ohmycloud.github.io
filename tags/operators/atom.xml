@@ -1,0 +1,898 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.63.2">Hugo</generator><title type="html"><![CDATA[Operators on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/operators/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/operators/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/operators/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/operators/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2020-09-03T17:12:30+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/operators/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Joining]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-22-joining/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/?utm_source=atom_feed" rel="related" type="text/html" title="用于外部数据访问的异步 I/O" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-windows/?utm_source=atom_feed" rel="related" type="text/html" title="窗口" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-java-lambda-expressions/?utm_source=atom_feed" rel="related" type="text/html" title="Java Lambda 表达式" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-operators/?utm_source=atom_feed" rel="related" type="text/html" title="Operators" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-scala-api-extensions/?utm_source=atom_feed" rel="related" type="text/html" title="Scala API 扩展" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-22-joining/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-22T00:00:00+08:00</published>
+            <updated>2020-08-22T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Joining</blockquote><h1 id="窗口连接join">窗口连接(Join)</h1>
+<p>窗口连接(window join)将两个流的元素连接起来，这两个流有一个共同的键，并且位于同一个窗口中。这些窗口可以通过使用<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners">窗口分配器</a>来定义，并对两个流的元素进行评估。</p>
+<p>然后，来自双方的元素被传递到一个用户定义的 JoinFunction 或 FlatJoinFunction 中，用户可以发出符合加入标准的结果。</p>
+<p>一般的用法可以归纳为以下几点。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="n">stream</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">otherStream</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">where</span><span class="o">(</span><span class="o">&lt;</span><span class="nc">KeySelector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">equalTo</span><span class="o">(</span><span class="o">&lt;</span><span class="nc">KeySelector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="nc">WindowAssigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">apply</span><span class="o">(</span><span class="o">&lt;</span><span class="nc">JoinFunction</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><p>关于语义的一些说明:</p>
+<ul>
+<li>两个流中元素的成对组合的创建就像一个内部连接，这意味着一个流中的元素如果没有另一个流中的相应元素与之连接，就不会发出。</li>
+<li>那些被加入的元素将以各自窗口中最大的时间戳作为它们的时间戳。例如，一个以 <code>[5, 10)</code> 为边界的窗口将导致加入的元素以9作为它们的时间戳。</li>
+</ul>
+<p>在下面的章节中，我们将使用一些示例性的场景来概述不同类型的窗口连接是如何进行的。</p>
+<h2 id="滚动窗口连接">滚动窗口连接</h2>
+<p>当执行滚动窗口连接时，所有具有共同的键和共同的滚动窗口的元素都会以成对组合的方式进行连接，并传递给 <code>JoinFunction</code> 或 <code>FlatJoinFunction</code>。因为这表现得像一个内连接，所以一个流的元素如果在其滚动窗口中没有来自另一个流的元素，就不会被发出去！这就是为什么我们要把一个流的元素加入到滚动窗口中。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tumbling-window-join.svg" alt="img"></p>
+<p>如图所示，我们定义了一个大小为2毫秒的滚动窗口，其结果是 <code>[0,1]</code>，<code>[2,3]</code>，&hellip;形式的窗口。图中显示了每个窗口中所有元素的配对组合，这些元素将被传递给 <code>JoinFunction</code>。请注意，在翻滚窗口 <code>[6,7]</code> 中，没有任何元素发出，因为绿色流中没有元素存在，要与橙色元素⑥和⑦连接。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows</span><span class="o">;</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.time.Time</span><span class="o">;</span>
+
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">orangeStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">greenStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">orangeStream</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">greenStream</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">where</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">equalTo</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">TumblingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">apply</span> <span class="o">{</span> <span class="o">(</span><span class="n">e1</span><span class="o">,</span> <span class="n">e2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">e1</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">e2</span> <span class="o">}</span>
+</code></pre></div><h2 id="滑动窗连接">滑动窗连接</h2>
+<p>在执行滑动窗口连接时，所有具有共同键和共同滑动窗口的元素都会以成对组合的方式连接，并传递给 <code>JoinFunction</code> 或 <code>FlatJoinFunction</code>。一个流的元素如果在当前的滑动窗口中没有来自另一个流的元素，则不会被发出! 请注意，有些元素可能在一个滑动窗口中被加入，但在另一个滑动窗口中却没有!</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/sliding-window-join.svg" alt="img"></p>
+<p>在这个例子中，我们使用的是大小为两毫秒的滑动窗口，并将它们滑动一毫秒，结果是滑动窗口 <code>[-1，0]，[0，1]，[1，2]，[2，3]</code>，&hellip;。x轴下面的加入元素就是每个滑动窗口传递给 <code>JoinFunction</code> 的元素。这里你也可以看到，例如橙色的②与绿色的③在窗口 <code>[2,3]</code> 中连接，但与窗口 <code>[1,2]</code> 中的任何元素都没有连接。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows</span><span class="o">;</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.time.Time</span><span class="o">;</span>
+
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">orangeStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">greenStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">orangeStream</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">greenStream</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">where</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">equalTo</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">SlidingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="cm">/*</span><span class="cm"> size </span><span class="cm">*/</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="cm">/*</span><span class="cm"> slide </span><span class="cm">*/</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">apply</span> <span class="o">{</span> <span class="o">(</span><span class="n">e1</span><span class="o">,</span> <span class="n">e2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">e1</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">e2</span> <span class="o">}</span>
+</code></pre></div><h2 id="会议窗口连接">会议窗口连接</h2>
+<p>当执行会话窗口连接时，所有具有相同键的元素，当&quot;组合&quot;满足会话标准时，将以成对组合的方式连接，并传递给 <code>JoinFunction</code> 或 <code>FlatJoinFunction</code>。同样，这也是执行内部连接，所以如果有一个会话窗口只包含来自一个流的元素，就不会有输出。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/session-window-join.svg" alt="img"></p>
+<p>在这里，我们定义了一个会话窗口加入，其中每个会话被至少1ms的间隙所分割。有三个会话，在前两个会话中，两个流中的加入元素都会传递给 <code>JoinFunction</code>。在第三个会话中，绿色流中没有元素，所以⑧和⑨没有加入！在第三个会话中，绿色流中没有元素。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows</span><span class="o">;</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.time.Time</span><span class="o">;</span>
+ 
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">orangeStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">greenStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">orangeStream</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">greenStream</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">where</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">equalTo</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">EventTimeSessionWindows</span><span class="o">.</span><span class="n">withGap</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">apply</span> <span class="o">{</span> <span class="o">(</span><span class="n">e1</span><span class="o">,</span> <span class="n">e2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">e1</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">e2</span> <span class="o">}</span>
+</code></pre></div><h2 id="间隔连接">间隔连接</h2>
+<p>间隔连接将两个流的元素（我们暂且称它们为A和B）用一个共同的键连接起来，流B中的元素的时间戳与流A中元素的时间戳处于一个相对的时间间隔。</p>
+<p>这也可以更正式地表达为 <code>b.timestamp∈[a.timestamp + lowerBound; a.timestamp + upperBound]</code> 或 <code>a.timestamp + lowerBound &lt;= b.timestamp &lt;= a.timestamp + upperBound</code>。</p>
+<p>其中a和b是A和B的元素，它们有一个共同的键。下界和上界都可以是负的或正的，只要下界总是小于或等于上界。区间连接目前只执行内连接。</p>
+<p>当一对元素传递给 <code>ProcessJoinFunction</code> 时，它们将被分配为两个元素中较大的时间戳（可以通过 <code>ProcessJoinFunction.Context</code> 访问）。</p>
+<p>注意：间隔连接目前只支持事件时间。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/interval-join.svg" alt="img"></p>
+<p>在上面的例子中，我们将两个流&quot;橙色&quot;和&quot;绿色&quot;连接起来，下界为-2毫秒，上界为+1毫秒。默认情况下，这些边界是包容的，但可以应用 <code>.lowerBoundExclusive()</code> 和 <code>.upperBoundExclusive</code> 来改变行为。</p>
+<p>再次使用更正式的符号，这将被翻译为:</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="n">orangeElem</span><span class="o">.</span><span class="n">ts</span> <span class="o">+</span> <span class="n">lowerBound</span> <span class="o">&lt;=</span> <span class="n">greenElem</span><span class="o">.</span><span class="n">ts</span> <span class="o">&lt;=</span> <span class="n">orangeElem</span><span class="o">.</span><span class="n">ts</span> <span class="o">+</span> <span class="n">upperBound</span>
+</code></pre></div><p>as indicated by the triangles.</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.functions.co.ProcessJoinFunction</span><span class="o">;</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.streaming.api.windowing.time.Time</span><span class="o">;</span>
+
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">orangeStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="k">val</span> <span class="n">greenStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Integer</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">orangeStream</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">intervalJoin</span><span class="o">(</span><span class="n">greenStream</span><span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="n">elem</span> <span class="k">=&gt;</span> <span class="cm">/*</span><span class="cm"> select key </span><span class="cm">*/</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">between</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="o">-</span><span class="mi">2</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">milliseconds</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">process</span><span class="o">(</span><span class="k">new</span> <span class="nc">ProcessJoinFunction</span><span class="o">[</span><span class="kt">Integer</span>, <span class="kt">Integer</span>, <span class="kt">String</span><span class="o">]</span> <span class="o">{</span>
+        <span class="k">override</span> <span class="k">def</span> <span class="n">processElement</span><span class="o">(</span><span class="n">left</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">,</span> <span class="n">right</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">,</span> <span class="n">ctx</span><span class="k">:</span> <span class="kt">ProcessJoinFunction</span><span class="o">[</span><span class="kt">Integer</span>, <span class="kt">Integer</span>, <span class="kt">String</span><span class="o">]</span><span class="k">#</span><span class="nc">Context</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+         <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="n">left</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">right</span><span class="o">)</span><span class="o">;</span> 
+        <span class="o">}</span>
+      <span class="o">}</span><span class="o">)</span><span class="o">;</span>
+    <span class="o">}</span><span class="o">)</span><span class="o">;</span>
+</code></pre></div><p>原文连接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/joining.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/joining.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/operators" term="operators" label="Operators" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/joining" term="joining" label="Joining" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[用于外部数据访问的异步 I/O]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-joining/?utm_source=atom_feed" rel="related" type="text/html" title="Joining" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-windows/?utm_source=atom_feed" rel="related" type="text/html" title="窗口" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-java-lambda-expressions/?utm_source=atom_feed" rel="related" type="text/html" title="Java Lambda 表达式" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-operators/?utm_source=atom_feed" rel="related" type="text/html" title="Operators" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-scala-api-extensions/?utm_source=atom_feed" rel="related" type="text/html" title="Scala API 扩展" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-22T00:00:00+08:00</published>
+            <updated>2020-08-22T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Asynchronous Io for External Data Access</blockquote><p>本页解释了如何使用 Flink 的 API 与外部数据存储进行异步 I/O。对于不熟悉异步或事件驱动编程的用户来说，一篇关于 Futures 和事件驱动编程的文章可能是有用的准备。</p>
+<p>注：关于异步 I/O 实用程序的设计和实现的细节可以在提案和设计文件 <a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=65870673">FLIP-12：异步I/O设计和实现中找到</a>。</p>
+<h2 id="异步io操作的必要性">异步I/O操作的必要性</h2>
+<p>在与外部系统交互时（例如用存储在数据库中的数据来丰富流事件时），需要注意与外部系统的通信延迟不会主导流应用的总工作。</p>
+<p>奈何访问外部数据库中的数据，例如在 <code>MapFunction</code> 中，通常意味着同步交互。一个请求被发送到数据库，<code>MapFunction</code> 等待直到收到响应。在许多情况下，这种等待占据了函数的绝大部分时间。</p>
+<p>与数据库的异步交互意味着一个并行函数实例可以同时处理许多请求，并同时接收响应。这样一来，等待时间就可以与发送其他请求和接收响应叠加起来。最起码，等待时间可以摊在多个请求上。这在大多数情况下会导致更高的流吞吐量。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/async_io.svg" alt="img"></p>
+<p>注意：通过仅仅将 <code>MapFunction</code> 扩展到很高的并行度来提高吞吐量，在某些情况下也是可行的，但通常要付出很高的资源代价：拥有更多的并行 <code>MapFunction</code> 实例意味着更多的任务、线程、Flink 内部网络连接、与数据库的网络连接、缓冲区以及一般的内部记账开销。</p>
+<h2 id="前提条件">前提条件</h2>
+<p>如上节所述，要实现对数据库（或键/值存储）的适当异步 I/O，需要向该数据库提供一个支持异步请求的客户端。许多流行的数据库都提供了这样的客户端。</p>
+<p>在没有这样的客户端的情况下，可以尝试通过创建多个客户端，并用线程池处理同步调用，将同步客户端变成有限的并发客户端。然而，这种方法通常比一个合适的异步客户端效率低。</p>
+<h2 id="异步-io-api">异步 I/O API</h2>
+<p>Flink 的 Async I/O API 允许用户使用异步请求客户端与数据流。该 API 处理与数据流的集成，以及处理顺序、事件时间、容错等。</p>
+<p>假设自己有一个目标数据库的异步客户端，需要三个部分来实现对数据库的异步 I/O 的流转换。</p>
+<ul>
+<li>一个 AsyncFunction 的实现，用来调度请求。</li>
+<li>一个回调，获取操作结果并将其交给 <code>ResultFuture</code>。</li>
+<li>在 DataStream 上应用异步 I/O 操作作为转换。</li>
+</ul>
+<p>下面的代码示例说明了基本模式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> An implementation of the &#39;AsyncFunction&#39; that sends requests and sets the callback.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">AsyncDatabaseRequest</span> <span class="k">extends</span> <span class="nc">AsyncFunction</span><span class="o">[</span><span class="kt">String</span>, <span class="o">(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span> <span class="o">{</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm"> The database specific client that can issue concurrent requests with callbacks </span><span class="cm">*/</span>
+    <span class="k">lazy</span> <span class="k">val</span> <span class="n">client</span><span class="k">:</span> <span class="kt">DatabaseClient</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatabaseClient</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">post</span><span class="o">,</span> <span class="n">credentials</span><span class="o">)</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm"> The context used for the future callbacks </span><span class="cm">*/</span>
+    <span class="k">implicit</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">executor</span><span class="k">:</span> <span class="kt">ExecutionContext</span> <span class="o">=</span> <span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">fromExecutor</span><span class="o">(</span><span class="nc">Executors</span><span class="o">.</span><span class="n">directExecutor</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+
+    <span class="k">override</span> <span class="k">def</span> <span class="n">asyncInvoke</span><span class="o">(</span><span class="n">str</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">resultFuture</span><span class="k">:</span> <span class="kt">ResultFuture</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+
+        <span class="c1">// issue the asynchronous request, receive a future for the result
+</span><span class="c1"></span>        <span class="k">val</span> <span class="n">resultFutureRequested</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query</span><span class="o">(</span><span class="n">str</span><span class="o">)</span>
+
+        <span class="c1">// set the callback to be executed once the request by the client is complete
+</span><span class="c1"></span>        <span class="c1">// the callback simply forwards the result to the result future
+</span><span class="c1"></span>        <span class="n">resultFutureRequested</span><span class="o">.</span><span class="n">onSuccess</span> <span class="o">{</span>
+            <span class="k">case</span> <span class="n">result</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="n">resultFuture</span><span class="o">.</span><span class="n">complete</span><span class="o">(</span><span class="nc">Iterable</span><span class="o">(</span><span class="o">(</span><span class="n">str</span><span class="o">,</span> <span class="n">result</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// create the original stream
+</span><span class="c1"></span><span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// apply the async I/O transformation
+</span><span class="c1"></span><span class="k">val</span> <span class="n">resultStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span>
+    <span class="nc">AsyncDataStream</span><span class="o">.</span><span class="n">unorderedWait</span><span class="o">(</span><span class="n">stream</span><span class="o">,</span> <span class="k">new</span> <span class="nc">AsyncDatabaseRequest</span><span class="o">(</span><span class="o">)</span><span class="o">,</span> <span class="mi">1000</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="nc">MILLISECONDS</span><span class="o">,</span> <span class="mi">100</span><span class="o">)</span>
+</code></pre></div><p>重要提示：<code>ResultFuture.complete</code> 的第一次调用就完成了。所有后续的完成调用将被忽略。</p>
+<p>以下两个参数控制异步操作。</p>
+<ul>
+<li>
+<p>超时: 超时定义了异步请求在被认为失败之前可能需要的时间。这个参数可以防范死机/失败的请求。</p>
+</li>
+<li>
+<p>Capacity（容量）：该参数定义了异步请求在被认为失败之前可能需要的时间。这个参数定义了多少个异步请求可以同时进行。尽管异步I/O方法通常会带来更好的吞吐量，但操作者仍然可以成为流应用的瓶颈。限制并发请求的数量可以确保操作者不会积累越来越多的待处理请求的积压，但一旦容量耗尽，就会触发背压。</p>
+</li>
+</ul>
+<h3 id="超时处理">超时处理</h3>
+<p>当一个异步 I/O 请求超时时，默认情况下会抛出一个异常并重新启动作业。如果你想处理超时，你可以重写 <code>AsyncFunction#timeout</code> 方法。</p>
+<h3 id="结果的顺序">结果的顺序</h3>
+<p><code>AsyncFunction</code> 发出的并发请求经常以某种未定义的顺序完成，基于哪个请求先完成。为了控制结果记录以何种顺序发出，Flink 提供了两种模式。</p>
+<ul>
+<li>
+<p>Unordered: 异步请求一结束，结果记录就会被发出。在异步 I/O 操作符之后，流中记录的顺序与之前不同。这种模式以处理时间为基本时间特性时，延迟最低，开销最小。使用 <code>AsyncDataStream.unorderedWait(...)</code> 来实现这种模式。</p>
+</li>
+<li>
+<p>Ordered: 在这种情况下，流的顺序被保留下来。结果记录的发出顺序与异步请求被触发的顺序相同（运算符输入记录的顺序）。为了达到这个目的，操作符会缓冲一个结果记录，直到它前面的所有记录都被发出来（或定时发出来）。这通常会在检查点中引入一些额外的延迟和一些开销，因为与无序模式相比，记录或结果在检查点状态下维持的时间更长。使用 <code>AsyncDataStream.orderedWait(...)</code> 来处理这种模式。</p>
+</li>
+</ul>
+<h2 id="事件时间">事件时间</h2>
+<p>当流媒体应用程序使用<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间</a>工作时，水印将由异步 I/O 操作符正确处理。具体来说，这意味着两种顺序模式的以下内容。</p>
+<ul>
+<li>无序的：水印不会超越记录，反之亦然，这意味着水印会建立一个顺序边界。只有在水印之间才会发出无序的记录。发生在某一水印之后的记录，只有在该水印被发射之后才会被发射。而水印则只有在该水印之前的所有输入的结果记录被发出之后才会被发出。</li>
+</ul>
+<p>这意味着在有水印的情况下，无序模式会引入一些与有序模式相同的延迟和管理开销。该开销的数量取决于水印的频率。</p>
+<ul>
+<li>有序的: 水印和记录的顺序被保留下来 就像记录之间的顺序被保留一样 与处理时间相比，开销没有明显变化。</li>
+</ul>
+<p>请记住，摄取时间是事件时间的一种特殊情况，其自动生成的水印是基于源处理时间的。</p>
+<h2 id="容错保证">容错保证</h2>
+<p>异步 I/O 操作符提供了完全精确的一次容错保证，它将飞行中的异步请求记录存储在检查点中，并在故障恢复时恢复/重新触发请求。它将飞行中的异步请求记录存储在检查点中，并在从故障中恢复时恢复/重新触发请求。</p>
+<h2 id="实现技巧">实现技巧</h2>
+<p>对于有 Executor（或 Scala 中的 ExecutionContext）用于回调的 Futures 实现，我们建议使用  DirectExecutor，因为回调通常只做最少的工作，而且DirectExecutor 避免了额外的线程间交接开销。回调通常只将结果交给 <code>ResultFuture</code>，后者将其添加到输出缓冲区。从那里开始，包括记录排放和与检查点记账的交互在内的繁重逻辑无论如何都发生在一个专用线程池中。</p>
+<p>可以通过 <code>org.apache.flink.runtime.concurrent.Executors.directExecutor()</code> 或 <code>com.google.common.util.concurrent.MoreExecutors.directExecutor()</code> 获得 DirectExecutor。</p>
+<h2 id="注意事项">注意事项</h2>
+<p>AsyncFunction 不叫多线程。</p>
+<p>我们在这里要明确指出的一个常见的困惑是，AsyncFunction 不是以多线程的方式调用的。AsyncFunction 只存在一个实例，并且对于流的各个分区中的每一条记录，它都会被依次调用。除非 <code>asyncInvoke(...)</code> 方法快速返回并依赖于回调（由客户端），否则不会导致正确的异步 I/O。</p>
+<p>例如，以下模式会导致阻塞 <code>asyncInvoke(...)</code> 函数，从而使异步行为无效。</p>
+<ul>
+<li>
+<p>使用一个数据库客户端，其查找/查询方法的调用会被阻塞，直到结果被接收回来为止</p>
+</li>
+<li>
+<p>在 <code>asyncInvoke(...)</code> 方法中阻止/等待异步客户端返回的未来型对象。</p>
+</li>
+</ul>
+<p>出于一致性的考虑，AsyncFunction 的操作符（AsyncWaitOperator）目前必须位于操作符链的头部。</p>
+<p>由于在 FLINK-13063 问题中给出的原因，我们目前必须打破 AsyncWaitOperator 的操作符链，以防止潜在的一致性问题。这是对以前支持链的行为的改变。需要旧行为并接受潜在的违反一致性保证的用户可以手动实例化并将 AsyncWaitOperator 添加到作业图中，并通过 AsyncWaitOperator#setChainingStrategy(ChainingStrategy.ALWAYS) 将链式策略设置回链式。</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/operators" term="operators" label="Operators" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/io" term="io" label="IO" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[窗口]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-22-windows/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-joining/?utm_source=atom_feed" rel="related" type="text/html" title="Joining" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/?utm_source=atom_feed" rel="related" type="text/html" title="用于外部数据访问的异步 I/O" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-java-lambda-expressions/?utm_source=atom_feed" rel="related" type="text/html" title="Java Lambda 表达式" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-operators/?utm_source=atom_feed" rel="related" type="text/html" title="Operators" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-scala-api-extensions/?utm_source=atom_feed" rel="related" type="text/html" title="Scala API 扩展" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-22-windows/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-22T00:00:00+08:00</published>
+            <updated>2020-08-22T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Windows</blockquote><h1 id="窗口">窗口</h1>
+<p>窗口是处理无限流的核心。窗口将流分割成有限大小的&quot;桶&rdquo;，我们可以对其应用计算。本文档主要介绍 Flink 中如何进行窗口化，以及程序员如何从其提供的功能中最大限度地受益。</p>
+<p>下面介绍了一个窗口化 Flink 程序的一般结构。第一个片段指的是 keyed 流，而第二个片段指的是 non-keyed 流。正如人们所看到的那样，唯一的区别是 keyed 流的 <code>keyBy(...)</code> 调用和 non-keyed 流的 <code>window(...)</code> 变成了 <code>windowAll(...)</code>。这也将作为本页面其他内容的路线图。</p>
+<p><strong>Keyed 窗口</strong></p>
+<pre><code>stream
+       .keyBy(...)               &lt;-  keyed 与 non-keyed 窗口的对比
+       .window(...)              &lt;-  必须的: &quot;assigner&quot;
+      [.trigger(...)]            &lt;-  可选的: &quot;trigger&quot; (否则使用默认的 trigger)
+      [.evictor(...)]            &lt;-  可选的: &quot;evictor&quot; (否则没有 evictor)
+      [.allowedLateness(...)]    &lt;-  可选的: &quot;lateness&quot; (否则为零)
+      [.sideOutputLateData(...)] &lt;-  可选的: &quot;output tag&quot; (否则迟到数据无侧输出)
+       .reduce/aggregate/fold/apply()      &lt;-  必须的: &quot;function&quot;
+      [.getSideOutput(...)]      &lt;-  可选的: &quot;output tag&quot;
+</code></pre><p><strong>Non-Keyed 窗口</strong></p>
+<pre><code>stream
+       .windowAll(...)           &lt;-  必须的: &quot;assigner&quot;
+      [.trigger(...)]            &lt;-  可选的: &quot;trigger&quot; (否则使用默认的 trigger)
+      [.evictor(...)]            &lt;-  可选的: &quot;evictor&quot; (否则没有 evictor)
+      [.allowedLateness(...)]    &lt;-  可选的: &quot;lateness&quot; (否则为零)
+      [.sideOutputLateData(...)] &lt;-  可选的: &quot;output tag&quot; (否则迟到数据无侧输出)
+       .reduce/aggregate/fold/apply()      &lt;-  必须的: &quot;function&quot;
+      [.getSideOutput(...)]      &lt;-  可选的: &quot;output tag&quot;
+</code></pre><p>在上面，方括号中的命令(<code>[...]</code>)是可选的。这表明 Flink 允许你以多种不同的方式定制你的窗口逻辑，以便它最适合你的需求。</p>
+<h2 id="窗口生命周期">窗口生命周期</h2>
+<p>简而言之，当第一个应该属于这个窗口的元素到达时，就会创建一个窗口，当时间（事件时间或处理时间）经过(passes)它的结束时间戳加上用户指定的允许延迟时，这个窗口就会被完全移除（见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#allowed-lateness">允许延迟</a>）。Flink 只保证对基于时间的窗口进行移除，而不保证对其他类型的窗口，如全局窗口进行移除（见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners">窗口分配器</a>）。例如，基于事件-时间的窗口策略每5分钟创建一个非重叠（或翻滚）的窗口，并且允许的延迟为1分钟，当第一个具有时间戳的元素落入这个区间时，Flink 将为 12:00 和 12:05 之间的区间创建一个新的窗口，当水印通过 12:06 的时间戳时，它将删除它。</p>
+<p>此外，每个窗口将有一个触发器(见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers">触发器</a>)和一个函数(ProcessWindowFunction、ReduceFunction、AggregateFunction或FoldFunction)(见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-functions">窗口函数</a>)。函数将包含要应用于窗口内容的计算，而触发器则指定了窗口被认为可以应用函数的条件。触发策略可能是&quot;当窗口中的元素数量超过4时&rdquo;，或者&quot;当水印经过窗口的末端时&rdquo;。触发器还可以决定在创建和删除窗口之间的任何时间(any time between its creation and removal)清除窗口的内容。在这种情况下，清除只指窗口中的元素，而不是窗口元数据。这意味着新的数据仍然可以被添加到该窗口中。</p>
+<p>除上述之外，您还可以指定一个 Evictor(见 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#evictors">Evictors</a>)，它将能够在触发器触发后以及在函数应用之前和/或之后从窗口中删除元素。</p>
+<p>在下文中，我们将对上述每个组件进行更详细的介绍。我们先从上述代码段中必须的部分开始(参见 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#keyed-vs-non-keyed-windows">Keyed vs Non-Keyed 窗口</a>、<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigner">窗口分配器</a>和<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-function">窗口函数</a>)，然后再转向可选部分。</p>
+<h2 id="keyed-与-non-keyed-窗口的对比">Keyed 与 Non-Keyed 窗口的对比</h2>
+<p>首先要指定的是您的流是否应该是 keyed 的。这必须在定义窗口之前完成。使用 <code>keyBy(...)</code> 将把您的无限流分割成逻辑 keyed 流。如果没有调用 <code>keyBy(...)</code>，那么您的流就不是 keyed 流。</p>
+<p>在 keyed 流的情况下，传入事件的任何属性都可以被用作键（更多细节在<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/state/state.html#keyed-datastream">这里</a>）。拥有一个 keyed 流将允许你的窗口计算由多个任务并行执行，因为每个逻辑 keyed 流可以独立于其他流进行处理。所有指向同一键的元素将被发送到同一个并行任务(task)。</p>
+<p>在 non-keyed 流的情况下，您的原始流不会被分割成多个逻辑流，所有的窗口化逻辑将由一个任务(task)来执行，即并行度为1。</p>
+<h2 id="窗口分配器">窗口分配器</h2>
+<p>在指定流是否是 keyed 流之后，下一步是定义窗口分配器。窗口分配器定义了如何将元素分配给窗口。这是通过在 <code>window(...)</code>（对于 keyed 流）或 <code>windowAll()</code>（对于 non-keyed 流）调用中指定您所选择的 <code>WindowAssigner</code> 来实现的。</p>
+<p><code>WindowAssigner</code> 负责将每个传入的元素分配给一个或多个窗口。Flink 为最常见的用例提供了预定义的窗口分配器，即滚动窗口、滑动窗口、会话窗口和全局窗口。您也可以通过扩展 <code>WindowAssigner</code> 类来实现自定义窗口分配器。所有内置的窗口分配器（除了全局窗口）都是基于时间将元素分配给窗口，时间可以是处理时间，也可以是事件时间。请查看我们关于<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间</a>的部分，了解处理时间和事件时间之间的区别，以及时间戳和水印是如何生成的。</p>
+<p>基于时间的窗口有一个开始时间戳（包括）和结束时间戳（不包括），共同描述窗口的大小。在代码中，Flink 在处理基于时间的窗口时使用了 <code>TimeWindow</code>，它有查询开始和结束时间戳的方法，还有一个额外的方法 <code>maxTimestamp()</code>，可以返回给定窗口的最大允许时间戳。</p>
+<p>在下文中，我们将展示 Flink 的预定义窗口分配器是如何工作的，以及如何在 DataStream 程序中使用它们。下图直观地展示了每个分配器的工作情况。紫色的圆圈代表流的元素，这些元素被某个键（在本例中是用户1、用户2和用户3）分割。x轴显示的是时间的进度。</p>
+<h2 id="滚动窗口">滚动窗口</h2>
+<p>滚动窗口分配器将每个元素分配到一个指定窗口大小的窗口。滚动窗口有一个固定的大小，并且不重叠。例如，如果你指定了一个大小为5分钟的滚动窗口，那么当前的窗口将被评估，并且每隔5分钟就会启动一个新的窗口，如下图所示。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tumbling-windows.svg" alt="img"></p>
+<p>以下代码片段展示了如何使用滚动窗口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// tumbling event-time windows
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">TumblingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// tumbling processing-time windows
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">TumblingProcessingTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// daily tumbling event-time windows offset by -8 hours.
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">TumblingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">days</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">hours</span><span class="o">(</span><span class="o">-</span><span class="mi">8</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><p>时间间隔可以使用 <code>Time.milliseconds(x)</code>, <code>Time.seconds(x)</code>, <code>Time.minutes(x)</code> 等中的一种来指定。</p>
+<p>如最后一个例子所示，滚动窗口分配器还可以采用一个可选的偏移量(<code>offset</code>)参数，用于改变窗口的对齐方式。例如，在没有偏移量的情况下，每小时的滚动窗口与纪元对齐，也就是说，你会得到诸如 <code>1:00:00.000 - 1:59:59.999</code>，<code>2:00:00.000 - 2:59:59.999</code> 等窗口。如果你想改变这一点，你可以给出一个偏移量。例如，如果偏移量为15分钟，您将得到 <code>1:15:00.000 - 2:14:59.999</code>，<code>2:15:00.000 - 3:14:59.999</code> 等。偏移量的一个重要用途是调整窗口到 UTC-0 以外的时区。例如，在中国，你必须指定一个 <code>Time.hours(-8)</code> 的偏移量。</p>
+<h2 id="滑动窗口">滑动窗口</h2>
+<p>滑动窗口分配器将元素分配给固定长度的窗口。与滚动窗口分配器类似，窗口的大小由窗口大小(window size)参数配置。一个额外的窗口滑动(window slide)参数控制滑动窗口的启动频率。因此，如果滑动窗口的滑块小于窗口大小，滑动窗口可以重叠。在这种情况下，元素被分配到多个窗口。</p>
+<p>例如，你可以有10分钟大小的窗口，滑动5分钟。这样，每隔5分钟就会有一个窗口，包含过去10分钟内到达的事件，如下图所示。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/sliding-windows.svg" alt="img"></p>
+<p>以下代码片段展示了如何使用滑动窗口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// sliding event-time windows
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">SlidingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// sliding processing-time windows
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">SlidingProcessingTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// sliding processing-time windows offset by -8 hours
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">SlidingProcessingTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">hours</span><span class="o">(</span><span class="mi">12</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">hours</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="o">,</span> <span class="nc">Time</span><span class="o">.</span><span class="n">hours</span><span class="o">(</span><span class="o">-</span><span class="mi">8</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><p>时间间隔可以通过使用 <code>Time.milliseconds(x)</code>, <code>Time.seconds(x)</code>, <code>Time.minutes(x)</code> 等中的一个来指定。</p>
+<p>如上一个例子所示，滑动窗口分配器还可以采取一个可选的偏移量(<code>offset</code>)参数，用于改变窗口的对齐方式。例如，在没有偏移量的情况下，每小时滑动30分钟的窗口与纪元对齐，也就是说，你将得到 <code>1:00:00.000 - 1:59:59.999</code>，<code>1:30:00.000 - 2:29:59.999</code> 等窗口。如果你想改变这一点，你可以给出一个偏移量。例如，如果偏移量为15分钟，您将得到 <code>1:15:00.000 - 2:14:59.999</code>，<code>1:45:00.000 - 2:44:59.999</code> 等。偏移量的一个重要用途是调整窗口到 UTC-0 以外的时区。例如，在中国，你必须指定一个 <code>Time.hours(-8)</code> 的偏移。</p>
+<h2 id="会话窗口">会话窗口</h2>
+<p>会话窗口分配器按活动的会话对元素进行分组。与滚动窗口和滑动窗口不同，会话窗口不重叠，也没有固定的开始和结束时间。相反，当会话窗口在一定时间内没有接收到元素时，也就是在不活动的间隙发生时，会话窗口就会关闭。会话窗口分配器可以配置一个静态的会话间隙(session gap)，也可以配置一个会话间隙提取函数，该函数定义了多长时间的不活动期。当这个时间段(period)到期(expires)时，当前会话关闭，后续元素被分配到一个新的会话窗口。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/session-windows.svg" alt="img"></p>
+<p>以下代码片段展示了如何使用会话窗口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// event-time session windows with static gap
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">EventTimeSessionWindows</span><span class="o">.</span><span class="n">withGap</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">minutes</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// event-time session windows with dynamic gap
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">EventTimeSessionWindows</span><span class="o">.</span><span class="n">withDynamicGap</span><span class="o">(</span><span class="k">new</span> <span class="nc">SessionWindowTimeGapExtractor</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">{</span>
+      <span class="k">override</span> <span class="k">def</span> <span class="n">extract</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// determine and return session gap
+</span><span class="c1"></span>      <span class="o">}</span>
+    <span class="o">}</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="c1">// processing-time session windows with static gap
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">ProcessingTimeSessionWindows</span><span class="o">.</span><span class="n">withGap</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">minutes</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+
+<span class="c1">// processing-time session windows with dynamic gap
+</span><span class="c1"></span><span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">DynamicProcessingTimeSessionWindows</span><span class="o">.</span><span class="n">withDynamicGap</span><span class="o">(</span><span class="k">new</span> <span class="nc">SessionWindowTimeGapExtractor</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">{</span>
+      <span class="k">override</span> <span class="k">def</span> <span class="n">extract</span><span class="o">(</span><span class="n">element</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="o">{</span>
+        <span class="c1">// determine and return session gap
+</span><span class="c1"></span>      <span class="o">}</span>
+    <span class="o">}</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><p>静态间隙可以通过使用 <code>Time.milliseconds(x)</code>, <code>Time.seconds(x)</code>, <code>Time.minutes(x)</code> 等之一来指定。</p>
+<p>动态间隙可以通过实现 <code>SessionWindowTimeGapExtractor</code> 接口来指定。</p>
+<p>注意: 由于会话窗口没有固定的开始和结束，所以它们的评估方式与滚动和滑动窗口不同。在内部，会话窗口操作符为每个到达的记录创建一个新的窗口，如果它们彼此之间的距离比定义的间隙更近，就会将窗口合并在一起。为了能够合并，会话窗口操作符需要一个合并<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers">触发器</a>和一个合并<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-functions">窗口函数</a>，如 ReduceFunction、AggregateFunction 或 ProcessWindowFunction(FoldFunction 不能合并)。</p>
+<h2 id="全局窗口">全局窗口</h2>
+<p>全局窗口分配器将具有相同键的所有元素分配到同一个全局窗口。只有当你还指定了一个自定义<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers">触发器</a>时，这种窗口方案才有用。否则，任何计算都不会被执行，因为全局窗口没有一个自然的终点，我们可以在那里处理聚集的元素。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/non-windowed.svg" alt="img"></p>
+<p>下面的代码片段展示了如何使用全局窗口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">GlobalWindows</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><h2 id="窗口函数">窗口函数</h2>
+<p>在定义了窗口分配器之后，我们需要指定我们要对这些窗口中的每一个窗口进行的计算。这是窗口函数的责任，一旦系统确定一个窗口准备好进行处理，它就会用来处理每个（可能是 keyed 的）窗口的元素（关于 Flink 如何确定窗口准备好，请参见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers">触发器</a>）。</p>
+<p>窗口函数可以是 <code>ReduceFunction</code>、<code>AggregateFunction</code>、<code>FoldFunction</code> 或 <code>ProcessWindowFunction</code> 中的一种。前两个可以更有效地执行（见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#state%20size">状态大小</a>部分），因为 Flink 可以在每个窗口到达时增量地聚合元素。<code>ProcessWindowFunction</code> 可以为一个窗口中包含的所有元素获取一个 <code>Iterable</code>，以及关于元素所属窗口的附加元信息。</p>
+<p>带有 <code>ProcessWindowFunction</code> 的窗口化转换不能像其他情况一样高效执行，因为 Flink 在调用函数之前必须在内部缓冲一个窗口的所有元素。通过将 <code>ProcessWindowFunction</code> 与 <code>ReduceFunction</code>、<code>AggregateFunction</code> 或 <code>FoldFunction</code> 结合起来，既可以得到窗口元素的增量聚合，也可以得到 <code>ProcessWindowFunction</code> 接收到的额外的窗口元数据，从而缓解这种情况。我们将查看这些变体的每个例子。</p>
+<h3 id="reducefunction">ReduceFunction</h3>
+<p><code>ReduceFunction</code> 指定了如何将输入的两个元素组合起来以产生相同类型的输出元素。Flink 使用 <code>ReduceFunction</code> 来增量聚合一个窗口的元素。</p>
+<p><code>ReduceFunction</code> 可以这样定义和使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">reduce</span> <span class="o">{</span> <span class="o">(</span><span class="n">v1</span><span class="o">,</span> <span class="n">v2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">v1</span><span class="o">.</span><span class="n">_1</span><span class="o">,</span> <span class="n">v1</span><span class="o">.</span><span class="n">_2</span> <span class="o">+</span> <span class="n">v2</span><span class="o">.</span><span class="n">_2</span><span class="o">)</span> <span class="o">}</span>
+</code></pre></div><p>上面的例子把一个窗口中所有元素的元组的第二个字段相加起来。</p>
+<h3 id="aggregatefunction">AggregateFunction</h3>
+<p><code>AggregateFunction</code> 是 <code>ReduceFunction</code> 的通用版本，它有三种类型：输入类型（IN）、累加器类型（ACC）和输出类型（OUT）。输入类型是输入流中元素的类型，AggregateFunction 有一个方法用于将一个输入元素添加到累加器中。该接口还有创建一个初始累加器、将两个累加器合并成一个累加器以及从一个累加器中提取一个输出（类型为 OUT）的方法。我们将在下面的例子中看到这些方法是如何工作的。</p>
+<p>和 ReduceFunction 一样，Flink 会在窗口的输入元素到达时，对它们进行增量聚合。</p>
+<p>AggregateFunction 可以这样定义和使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> The accumulator is used to keep a running sum and a count. The [getResult] method
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> computes the average.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">AverageAggregate</span> <span class="k">extends</span> <span class="nc">AggregateFunction</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span>, <span class="o">(</span><span class="kt">Long</span>, <span class="kt">Long</span><span class="o">)</span>, <span class="kt">Double</span><span class="o">]</span> <span class="o">{</span>
+  <span class="k">override</span> <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span> <span class="k">=</span> <span class="o">(</span><span class="mi">0L</span><span class="o">,</span> <span class="mi">0L</span><span class="o">)</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">add</span><span class="o">(</span><span class="n">value</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">,</span> <span class="n">accumulator</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span>
+    <span class="o">(</span><span class="n">accumulator</span><span class="o">.</span><span class="n">_1</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">_2</span><span class="o">,</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_2</span> <span class="o">+</span> <span class="mi">1L</span><span class="o">)</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">getResult</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_1</span> <span class="o">/</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_2</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span>
+    <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="n">_1</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">_1</span><span class="o">,</span> <span class="n">a</span><span class="o">.</span><span class="n">_2</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">_2</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="o">(</span><span class="k">new</span> <span class="nc">AverageAggregate</span><span class="o">)</span>
+</code></pre></div><p>上面的例子是计算窗口中元素的第二个字段的平均值。</p>
+<h3 id="foldfunction">FoldFunction</h3>
+<p>FoldFunction 指定了窗口的输入元素如何与输出类型的元素相结合。对于添加到窗口的每个元素和当前的输出值，都会递增地调用 FoldFunction。第一个元素与输出类型的预定义初始值相结合。</p>
+<p>可以这样定义和使用 FoldFunction。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">v</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">v</span><span class="o">.</span><span class="n">_2</span> <span class="o">}</span>
+</code></pre></div><p>上面的例子将所有输入的 Long 值追加到一个初始的空字符串中。</p>
+<p>注意 <code>fold()</code> 不能用于会话窗口或其他可合并窗口。</p>
+<h3 id="processwindowfunction">ProcessWindowFunction</h3>
+<p>ProcessWindowFunction 得到一个包含窗口所有元素的 Iterable，以及一个可以访问时间和状态信息的 Context 对象，这使得它能够提供比其他窗口函数更多的灵活性。这是以性能和资源消耗为代价的，因为元素不能增量聚合，而是需要在内部缓冲，直到窗口被认为可以处理为止。</p>
+<p>ProcessWindowFunction 的签名如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">abstract</span> <span class="k">class</span> <span class="nc">ProcessWindowFunction</span><span class="o">[</span><span class="kt">IN</span>, <span class="kt">OUT</span>, <span class="kt">KEY</span>, <span class="kt">W</span> <span class="k">&lt;:</span> <span class="kt">Window</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Function</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Evaluates the window and outputs none or several elements.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param key      The key for which this window is evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param context  The context in which the window is being evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param elements The elements in the window being evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param out      A collector for emitting elements.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @throws Exception The function may throw exceptions to fail the program and trigger recovery.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">process</span><span class="o">(</span>
+      <span class="n">key</span><span class="k">:</span> <span class="kt">KEY</span><span class="o">,</span>
+      <span class="n">context</span><span class="k">:</span> <span class="kt">Context</span><span class="o">,</span>
+      <span class="n">elements</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="kt">IN</span><span class="o">]</span><span class="o">,</span>
+      <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">OUT</span><span class="o">]</span><span class="o">)</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> The context holding window metadata
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">abstract</span> <span class="k">class</span> <span class="nc">Context</span> <span class="o">{</span>
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> Returns the window that is being evaluated.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">window</span><span class="k">:</span> <span class="kt">W</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> Returns the current processing time.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">currentProcessingTime</span><span class="k">:</span> <span class="kt">Long</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> Returns the current event-time watermark.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">currentWatermark</span><span class="k">:</span> <span class="kt">Long</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> State accessor for per-key and per-window state.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">windowState</span><span class="k">:</span> <span class="kt">KeyedStateStore</span>
+
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> State accessor for per-key global state.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">globalState</span><span class="k">:</span> <span class="kt">KeyedStateStore</span>
+  <span class="o">}</span>
+
+<span class="o">}</span>
+</code></pre></div><p>注意 <code>key</code> 参数是通过为 <code>keyBy()</code> 调用指定的 <code>KeySelector</code> 提取的键。如果是元组索引键或字符串字段引用，这个键的类型总是 Tuple，你必须手动将其转换为一个正确大小的元组来提取键字段。</p>
+<p><code>ProcessWindowFunction</code> 可以这样定义和使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+  <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">_1</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">minutes</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">process</span><span class="o">(</span><span class="k">new</span> <span class="nc">MyProcessWindowFunction</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="cm">/*</span><span class="cm"> ... </span><span class="cm">*/</span>
+
+<span class="k">class</span> <span class="nc">MyProcessWindowFunction</span> <span class="k">extends</span> <span class="nc">ProcessWindowFunction</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span>, <span class="kt">String</span>, <span class="kt">String</span>, <span class="kt">TimeWindow</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">def</span> <span class="n">process</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">context</span><span class="k">:</span> <span class="kt">Context</span><span class="o">,</span> <span class="n">input</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">var</span> <span class="n">count</span> <span class="k">=</span> <span class="mi">0L</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">in</span> <span class="k">&lt;-</span> <span class="n">input</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">count</span> <span class="k">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="o">}</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="s">s&#34;</span><span class="s">Window </span><span class="si">${</span><span class="n">context</span><span class="o">.</span><span class="n">window</span><span class="si">}</span><span class="s"> count: </span><span class="si">$count</span><span class="s">&#34;</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>这个例子显示了一个 <code>ProcessWindowFunction</code>，它可以计算一个窗口中的元素。此外，窗口函数还将窗口的信息添加到输出中。</p>
+<p>注意，使用 ProcessWindowFunction 进行简单的聚合，如 <code>count</code>，效率相当低。下一节将展示如何将 <code>ReduceFunction</code> 或 <code>AggregateFunction</code> 与 <code>ProcessWindowFunction</code> 结合起来，以获得增量聚合和 <code>ProcessWindowFunction</code> 的附加信息。</p>
+<h3 id="具有增量聚合功能的-processwindowfunction">具有增量聚合功能的 ProcessWindowFunction</h3>
+<p><code>ProcessWindowFunction</code> 可以与 <code>ReduceFunction</code>、<code>AggregateFunction</code> 或 <code>FoldFunction</code> 相结合，以在元素到达窗口时进行增量聚合。当窗口关闭时，<code>ProcessWindowFunction</code> 将被提供聚合的结果。这使得它可以增量计算窗口，同时可以访问 <code>ProcessWindowFunction</code> 的附加窗口元信息。</p>
+<p>注意 您也可以使用 legacy WindowFunction 代替 ProcessWindowFunction 进行增量窗口聚合。</p>
+<h4 id="使用-reducefunction-进行增量窗口聚合">使用 ReduceFunction 进行增量窗口聚合</h4>
+<p>下面的例子展示了如何将增量 ReduceFunction 与 ProcessWindowFunction 相结合，以返回窗口中最小的事件以及窗口的开始时间。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">SensorReading</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+  <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="o">&lt;</span><span class="n">duration</span><span class="o">&gt;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">reduce</span><span class="o">(</span>
+    <span class="o">(</span><span class="n">r1</span><span class="k">:</span> <span class="kt">SensorReading</span><span class="o">,</span> <span class="n">r2</span><span class="k">:</span> <span class="kt">SensorReading</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">r1</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;</span> <span class="n">r2</span><span class="o">.</span><span class="n">value</span><span class="o">)</span> <span class="n">r2</span> <span class="k">else</span> <span class="n">r1</span> <span class="o">}</span><span class="o">,</span>
+    <span class="o">(</span> <span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+      <span class="n">context</span><span class="k">:</span> <span class="kt">ProcessWindowFunction</span><span class="o">[</span><span class="k">_</span>, <span class="k">_</span>, <span class="k">_</span>, <span class="kt">TimeWindow</span><span class="o">]</span><span class="k">#</span><span class="nc">Context</span><span class="o">,</span>
+      <span class="n">minReadings</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="kt">SensorReading</span><span class="o">]</span><span class="o">,</span>
+      <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="o">(</span><span class="kt">Long</span>, <span class="kt">SensorReading</span><span class="o">)</span><span class="o">]</span> <span class="o">)</span> <span class="k">=&gt;</span>
+      <span class="o">{</span>
+        <span class="k">val</span> <span class="n">min</span> <span class="k">=</span> <span class="n">minReadings</span><span class="o">.</span><span class="n">iterator</span><span class="o">.</span><span class="n">next</span><span class="o">(</span><span class="o">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">window</span><span class="o">.</span><span class="n">getStart</span><span class="o">,</span> <span class="n">min</span><span class="o">)</span><span class="o">)</span>
+      <span class="o">}</span>
+  <span class="o">)</span>
+</code></pre></div><h4 id="用-aggregatefunction-进行增量窗口聚合">用 AggregateFunction 进行增量窗口聚合</h4>
+<p>下面的例子展示了如何将增量的 AggregateFunction 与 ProcessWindowFunction 结合起来，计算平均值，同时将键和窗口与平均值一起发出。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+  <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="o">&lt;</span><span class="n">duration</span><span class="o">&gt;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">aggregate</span><span class="o">(</span><span class="k">new</span> <span class="nc">AverageAggregate</span><span class="o">(</span><span class="o">)</span><span class="o">,</span> <span class="k">new</span> <span class="nc">MyProcessWindowFunction</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// Function definitions
+</span><span class="c1"></span>
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> The accumulator is used to keep a running sum and a count. The [getResult] method
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> computes the average.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">AverageAggregate</span> <span class="k">extends</span> <span class="nc">AggregateFunction</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span>, <span class="o">(</span><span class="kt">Long</span>, <span class="kt">Long</span><span class="o">)</span>, <span class="kt">Double</span><span class="o">]</span> <span class="o">{</span>
+  <span class="k">override</span> <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span> <span class="k">=</span> <span class="o">(</span><span class="mi">0L</span><span class="o">,</span> <span class="mi">0L</span><span class="o">)</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">add</span><span class="o">(</span><span class="n">value</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">,</span> <span class="n">accumulator</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span>
+    <span class="o">(</span><span class="n">accumulator</span><span class="o">.</span><span class="n">_1</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">_2</span><span class="o">,</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_2</span> <span class="o">+</span> <span class="mi">1L</span><span class="o">)</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">getResult</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_1</span> <span class="o">/</span> <span class="n">accumulator</span><span class="o">.</span><span class="n">_2</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Long</span><span class="o">)</span><span class="o">)</span> <span class="k">=</span>
+    <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="n">_1</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">_1</span><span class="o">,</span> <span class="n">a</span><span class="o">.</span><span class="n">_2</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">_2</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="k">class</span> <span class="nc">MyProcessWindowFunction</span> <span class="k">extends</span> <span class="nc">ProcessWindowFunction</span><span class="o">[</span><span class="kt">Double</span>, <span class="o">(</span><span class="kt">String</span>, <span class="kt">Double</span><span class="o">)</span>, <span class="kt">String</span>, <span class="kt">TimeWindow</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">def</span> <span class="n">process</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">context</span><span class="k">:</span> <span class="kt">Context</span><span class="o">,</span> <span class="n">averages</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="kt">Double</span><span class="o">]</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Double</span><span class="o">)</span><span class="o">]</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">average</span> <span class="k">=</span> <span class="n">averages</span><span class="o">.</span><span class="n">iterator</span><span class="o">.</span><span class="n">next</span><span class="o">(</span><span class="o">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">average</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h4 id="用-foldfunction-进行增量窗口聚合">用 FoldFunction 进行增量窗口聚合</h4>
+<p>下面的例子展示了如何将增量式 FoldFunction 与 ProcessWindowFunction 相结合，以提取窗口中的事件数量，并返回窗口的键和结束时间。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">SensorReading</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+ <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+ <span class="o">.</span><span class="n">timeWindow</span><span class="o">(</span><span class="o">&lt;</span><span class="n">duration</span><span class="o">&gt;</span><span class="o">)</span>
+ <span class="o">.</span><span class="n">fold</span> <span class="o">(</span>
+    <span class="o">(</span><span class="s">&#34;&#34;</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="mi">0</span><span class="o">)</span><span class="o">,</span>
+    <span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Long</span><span class="o">,</span> <span class="nc">Int</span><span class="o">)</span><span class="o">,</span> <span class="n">r</span><span class="k">:</span> <span class="kt">SensorReading</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">(</span><span class="s">&#34;&#34;</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">acc</span><span class="o">.</span><span class="n">_3</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="o">}</span><span class="o">,</span>
+    <span class="o">(</span> <span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+      <span class="n">window</span><span class="k">:</span> <span class="kt">TimeWindow</span><span class="o">,</span>
+      <span class="n">counts</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span>, <span class="kt">Int</span><span class="o">)</span><span class="o">]</span><span class="o">,</span>
+      <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span>, <span class="kt">Int</span><span class="o">)</span><span class="o">]</span> <span class="o">)</span> <span class="k">=&gt;</span>
+      <span class="o">{</span>
+        <span class="k">val</span> <span class="n">count</span> <span class="k">=</span> <span class="n">counts</span><span class="o">.</span><span class="n">iterator</span><span class="o">.</span><span class="n">next</span><span class="o">(</span><span class="o">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">window</span><span class="o">.</span><span class="n">getEnd</span><span class="o">,</span> <span class="n">count</span><span class="o">.</span><span class="n">_3</span><span class="o">)</span><span class="o">)</span>
+      <span class="o">}</span>
+  <span class="o">)</span>
+</code></pre></div><h4 id="在-processwindowfunction-中使用-per-窗口状态">在 ProcessWindowFunction 中使用 per-窗口状态</h4>
+<p>除了访问 keyed 状态（任何富函数都可以），ProcessWindowFunction 还可以使用 keyed 状态，该状态的作用域是函数当前正在处理的窗口。在这种情况下，理解每个窗口状态所指的窗口是什么很重要。这里涉及到不同的&quot;窗口&rdquo;。</p>
+<ul>
+<li>窗口是在指定窗口操作时定义的。这可能是1小时的滚动窗口或者2小时的滑动窗口，滑动1小时。</li>
+<li>一个给定的键的定义窗口的实际实例。这可能是 12: 00 到 13: 00 的时间窗口，用户 ID xyz. 这是基于窗口定义的，会有很多窗口，基于作业当前正在处理的键的数量，基于事件属于什么时间段。</li>
+</ul>
+<p>每个窗口的状态与这两者中的后一种挂钩。意思是说，如果我们处理了1000个不同键的事件，并且所有键的事件当前都属于 <code>[12:00，13:00)</code> 时间窗口，那么将有1000个窗口实例，每个窗口都有自己的键的per-窗口状态。</p>
+<p><code>process()</code> 调用接收到的 Context 对象上有两个方法允许访问这两种类型的状态。</p>
+<ul>
+<li><code>globalState()</code>，允许访问不在窗口范围内的 keyed 状态。</li>
+<li><code>windowState()</code>，它允许访问同样作用于窗口的 keyed 状态。</li>
+</ul>
+<p>如果你预计同一窗口会有多次发射，那么这个功能是很有帮助的，因为当你对晚到的数据有晚发射的情况，或者当你有一个自定义的触发器，做投机性的早期发射时，可能会发生这种情况。在这种情况下，你会在每个窗口状态下存储之前的发射信息或发射次数。</p>
+<p>当使用窗口状态时，重要的是当窗口被清除时也要清理该状态。这应该发生在 <code>clear()</code> 方法中。</p>
+<h3 id="windowfunctionlegacy">WindowFunction(Legacy)</h3>
+<p>在一些可以使用 <code>ProcessWindowFunction</code> 的地方，你也可以使用 <code>WindowFunction</code>。这是 <code>ProcessWindowFunction</code> 的旧版本，它提供的上下文信息较少，而且没有一些先进的功能，比如每个窗口的 keyed 状态。这个接口在某些时候会被废弃。</p>
+<p>WindowFunction 的签名如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">trait</span> <span class="nc">WindowFunction</span><span class="o">[</span><span class="kt">IN</span>, <span class="kt">OUT</span>, <span class="kt">KEY</span>, <span class="kt">W</span> <span class="k">&lt;:</span> <span class="kt">Window</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Function</span> <span class="k">with</span> <span class="nc">Serializable</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Evaluates the window and outputs none or several elements.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param key    The key for which this window is evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param window The window that is being evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param input  The elements in the window being evaluated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param out    A collector for emitting elements.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @throws Exception The function may throw exceptions to fail the program and trigger recovery.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">apply</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">KEY</span><span class="o">,</span> <span class="n">window</span><span class="k">:</span> <span class="kt">W</span><span class="o">,</span> <span class="n">input</span><span class="k">:</span> <span class="kt">Iterable</span><span class="o">[</span><span class="kt">IN</span><span class="o">]</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">OUT</span><span class="o">]</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div><p>可以这样使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Long</span><span class="o">)</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">apply</span><span class="o">(</span><span class="k">new</span> <span class="nc">MyWindowFunction</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div><h3 id="触发器">触发器</h3>
+<p>触发器决定一个窗口（由窗口分配器形成）何时可以被窗口函数处理。每个 <code>WindowAssigner</code> 都有一个默认的触发器。如果默认的触发器不符合你的需求，你可以使用 <code>trigger(...)</code> 指定一个自定义的触发器。</p>
+<p>触发器接口有五个方法，允许 Trigger 对不同的事件做出反应。</p>
+<ul>
+<li><code>onElement()</code> 方法对每个添加到窗口的元素都会被调用。</li>
+<li><code>onEventTime()</code> 方法在注册的事件时间定时器启动时被调用。</li>
+<li><code>onProcessingTime()</code> 方法在注册的处理时间计时器启动时被调用。</li>
+<li><code>onMerge()</code> 方法与有状态的触发器相关，当两个触发器的对应窗口合并时，例如使用会话窗口时，就会合并两个触发器的状态。</li>
+<li>最后 <code>clear()</code> 方法在删除相应窗口时执行任何需要的操作。</li>
+</ul>
+<p>关于以上方法有两点需要注意。</p>
+<p>1）前三个方法通过返回一个 <code>TriggerResult</code> 来决定如何对其调用事件采取行动。动作可以是以下之一。</p>
+<ul>
+<li>CONTINUE：什么也不做。</li>
+<li>FIRE：触发计算。</li>
+<li>PURGE：清除窗口中的元素，以及</li>
+<li>FIRE_AND_PURGE：触发计算，之后清除窗口中的元素。</li>
+</ul>
+<ol start="2">
+<li>这些方法中的任何一种都可以用来注册处理时间或事件时间的定时器，以备将来的操作。</li>
+</ol>
+<h3 id="fire-和-purge">Fire 和 Purge</h3>
+<p>一旦触发器确定一个窗口可以处理，它就会发射，即返回 FIRE 或 FIRE_AND_PURGE。这是窗口操作者发出当前窗口结果的信号。给定一个带有 ProcessWindowFunction 的窗口，所有的元素都会被传递给 ProcessWindowFunction（可能是在将它们传递给 evictor 之后）。带有 ReduceFunction、AggregateFunction 或 FoldFunction 的窗口只是简单地发出它们急切的聚合结果。</p>
+<p>当一个触发器发射时，它可以是 FIRE 或 FIRE_AND_PURGE。FIRE 保留窗口的内容，而 FIRE_AND_PURGE 则删除其内容。默认情况下，预先实现的触发器只是 FIRE 而不清除窗口状态。</p>
+<p>注意 Purging 将简单地删除窗口的内容，并将完整地保留任何关于窗口和任何触发状态的潜在元信息。</p>
+<h3 id="窗口分配器的默认触发器">窗口分配器的默认触发器</h3>
+<p>WindowAssigner 的默认触发器适合于许多用例。例如，所有的事件时间窗口分配器都有一个 EventTimeTrigger 作为默认触发器。这个触发器仅仅是在水印通过窗口结束后就会触发。</p>
+<p>注意：GlobalWindow 的默认触发器是 NeverTrigger，它永远不会触发。因此，在使用 GlobalWindow 时，您必须定义一个自定义的触发器。</p>
+<p>注意：通过使用 trigger() 指定一个触发器，您将覆盖一个 WindowAssigner 的默认触发器。例如，如果你为 TumblingEventTimeWindows 指定了一个 CountTrigger，你将不再获得基于时间进度的窗口启动，而只能通过计数来获得。现在，如果你想同时基于时间和计数做出反应，你必须编写自己的自定义触发器。</p>
+<h3 id="内置和自定义触发器">内置和自定义触发器</h3>
+<p>Flink 内置了一些触发器。</p>
+<ul>
+<li>前面已经提到过的, EventTimeTrigger 会根据水印测量的事件时间的进展而触发。</li>
+<li>处理时间触发器（ProcessingTimeTrigger）基于处理时间而触发。</li>
+<li>CountTrigger 在一个窗口中的元素数量超过给定的限制时触发。</li>
+<li>PurgingTrigger 将另一个触发器作为参数，并将其转换为一个清洗触发器。</li>
+</ul>
+<p>如果你需要实现一个自定义的触发器，你应该查看抽象的 <a href="https://github.com/apache/flink/blob/master//flink-streaming-java/src/main/java/org/apache/flink/streaming/api/windowing/triggers/Trigger.java">Trigger</a> 类。请注意，API 仍在不断发展，可能会在 Flink 的未来版本中改变。</p>
+<h3 id="evictors">Evictors</h3>
+<p>Flink 的窗口模型允许在 WindowAssigner 和 Trigger 之外指定一个可选的 Evictor。这可以通过 <code>evictor(...)</code> 方法来完成（如本文开头所示）。Evictor 能够在触发器触发后和应用窗口函数之前和/或之后从窗口中移除元素。要做到这一点，Evictor 接口有两个方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="cm">/**
+</span><span class="cm"> * Optionally evicts elements. Called before windowing function.
+</span><span class="cm"> *
+</span><span class="cm"> * @param elements The elements currently in the pane.
+</span><span class="cm"> * @param size The current number of elements in the pane.
+</span><span class="cm"> * @param window The {@link Window}
+</span><span class="cm"> * @param evictorContext The context for the Evictor
+</span><span class="cm"> */</span>
+<span class="kt">void</span> <span class="nf">evictBefore</span><span class="o">(</span><span class="n">Iterable</span><span class="o">&lt;</span><span class="n">TimestampedValue</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">,</span> <span class="kt">int</span> <span class="n">size</span><span class="o">,</span> <span class="n">W</span> <span class="n">window</span><span class="o">,</span> <span class="n">EvictorContext</span> <span class="n">evictorContext</span><span class="o">)</span><span class="o">;</span>
+
+<span class="cm">/**
+</span><span class="cm"> * Optionally evicts elements. Called after windowing function.
+</span><span class="cm"> *
+</span><span class="cm"> * @param elements The elements currently in the pane.
+</span><span class="cm"> * @param size The current number of elements in the pane.
+</span><span class="cm"> * @param window The {@link Window}
+</span><span class="cm"> * @param evictorContext The context for the Evictor
+</span><span class="cm"> */</span>
+<span class="kt">void</span> <span class="nf">evictAfter</span><span class="o">(</span><span class="n">Iterable</span><span class="o">&lt;</span><span class="n">TimestampedValue</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">,</span> <span class="kt">int</span> <span class="n">size</span><span class="o">,</span> <span class="n">W</span> <span class="n">window</span><span class="o">,</span> <span class="n">EvictorContext</span> <span class="n">evictorContext</span><span class="o">)</span><span class="o">;</span>
+</code></pre></div><p><code>evictBefore()</code> 包含在窗口函数之前应用的驱逐逻辑，而 <code>evictAfter()</code> 包含在窗口函数之后应用的逻辑。在应用窗口函数之前被驱逐的元素将不会被它处理。</p>
+<p>Flink 自带了三个预先实现的驱逐器。这三个是:</p>
+<ul>
+<li>CountEvictor：从窗口中保留最多用户指定数量的元素，并从窗口缓冲区开始丢弃剩余的元素。</li>
+<li>DeltaEvictor：取 DeltaFunction 和阈值，计算窗口缓冲区中最后一个元素和剩余元素之间的 delta，并删除 delta 大于或等于阈值的元素。</li>
+<li>TimeEvictor：以毫秒为单位的时间间隔作为参数，对于一个给定的窗口，它在其元素中找到最大的时间戳 max_ts，并删除所有时间戳小于 max_ts - interval 的元素。</li>
+</ul>
+<p>默认情况下，所有预先实现的 evictor 都会在 window 函数之前应用其逻辑。</p>
+<p>注意: 指定一个 evictor 可以防止任何预聚集，因为一个窗口的所有元素都必须在应用计算之前传递给 evictor。</p>
+<p>注意 Flink 不保证窗口内元素的顺序。这意味着，虽然 evictor 可以从窗口的开头移除元素，但这些元素不一定是最先或最后到达的。</p>
+<h2 id="允许的延迟">允许的延迟</h2>
+<p>当使用事件时间窗口时，可能会发生元素迟到的情况，也就是说，Flink 用来跟踪事件时间进度的水印已经超过了元素所属窗口的结束时间戳。关于 Flink 如何处理事件时间，请参见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间</a>，尤其是<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html#late-elements">迟到元素</a>。</p>
+<p>默认情况下，当水印超过窗口的结束时间时，晚期元素就会被删除。然而，Flink 允许为窗口操作者指定一个最大允许延迟。允许延迟指定了元素在被丢弃之前可以迟到多少时间，其默认值为0。 在水印通过窗口结束后但在其通过窗口结束前加上允许延迟之前到达的元素，仍然会被添加到窗口中。根据所使用的触发器，一个迟到但未被丢弃的元素可能会导致窗口再次启动。EventTimeTrigger 就属于这种情况。</p>
+<p>为了使这个工作，Flink 会保持窗口的状态，直到它们的允许延迟过期。一旦发生这种情况，Flink 就会删除窗口并删除其状态，这一点在<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-lifecycle">窗口生命周期</a>部分也有描述。</p>
+<p>默认情况下，允许的延迟被设置为0，也就是说，到达水印后面的元素将被丢弃。</p>
+<p>您可以像这样指定允许的延迟。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">allowedLateness</span><span class="o">(</span><span class="o">&lt;</span><span class="n">time</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+</code></pre></div><p>注意 当使用 GlobalWindows 窗口分配器时，由于全局窗口的结束时间戳是 Long.MAX_VALUE，因此没有数据被认为是迟到数据。</p>
+<h3 id="作为侧输出获取迟到数据">作为侧输出获取迟到数据</h3>
+<p>使用 Flink 的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/side_output.html">侧输出</a>功能，你可以得到一个被丢弃的迟到数据流。</p>
+<p>首先，你需要在窗口化的数据流上使用 <code>sideOutputLateData(OutputTag)</code> 来指定你要获取迟到的数据。然后，你就可以在窗口化操作的结果上得到侧输出流。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">lateOutputTag</span> <span class="k">=</span> <span class="nc">OutputTag</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span><span class="o">(</span><span class="s">&#34;late-data&#34;</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">assigner</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">allowedLateness</span><span class="o">(</span><span class="o">&lt;</span><span class="n">time</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">sideOutputLateData</span><span class="o">(</span><span class="n">lateOutputTag</span><span class="o">)</span>
+    <span class="o">.</span><span class="o">&lt;</span><span class="n">windowed</span> <span class="n">transformation</span><span class="o">&gt;</span><span class="o">(</span><span class="o">&lt;</span><span class="n">window</span> <span class="n">function</span><span class="o">&gt;</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">lateStream</span> <span class="k">=</span> <span class="n">result</span><span class="o">.</span><span class="n">getSideOutput</span><span class="o">(</span><span class="n">lateOutputTag</span><span class="o">)</span>
+</code></pre></div><h4 id="迟到元素的考虑">迟到元素的考虑</h4>
+<p>当指定允许的延迟大于0时，在水印通过窗口结束后，窗口及其内容将被保留。在这些情况下，当一个迟到但未被丢弃的元素到达时，它可能会触发窗口的另一次发射。这些发射被称为晚期发射，因为它们是由晚期事件触发的，与主发射相反，主发射是窗口的第一次发射。在会话窗口的情况下，迟发可能会进一步导致窗口的合并，因为它们可能会&quot;弥合&quot;两个已经存在的、未合并的窗口之间的差距。</p>
+<p>注意：你应该意识到，晚点发射的元素应该被视为之前计算的更新结果，也就是说，你的数据流将包含同一计算的多个结果。根据你的应用，你需要考虑到这些重复的结果，或者对它们进行重复复制。</p>
+<h3 id="处理窗口结果">处理窗口结果</h3>
+<p>窗口化操作的结果又是一个 DataStream，在结果元素中没有保留任何关于窗口化操作的信息，所以如果你想保留窗口的元信息，你必须在你的 <code>ProcessWindowFunction</code> 的结果元素中手动编码这些信息。在结果元素上设置的唯一相关信息是元素的时间戳。这被设置为处理过的窗口的最大允许时间戳，也就是结束时间戳-1，因为窗口结束时间戳是独占的。注意，这对事件时间窗口和处理时间窗口都是如此，即在窗口化操作后元素总是有一个时间戳，但这个时间戳可以是事件时间时间戳，也可以是处理时间时间戳。对于处理时间窗口来说，这没有特别的影响，但是对于事件时间窗口来说，加上水印与窗口的交互方式，使得<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#consecutive-windowed-operations">连续的窗口化操作</a>具有相同的窗口大小。我们将在看完水印如何与窗口交互后再谈这个问题。</p>
+<h4 id="水印和窗口的交互">水印和窗口的交互</h4>
+<p>在继续本节之前，你可能想看看我们关于<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间和水印</a>的章节。</p>
+<p>当水印到达窗口操作符时，会触发两件事。</p>
+<ul>
+<li>水印会触发计算所有窗口的最大时间戳（就是结束时间戳-1）小于新水印的窗口。</li>
+<li>水印被转发到下游的操作中</li>
+</ul>
+<p>直观地说，水印会&quot;冲掉&quot;任何在下游操作中被认为是晚期的窗口，一旦它们收到该水印。</p>
+<h4 id="连续的窗口操作">连续的窗口操作</h4>
+<p>如前所述，计算窗口化结果的时间戳的方式以及水印与窗口的交互方式允许将连续的窗口化操作串在一起。当你想进行两个连续的窗口化操作时，如果你想使用不同的键，但仍然希望来自同一个上游窗口的元素最终出现在同一个下游窗口中，这就很有用。考虑这个例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">input</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="k">val</span> <span class="n">resultsPerKey</span> <span class="k">=</span> <span class="n">input</span>
+    <span class="o">.</span><span class="n">keyBy</span><span class="o">(</span><span class="o">&lt;</span><span class="n">key</span> <span class="n">selector</span><span class="o">&gt;</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">window</span><span class="o">(</span><span class="nc">TumblingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">reduce</span><span class="o">(</span><span class="k">new</span> <span class="nc">Summer</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">globalResults</span> <span class="k">=</span> <span class="n">resultsPerKey</span>
+    <span class="o">.</span><span class="n">windowAll</span><span class="o">(</span><span class="nc">TumblingEventTimeWindows</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="nc">Time</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">process</span><span class="o">(</span><span class="k">new</span> <span class="nc">TopKWindowFunction</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div><p>在这个例子中，第一次操作的时间窗口 <code>[0，5)</code> 的结果也会在随后的窗口操作中最终出现在时间窗口 <code>[0，5)</code>。这样就可以计算每个键的和，然后在第二个操作中计算同一窗口内的 top-k 元素。</p>
+<h3 id="有用的状态大小考虑">有用的状态大小考虑</h3>
+<p>窗口可以在很长一段时间内（如几天、几周或几个月）被定义，因此会积累非常大的状态。在估算窗口计算的存储需求时，有几个规则需要牢记。</p>
+<ol>
+<li>
+<p>Flink 为每个元素所属的窗口创建一个副本。鉴于此，翻滚窗口为每个元素保留一个副本（一个元素正好属于一个窗口，除非它被后期丢弃）。相比之下，滑动窗口会给每个元素创建若干个，这一点在<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners">窗口分配器</a>部分有解释。因此，大小为1天，滑动1秒的滑动窗口可能不是一个好主意。</p>
+</li>
+<li>
+<p>ReduceFunction、AggregateFunction 和 FoldFunction 可以显著降低存储要求，因为它们热衷于聚合元素，每个窗口只存储一个值。相比之下，仅仅使用 ProcessWindowFunction 就需要累积所有元素。</p>
+</li>
+<li>
+<p>使用 Evictor 可以防止任何预聚集，因为一个窗口的所有元素都必须在应用计算之前通过 evictor（见 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#evictors">Evictor</a>）。</p>
+</li>
+</ol>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/datastream-api" term="datastream-api" label="DataStream API" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/operators" term="operators" label="Operators" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/windows" term="windows" label="Windows" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

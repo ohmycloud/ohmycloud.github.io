@@ -1,0 +1,866 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    Operators on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/operators/</link>
+        <description>Recent content  in Operators
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Thu, 03 Sep 2020 17:12:30 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/operators/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Joining</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-22-joining/</link>
+                
+                
+                <description>&lt;blockquote&gt;Joining&lt;/blockquote&gt;&lt;h1 id=&#34;窗口连接join&#34;&gt;窗口连接(Join)&lt;/h1&gt;
+&lt;p&gt;窗口连接(window join)将两个流的元素连接起来，这两个流有一个共同的键，并且位于同一个窗口中。这些窗口可以通过使用&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners&#34;&gt;窗口分配器&lt;/a&gt;来定义，并对两个流的元素进行评估。&lt;/p&gt;
+&lt;p&gt;然后，来自双方的元素被传递到一个用户定义的 JoinFunction 或 FlatJoinFunction 中，用户可以发出符合加入标准的结果。&lt;/p&gt;
+&lt;p&gt;一般的用法可以归纳为以下几点。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;otherStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;where&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;KeySelector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;equalTo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;KeySelector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;WindowAssigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;JoinFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;关于语义的一些说明:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;两个流中元素的成对组合的创建就像一个内部连接，这意味着一个流中的元素如果没有另一个流中的相应元素与之连接，就不会发出。&lt;/li&gt;
+&lt;li&gt;那些被加入的元素将以各自窗口中最大的时间戳作为它们的时间戳。例如，一个以 &lt;code&gt;[5, 10)&lt;/code&gt; 为边界的窗口将导致加入的元素以9作为它们的时间戳。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在下面的章节中，我们将使用一些示例性的场景来概述不同类型的窗口连接是如何进行的。&lt;/p&gt;
+&lt;h2 id=&#34;滚动窗口连接&#34;&gt;滚动窗口连接&lt;/h2&gt;
+&lt;p&gt;当执行滚动窗口连接时，所有具有共同的键和共同的滚动窗口的元素都会以成对组合的方式进行连接，并传递给 &lt;code&gt;JoinFunction&lt;/code&gt; 或 &lt;code&gt;FlatJoinFunction&lt;/code&gt;。因为这表现得像一个内连接，所以一个流的元素如果在其滚动窗口中没有来自另一个流的元素，就不会被发出去！这就是为什么我们要把一个流的元素加入到滚动窗口中。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tumbling-window-join.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;如图所示，我们定义了一个大小为2毫秒的滚动窗口，其结果是 &lt;code&gt;[0,1]&lt;/code&gt;，&lt;code&gt;[2,3]&lt;/code&gt;，&amp;hellip;形式的窗口。图中显示了每个窗口中所有元素的配对组合，这些元素将被传递给 &lt;code&gt;JoinFunction&lt;/code&gt;。请注意，在翻滚窗口 &lt;code&gt;[6,7]&lt;/code&gt; 中，没有任何元素发出，因为绿色流中没有元素存在，要与橙色元素⑥和⑦连接。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.time.Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;where&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;equalTo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;,&amp;#34;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;滑动窗连接&#34;&gt;滑动窗连接&lt;/h2&gt;
+&lt;p&gt;在执行滑动窗口连接时，所有具有共同键和共同滑动窗口的元素都会以成对组合的方式连接，并传递给 &lt;code&gt;JoinFunction&lt;/code&gt; 或 &lt;code&gt;FlatJoinFunction&lt;/code&gt;。一个流的元素如果在当前的滑动窗口中没有来自另一个流的元素，则不会被发出! 请注意，有些元素可能在一个滑动窗口中被加入，但在另一个滑动窗口中却没有!&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/sliding-window-join.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在这个例子中，我们使用的是大小为两毫秒的滑动窗口，并将它们滑动一毫秒，结果是滑动窗口 &lt;code&gt;[-1，0]，[0，1]，[1，2]，[2，3]&lt;/code&gt;，&amp;hellip;。x轴下面的加入元素就是每个滑动窗口传递给 &lt;code&gt;JoinFunction&lt;/code&gt; 的元素。这里你也可以看到，例如橙色的②与绿色的③在窗口 &lt;code&gt;[2,3]&lt;/code&gt; 中连接，但与窗口 &lt;code&gt;[1,2]&lt;/code&gt; 中的任何元素都没有连接。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.time.Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;where&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;equalTo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;SlidingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; size &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; slide &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;,&amp;#34;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;会议窗口连接&#34;&gt;会议窗口连接&lt;/h2&gt;
+&lt;p&gt;当执行会话窗口连接时，所有具有相同键的元素，当&amp;quot;组合&amp;quot;满足会话标准时，将以成对组合的方式连接，并传递给 &lt;code&gt;JoinFunction&lt;/code&gt; 或 &lt;code&gt;FlatJoinFunction&lt;/code&gt;。同样，这也是执行内部连接，所以如果有一个会话窗口只包含来自一个流的元素，就不会有输出。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/session-window-join.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在这里，我们定义了一个会话窗口加入，其中每个会话被至少1ms的间隙所分割。有三个会话，在前两个会话中，两个流中的加入元素都会传递给 &lt;code&gt;JoinFunction&lt;/code&gt;。在第三个会话中，绿色流中没有元素，所以⑧和⑨没有加入！在第三个会话中，绿色流中没有元素。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.time.Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+ 
+&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;where&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;equalTo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;EventTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withGap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;,&amp;#34;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;e2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;间隔连接&#34;&gt;间隔连接&lt;/h2&gt;
+&lt;p&gt;间隔连接将两个流的元素（我们暂且称它们为A和B）用一个共同的键连接起来，流B中的元素的时间戳与流A中元素的时间戳处于一个相对的时间间隔。&lt;/p&gt;
+&lt;p&gt;这也可以更正式地表达为 &lt;code&gt;b.timestamp∈[a.timestamp + lowerBound; a.timestamp + upperBound]&lt;/code&gt; 或 &lt;code&gt;a.timestamp + lowerBound &amp;lt;= b.timestamp &amp;lt;= a.timestamp + upperBound&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;其中a和b是A和B的元素，它们有一个共同的键。下界和上界都可以是负的或正的，只要下界总是小于或等于上界。区间连接目前只执行内连接。&lt;/p&gt;
+&lt;p&gt;当一对元素传递给 &lt;code&gt;ProcessJoinFunction&lt;/code&gt; 时，它们将被分配为两个元素中较大的时间戳（可以通过 &lt;code&gt;ProcessJoinFunction.Context&lt;/code&gt; 访问）。&lt;/p&gt;
+&lt;p&gt;注意：间隔连接目前只支持事件时间。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/interval-join.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在上面的例子中，我们将两个流&amp;quot;橙色&amp;quot;和&amp;quot;绿色&amp;quot;连接起来，下界为-2毫秒，上界为+1毫秒。默认情况下，这些边界是包容的，但可以应用 &lt;code&gt;.lowerBoundExclusive()&lt;/code&gt; 和 &lt;code&gt;.upperBoundExclusive&lt;/code&gt; 来改变行为。&lt;/p&gt;
+&lt;p&gt;再次使用更正式的符号，这将被翻译为:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;n&#34;&gt;orangeElem&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ts&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lowerBound&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;greenElem&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ts&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;orangeElem&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ts&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;upperBound&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;as indicated by the triangles.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.functions.co.ProcessJoinFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.windowing.time.Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;orangeStream&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;intervalJoin&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;greenStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;elem&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; select key &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;between&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;milliseconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ProcessJoinFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;processElement&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;left&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;right&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ctx&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;ProcessJoinFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Integer&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+         &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;collect&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;left&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;,&amp;#34;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;right&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt; 
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+      &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;原文连接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/joining.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/joining.html&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/datastream-api">DataStream API</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/operators">Operators</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/joining">Joining</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-22-joining/</guid>
+                <pubDate>Sat, 22 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+            
+            <item>
+                <title>用于外部数据访问的异步 I/O</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/</link>
+                
+                
+                <description>&lt;blockquote&gt;Asynchronous Io for External Data Access&lt;/blockquote&gt;&lt;p&gt;本页解释了如何使用 Flink 的 API 与外部数据存储进行异步 I/O。对于不熟悉异步或事件驱动编程的用户来说，一篇关于 Futures 和事件驱动编程的文章可能是有用的准备。&lt;/p&gt;
+&lt;p&gt;注：关于异步 I/O 实用程序的设计和实现的细节可以在提案和设计文件 &lt;a href=&#34;https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=65870673&#34;&gt;FLIP-12：异步I/O设计和实现中找到&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;异步io操作的必要性&#34;&gt;异步I/O操作的必要性&lt;/h2&gt;
+&lt;p&gt;在与外部系统交互时（例如用存储在数据库中的数据来丰富流事件时），需要注意与外部系统的通信延迟不会主导流应用的总工作。&lt;/p&gt;
+&lt;p&gt;奈何访问外部数据库中的数据，例如在 &lt;code&gt;MapFunction&lt;/code&gt; 中，通常意味着同步交互。一个请求被发送到数据库，&lt;code&gt;MapFunction&lt;/code&gt; 等待直到收到响应。在许多情况下，这种等待占据了函数的绝大部分时间。&lt;/p&gt;
+&lt;p&gt;与数据库的异步交互意味着一个并行函数实例可以同时处理许多请求，并同时接收响应。这样一来，等待时间就可以与发送其他请求和接收响应叠加起来。最起码，等待时间可以摊在多个请求上。这在大多数情况下会导致更高的流吞吐量。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/async_io.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;注意：通过仅仅将 &lt;code&gt;MapFunction&lt;/code&gt; 扩展到很高的并行度来提高吞吐量，在某些情况下也是可行的，但通常要付出很高的资源代价：拥有更多的并行 &lt;code&gt;MapFunction&lt;/code&gt; 实例意味着更多的任务、线程、Flink 内部网络连接、与数据库的网络连接、缓冲区以及一般的内部记账开销。&lt;/p&gt;
+&lt;h2 id=&#34;前提条件&#34;&gt;前提条件&lt;/h2&gt;
+&lt;p&gt;如上节所述，要实现对数据库（或键/值存储）的适当异步 I/O，需要向该数据库提供一个支持异步请求的客户端。许多流行的数据库都提供了这样的客户端。&lt;/p&gt;
+&lt;p&gt;在没有这样的客户端的情况下，可以尝试通过创建多个客户端，并用线程池处理同步调用，将同步客户端变成有限的并发客户端。然而，这种方法通常比一个合适的异步客户端效率低。&lt;/p&gt;
+&lt;h2 id=&#34;异步-io-api&#34;&gt;异步 I/O API&lt;/h2&gt;
+&lt;p&gt;Flink 的 Async I/O API 允许用户使用异步请求客户端与数据流。该 API 处理与数据流的集成，以及处理顺序、事件时间、容错等。&lt;/p&gt;
+&lt;p&gt;假设自己有一个目标数据库的异步客户端，需要三个部分来实现对数据库的异步 I/O 的流转换。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;一个 AsyncFunction 的实现，用来调度请求。&lt;/li&gt;
+&lt;li&gt;一个回调，获取操作结果并将其交给 &lt;code&gt;ResultFuture&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;在 DataStream 上应用异步 I/O 操作作为转换。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面的代码示例说明了基本模式。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; An implementation of the &amp;#39;AsyncFunction&amp;#39; that sends requests and sets the callback.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AsyncDatabaseRequest&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AsyncFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; The database specific client that can issue concurrent requests with callbacks &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;lazy&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;client&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DatabaseClient&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;DatabaseClient&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;host&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;post&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;credentials&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; The context used for the future callbacks &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;implicit&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;lazy&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;executor&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;ExecutionContext&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ExecutionContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromExecutor&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Executors&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;directExecutor&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+
+    &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;asyncInvoke&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultFuture&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;ResultFuture&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Unit&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+        &lt;span class=&#34;c1&#34;&gt;// issue the asynchronous request, receive a future for the result
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultFutureRequested&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Future&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;client&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+        &lt;span class=&#34;c1&#34;&gt;// set the callback to be executed once the request by the client is complete
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;c1&#34;&gt;// the callback simply forwards the result to the result future
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;n&#34;&gt;resultFutureRequested&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;onSuccess&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+            &lt;span class=&#34;k&#34;&gt;case&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;result&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultFuture&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;complete&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// create the original stream
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// apply the async I/O transformation
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultStream&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt;
+    &lt;span class=&#34;nc&#34;&gt;AsyncDataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unorderedWait&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;stream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AsyncDatabaseRequest&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1000&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;TimeUnit&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;MILLISECONDS&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;100&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;重要提示：&lt;code&gt;ResultFuture.complete&lt;/code&gt; 的第一次调用就完成了。所有后续的完成调用将被忽略。&lt;/p&gt;
+&lt;p&gt;以下两个参数控制异步操作。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;超时: 超时定义了异步请求在被认为失败之前可能需要的时间。这个参数可以防范死机/失败的请求。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Capacity（容量）：该参数定义了异步请求在被认为失败之前可能需要的时间。这个参数定义了多少个异步请求可以同时进行。尽管异步I/O方法通常会带来更好的吞吐量，但操作者仍然可以成为流应用的瓶颈。限制并发请求的数量可以确保操作者不会积累越来越多的待处理请求的积压，但一旦容量耗尽，就会触发背压。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;超时处理&#34;&gt;超时处理&lt;/h3&gt;
+&lt;p&gt;当一个异步 I/O 请求超时时，默认情况下会抛出一个异常并重新启动作业。如果你想处理超时，你可以重写 &lt;code&gt;AsyncFunction#timeout&lt;/code&gt; 方法。&lt;/p&gt;
+&lt;h3 id=&#34;结果的顺序&#34;&gt;结果的顺序&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;AsyncFunction&lt;/code&gt; 发出的并发请求经常以某种未定义的顺序完成，基于哪个请求先完成。为了控制结果记录以何种顺序发出，Flink 提供了两种模式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Unordered: 异步请求一结束，结果记录就会被发出。在异步 I/O 操作符之后，流中记录的顺序与之前不同。这种模式以处理时间为基本时间特性时，延迟最低，开销最小。使用 &lt;code&gt;AsyncDataStream.unorderedWait(...)&lt;/code&gt; 来实现这种模式。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Ordered: 在这种情况下，流的顺序被保留下来。结果记录的发出顺序与异步请求被触发的顺序相同（运算符输入记录的顺序）。为了达到这个目的，操作符会缓冲一个结果记录，直到它前面的所有记录都被发出来（或定时发出来）。这通常会在检查点中引入一些额外的延迟和一些开销，因为与无序模式相比，记录或结果在检查点状态下维持的时间更长。使用 &lt;code&gt;AsyncDataStream.orderedWait(...)&lt;/code&gt; 来处理这种模式。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;事件时间&#34;&gt;事件时间&lt;/h2&gt;
+&lt;p&gt;当流媒体应用程序使用&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间&lt;/a&gt;工作时，水印将由异步 I/O 操作符正确处理。具体来说，这意味着两种顺序模式的以下内容。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;无序的：水印不会超越记录，反之亦然，这意味着水印会建立一个顺序边界。只有在水印之间才会发出无序的记录。发生在某一水印之后的记录，只有在该水印被发射之后才会被发射。而水印则只有在该水印之前的所有输入的结果记录被发出之后才会被发出。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这意味着在有水印的情况下，无序模式会引入一些与有序模式相同的延迟和管理开销。该开销的数量取决于水印的频率。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有序的: 水印和记录的顺序被保留下来 就像记录之间的顺序被保留一样 与处理时间相比，开销没有明显变化。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;请记住，摄取时间是事件时间的一种特殊情况，其自动生成的水印是基于源处理时间的。&lt;/p&gt;
+&lt;h2 id=&#34;容错保证&#34;&gt;容错保证&lt;/h2&gt;
+&lt;p&gt;异步 I/O 操作符提供了完全精确的一次容错保证，它将飞行中的异步请求记录存储在检查点中，并在故障恢复时恢复/重新触发请求。它将飞行中的异步请求记录存储在检查点中，并在从故障中恢复时恢复/重新触发请求。&lt;/p&gt;
+&lt;h2 id=&#34;实现技巧&#34;&gt;实现技巧&lt;/h2&gt;
+&lt;p&gt;对于有 Executor（或 Scala 中的 ExecutionContext）用于回调的 Futures 实现，我们建议使用  DirectExecutor，因为回调通常只做最少的工作，而且DirectExecutor 避免了额外的线程间交接开销。回调通常只将结果交给 &lt;code&gt;ResultFuture&lt;/code&gt;，后者将其添加到输出缓冲区。从那里开始，包括记录排放和与检查点记账的交互在内的繁重逻辑无论如何都发生在一个专用线程池中。&lt;/p&gt;
+&lt;p&gt;可以通过 &lt;code&gt;org.apache.flink.runtime.concurrent.Executors.directExecutor()&lt;/code&gt; 或 &lt;code&gt;com.google.common.util.concurrent.MoreExecutors.directExecutor()&lt;/code&gt; 获得 DirectExecutor。&lt;/p&gt;
+&lt;h2 id=&#34;注意事项&#34;&gt;注意事项&lt;/h2&gt;
+&lt;p&gt;AsyncFunction 不叫多线程。&lt;/p&gt;
+&lt;p&gt;我们在这里要明确指出的一个常见的困惑是，AsyncFunction 不是以多线程的方式调用的。AsyncFunction 只存在一个实例，并且对于流的各个分区中的每一条记录，它都会被依次调用。除非 &lt;code&gt;asyncInvoke(...)&lt;/code&gt; 方法快速返回并依赖于回调（由客户端），否则不会导致正确的异步 I/O。&lt;/p&gt;
+&lt;p&gt;例如，以下模式会导致阻塞 &lt;code&gt;asyncInvoke(...)&lt;/code&gt; 函数，从而使异步行为无效。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;使用一个数据库客户端，其查找/查询方法的调用会被阻塞，直到结果被接收回来为止&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;在 &lt;code&gt;asyncInvoke(...)&lt;/code&gt; 方法中阻止/等待异步客户端返回的未来型对象。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;出于一致性的考虑，AsyncFunction 的操作符（AsyncWaitOperator）目前必须位于操作符链的头部。&lt;/p&gt;
+&lt;p&gt;由于在 FLINK-13063 问题中给出的原因，我们目前必须打破 AsyncWaitOperator 的操作符链，以防止潜在的一致性问题。这是对以前支持链的行为的改变。需要旧行为并接受潜在的违反一致性保证的用户可以手动实例化并将 AsyncWaitOperator 添加到作业图中，并通过 AsyncWaitOperator#setChainingStrategy(ChainingStrategy.ALWAYS) 将链式策略设置回链式。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/datastream-api">DataStream API</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/operators">Operators</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/io">IO</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/</guid>
+                <pubDate>Sat, 22 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+            
+            <item>
+                <title>窗口</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-22-windows/</link>
+                
+                
+                <description>&lt;blockquote&gt;Windows&lt;/blockquote&gt;&lt;h1 id=&#34;窗口&#34;&gt;窗口&lt;/h1&gt;
+&lt;p&gt;窗口是处理无限流的核心。窗口将流分割成有限大小的&amp;quot;桶&amp;rdquo;，我们可以对其应用计算。本文档主要介绍 Flink 中如何进行窗口化，以及程序员如何从其提供的功能中最大限度地受益。&lt;/p&gt;
+&lt;p&gt;下面介绍了一个窗口化 Flink 程序的一般结构。第一个片段指的是 keyed 流，而第二个片段指的是 non-keyed 流。正如人们所看到的那样，唯一的区别是 keyed 流的 &lt;code&gt;keyBy(...)&lt;/code&gt; 调用和 non-keyed 流的 &lt;code&gt;window(...)&lt;/code&gt; 变成了 &lt;code&gt;windowAll(...)&lt;/code&gt;。这也将作为本页面其他内容的路线图。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Keyed 窗口&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;stream
+       .keyBy(...)               &amp;lt;-  keyed 与 non-keyed 窗口的对比
+       .window(...)              &amp;lt;-  必须的: &amp;quot;assigner&amp;quot;
+      [.trigger(...)]            &amp;lt;-  可选的: &amp;quot;trigger&amp;quot; (否则使用默认的 trigger)
+      [.evictor(...)]            &amp;lt;-  可选的: &amp;quot;evictor&amp;quot; (否则没有 evictor)
+      [.allowedLateness(...)]    &amp;lt;-  可选的: &amp;quot;lateness&amp;quot; (否则为零)
+      [.sideOutputLateData(...)] &amp;lt;-  可选的: &amp;quot;output tag&amp;quot; (否则迟到数据无侧输出)
+       .reduce/aggregate/fold/apply()      &amp;lt;-  必须的: &amp;quot;function&amp;quot;
+      [.getSideOutput(...)]      &amp;lt;-  可选的: &amp;quot;output tag&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;Non-Keyed 窗口&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;stream
+       .windowAll(...)           &amp;lt;-  必须的: &amp;quot;assigner&amp;quot;
+      [.trigger(...)]            &amp;lt;-  可选的: &amp;quot;trigger&amp;quot; (否则使用默认的 trigger)
+      [.evictor(...)]            &amp;lt;-  可选的: &amp;quot;evictor&amp;quot; (否则没有 evictor)
+      [.allowedLateness(...)]    &amp;lt;-  可选的: &amp;quot;lateness&amp;quot; (否则为零)
+      [.sideOutputLateData(...)] &amp;lt;-  可选的: &amp;quot;output tag&amp;quot; (否则迟到数据无侧输出)
+       .reduce/aggregate/fold/apply()      &amp;lt;-  必须的: &amp;quot;function&amp;quot;
+      [.getSideOutput(...)]      &amp;lt;-  可选的: &amp;quot;output tag&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在上面，方括号中的命令(&lt;code&gt;[...]&lt;/code&gt;)是可选的。这表明 Flink 允许你以多种不同的方式定制你的窗口逻辑，以便它最适合你的需求。&lt;/p&gt;
+&lt;h2 id=&#34;窗口生命周期&#34;&gt;窗口生命周期&lt;/h2&gt;
+&lt;p&gt;简而言之，当第一个应该属于这个窗口的元素到达时，就会创建一个窗口，当时间（事件时间或处理时间）经过(passes)它的结束时间戳加上用户指定的允许延迟时，这个窗口就会被完全移除（见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#allowed-lateness&#34;&gt;允许延迟&lt;/a&gt;）。Flink 只保证对基于时间的窗口进行移除，而不保证对其他类型的窗口，如全局窗口进行移除（见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners&#34;&gt;窗口分配器&lt;/a&gt;）。例如，基于事件-时间的窗口策略每5分钟创建一个非重叠（或翻滚）的窗口，并且允许的延迟为1分钟，当第一个具有时间戳的元素落入这个区间时，Flink 将为 12:00 和 12:05 之间的区间创建一个新的窗口，当水印通过 12:06 的时间戳时，它将删除它。&lt;/p&gt;
+&lt;p&gt;此外，每个窗口将有一个触发器(见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers&#34;&gt;触发器&lt;/a&gt;)和一个函数(ProcessWindowFunction、ReduceFunction、AggregateFunction或FoldFunction)(见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-functions&#34;&gt;窗口函数&lt;/a&gt;)。函数将包含要应用于窗口内容的计算，而触发器则指定了窗口被认为可以应用函数的条件。触发策略可能是&amp;quot;当窗口中的元素数量超过4时&amp;rdquo;，或者&amp;quot;当水印经过窗口的末端时&amp;rdquo;。触发器还可以决定在创建和删除窗口之间的任何时间(any time between its creation and removal)清除窗口的内容。在这种情况下，清除只指窗口中的元素，而不是窗口元数据。这意味着新的数据仍然可以被添加到该窗口中。&lt;/p&gt;
+&lt;p&gt;除上述之外，您还可以指定一个 Evictor(见 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#evictors&#34;&gt;Evictors&lt;/a&gt;)，它将能够在触发器触发后以及在函数应用之前和/或之后从窗口中删除元素。&lt;/p&gt;
+&lt;p&gt;在下文中，我们将对上述每个组件进行更详细的介绍。我们先从上述代码段中必须的部分开始(参见 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#keyed-vs-non-keyed-windows&#34;&gt;Keyed vs Non-Keyed 窗口&lt;/a&gt;、&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigner&#34;&gt;窗口分配器&lt;/a&gt;和&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-function&#34;&gt;窗口函数&lt;/a&gt;)，然后再转向可选部分。&lt;/p&gt;
+&lt;h2 id=&#34;keyed-与-non-keyed-窗口的对比&#34;&gt;Keyed 与 Non-Keyed 窗口的对比&lt;/h2&gt;
+&lt;p&gt;首先要指定的是您的流是否应该是 keyed 的。这必须在定义窗口之前完成。使用 &lt;code&gt;keyBy(...)&lt;/code&gt; 将把您的无限流分割成逻辑 keyed 流。如果没有调用 &lt;code&gt;keyBy(...)&lt;/code&gt;，那么您的流就不是 keyed 流。&lt;/p&gt;
+&lt;p&gt;在 keyed 流的情况下，传入事件的任何属性都可以被用作键（更多细节在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/state/state.html#keyed-datastream&#34;&gt;这里&lt;/a&gt;）。拥有一个 keyed 流将允许你的窗口计算由多个任务并行执行，因为每个逻辑 keyed 流可以独立于其他流进行处理。所有指向同一键的元素将被发送到同一个并行任务(task)。&lt;/p&gt;
+&lt;p&gt;在 non-keyed 流的情况下，您的原始流不会被分割成多个逻辑流，所有的窗口化逻辑将由一个任务(task)来执行，即并行度为1。&lt;/p&gt;
+&lt;h2 id=&#34;窗口分配器&#34;&gt;窗口分配器&lt;/h2&gt;
+&lt;p&gt;在指定流是否是 keyed 流之后，下一步是定义窗口分配器。窗口分配器定义了如何将元素分配给窗口。这是通过在 &lt;code&gt;window(...)&lt;/code&gt;（对于 keyed 流）或 &lt;code&gt;windowAll()&lt;/code&gt;（对于 non-keyed 流）调用中指定您所选择的 &lt;code&gt;WindowAssigner&lt;/code&gt; 来实现的。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;WindowAssigner&lt;/code&gt; 负责将每个传入的元素分配给一个或多个窗口。Flink 为最常见的用例提供了预定义的窗口分配器，即滚动窗口、滑动窗口、会话窗口和全局窗口。您也可以通过扩展 &lt;code&gt;WindowAssigner&lt;/code&gt; 类来实现自定义窗口分配器。所有内置的窗口分配器（除了全局窗口）都是基于时间将元素分配给窗口，时间可以是处理时间，也可以是事件时间。请查看我们关于&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间&lt;/a&gt;的部分，了解处理时间和事件时间之间的区别，以及时间戳和水印是如何生成的。&lt;/p&gt;
+&lt;p&gt;基于时间的窗口有一个开始时间戳（包括）和结束时间戳（不包括），共同描述窗口的大小。在代码中，Flink 在处理基于时间的窗口时使用了 &lt;code&gt;TimeWindow&lt;/code&gt;，它有查询开始和结束时间戳的方法，还有一个额外的方法 &lt;code&gt;maxTimestamp()&lt;/code&gt;，可以返回给定窗口的最大允许时间戳。&lt;/p&gt;
+&lt;p&gt;在下文中，我们将展示 Flink 的预定义窗口分配器是如何工作的，以及如何在 DataStream 程序中使用它们。下图直观地展示了每个分配器的工作情况。紫色的圆圈代表流的元素，这些元素被某个键（在本例中是用户1、用户2和用户3）分割。x轴显示的是时间的进度。&lt;/p&gt;
+&lt;h2 id=&#34;滚动窗口&#34;&gt;滚动窗口&lt;/h2&gt;
+&lt;p&gt;滚动窗口分配器将每个元素分配到一个指定窗口大小的窗口。滚动窗口有一个固定的大小，并且不重叠。例如，如果你指定了一个大小为5分钟的滚动窗口，那么当前的窗口将被评估，并且每隔5分钟就会启动一个新的窗口，如下图所示。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/tumbling-windows.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;以下代码片段展示了如何使用滚动窗口。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// tumbling event-time windows
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// tumbling processing-time windows
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingProcessingTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// daily tumbling event-time windows offset by -8 hours.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;days&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hours&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;8&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;时间间隔可以使用 &lt;code&gt;Time.milliseconds(x)&lt;/code&gt;, &lt;code&gt;Time.seconds(x)&lt;/code&gt;, &lt;code&gt;Time.minutes(x)&lt;/code&gt; 等中的一种来指定。&lt;/p&gt;
+&lt;p&gt;如最后一个例子所示，滚动窗口分配器还可以采用一个可选的偏移量(&lt;code&gt;offset&lt;/code&gt;)参数，用于改变窗口的对齐方式。例如，在没有偏移量的情况下，每小时的滚动窗口与纪元对齐，也就是说，你会得到诸如 &lt;code&gt;1:00:00.000 - 1:59:59.999&lt;/code&gt;，&lt;code&gt;2:00:00.000 - 2:59:59.999&lt;/code&gt; 等窗口。如果你想改变这一点，你可以给出一个偏移量。例如，如果偏移量为15分钟，您将得到 &lt;code&gt;1:15:00.000 - 2:14:59.999&lt;/code&gt;，&lt;code&gt;2:15:00.000 - 3:14:59.999&lt;/code&gt; 等。偏移量的一个重要用途是调整窗口到 UTC-0 以外的时区。例如，在中国，你必须指定一个 &lt;code&gt;Time.hours(-8)&lt;/code&gt; 的偏移量。&lt;/p&gt;
+&lt;h2 id=&#34;滑动窗口&#34;&gt;滑动窗口&lt;/h2&gt;
+&lt;p&gt;滑动窗口分配器将元素分配给固定长度的窗口。与滚动窗口分配器类似，窗口的大小由窗口大小(window size)参数配置。一个额外的窗口滑动(window slide)参数控制滑动窗口的启动频率。因此，如果滑动窗口的滑块小于窗口大小，滑动窗口可以重叠。在这种情况下，元素被分配到多个窗口。&lt;/p&gt;
+&lt;p&gt;例如，你可以有10分钟大小的窗口，滑动5分钟。这样，每隔5分钟就会有一个窗口，包含过去10分钟内到达的事件，如下图所示。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/sliding-windows.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;以下代码片段展示了如何使用滑动窗口。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// sliding event-time windows
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;SlidingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// sliding processing-time windows
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;SlidingProcessingTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// sliding processing-time windows offset by -8 hours
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;SlidingProcessingTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hours&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;12&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hours&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;hours&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;8&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;时间间隔可以通过使用 &lt;code&gt;Time.milliseconds(x)&lt;/code&gt;, &lt;code&gt;Time.seconds(x)&lt;/code&gt;, &lt;code&gt;Time.minutes(x)&lt;/code&gt; 等中的一个来指定。&lt;/p&gt;
+&lt;p&gt;如上一个例子所示，滑动窗口分配器还可以采取一个可选的偏移量(&lt;code&gt;offset&lt;/code&gt;)参数，用于改变窗口的对齐方式。例如，在没有偏移量的情况下，每小时滑动30分钟的窗口与纪元对齐，也就是说，你将得到 &lt;code&gt;1:00:00.000 - 1:59:59.999&lt;/code&gt;，&lt;code&gt;1:30:00.000 - 2:29:59.999&lt;/code&gt; 等窗口。如果你想改变这一点，你可以给出一个偏移量。例如，如果偏移量为15分钟，您将得到 &lt;code&gt;1:15:00.000 - 2:14:59.999&lt;/code&gt;，&lt;code&gt;1:45:00.000 - 2:44:59.999&lt;/code&gt; 等。偏移量的一个重要用途是调整窗口到 UTC-0 以外的时区。例如，在中国，你必须指定一个 &lt;code&gt;Time.hours(-8)&lt;/code&gt; 的偏移。&lt;/p&gt;
+&lt;h2 id=&#34;会话窗口&#34;&gt;会话窗口&lt;/h2&gt;
+&lt;p&gt;会话窗口分配器按活动的会话对元素进行分组。与滚动窗口和滑动窗口不同，会话窗口不重叠，也没有固定的开始和结束时间。相反，当会话窗口在一定时间内没有接收到元素时，也就是在不活动的间隙发生时，会话窗口就会关闭。会话窗口分配器可以配置一个静态的会话间隙(session gap)，也可以配置一个会话间隙提取函数，该函数定义了多长时间的不活动期。当这个时间段(period)到期(expires)时，当前会话关闭，后续元素被分配到一个新的会话窗口。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/session-windows.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;以下代码片段展示了如何使用会话窗口。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// event-time session windows with static gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;EventTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withGap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;minutes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// event-time session windows with dynamic gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;EventTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withDynamicGap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;SessionWindowTimeGapExtractor&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;extract&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// determine and return session gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;      &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// processing-time session windows with static gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;ProcessingTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withGap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;minutes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;10&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&#34;c1&#34;&gt;// processing-time session windows with dynamic gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;DynamicProcessingTimeSessionWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;withDynamicGap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;SessionWindowTimeGapExtractor&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;extract&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;element&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;c1&#34;&gt;// determine and return session gap
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;      &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;静态间隙可以通过使用 &lt;code&gt;Time.milliseconds(x)&lt;/code&gt;, &lt;code&gt;Time.seconds(x)&lt;/code&gt;, &lt;code&gt;Time.minutes(x)&lt;/code&gt; 等之一来指定。&lt;/p&gt;
+&lt;p&gt;动态间隙可以通过实现 &lt;code&gt;SessionWindowTimeGapExtractor&lt;/code&gt; 接口来指定。&lt;/p&gt;
+&lt;p&gt;注意: 由于会话窗口没有固定的开始和结束，所以它们的评估方式与滚动和滑动窗口不同。在内部，会话窗口操作符为每个到达的记录创建一个新的窗口，如果它们彼此之间的距离比定义的间隙更近，就会将窗口合并在一起。为了能够合并，会话窗口操作符需要一个合并&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers&#34;&gt;触发器&lt;/a&gt;和一个合并&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-functions&#34;&gt;窗口函数&lt;/a&gt;，如 ReduceFunction、AggregateFunction 或 ProcessWindowFunction(FoldFunction 不能合并)。&lt;/p&gt;
+&lt;h2 id=&#34;全局窗口&#34;&gt;全局窗口&lt;/h2&gt;
+&lt;p&gt;全局窗口分配器将具有相同键的所有元素分配到同一个全局窗口。只有当你还指定了一个自定义&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers&#34;&gt;触发器&lt;/a&gt;时，这种窗口方案才有用。否则，任何计算都不会被执行，因为全局窗口没有一个自然的终点，我们可以在那里处理聚集的元素。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/non-windowed.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;下面的代码片段展示了如何使用全局窗口。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;GlobalWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;create&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;窗口函数&#34;&gt;窗口函数&lt;/h2&gt;
+&lt;p&gt;在定义了窗口分配器之后，我们需要指定我们要对这些窗口中的每一个窗口进行的计算。这是窗口函数的责任，一旦系统确定一个窗口准备好进行处理，它就会用来处理每个（可能是 keyed 的）窗口的元素（关于 Flink 如何确定窗口准备好，请参见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#triggers&#34;&gt;触发器&lt;/a&gt;）。&lt;/p&gt;
+&lt;p&gt;窗口函数可以是 &lt;code&gt;ReduceFunction&lt;/code&gt;、&lt;code&gt;AggregateFunction&lt;/code&gt;、&lt;code&gt;FoldFunction&lt;/code&gt; 或 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 中的一种。前两个可以更有效地执行（见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#state%20size&#34;&gt;状态大小&lt;/a&gt;部分），因为 Flink 可以在每个窗口到达时增量地聚合元素。&lt;code&gt;ProcessWindowFunction&lt;/code&gt; 可以为一个窗口中包含的所有元素获取一个 &lt;code&gt;Iterable&lt;/code&gt;，以及关于元素所属窗口的附加元信息。&lt;/p&gt;
+&lt;p&gt;带有 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的窗口化转换不能像其他情况一样高效执行，因为 Flink 在调用函数之前必须在内部缓冲一个窗口的所有元素。通过将 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 与 &lt;code&gt;ReduceFunction&lt;/code&gt;、&lt;code&gt;AggregateFunction&lt;/code&gt; 或 &lt;code&gt;FoldFunction&lt;/code&gt; 结合起来，既可以得到窗口元素的增量聚合，也可以得到 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 接收到的额外的窗口元数据，从而缓解这种情况。我们将查看这些变体的每个例子。&lt;/p&gt;
+&lt;h3 id=&#34;reducefunction&#34;&gt;ReduceFunction&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;ReduceFunction&lt;/code&gt; 指定了如何将输入的两个元素组合起来以产生相同类型的输出元素。Flink 使用 &lt;code&gt;ReduceFunction&lt;/code&gt; 来增量聚合一个窗口的元素。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ReduceFunction&lt;/code&gt; 可以这样定义和使用。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;reduce&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;v1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;v1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;上面的例子把一个窗口中所有元素的元组的第二个字段相加起来。&lt;/p&gt;
+&lt;h3 id=&#34;aggregatefunction&#34;&gt;AggregateFunction&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;AggregateFunction&lt;/code&gt; 是 &lt;code&gt;ReduceFunction&lt;/code&gt; 的通用版本，它有三种类型：输入类型（IN）、累加器类型（ACC）和输出类型（OUT）。输入类型是输入流中元素的类型，AggregateFunction 有一个方法用于将一个输入元素添加到累加器中。该接口还有创建一个初始累加器、将两个累加器合并成一个累加器以及从一个累加器中提取一个输出（类型为 OUT）的方法。我们将在下面的例子中看到这些方法是如何工作的。&lt;/p&gt;
+&lt;p&gt;和 ReduceFunction 一样，Flink 会在窗口的输入元素到达时，对它们进行增量聚合。&lt;/p&gt;
+&lt;p&gt;AggregateFunction 可以这样定义和使用。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; The accumulator is used to keep a running sum and a count. The [getResult] method
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; computes the average.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AverageAggregate&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AggregateFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;createAccumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;add&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;getResult&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;merge&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;aggregate&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AverageAggregate&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;上面的例子是计算窗口中元素的第二个字段的平均值。&lt;/p&gt;
+&lt;h3 id=&#34;foldfunction&#34;&gt;FoldFunction&lt;/h3&gt;
+&lt;p&gt;FoldFunction 指定了窗口的输入元素如何与输出类型的元素相结合。对于添加到窗口的每个元素和当前的输出值，都会递增地调用 FoldFunction。第一个元素与输出类型的预定义初始值相结合。&lt;/p&gt;
+&lt;p&gt;可以这样定义和使用 FoldFunction。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fold&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;acc&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;acc&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;上面的例子将所有输入的 Long 值追加到一个初始的空字符串中。&lt;/p&gt;
+&lt;p&gt;注意 &lt;code&gt;fold()&lt;/code&gt; 不能用于会话窗口或其他可合并窗口。&lt;/p&gt;
+&lt;h3 id=&#34;processwindowfunction&#34;&gt;ProcessWindowFunction&lt;/h3&gt;
+&lt;p&gt;ProcessWindowFunction 得到一个包含窗口所有元素的 Iterable，以及一个可以访问时间和状态信息的 Context 对象，这使得它能够提供比其他窗口函数更多的灵活性。这是以性能和资源消耗为代价的，因为元素不能增量聚合，而是需要在内部缓冲，直到窗口被认为可以处理为止。&lt;/p&gt;
+&lt;p&gt;ProcessWindowFunction 的签名如下。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;abstract&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;IN&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;OUT&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;KEY&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;W&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;&amp;lt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Function&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+  &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; Evaluates the window and outputs none or several elements.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param key      The key for which this window is evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param context  The context in which the window is being evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param elements The elements in the window being evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param out      A collector for emitting elements.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @throws Exception The function may throw exceptions to fail the program and trigger recovery.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;KEY&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;elements&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;IN&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;OUT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+  &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; The context holding window metadata
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;abstract&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Context&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; Returns the window that is being evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;W&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; Returns the current processing time.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;currentProcessingTime&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; Returns the current event-time watermark.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;currentWatermark&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; State accessor for per-key and per-window state.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;windowState&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;KeyedStateStore&lt;/span&gt;
+
+    &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; State accessor for per-key global state.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;globalState&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;KeyedStateStore&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;注意 &lt;code&gt;key&lt;/code&gt; 参数是通过为 &lt;code&gt;keyBy()&lt;/code&gt; 调用指定的 &lt;code&gt;KeySelector&lt;/code&gt; 提取的键。如果是元组索引键或字符串字段引用，这个键的类型总是 Tuple，你必须手动将其转换为一个正确大小的元组来提取键字段。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ProcessWindowFunction&lt;/code&gt; 可以这样定义和使用。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;timeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;minutes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; ... &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyProcessWindowFunction&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;TimeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;var&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;in&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;collect&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;s&amp;#34;&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;Window &lt;/span&gt;&lt;span class=&#34;si&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;si&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;s&#34;&gt; count: &lt;/span&gt;&lt;span class=&#34;si&#34;&gt;$count&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个例子显示了一个 &lt;code&gt;ProcessWindowFunction&lt;/code&gt;，它可以计算一个窗口中的元素。此外，窗口函数还将窗口的信息添加到输出中。&lt;/p&gt;
+&lt;p&gt;注意，使用 ProcessWindowFunction 进行简单的聚合，如 &lt;code&gt;count&lt;/code&gt;，效率相当低。下一节将展示如何将 &lt;code&gt;ReduceFunction&lt;/code&gt; 或 &lt;code&gt;AggregateFunction&lt;/code&gt; 与 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 结合起来，以获得增量聚合和 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的附加信息。&lt;/p&gt;
+&lt;h3 id=&#34;具有增量聚合功能的-processwindowfunction&#34;&gt;具有增量聚合功能的 ProcessWindowFunction&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;ProcessWindowFunction&lt;/code&gt; 可以与 &lt;code&gt;ReduceFunction&lt;/code&gt;、&lt;code&gt;AggregateFunction&lt;/code&gt; 或 &lt;code&gt;FoldFunction&lt;/code&gt; 相结合，以在元素到达窗口时进行增量聚合。当窗口关闭时，&lt;code&gt;ProcessWindowFunction&lt;/code&gt; 将被提供聚合的结果。这使得它可以增量计算窗口，同时可以访问 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的附加窗口元信息。&lt;/p&gt;
+&lt;p&gt;注意 您也可以使用 legacy WindowFunction 代替 ProcessWindowFunction 进行增量窗口聚合。&lt;/p&gt;
+&lt;h4 id=&#34;使用-reducefunction-进行增量窗口聚合&#34;&gt;使用 ReduceFunction 进行增量窗口聚合&lt;/h4&gt;
+&lt;p&gt;下面的例子展示了如何将增量 ReduceFunction 与 ProcessWindowFunction 相结合，以返回窗口中最小的事件以及窗口的开始时间。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;timeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;reduce&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;r1&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;r2&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;r1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;r2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;r2&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;else&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;r1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;ProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;, &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;, &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;TimeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;minReadings&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;min&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;minReadings&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;iterator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;collect&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getStart&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;min&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+      &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;用-aggregatefunction-进行增量窗口聚合&#34;&gt;用 AggregateFunction 进行增量窗口聚合&lt;/h4&gt;
+&lt;p&gt;下面的例子展示了如何将增量的 AggregateFunction 与 ProcessWindowFunction 结合起来，计算平均值，同时将键和窗口与平均值一起发出。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;timeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;aggregate&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AverageAggregate&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;// Function definitions
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
+&lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; The accumulator is used to keep a running sum and a count. The [getResult] method
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; computes the average.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AverageAggregate&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AggregateFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;createAccumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;add&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;getResult&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;accumulator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;override&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;merge&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyProcessWindowFunction&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ProcessWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;, &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;TimeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;context&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Context&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;averages&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;average&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;averages&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;iterator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;collect&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;average&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;用-foldfunction-进行增量窗口聚合&#34;&gt;用 FoldFunction 进行增量窗口聚合&lt;/h4&gt;
+&lt;p&gt;下面的例子展示了如何将增量式 FoldFunction 与 ProcessWindowFunction 相结合，以提取窗口中的事件数量，并返回窗口的键和结束时间。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+ &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+ &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;timeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;duration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+ &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fold&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;acc&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;r&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;SensorReading&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;acc&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_3&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TimeWindow&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;counts&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+      &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;counts&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;iterator&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+        &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;collect&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getEnd&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_3&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+      &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+  &lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;在-processwindowfunction-中使用-per-窗口状态&#34;&gt;在 ProcessWindowFunction 中使用 per-窗口状态&lt;/h4&gt;
+&lt;p&gt;除了访问 keyed 状态（任何富函数都可以），ProcessWindowFunction 还可以使用 keyed 状态，该状态的作用域是函数当前正在处理的窗口。在这种情况下，理解每个窗口状态所指的窗口是什么很重要。这里涉及到不同的&amp;quot;窗口&amp;rdquo;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;窗口是在指定窗口操作时定义的。这可能是1小时的滚动窗口或者2小时的滑动窗口，滑动1小时。&lt;/li&gt;
+&lt;li&gt;一个给定的键的定义窗口的实际实例。这可能是 12: 00 到 13: 00 的时间窗口，用户 ID xyz. 这是基于窗口定义的，会有很多窗口，基于作业当前正在处理的键的数量，基于事件属于什么时间段。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;每个窗口的状态与这两者中的后一种挂钩。意思是说，如果我们处理了1000个不同键的事件，并且所有键的事件当前都属于 &lt;code&gt;[12:00，13:00)&lt;/code&gt; 时间窗口，那么将有1000个窗口实例，每个窗口都有自己的键的per-窗口状态。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;process()&lt;/code&gt; 调用接收到的 Context 对象上有两个方法允许访问这两种类型的状态。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;globalState()&lt;/code&gt;，允许访问不在窗口范围内的 keyed 状态。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;windowState()&lt;/code&gt;，它允许访问同样作用于窗口的 keyed 状态。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果你预计同一窗口会有多次发射，那么这个功能是很有帮助的，因为当你对晚到的数据有晚发射的情况，或者当你有一个自定义的触发器，做投机性的早期发射时，可能会发生这种情况。在这种情况下，你会在每个窗口状态下存储之前的发射信息或发射次数。&lt;/p&gt;
+&lt;p&gt;当使用窗口状态时，重要的是当窗口被清除时也要清理该状态。这应该发生在 &lt;code&gt;clear()&lt;/code&gt; 方法中。&lt;/p&gt;
+&lt;h3 id=&#34;windowfunctionlegacy&#34;&gt;WindowFunction(Legacy)&lt;/h3&gt;
+&lt;p&gt;在一些可以使用 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的地方，你也可以使用 &lt;code&gt;WindowFunction&lt;/code&gt;。这是 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的旧版本，它提供的上下文信息较少，而且没有一些先进的功能，比如每个窗口的 keyed 状态。这个接口在某些时候会被废弃。&lt;/p&gt;
+&lt;p&gt;WindowFunction 的签名如下。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;trait&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;IN&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;OUT&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;KEY&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;W&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;&amp;lt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Function&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;with&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Serializable&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
+
+  &lt;span class=&#34;cm&#34;&gt;/*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; Evaluates the window and outputs none or several elements.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param key    The key for which this window is evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param window The window that is being evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param input  The elements in the window being evaluated.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @param out    A collector for emitting elements.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; @throws Exception The function may throw exceptions to fail the program and trigger recovery.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;cm&#34;&gt;*/&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;KEY&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;W&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;IN&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;out&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Collector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;OUT&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;可以这样使用。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;apply&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;触发器&#34;&gt;触发器&lt;/h3&gt;
+&lt;p&gt;触发器决定一个窗口（由窗口分配器形成）何时可以被窗口函数处理。每个 &lt;code&gt;WindowAssigner&lt;/code&gt; 都有一个默认的触发器。如果默认的触发器不符合你的需求，你可以使用 &lt;code&gt;trigger(...)&lt;/code&gt; 指定一个自定义的触发器。&lt;/p&gt;
+&lt;p&gt;触发器接口有五个方法，允许 Trigger 对不同的事件做出反应。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;onElement()&lt;/code&gt; 方法对每个添加到窗口的元素都会被调用。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;onEventTime()&lt;/code&gt; 方法在注册的事件时间定时器启动时被调用。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;onProcessingTime()&lt;/code&gt; 方法在注册的处理时间计时器启动时被调用。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;onMerge()&lt;/code&gt; 方法与有状态的触发器相关，当两个触发器的对应窗口合并时，例如使用会话窗口时，就会合并两个触发器的状态。&lt;/li&gt;
+&lt;li&gt;最后 &lt;code&gt;clear()&lt;/code&gt; 方法在删除相应窗口时执行任何需要的操作。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关于以上方法有两点需要注意。&lt;/p&gt;
+&lt;p&gt;1）前三个方法通过返回一个 &lt;code&gt;TriggerResult&lt;/code&gt; 来决定如何对其调用事件采取行动。动作可以是以下之一。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CONTINUE：什么也不做。&lt;/li&gt;
+&lt;li&gt;FIRE：触发计算。&lt;/li&gt;
+&lt;li&gt;PURGE：清除窗口中的元素，以及&lt;/li&gt;
+&lt;li&gt;FIRE_AND_PURGE：触发计算，之后清除窗口中的元素。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;这些方法中的任何一种都可以用来注册处理时间或事件时间的定时器，以备将来的操作。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;fire-和-purge&#34;&gt;Fire 和 Purge&lt;/h3&gt;
+&lt;p&gt;一旦触发器确定一个窗口可以处理，它就会发射，即返回 FIRE 或 FIRE_AND_PURGE。这是窗口操作者发出当前窗口结果的信号。给定一个带有 ProcessWindowFunction 的窗口，所有的元素都会被传递给 ProcessWindowFunction（可能是在将它们传递给 evictor 之后）。带有 ReduceFunction、AggregateFunction 或 FoldFunction 的窗口只是简单地发出它们急切的聚合结果。&lt;/p&gt;
+&lt;p&gt;当一个触发器发射时，它可以是 FIRE 或 FIRE_AND_PURGE。FIRE 保留窗口的内容，而 FIRE_AND_PURGE 则删除其内容。默认情况下，预先实现的触发器只是 FIRE 而不清除窗口状态。&lt;/p&gt;
+&lt;p&gt;注意 Purging 将简单地删除窗口的内容，并将完整地保留任何关于窗口和任何触发状态的潜在元信息。&lt;/p&gt;
+&lt;h3 id=&#34;窗口分配器的默认触发器&#34;&gt;窗口分配器的默认触发器&lt;/h3&gt;
+&lt;p&gt;WindowAssigner 的默认触发器适合于许多用例。例如，所有的事件时间窗口分配器都有一个 EventTimeTrigger 作为默认触发器。这个触发器仅仅是在水印通过窗口结束后就会触发。&lt;/p&gt;
+&lt;p&gt;注意：GlobalWindow 的默认触发器是 NeverTrigger，它永远不会触发。因此，在使用 GlobalWindow 时，您必须定义一个自定义的触发器。&lt;/p&gt;
+&lt;p&gt;注意：通过使用 trigger() 指定一个触发器，您将覆盖一个 WindowAssigner 的默认触发器。例如，如果你为 TumblingEventTimeWindows 指定了一个 CountTrigger，你将不再获得基于时间进度的窗口启动，而只能通过计数来获得。现在，如果你想同时基于时间和计数做出反应，你必须编写自己的自定义触发器。&lt;/p&gt;
+&lt;h3 id=&#34;内置和自定义触发器&#34;&gt;内置和自定义触发器&lt;/h3&gt;
+&lt;p&gt;Flink 内置了一些触发器。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;前面已经提到过的, EventTimeTrigger 会根据水印测量的事件时间的进展而触发。&lt;/li&gt;
+&lt;li&gt;处理时间触发器（ProcessingTimeTrigger）基于处理时间而触发。&lt;/li&gt;
+&lt;li&gt;CountTrigger 在一个窗口中的元素数量超过给定的限制时触发。&lt;/li&gt;
+&lt;li&gt;PurgingTrigger 将另一个触发器作为参数，并将其转换为一个清洗触发器。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果你需要实现一个自定义的触发器，你应该查看抽象的 &lt;a href=&#34;https://github.com/apache/flink/blob/master//flink-streaming-java/src/main/java/org/apache/flink/streaming/api/windowing/triggers/Trigger.java&#34;&gt;Trigger&lt;/a&gt; 类。请注意，API 仍在不断发展，可能会在 Flink 的未来版本中改变。&lt;/p&gt;
+&lt;h3 id=&#34;evictors&#34;&gt;Evictors&lt;/h3&gt;
+&lt;p&gt;Flink 的窗口模型允许在 WindowAssigner 和 Trigger 之外指定一个可选的 Evictor。这可以通过 &lt;code&gt;evictor(...)&lt;/code&gt; 方法来完成（如本文开头所示）。Evictor 能够在触发器触发后和应用窗口函数之前和/或之后从窗口中移除元素。要做到这一点，Evictor 接口有两个方法。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * Optionally evicts elements. Called before windowing function.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; *
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param elements The elements currently in the pane.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param size The current number of elements in the pane.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param window The {@link Window}
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param evictorContext The context for the Evictor
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; */&lt;/span&gt;
+&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;evictBefore&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;TimestampedValue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;elements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;size&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;W&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;EvictorContext&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;evictorContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;cm&#34;&gt;/**
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * Optionally evicts elements. Called after windowing function.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; *
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param elements The elements currently in the pane.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param size The current number of elements in the pane.
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param window The {@link Window}
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; * @param evictorContext The context for the Evictor
+&lt;/span&gt;&lt;span class=&#34;cm&#34;&gt; */&lt;/span&gt;
+&lt;span class=&#34;kt&#34;&gt;void&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;evictAfter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Iterable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;TimestampedValue&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;elements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;size&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;W&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;EvictorContext&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;evictorContext&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;evictBefore()&lt;/code&gt; 包含在窗口函数之前应用的驱逐逻辑，而 &lt;code&gt;evictAfter()&lt;/code&gt; 包含在窗口函数之后应用的逻辑。在应用窗口函数之前被驱逐的元素将不会被它处理。&lt;/p&gt;
+&lt;p&gt;Flink 自带了三个预先实现的驱逐器。这三个是:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CountEvictor：从窗口中保留最多用户指定数量的元素，并从窗口缓冲区开始丢弃剩余的元素。&lt;/li&gt;
+&lt;li&gt;DeltaEvictor：取 DeltaFunction 和阈值，计算窗口缓冲区中最后一个元素和剩余元素之间的 delta，并删除 delta 大于或等于阈值的元素。&lt;/li&gt;
+&lt;li&gt;TimeEvictor：以毫秒为单位的时间间隔作为参数，对于一个给定的窗口，它在其元素中找到最大的时间戳 max_ts，并删除所有时间戳小于 max_ts - interval 的元素。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;默认情况下，所有预先实现的 evictor 都会在 window 函数之前应用其逻辑。&lt;/p&gt;
+&lt;p&gt;注意: 指定一个 evictor 可以防止任何预聚集，因为一个窗口的所有元素都必须在应用计算之前传递给 evictor。&lt;/p&gt;
+&lt;p&gt;注意 Flink 不保证窗口内元素的顺序。这意味着，虽然 evictor 可以从窗口的开头移除元素，但这些元素不一定是最先或最后到达的。&lt;/p&gt;
+&lt;h2 id=&#34;允许的延迟&#34;&gt;允许的延迟&lt;/h2&gt;
+&lt;p&gt;当使用事件时间窗口时，可能会发生元素迟到的情况，也就是说，Flink 用来跟踪事件时间进度的水印已经超过了元素所属窗口的结束时间戳。关于 Flink 如何处理事件时间，请参见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间&lt;/a&gt;，尤其是&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html#late-elements&#34;&gt;迟到元素&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;默认情况下，当水印超过窗口的结束时间时，晚期元素就会被删除。然而，Flink 允许为窗口操作者指定一个最大允许延迟。允许延迟指定了元素在被丢弃之前可以迟到多少时间，其默认值为0。 在水印通过窗口结束后但在其通过窗口结束前加上允许延迟之前到达的元素，仍然会被添加到窗口中。根据所使用的触发器，一个迟到但未被丢弃的元素可能会导致窗口再次启动。EventTimeTrigger 就属于这种情况。&lt;/p&gt;
+&lt;p&gt;为了使这个工作，Flink 会保持窗口的状态，直到它们的允许延迟过期。一旦发生这种情况，Flink 就会删除窗口并删除其状态，这一点在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-lifecycle&#34;&gt;窗口生命周期&lt;/a&gt;部分也有描述。&lt;/p&gt;
+&lt;p&gt;默认情况下，允许的延迟被设置为0，也就是说，到达水印后面的元素将被丢弃。&lt;/p&gt;
+&lt;p&gt;您可以像这样指定允许的延迟。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;allowedLateness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;注意 当使用 GlobalWindows 窗口分配器时，由于全局窗口的结束时间戳是 Long.MAX_VALUE，因此没有数据被认为是迟到数据。&lt;/p&gt;
+&lt;h3 id=&#34;作为侧输出获取迟到数据&#34;&gt;作为侧输出获取迟到数据&lt;/h3&gt;
+&lt;p&gt;使用 Flink 的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/side_output.html&#34;&gt;侧输出&lt;/a&gt;功能，你可以得到一个被丢弃的迟到数据流。&lt;/p&gt;
+&lt;p&gt;首先，你需要在窗口化的数据流上使用 &lt;code&gt;sideOutputLateData(OutputTag)&lt;/code&gt; 来指定你要获取迟到的数据。然后，你就可以在窗口化操作的结果上得到侧输出流。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lateOutputTag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;OutputTag&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;late-data&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;result&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;assigner&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;allowedLateness&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;sideOutputLateData&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;lateOutputTag&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowed&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;transformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;function&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lateStream&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getSideOutput&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;lateOutputTag&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;迟到元素的考虑&#34;&gt;迟到元素的考虑&lt;/h4&gt;
+&lt;p&gt;当指定允许的延迟大于0时，在水印通过窗口结束后，窗口及其内容将被保留。在这些情况下，当一个迟到但未被丢弃的元素到达时，它可能会触发窗口的另一次发射。这些发射被称为晚期发射，因为它们是由晚期事件触发的，与主发射相反，主发射是窗口的第一次发射。在会话窗口的情况下，迟发可能会进一步导致窗口的合并，因为它们可能会&amp;quot;弥合&amp;quot;两个已经存在的、未合并的窗口之间的差距。&lt;/p&gt;
+&lt;p&gt;注意：你应该意识到，晚点发射的元素应该被视为之前计算的更新结果，也就是说，你的数据流将包含同一计算的多个结果。根据你的应用，你需要考虑到这些重复的结果，或者对它们进行重复复制。&lt;/p&gt;
+&lt;h3 id=&#34;处理窗口结果&#34;&gt;处理窗口结果&lt;/h3&gt;
+&lt;p&gt;窗口化操作的结果又是一个 DataStream，在结果元素中没有保留任何关于窗口化操作的信息，所以如果你想保留窗口的元信息，你必须在你的 &lt;code&gt;ProcessWindowFunction&lt;/code&gt; 的结果元素中手动编码这些信息。在结果元素上设置的唯一相关信息是元素的时间戳。这被设置为处理过的窗口的最大允许时间戳，也就是结束时间戳-1，因为窗口结束时间戳是独占的。注意，这对事件时间窗口和处理时间窗口都是如此，即在窗口化操作后元素总是有一个时间戳，但这个时间戳可以是事件时间时间戳，也可以是处理时间时间戳。对于处理时间窗口来说，这没有特别的影响，但是对于事件时间窗口来说，加上水印与窗口的交互方式，使得&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#consecutive-windowed-operations&#34;&gt;连续的窗口化操作&lt;/a&gt;具有相同的窗口大小。我们将在看完水印如何与窗口交互后再谈这个问题。&lt;/p&gt;
+&lt;h4 id=&#34;水印和窗口的交互&#34;&gt;水印和窗口的交互&lt;/h4&gt;
+&lt;p&gt;在继续本节之前，你可能想看看我们关于&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html&#34;&gt;事件时间和水印&lt;/a&gt;的章节。&lt;/p&gt;
+&lt;p&gt;当水印到达窗口操作符时，会触发两件事。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;水印会触发计算所有窗口的最大时间戳（就是结束时间戳-1）小于新水印的窗口。&lt;/li&gt;
+&lt;li&gt;水印被转发到下游的操作中&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;直观地说，水印会&amp;quot;冲掉&amp;quot;任何在下游操作中被认为是晚期的窗口，一旦它们收到该水印。&lt;/p&gt;
+&lt;h4 id=&#34;连续的窗口操作&#34;&gt;连续的窗口操作&lt;/h4&gt;
+&lt;p&gt;如前所述，计算窗口化结果的时间戳的方式以及水印与窗口的交互方式允许将连续的窗口化操作串在一起。当你想进行两个连续的窗口化操作时，如果你想使用不同的键，但仍然希望来自同一个上游窗口的元素最终出现在同一个下游窗口中，这就很有用。考虑这个例子。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataStream&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultsPerKey&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selector&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;window&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;reduce&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Summer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;globalResults&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;resultsPerKey&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;windowAll&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;TumblingEventTimeWindows&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;of&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;Time&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;seconds&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;process&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;TopKWindowFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在这个例子中，第一次操作的时间窗口 &lt;code&gt;[0，5)&lt;/code&gt; 的结果也会在随后的窗口操作中最终出现在时间窗口 &lt;code&gt;[0，5)&lt;/code&gt;。这样就可以计算每个键的和，然后在第二个操作中计算同一窗口内的 top-k 元素。&lt;/p&gt;
+&lt;h3 id=&#34;有用的状态大小考虑&#34;&gt;有用的状态大小考虑&lt;/h3&gt;
+&lt;p&gt;窗口可以在很长一段时间内（如几天、几周或几个月）被定义，因此会积累非常大的状态。在估算窗口计算的存储需求时，有几个规则需要牢记。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Flink 为每个元素所属的窗口创建一个副本。鉴于此，翻滚窗口为每个元素保留一个副本（一个元素正好属于一个窗口，除非它被后期丢弃）。相比之下，滑动窗口会给每个元素创建若干个，这一点在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#window-assigners&#34;&gt;窗口分配器&lt;/a&gt;部分有解释。因此，大小为1天，滑动1秒的滑动窗口可能不是一个好主意。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ReduceFunction、AggregateFunction 和 FoldFunction 可以显著降低存储要求，因为它们热衷于聚合元素，每个窗口只存储一个值。相比之下，仅仅使用 ProcessWindowFunction 就需要累积所有元素。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;使用 Evictor 可以防止任何预聚集，因为一个窗口的所有元素都必须在应用计算之前通过 evictor（见 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html#evictors&#34;&gt;Evictor&lt;/a&gt;）。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/windows.html&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/datastream-api">DataStream API</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/operators">Operators</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/windows">Windows</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-08-22-windows/</guid>
+                <pubDate>Sat, 22 Aug 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+
