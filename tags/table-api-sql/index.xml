@@ -10,7 +10,7 @@
         <description>Recent content  in Table API &amp; SQL
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Thu, 03 Sep 2020 19:37:16 +0800</lastBuildDate>
+        <lastBuildDate>Thu, 03 Sep 2020 19:49:03 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/tags/table-api-sql/index.xml" rel="self" type="application/rss&#43;xml" />
@@ -3165,121 +3165,48 @@ timeIndicator = fieldReference , &amp;quot;.&amp;quot; , ( &amp;quot;proctime&am
         
             
             <item>
-                <title>动态表</title>
-                <link>https://ohmyweekly.github.io/notes/2020-08-22-dynamic-tables/</link>
+                <title>函数</title>
+                <link>https://ohmyweekly.github.io/notes/2020-08-22-functions/</link>
                 
                 
-                <description>&lt;blockquote&gt;Dynamic Tables&lt;/blockquote&gt;&lt;h1 id=&#34;动态表&#34;&gt;动态表&lt;/h1&gt;
-&lt;p&gt;SQL 和关系代数在设计时并没有考虑到流数据。因此，关系代数（和 SQL）和流处理之间几乎没有概念上的差距。&lt;/p&gt;
-&lt;p&gt;本页讨论了这些差异，并解释了 Flink 如何在无界数据上实现与常规数据库引擎在有界数据上相同的语义。&lt;/p&gt;
-&lt;h2 id=&#34;数据流的关系查询&#34;&gt;数据流的关系查询&lt;/h2&gt;
-&lt;p&gt;下表比较了传统的关系代数和流处理在输入数据、执行和输出结果方面的情况。&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th align=&#34;left&#34;&gt;关系代数/SQL&lt;/th&gt;
-&lt;th align=&#34;left&#34;&gt;流处理&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td align=&#34;left&#34;&gt;关系（或表）是有界（多）元组的集合。&lt;/td&gt;
-&lt;td align=&#34;left&#34;&gt;流是一个无限的元组序列。&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td align=&#34;left&#34;&gt;在批数据上执行的查询（如关系数据库中的表）可以访问完整的输入数据。&lt;/td&gt;
-&lt;td align=&#34;left&#34;&gt;流式查询在启动时不能访问所有的数据，必须&amp;quot;等待&amp;quot;数据流进来。&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td align=&#34;left&#34;&gt;批量查询在产生一个固定大小的结果后就会终止。&lt;/td&gt;
-&lt;td align=&#34;left&#34;&gt;流式查询根据接收到的记录不断地更新其结果，并且永远不会完成。&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;尽管存在这些差异，但用关系查询和 SQL 处理流并不是不可能的。先进的关系数据库系统提供了一种叫做物化视图的功能。物化视图被定义为一个 SQL 查询，就像一个普通的虚拟视图一样。与虚拟视图不同，物化视图会缓存查询的结果，这样在访问视图时就不需要对查询进行评估。缓存的一个常见挑战是防止缓存提供过时的结果。当其定义查询的基表被修改时，一个物化视图就会过时。急切的视图维护是一种技术，它可以在更新基表时立即更新一个物化视图。&lt;/p&gt;
-&lt;p&gt;如果我们考虑以下几点，急切的视图维护和流上的 SQL 查询之间的联系就会变得很明显。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;数据库表是一个 INSERT、UPDATE 和 DELETE DML 语句流的结果，通常称为 changelog 流。&lt;/li&gt;
-&lt;li&gt;物化视图被定义为一个 SQL 查询。为了更新视图，查询不断处理视图的基础关系的 changelog 流。&lt;/li&gt;
-&lt;li&gt;物化视图是流式 SQL 查询的结果。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;考虑到这些要点，我们在下一节介绍以下动态表的概念。&lt;/p&gt;
-&lt;h2 id=&#34;动态表与连续查询&#34;&gt;动态表与连续查询&lt;/h2&gt;
-&lt;p&gt;动态表是 Flink 的表 API 和 SQL 支持流数据的核心概念。与代表批处理数据的静态表相比，动态表是随时间变化的。它们可以像静态批处理表一样被查询。查询动态表会产生一个连续查询。一个连续查询永远不会终止，并产生一个动态表作为结果。查询不断地更新它的（动态）结果表，以反映其（动态）输入表的变化。本质上，对动态表的连续查询与定义物化视图的查询非常相似。&lt;/p&gt;
-&lt;p&gt;需要注意的是，连续查询的结果在语义上总是等同于在输入表的快照上以批处理模式执行相同查询的结果。&lt;/p&gt;
-&lt;p&gt;下图直观地展示了流、动态表和连续查询的关系。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/stream-query-stream.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+                <description>&lt;blockquote&gt;Functions&lt;/blockquote&gt;&lt;h1 id=&#34;函数&#34;&gt;函数&lt;/h1&gt;
+&lt;p&gt;Flink Table API &amp;amp; SQL 使用户能够通过函数进行数据转换。&lt;/p&gt;
+&lt;h2 id=&#34;函数的类型&#34;&gt;函数的类型&lt;/h2&gt;
+&lt;p&gt;Flink 中的函数有两个维度来分类。&lt;/p&gt;
+&lt;p&gt;一个维度是系统（或内置）函数 v.s. 目录函数。系统函数没有命名空间，可以只用名字来引用。目录函数属于目录和数据库，因此它们有目录和数据库的命名空间，它们可以用完全/部分限定名（&lt;code&gt;catalog.db.func&lt;/code&gt; 或 &lt;code&gt;db.func&lt;/code&gt;）或者只用函数名来引用。&lt;/p&gt;
+&lt;p&gt;另一个维度是临时函数 v.s. 持久化函数。临时函数是不稳定的，只存在于一个会话的生命周期内，它们总是由用户创建的。而持久性函数则是在会话的生命周期内存在的，它们要么是由系统提供的，要么是在目录中持久存在的。&lt;/p&gt;
+&lt;p&gt;这两个维度给 Flink 用户提供了4类函数。&lt;/p&gt;
 &lt;ol&gt;
-&lt;li&gt;一个流被转换为一个动态表。&lt;/li&gt;
-&lt;li&gt;对动态表进行连续查询，得到一个新的动态表。&lt;/li&gt;
-&lt;li&gt;产生的动态表又被转换回流。&lt;/li&gt;
+&lt;li&gt;临时系统函数&lt;/li&gt;
+&lt;li&gt;系统函数&lt;/li&gt;
+&lt;li&gt;临时目录函数&lt;/li&gt;
+&lt;li&gt;目录函数&lt;/li&gt;
 &lt;/ol&gt;
-&lt;p&gt;注意：动态表首先是一个逻辑概念。动态表在查询执行过程中不一定（完全）实体化。&lt;/p&gt;
-&lt;p&gt;在下文中，我们将解释动态表和连续查询的概念，其点击事件流的模式如下。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;
-  &lt;span class=&#34;err&#34;&gt;u&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;r&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;:&lt;/span&gt;  &lt;span class=&#34;err&#34;&gt;V&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;A&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;C&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;H&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;A&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;   &lt;span class=&#34;err&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;n&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;m&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;o&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;f&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;u&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;r&lt;/span&gt;
-  &lt;span class=&#34;err&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;m&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;I&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;M&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;E&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;S&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;A&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;M&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;P&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;m&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;w&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;n&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;U&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;L&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;w&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;d&lt;/span&gt;
-  &lt;span class=&#34;err&#34;&gt;u&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;r&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;l&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;:&lt;/span&gt;   &lt;span class=&#34;err&#34;&gt;V&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;A&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;C&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;H&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;A&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;    &lt;span class=&#34;err&#34;&gt;/&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;/&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;U&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;R&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;L&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;t&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;w&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;d&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;y&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;h&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;u&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;s&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;e&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;r&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;在流上定义一个表&#34;&gt;在流上定义一个表&lt;/h2&gt;
-&lt;p&gt;为了用关系查询来处理一个流，必须把它转换成一个表。从概念上讲，流的每一条记录都被解释为对生成的表进行 INSERT 修改。从本质上讲，我们是从一个仅有 INSERT 的 changelog 流建立一个表。&lt;/p&gt;
-&lt;p&gt;下图直观地展示了点击事件流（左手边）是如何转换为表（右手边）的。随着更多的点击流记录被插入，生成的表在不断增长。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/append-mode.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;注意：一个定义在流上的表在内部是不被实现的。&lt;/p&gt;
-&lt;h3 id=&#34;连续查询&#34;&gt;连续查询&lt;/h3&gt;
-&lt;p&gt;连续查询是在动态表上进行评估，并生成一个新的动态表作为结果。与批处理查询不同，连续查询永远不会终止，并根据输入表的更新更新其结果表。在任何时间点上，连续查询的结果在语义上等同于在输入表的快照上以批处理模式执行相同查询的结果。&lt;/p&gt;
-&lt;p&gt;在下面我们展示了在点击事件流上定义的点击表上的两个查询示例。&lt;/p&gt;
-&lt;p&gt;第一个查询是一个简单的 GROUP-BY COUNT 聚合查询。它对用户字段的点击表进行分组，并统计访问的 URL 数量。下图显示了当点击表更新了更多的行时，查询是如何随着时间的推移进行评估的。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/query-groupBy-cnt.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;查询开始时，点击表（左侧）为空。当第一条记录被插入到 clicks 表中时，查询开始计算结果表。插入第一行 &lt;code&gt;[Mary, ./home]&lt;/code&gt; 后，结果表（右侧，顶部）由一条行 &lt;code&gt;[Mary, 1]&lt;/code&gt; 组成。当第二条记录 &lt;code&gt;[Bob, ./cart]&lt;/code&gt; 插入点击表后，查询更新结果表，插入一条新的记录 &lt;code&gt;[Bob, 1]&lt;/code&gt;。第三条记录 &lt;code&gt;[Mary, ./prod?id=1]&lt;/code&gt; 产生对已经计算好的结果行的更新，这样 &lt;code&gt;[Mary, 1]&lt;/code&gt; 就更新为 &lt;code&gt;[Mary, 2]&lt;/code&gt;。最后，查询将第三条记录 &lt;code&gt;[Liz，1]&lt;/code&gt; 插入到结果表中，这时第四条记录被追加到点击表中。&lt;/p&gt;
-&lt;p&gt;第二个查询与第一个查询类似，但将点击表除了用户属性也分组在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sql/queries.html#group-windows&#34;&gt;一个小时滚动窗口&lt;/a&gt;上，然后再统计 URL 的数量（窗口等基于时间的计算是基于特殊的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/time_attributes.html&#34;&gt;时间属性&lt;/a&gt;，后面会讨论）。同样，图中显示了不同时间点的输入和输出，以直观地显示动态表的变化性质。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/query-groupBy-window-cnt.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;和以前一样，输入表的点击率在左边显示。查询每隔一小时持续计算结果并更新结果表。clicks 表包含四条记录，时间戳（cTime）在 12:00:00 和 12:59:59 之间。查询从这个输入中计算出两条结果行（每个用户一条），并将它们追加到结果表中。对于 13:00:00 和 13:59:59 之间的下一个窗口，点击表包含三条记录，结果是另外两条记录被追加到结果表中。随着时间的推移，更多的行被追加到点击表中，结果表会被更新。&lt;/p&gt;
-&lt;h3 id=&#34;更新和追加查询&#34;&gt;更新和追加查询&lt;/h3&gt;
-&lt;p&gt;虽然这两个例子查询看起来很相似（都是计算一个分组计数合计），但它们在一个重要方面有所不同。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;第一个查询更新了之前发出的结果，即定义结果表的 changelog 流包含了 INSERT 和 UPDATE 变化。&lt;/li&gt;
-&lt;li&gt;第二个查询只对结果表进行追加，即结果表的 changelog 流只包含 insert 更改。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;查询产生的是只追加表还是更新表有一定的影响。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;产生更新变化的查询通常要维护更多的状态（见下节）。&lt;/li&gt;
-&lt;li&gt;将仅有附录的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/dynamic_tables.html#table-to-stream-conversion&#34;&gt;表转换为流&lt;/a&gt;与更新表的转换是不同的（参见表到流的转换部分）。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;查询限制&#34;&gt;查询限制&lt;/h3&gt;
-&lt;p&gt;许多（但不是全部）语义有效的查询可以作为流上的连续查询来评估。有些查询的计算成本太高，要么是由于它们需要维护的状态大小，要么是由于计算更新太贵。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;状态大小。连续查询是在无边界的流上进行评估的，通常应该运行数周或数月。因此，一个连续查询处理的数据总量可能非常大。必须更新之前发出的结果的查询需要维护所有发出的行，以便能够更新它们。例如，第一个示例查询需要存储每个用户的 URL 计数，以便能够增加计数，并在输入表收到新行时发出新结果。如果只跟踪注册用户，需要维护的计数数量可能不会太高。但是，如果非注册用户被分配了一个唯一的用户名，那么需要维护的次数会随着时间的推移而增加，最终可能会导致查询失败。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;url&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;clicks&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
-&lt;li&gt;计算更新。有些查询需要重新计算和更新大部分发出的结果行，即使只增加或更新一条输入记录。显然，这种查询并不适合作为连续查询来执行。一个例子是下面的查询，它根据最后一次点击的时间为每个用户计算一个 rank。只要点击表收到一条新的记录，该用户的 lastAction 就会被更新，必须计算新的 rank。但是由于两行不能有相同的 rank，所以所有排名较低的行也需要更新。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;RANK&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;OVER&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;ORDER&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lastLogin&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;
-  &lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;MAX&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;cTime&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;lastAction&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;clicks&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;user&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/query_configuration.html&#34;&gt;查询配置&lt;/a&gt;页面讨论了控制连续查询执行的参数。有些参数可用于以维护状态的大小来换取结果的准确性。&lt;/p&gt;
-&lt;h2 id=&#34;表到流的转换&#34;&gt;表到流的转换&lt;/h2&gt;
-&lt;p&gt;动态表可以像普通的数据库表一样，通过 INSERT、UPDATE 和 DELETE 的修改不断地进行修改。它可能是一张只有一行的表，不断地更新，也可能是一张只有插入的表，没有 UPDATE 和 DELETE 的修改，或者是介于两者之间的任何表。&lt;/p&gt;
-&lt;p&gt;当把动态表转换为流或写入外部系统时，需要对这些变化进行编码。Flink 的表 API 和 SQL 支持三种方式来编码动态表的变化。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;只添加流。一个只被 INSERT 修改的动态表，可以通过发出插入的行来转换成流。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;撤回流。缩回流是指有两种消息的流，即添加消息和缩回消息。通过将 INSERT 变更编码为添加消息，将 DELETE 变更编码为回撤消息，将 UPDATE 变更编码为更新（上一条）行的回撤消息和更新（新一条）行的添加消息，就可以将一张动态表转换为回撤流。下图直观地展示了动态表转换为回撤流的过程。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/undo-redo-mode.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Upsert 流。Upsert 流是一个有两种消息类型的流，即 upsert 消息和删除消息。一个动态表被转换为 upsert 流需要一个（可能是复合的）唯一键。通过将 INSERT 和 UPDATE 更改编码为 upsert 消息，将 DELETE 更改编码为 delete 消息，将具有唯一键的动态表转换为流。消耗流的操作者需要知道唯一键属性，以便正确应用消息。与 retract 流的主要区别在于 update 变更用一条消息进行编码，因此效率更高。下图直观地展示了动态表转换为 update 流的过程。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/redo-mode.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;将动态表转换为 DataStream 的 API 在&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/common.html#convert-a-table-into-a-datastream&#34;&gt;通用概念&lt;/a&gt;页面上讨论。请注意，在将动态表转换为 DataStream 时，只支持追加和收回流。在 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sourceSinks.html#define-a-tablesink&#34;&gt;TableSources 和 TableSinks&lt;/a&gt; 页面上讨论了将动态表发射到外部系统的 TableSink 接口。&lt;/p&gt;
-&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/dynamic_tables.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/dynamic_tables.html&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&#34;引用函数&#34;&gt;引用函数&lt;/h2&gt;
+&lt;p&gt;在 Flink 中，用户有两种引用函数的方式 - 精确引用函数或模棱两可的引用函数。&lt;/p&gt;
+&lt;h3 id=&#34;精确的函数引用&#34;&gt;精确的函数引用&lt;/h3&gt;
+&lt;p&gt;精确的函数引用使用户能够专门使用目录函数，并且跨目录和跨数据库，例如从 &lt;code&gt;mytable&lt;/code&gt; 中选择 &lt;code&gt;mycatalog.mydb.myfunc(x)&lt;/code&gt;，从 &lt;code&gt;mytable&lt;/code&gt; 中选择 &lt;code&gt;mydb.myfunc(x)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这只从 Flink 1.10 开始支持。&lt;/p&gt;
+&lt;h3 id=&#34;模棱两可的函数引用&#34;&gt;模棱两可的函数引用&lt;/h3&gt;
+&lt;p&gt;在模棱两可的函数引用中，用户只需在 SQL 查询中指定函数名称即可，例如：&lt;code&gt;select myfunc(x) from mytable&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;函数解析顺序&#34;&gt;函数解析顺序&lt;/h2&gt;
+&lt;p&gt;只有当有不同类型但名称相同的函数时，解析顺序才是重要的，比如有三个函数都名为 &amp;ldquo;myfunc&amp;rdquo;，但分别是临时目录、目录和系统函数。如果没有函数名冲突，则函数将被解析为唯一的一个。&lt;/p&gt;
+&lt;h3 id=&#34;精确的函数引用-1&#34;&gt;精确的函数引用&lt;/h3&gt;
+&lt;p&gt;因为系统函数没有命名空间，所以 Flink 中的精确函数引用必须指向临时目录函数或目录函数。&lt;/p&gt;
+&lt;p&gt;其解析顺序是：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;临时目录函数&lt;/li&gt;
+&lt;li&gt;目录函数&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;含糊不清的函数参考&#34;&gt;含糊不清的函数参考&lt;/h3&gt;
+&lt;p&gt;解析顺序是:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;临时系统函数&lt;/li&gt;
+&lt;li&gt;系统函数&lt;/li&gt;
+&lt;li&gt;临时目录函数，在当前目录和当前数据库中的会话。&lt;/li&gt;
+&lt;li&gt;目录函数，在当前目录和当前数据库中的会话。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/functions/&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/functions/&lt;/a&gt;&lt;/p&gt;
 </description>
                 
                         <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
@@ -3305,12 +3232,14 @@ timeIndicator = fieldReference , &amp;quot;.&amp;quot; , ( &amp;quot;proctime&am
                                     <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
                                  
                                     <category domain="https://ohmyweekly.github.io/tags/table-api-sql">Table API &amp; SQL</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/function">Function</category>
                                 
                             
                         
                     
                 
-                <guid>https://ohmyweekly.github.io/notes/2020-08-22-dynamic-tables/</guid>
+                <guid>https://ohmyweekly.github.io/notes/2020-08-22-functions/</guid>
                 <pubDate>Sat, 22 Aug 2020 00:00:00 +0800</pubDate>
             </item>
         
