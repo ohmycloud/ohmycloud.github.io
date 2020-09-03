@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-09-03T19:49:03+08:00</updated>
+    <updated>2020-09-03T20:20:09+08:00</updated>
     
     
     
@@ -6032,11 +6032,11 @@ timeIndicator = fieldReference , &quot;.&quot; , ( &quot;proctime&quot; | &quot;
             <title type="html"><![CDATA[函数]]></title>
             <link href="https://ohmyweekly.github.io/notes/2020-08-22-functions/?utm_source=atom_feed" rel="alternate" type="text/html" />
             
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-table-api-user-defined-functions/?utm_source=atom_feed" rel="related" type="text/html" title="用户定义函数" />
                 <link href="https://ohmyweekly.github.io/notes/2020-08-22-alter-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Alter 语句" />
                 <link href="https://ohmyweekly.github.io/notes/2020-08-22-catalogs/?utm_source=atom_feed" rel="related" type="text/html" title="Catalogs" />
                 <link href="https://ohmyweekly.github.io/notes/2020-08-22-create-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Create 语句" />
                 <link href="https://ohmyweekly.github.io/notes/2020-08-22-drop-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Drop 语句" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-explan-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Explan 语句" />
             
                 <id>https://ohmyweekly.github.io/notes/2020-08-22-functions/</id>
             
@@ -10417,6 +10417,947 @@ Stage 8 : Data Source
                                 <category scheme="https://ohmyweekly.github.io/tags/operators" term="operators" label="Operators" />
                              
                                 <category scheme="https://ohmyweekly.github.io/tags/io" term="io" label="IO" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[用户定义函数]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-22-table-api-user-defined-functions/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-functions/?utm_source=atom_feed" rel="related" type="text/html" title="函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-alter-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Alter 语句" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-catalogs/?utm_source=atom_feed" rel="related" type="text/html" title="Catalogs" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-create-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Create 语句" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-22-drop-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Drop 语句" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-22-table-api-user-defined-functions/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-22T00:00:00+08:00</published>
+            <updated>2020-08-22T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>User Defined Functions</blockquote><h1 id="用户自定义函数">用户自定义函数</h1>
+<p>用户自定义函数(UDFs)是扩展点，用于调用常用的逻辑或自定义逻辑，这些逻辑无法在查询中以其他方式表达。</p>
+<p>用户定义函数可以用 JVM 语言（如 Java 或 Scala）或 Python 实现。实现者可以在 UDF 中使用任意的第三方库。本页将重点介绍基于 JVM 的语言。</p>
+<h2 id="概述">概述</h2>
+<p>目前，Flink 区分了以下几种函数。</p>
+<ul>
+<li>标量函数将标量值映射到一个新的标量值。</li>
+<li>表函数将标量值映射到新的行(row)。</li>
+<li>聚合函数将多行的标量值映射到新的标量值。</li>
+<li>表聚合函数将多行的标量值映射到新的行上。</li>
+<li>异步表函数是针对 table source 执行查找的特殊函数。</li>
+</ul>
+<p>注意: 标量函数和表函数已经更新为基于<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/types.html">数据类型</a>的新类型系统。聚合函数仍然使用基于 TypeInformation 的旧类型系统。</p>
+<p>下面的示例展示了如何创建一个简单的标量函数，以及如何在表 API 和 SQL 中调用该函数。</p>
+<p>对于 SQL 查询，一个函数必须始终以一个名字注册。对于 Table API，函数可以被注册，也可以直接内联使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.api._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+
+<span class="c1">// define function logic
+</span><span class="c1"></span><span class="k">class</span> <span class="nc">SubstringFunction</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">s</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">begin</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">,</span> <span class="n">end</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">)</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">substring</span><span class="o">(</span><span class="n">begin</span><span class="o">,</span> <span class="n">end</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+
+<span class="c1">// call function &#34;inline&#34; without registration in Table API
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">SubstringFunction</span><span class="o">]</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="mi">5</span><span class="o">,</span> <span class="mi">12</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// register function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">createTemporarySystemFunction</span><span class="o">(</span><span class="s">&#34;SubstringFunction&#34;</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">SubstringFunction</span><span class="o">]</span><span class="o">)</span>
+
+<span class="c1">// call registered function in Table API
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="s">&#34;SubstringFunction&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="mi">5</span><span class="o">,</span> <span class="mi">12</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// call registered function in SQL
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span><span class="s">&#34;SELECT SubstringFunction(myField, 5, 12) FROM MyTable&#34;</span><span class="o">)</span>
+</code></pre></div><p>对于交互式会话，也可以在使用或注册函数之前对其进行参数化。在这种情况下，可以使用函数实例代替函数类作为临时函数。</p>
+<p>它要求参数是可序列化的，以便将函数实例运送到集群。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.api._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+
+<span class="c1">// define parameterizable function logic
+</span><span class="c1"></span><span class="k">class</span> <span class="nc">SubstringFunction</span><span class="o">(</span><span class="k">val</span> <span class="n">endInclusive</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">s</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">begin</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">,</span> <span class="n">end</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">)</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">substring</span><span class="o">(</span><span class="n">endInclusive</span> <span class="o">?</span> <span class="n">end</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">:</span> <span class="kt">end</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+
+<span class="c1">// call function &#34;inline&#34; without registration in Table API
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="k">new</span> <span class="nc">SubstringFunction</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="mi">5</span><span class="o">,</span> <span class="mi">12</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// register function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">createTemporarySystemFunction</span><span class="o">(</span><span class="s">&#34;SubstringFunction&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">SubstringFunction</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span><span class="o">)</span>
+</code></pre></div><h2 id="实现指南">实现指南</h2>
+<p>注意：本节目前只适用于标量函数和表函数；在集合函数更新到新的类型系统之前，本节只适用于标量函数。</p>
+<p>无论函数的种类如何，所有用户定义的函数都遵循一些基本的实现原则。</p>
+<h3 id="函数类">函数类</h3>
+<p>一个实现类必须从一个可用的基类(例如 <code>org.apache.flink.table.function.ScalarFunction</code>)中扩展出来。</p>
+<p>这个类必须被声明为 <code>public</code>，而不是 <code>abstract</code>，并且应该是全局访问的。因此，不允许使用非静态的内部类或匿名类。</p>
+<p>对于在持久化目录中存储用户定义的函数，该类必须有一个默认的构造函数，并且在运行时必须是可实例化的。</p>
+<h3 id="评估方法">评估方法</h3>
+<p>基类提供了一组可以重写的方法，如 <code>open()</code>、<code>close()</code> 或 <code>isDeterministic()</code>。</p>
+<p>然而，除了这些声明的方法外，应用于每个传入记录的主要运行时逻辑必须通过专门的评估方法来实现。</p>
+<p>根据函数种类的不同，评价方法如 <code>eval()</code>、<code>accumulate()</code> 或 <code>retract()</code> 会在运行时被代码生成的操作符调用。</p>
+<p>这些方法必须声明为 <code>public</code>，并接受一组定义明确的参数。</p>
+<p>常规的 JVM 方法调用语义适用。因此，可以</p>
+<ul>
+<li>实现重载方法，如 <code>eval(Integer)</code> 和 <code>eval(LocalDateTime)</code>。</li>
+<li>使用 var-args，如 <code>eval(Integer...)</code>。</li>
+<li>使用对象继承，如 <code>eval(Object)</code>，它同时接受 <code>LocalDateTime</code> 和 <code>Integer</code>。</li>
+<li>以及上述函数的组合，如 <code>eval(Object...)</code>，它可以接受所有类型的参数。</li>
+</ul>
+<p>如果你打算在 Scala 中实现函数，请在使用变量参数时添加 scala.annotation.varargs 注解。此外，建议使用盒状基元（如用 java.lang.Integer 代替 Int）来支持 NULL。</p>
+<p>下面的代码段显示了一个重载函数的示例。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+<span class="k">import</span> <span class="nn">java.lang.Integer</span>
+<span class="k">import</span> <span class="nn">java.lang.Double</span>
+<span class="k">import</span> <span class="nn">scala.annotation.varargs</span>
+
+<span class="c1">// function with overloaded evaluation methods
+</span><span class="c1"></span><span class="k">class</span> <span class="nc">SumFunction</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Integer</span><span class="o">)</span><span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="nc">Integer</span><span class="o">.</span><span class="n">valueOf</span><span class="o">(</span><span class="n">a</span><span class="o">)</span> <span class="o">+</span> <span class="nc">Integer</span><span class="o">.</span><span class="n">valueOf</span><span class="o">(</span><span class="n">b</span><span class="o">)</span>
+  <span class="o">}</span>
+
+  <span class="nd">@varargs</span> <span class="c1">// generate var-args like Java
+</span><span class="c1"></span>  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">d</span><span class="k">:</span> <span class="kt">Double</span><span class="kt">*</span><span class="o">)</span><span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">sum</span><span class="o">.</span><span class="n">toInt</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h3 id="类型推断">类型推断</h3>
+<p>表生态系统（类似于 SQL 标准）是一个强类型的 API。因此，函数参数和返回类型都必须映射到<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/types.html">数据类型</a>。</p>
+<p>从逻辑的角度来看，规划师需要关于预期类型、精度和规模的信息。从 JVM 的角度来看，规划师需要了解当调用用户定义的函数时，内部数据结构如何被表示为 JVM 对象。</p>
+<p>验证输入参数和推导出函数的参数和结果的数据类型的逻辑被总结在类型推理这个术语下。</p>
+<p>Flink 的用户定义函数实现了自动类型推理提取，通过反射从函数的类和它的评估方法中导出数据类型。如果这种隐式反射提取方法不成功，可以通过用 <code>@DataTypeHint</code> 和 <code>@FunctionHint</code> 注释受影响的参数、类或方法来支持提取过程。更多关于如何注释函数的例子如下所示。</p>
+<p>如果需要更高级的类型推理逻辑，实现者可以在每个用户定义的函数中显式覆盖 <code>getTypeInference()</code> 方法。然而，推荐使用注释方法，因为它将自定义类型推理逻辑保持在受影响的位置附近，并回落到其余实现的默认行为。</p>
+<h4 id="自动类型推断">自动类型推断</h4>
+<p>自动类型推理检查函数的类和评估方法，从而得出函数的参数和结果的数据类型。<code>@DataTypeHint</code> 和 <code>@FunctionHint</code> 注解支持自动提取。</p>
+<p>关于可以隐式映射到数据类型的类的完整列表，请参阅<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/types.html#data-type-extraction">数据类型提取</a>部分。</p>
+<h5 id="datatypehint">@DataTypeHint</h5>
+<p>在很多情况下，需要支持对函数的参数和返回类型进行在线自动提取。</p>
+<p>下面的示例展示了如何使用数据类型提示。更多信息可以在注解类的文档中找到。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.DataTypeHint</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.InputGroup</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.types.Row</span>
+<span class="k">import</span> <span class="nn">scala.annotation.varargs</span>
+
+<span class="c1">// function with overloaded evaluation methods
+</span><span class="c1"></span><span class="k">class</span> <span class="nc">OverloadedFunction</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+
+  <span class="c1">// no hint required
+</span><span class="c1"></span>  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+  <span class="o">}</span>
+
+  <span class="c1">// define the precision and scale of a decimal
+</span><span class="c1"></span>  <span class="nd">@DataTypeHint</span><span class="o">(</span><span class="s">&#34;DECIMAL(12, 3)&#34;</span><span class="o">)</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">double</span> <span class="n">a</span><span class="o">,</span> <span class="n">double</span> <span class="n">b</span><span class="o">)</span><span class="k">:</span> <span class="kt">BigDecimal</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">BigDecimal</span><span class="o">.</span><span class="n">valueOf</span><span class="o">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">)</span>
+  <span class="o">}</span>
+
+  <span class="c1">// define a nested data type
+</span><span class="c1"></span>  <span class="nd">@DataTypeHint</span><span class="o">(</span><span class="s">&#34;ROW&lt;s STRING, t TIMESTAMP(3) WITH LOCAL TIME ZONE&gt;&#34;</span><span class="o">)</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="nc">Int</span> <span class="n">i</span><span class="o">)</span><span class="k">:</span> <span class="kt">Row</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="nc">Row</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">String</span><span class="o">.</span><span class="n">valueOf</span><span class="o">(</span><span class="n">i</span><span class="o">)</span><span class="o">,</span> <span class="n">java</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="nc">Instant</span><span class="o">.</span><span class="n">ofEpochSecond</span><span class="o">(</span><span class="n">i</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+
+  <span class="c1">// allow wildcard input and customly serialized output
+</span><span class="c1"></span>  <span class="nd">@DataTypeHint</span><span class="o">(</span><span class="n">value</span> <span class="k">=</span> <span class="s">&#34;RAW&#34;</span><span class="o">,</span> <span class="n">bridgedTo</span> <span class="k">=</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">java</span><span class="kt">.</span><span class="kt">nio</span><span class="kt">.</span><span class="kt">ByteBuffer</span><span class="o">]</span><span class="o">)</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="nd">@DataTypeHint</span><span class="o">(</span><span class="n">inputGroup</span> <span class="k">=</span> <span class="nc">InputGroup</span><span class="o">.</span><span class="nc">ANY</span><span class="o">)</span> <span class="nc">Object</span> <span class="n">o</span><span class="o">)</span><span class="k">:</span> <span class="kt">java</span><span class="kt">.</span><span class="kt">nio</span><span class="kt">.</span><span class="kt">ByteBuffer</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="nc">MyUtils</span><span class="o">.</span><span class="n">serializeToByteBuffer</span><span class="o">(</span><span class="n">o</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h5 id="functionhint">@FunctionHint</h5>
+<p>在某些场景下，一个评估方法同时处理多种不同的数据类型是可取的。此外，在某些场景中，重载的评估方法有一个共同的结果类型，应该只声明一次。</p>
+<p><code>@FunctionHint</code> 注解可以提供从参数数据类型到结果数据类型的映射。它可以为输入、累加器和结果数据类型注释整个函数类或评估方法。一个或多个注解可以在一个类的顶部声明，也可以为每个评估方法单独声明，以便重载函数签名。所有的提示参数都是可选的。如果没有定义参数，则使用默认的基于反射的提取方式。在函数类之上定义的提示参数会被所有的评估方法继承。</p>
+<p>下面的例子展示了如何使用函数提示。更多信息可以在注解类的文档中找到。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.DataTypeHint</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.FunctionHint</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.TableFunction</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.types.Row</span>
+
+<span class="c1">// function with overloaded evaluation methods
+</span><span class="c1"></span><span class="c1">// but globally defined output type
+</span><span class="c1"></span><span class="nd">@FunctionHint</span><span class="o">(</span><span class="n">output</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;ROW&lt;s STRING, i INT&gt;&#34;</span><span class="o">)</span><span class="o">)</span>
+<span class="k">class</span> <span class="nc">OverloadedFunction</span> <span class="k">extends</span> <span class="nc">TableFunction</span><span class="o">[</span><span class="kt">Row</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">collect</span><span class="o">(</span><span class="nc">Row</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="s">&#34;Sum&#34;</span><span class="o">,</span> <span class="nc">Int</span><span class="o">.</span><span class="n">box</span><span class="o">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+
+  <span class="c1">// overloading of arguments is still possible
+</span><span class="c1"></span>  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">collect</span><span class="o">(</span><span class="nc">Row</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="s">&#34;Empty args&#34;</span><span class="o">,</span> <span class="nc">Int</span><span class="o">.</span><span class="n">box</span><span class="o">(</span><span class="o">-</span><span class="mi">1</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// decouples the type inference from evaluation methods,
+</span><span class="c1"></span><span class="c1">// the type inference is entirely determined by the function hints
+</span><span class="c1"></span><span class="nd">@FunctionHint</span><span class="o">(</span>
+  <span class="n">input</span> <span class="k">=</span> <span class="nc">Array</span><span class="o">(</span><span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;INT&#34;</span><span class="o">)</span><span class="o">,</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;INT&#34;</span><span class="o">)</span><span class="o">)</span><span class="o">,</span>
+  <span class="n">output</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;INT&#34;</span><span class="o">)</span>
+<span class="o">)</span>
+<span class="nd">@FunctionHint</span><span class="o">(</span>
+  <span class="n">input</span> <span class="k">=</span> <span class="nc">Array</span><span class="o">(</span><span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;BIGINT&#34;</span><span class="o">)</span><span class="o">,</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;BIGINT&#34;</span><span class="o">)</span><span class="o">)</span><span class="o">,</span>
+  <span class="n">output</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;BIGINT&#34;</span><span class="o">)</span>
+<span class="o">)</span>
+<span class="nd">@FunctionHint</span><span class="o">(</span>
+  <span class="n">input</span> <span class="k">=</span> <span class="nc">Array</span><span class="o">(</span><span class="o">)</span><span class="o">,</span>
+  <span class="n">output</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;BOOLEAN&#34;</span><span class="o">)</span>
+<span class="o">)</span>
+<span class="k">class</span> <span class="nc">OverloadedFunction</span> <span class="k">extends</span> <span class="nc">TableFunction</span><span class="o">[</span><span class="kt">AnyRef</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="c1">// an implementer just needs to make sure that a method exists
+</span><span class="c1"></span>  <span class="c1">// that can be called by the JVM
+</span><span class="c1"></span>  <span class="nd">@varargs</span>
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">o</span><span class="k">:</span> <span class="kt">AnyRef</span><span class="kt">*</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">o</span><span class="o">.</span><span class="n">length</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">collect</span><span class="o">(</span><span class="nc">Boolean</span><span class="o">.</span><span class="n">box</span><span class="o">(</span><span class="kc">false</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="n">collect</span><span class="o">(</span><span class="n">o</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h4 id="自定义类型推断">自定义类型推断</h4>
+<p>对于大多数情况下，<code>@DataTypeHint</code> 和 <code>@FunctionHint</code> 应该足以为用户定义的函数建模。然而，通过覆盖 <code>getTypeInference()</code> 中定义的自动类型推理，实现者可以创建任意的函数，这些函数的行为就像内置的系统函数一样。</p>
+<p>下面这个用 Java 实现的例子说明了自定义类型推理逻辑的潜力。它使用一个字符串文字参数来确定一个函数的结果类型。该函数需要两个字符串参数：第一个参数代表要解析的字符串，第二个参数代表目标类型。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">org.apache.flink.table.api.DataTypes</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.flink.table.catalog.DataTypeFactory</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.flink.table.types.inference.TypeInference</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.flink.types.Row</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">LiteralFunction</span> <span class="kd">extends</span> <span class="n">ScalarFunction</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="n">Object</span> <span class="nf">eval</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">,</span> <span class="n">String</span> <span class="n">type</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">switch</span> <span class="o">(</span><span class="n">type</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">case</span> <span class="s">&#34;INT&#34;</span><span class="o">:</span>
+        <span class="k">return</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">s</span><span class="o">)</span><span class="o">;</span>
+      <span class="k">case</span> <span class="s">&#34;DOUBLE&#34;</span><span class="o">:</span>
+        <span class="k">return</span> <span class="n">Double</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">s</span><span class="o">)</span><span class="o">;</span>
+      <span class="k">case</span> <span class="s">&#34;STRING&#34;</span><span class="o">:</span>
+      <span class="k">default</span><span class="o">:</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="c1">// the automatic, reflection-based type inference is disabled and
+</span><span class="c1"></span>  <span class="c1">// replaced by the following logic
+</span><span class="c1"></span>  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="n">TypeInference</span> <span class="nf">getTypeInference</span><span class="o">(</span><span class="n">DataTypeFactory</span> <span class="n">typeFactory</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">TypeInference</span><span class="o">.</span><span class="na">newBuilder</span><span class="o">(</span><span class="o">)</span>
+      <span class="c1">// specify typed arguments
+</span><span class="c1"></span>      <span class="c1">// parameters will be casted implicitly to those types if necessary
+</span><span class="c1"></span>      <span class="o">.</span><span class="na">typedArguments</span><span class="o">(</span><span class="n">DataTypes</span><span class="o">.</span><span class="na">STRING</span><span class="o">(</span><span class="o">)</span><span class="o">,</span> <span class="n">DataTypes</span><span class="o">.</span><span class="na">STRING</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+      <span class="c1">// specify a strategy for the result data type of the function
+</span><span class="c1"></span>      <span class="o">.</span><span class="na">outputTypeStrategy</span><span class="o">(</span><span class="n">callContext</span> <span class="o">-</span><span class="o">&gt;</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="o">!</span><span class="n">callContext</span><span class="o">.</span><span class="na">isArgumentLiteral</span><span class="o">(</span><span class="n">1</span><span class="o">)</span> <span class="o">|</span><span class="o">|</span> <span class="n">callContext</span><span class="o">.</span><span class="na">isArgumentNull</span><span class="o">(</span><span class="n">1</span><span class="o">)</span><span class="o">)</span> <span class="o">{</span>
+          <span class="k">throw</span> <span class="n">callContext</span><span class="o">.</span><span class="na">newValidationError</span><span class="o">(</span><span class="s">&#34;Literal expected for second argument.&#34;</span><span class="o">)</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// return a data type based on a literal
+</span><span class="c1"></span>        <span class="kd">final</span> <span class="n">String</span> <span class="n">literal</span> <span class="o">=</span> <span class="n">callContext</span><span class="o">.</span><span class="na">getArgumentValue</span><span class="o">(</span><span class="n">1</span><span class="o">,</span> <span class="n">String</span><span class="o">.</span><span class="na">class</span><span class="o">)</span><span class="o">.</span><span class="na">orElse</span><span class="o">(</span><span class="s">&#34;STRING&#34;</span><span class="o">)</span><span class="o">;</span>
+        <span class="k">switch</span> <span class="o">(</span><span class="n">literal</span><span class="o">)</span> <span class="o">{</span>
+          <span class="k">case</span> <span class="s">&#34;INT&#34;</span><span class="o">:</span>
+            <span class="k">return</span> <span class="n">Optional</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">DataTypes</span><span class="o">.</span><span class="na">INT</span><span class="o">(</span><span class="o">)</span><span class="o">.</span><span class="na">notNull</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+          <span class="k">case</span> <span class="s">&#34;DOUBLE&#34;</span><span class="o">:</span>
+            <span class="k">return</span> <span class="n">Optional</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">DataTypes</span><span class="o">.</span><span class="na">DOUBLE</span><span class="o">(</span><span class="o">)</span><span class="o">.</span><span class="na">notNull</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+          <span class="k">case</span> <span class="s">&#34;STRING&#34;</span><span class="o">:</span>
+          <span class="k">default</span><span class="o">:</span>
+            <span class="k">return</span> <span class="n">Optional</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">DataTypes</span><span class="o">.</span><span class="na">STRING</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+        <span class="o">}</span>
+      <span class="o">}</span><span class="o">)</span>
+      <span class="o">.</span><span class="na">build</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><h3 id="运行时集成">运行时集成</h3>
+<p>有时可能需要用户自定义函数在实际工作前获取全局运行时信息或做一些设置/清理工作。用户自定义函数提供了 <code>open()</code> 和 <code>close()</code> 方法，这些方法可以被重写，并提供与 DataStream API 的 RichFunction 中的方法类似的功能。</p>
+<p><code>open()</code> 方法在评估方法之前被调用一次。<code>close()</code> 方法在最后一次调用评估方法后调用。</p>
+<p><code>open()</code> 方法提供了一个 FunctionContext，该 FunctionContext 包含了用户定义函数执行的上下文信息，如度量组、分布式缓存文件或全局作业参数。</p>
+<p>通过调用 FunctionContext 的相应方法，可以获得以下信息。</p>
+<table>
+<thead>
+<tr>
+<th align="left">方法</th>
+<th align="left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">getMetricGroup()</td>
+<td align="left">该并行子任务的度量组。</td>
+</tr>
+<tr>
+<td align="left">getCachedFile(name)</td>
+<td align="left">分布式缓存文件的本地临时文件副本。</td>
+</tr>
+<tr>
+<td align="left">getJobParameter(name, defaultValue)</td>
+<td align="left">与给定键相关联的全局作业参数值。</td>
+</tr>
+</tbody>
+</table>
+<p>下面的示例片段展示了如何在标量函数中使用 FunctionContext 来访问全局工作参数。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.api._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.FunctionContext</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+
+<span class="k">class</span> <span class="nc">HashCodeFunction</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+
+  <span class="k">private</span> <span class="k">var</span> <span class="n">factor</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">open</span><span class="o">(</span><span class="n">context</span><span class="k">:</span> <span class="kt">FunctionContext</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="c1">// access the global &#34;hashcode_factor&#34; parameter
+</span><span class="c1"></span>    <span class="c1">// &#34;12&#34; would be the default value if the parameter does not exist
+</span><span class="c1"></span>    <span class="n">factor</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getJobParameter</span><span class="o">(</span><span class="s">&#34;hashcode_factor&#34;</span><span class="o">,</span> <span class="s">&#34;12&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">toInt</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">s</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">hashCode</span> <span class="o">*</span> <span class="n">factor</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+
+<span class="c1">// add job parameter
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">getConfig</span><span class="o">.</span><span class="n">addJobParameter</span><span class="o">(</span><span class="s">&#34;hashcode_factor&#34;</span><span class="o">,</span> <span class="s">&#34;31&#34;</span><span class="o">)</span>
+
+<span class="c1">// register the function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">createTemporarySystemFunction</span><span class="o">(</span><span class="s">&#34;hashCode&#34;</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">HashCodeFunction</span><span class="o">]</span><span class="o">)</span>
+
+<span class="c1">// use the function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span><span class="s">&#34;SELECT myField, hashCode(myField) FROM MyTable&#34;</span><span class="o">)</span>
+</code></pre></div><h2 id="标量函数">标量函数</h2>
+<p>用户定义的标量函数可以将零、一或多个标量值映射到一个新的标量值。数据类型一节中列出的任何数据类型都可以作为一个评估方法的参数或返回类型。</p>
+<p>为了定义一个标量函数，必须扩展 org.apache.flink.table.function 中的基类 ScalarFunction，并实现一个或多个名为 <code>eval(...)</code> 的评估方法。</p>
+<p>下面的例子展示了如何定义自己的哈希码函数并在查询中调用它。更多细节请参见实施指南。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.InputGroup</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.api._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.ScalarFunction</span>
+
+<span class="k">class</span> <span class="nc">HashFunction</span> <span class="k">extends</span> <span class="nc">ScalarFunction</span> <span class="o">{</span>
+
+  <span class="c1">// take any data type and return INT
+</span><span class="c1"></span>  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="nd">@DataTypeHint</span><span class="o">(</span><span class="n">inputGroup</span> <span class="k">=</span> <span class="nc">InputGroup</span><span class="o">.</span><span class="nc">ANY</span><span class="o">)</span> <span class="n">o</span><span class="k">:</span> <span class="kt">AnyRef</span><span class="o">)</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">{</span>
+    <span class="kt">return</span> <span class="kt">o</span><span class="kt">.</span><span class="kt">hashCode</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+
+<span class="c1">// call function &#34;inline&#34; without registration in Table API
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">HashFunction</span><span class="o">]</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// register function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">createTemporarySystemFunction</span><span class="o">(</span><span class="s">&#34;HashFunction&#34;</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">HashFunction</span><span class="o">]</span><span class="o">)</span>
+
+<span class="c1">// call registered function in Table API
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="s">&#34;HashFunction&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// call registered function in SQL
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span><span class="s">&#34;SELECT HashFunction(myField) FROM MyTable&#34;</span><span class="o">)</span>
+</code></pre></div><p>如果你打算用 Python 实现或调用函数，请参考 Python Scalar Functions 文档了解更多细节。</p>
+<h2 id="表函数">表函数</h2>
+<p>与用户定义的标量函数类似，用户定义的表函数将零、一个或多个标量值作为输入参数。然而，与标量函数不同的是，它可以返回任意数量的行（或结构化类型）作为输出，而不是单个值。返回的记录可能由一个或多个字段组成。如果一条输出记录只由一个字段组成，则可以省略结构化记录，并发出一个标量值。它将被运行时包装成一个隐式行。</p>
+<p>为了定义一个表函数，必须扩展 org.apache.flink.table.function 中的基类 TableFunction，并实现一个或多个名为 <code>eval(...)</code> 的评估方法。与其他函数类似，输入和输出数据类型也是使用反射自动提取的。这包括类的通用参数 T，用于确定输出数据类型。与标量函数不同的是，评价方法本身不能有返回类型，相反，表函数提供了一个 <code>collect(T)</code> 方法，可以在每个评价方法内调用，用于发出零、一条或多条记录。</p>
+<p>在表 API 中，表函数的使用方法是 <code>.joinLateral(...)</code> 或 <code>.leftOuterJoinLateral(...)</code>。joinLateral 运算符（cross）将外表（运算符左边的表）的每条记录与表值函数产生的所有记录（表值函数在运算符的右边）连接起来。leftOuterJoinLateral 操作符将外表（操作符左边的表）的每一条记录与表值函数产生的所有记录（它在操作符的右边）连接起来，并且保留那些表函数返回空表的外表。</p>
+<p>在 SQL 中，使用 <code>LATERAL TABLE(&lt;TableFunction&gt;)</code> 与 JOIN 或 LEFT JOIN 与 ON TRUE 连接条件。</p>
+<p>下面的示例展示了如何定义自己的拆分函数并在查询中调用它。更多细节请参见《实现指南》。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.DataTypeHint</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.annotation.FunctionHint</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.api._</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.TableFunction</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.types.Row</span>
+
+<span class="nd">@FunctionHint</span><span class="o">(</span><span class="n">output</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">DataTypeHint</span><span class="o">(</span><span class="s">&#34;ROW&lt;word STRING, length INT&gt;&#34;</span><span class="o">)</span><span class="o">)</span>
+<span class="k">class</span> <span class="nc">SplitFunction</span> <span class="k">extends</span> <span class="nc">TableFunction</span><span class="o">[</span><span class="kt">Row</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">def</span> <span class="n">eval</span><span class="o">(</span><span class="n">str</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="c1">// use collect(...) to emit a row
+</span><span class="c1"></span>    <span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&#34; &#34;</span><span class="o">)</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">s</span> <span class="k">=&gt;</span> <span class="n">collect</span><span class="o">(</span><span class="nc">Row</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="nc">Int</span><span class="o">.</span><span class="n">box</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">length</span><span class="o">)</span><span class="o">)</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="k">val</span> <span class="n">env</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">)</span>
+
+<span class="c1">// call function &#34;inline&#34; without registration in Table API
+</span><span class="c1"></span><span class="n">env</span>
+  <span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">joinLateral</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">SplitFunction</span><span class="o">]</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;word&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;length&#34;</span><span class="o">)</span>
+<span class="n">env</span>
+  <span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">leftOuterJoinLateral</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">SplitFunction</span><span class="o">]</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;word&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;length&#34;</span><span class="o">)</span>
+
+<span class="c1">// rename fields of the function in Table API
+</span><span class="c1"></span><span class="n">env</span>
+  <span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">leftOuterJoinLateral</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">SplitFunction</span><span class="o">]</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">.</span><span class="n">as</span><span class="o">(</span><span class="s">&#34;newWord&#34;</span><span class="o">,</span> <span class="s">&#34;newLength&#34;</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;newWord&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;newLength&#34;</span><span class="o">)</span>
+
+<span class="c1">// register function
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">createTemporarySystemFunction</span><span class="o">(</span><span class="s">&#34;SplitFunction&#34;</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">SplitFunction</span><span class="o">]</span><span class="o">)</span>
+
+<span class="c1">// call registered function in Table API
+</span><span class="c1"></span><span class="n">env</span>
+  <span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">joinLateral</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="s">&#34;SplitFunction&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;word&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;length&#34;</span><span class="o">)</span>
+<span class="n">env</span>
+  <span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="s">&#34;MyTable&#34;</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">leftOuterJoinLateral</span><span class="o">(</span><span class="n">call</span><span class="o">(</span><span class="s">&#34;SplitFunction&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;myField&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;word&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;length&#34;</span><span class="o">)</span>
+
+<span class="c1">// call registered function in SQL
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span>
+  <span class="s">&#34;SELECT myField, word, length &#34;</span> <span class="o">+</span>
+  <span class="s">&#34;FROM MyTable, LATERAL TABLE(SplitFunction(myField))&#34;</span><span class="o">)</span><span class="o">;</span>
+<span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span>
+  <span class="s">&#34;SELECT myField, word, length &#34;</span> <span class="o">+</span>
+  <span class="s">&#34;FROM MyTable &#34;</span> <span class="o">+</span>
+  <span class="s">&#34;LEFT JOIN LATERAL TABLE(SplitFunction(myField)) ON TRUE&#34;</span><span class="o">)</span>
+
+<span class="c1">// rename fields of the function in SQL
+</span><span class="c1"></span><span class="n">env</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span>
+  <span class="s">&#34;SELECT myField, newWord, newLength &#34;</span> <span class="o">+</span>
+  <span class="s">&#34;FROM MyTable &#34;</span> <span class="o">+</span>
+  <span class="s">&#34;LEFT JOIN LATERAL TABLE(SplitFunction(myField)) AS T(newWord, newLength) ON TRUE&#34;</span><span class="o">)</span>
+</code></pre></div><p>如果你打算在 Scala 中实现函数，不要将表函数实现为 Scala 对象。Scala 对象是单子，会导致并发问题。</p>
+<p>如果你打算用 Python 实现或调用函数，请参考 Python 表函数文档了解更多细节。</p>
+<h2 id="聚合函数">聚合函数</h2>
+<p>用户自定义聚合函数（UDAGG）将一个表（一个或多个具有一个或多个属性的行）聚合成一个标量值。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/udagg-mechanism.png" alt="img"></p>
+<p>上图显示了一个聚合的例子。假设你有一个包含饮料数据的表。该表由 id、名称和价格三列和 5 行组成。想象一下，你需要找到表中所有饮料的最高价格，即执行 <code>max()</code> 聚合。你需要对 5 行中的每一行进行检查，结果将是一个单一的数值。</p>
+<p>用户定义的聚合函数是通过扩展 AggregateFunction 类来实现的。AggregateFunction 的工作原理如下。首先，它需要一个累加器，它是存放聚合中间结果的数据结构。通过调用 AggregateFunction 的 <code>createAccumulator()</code> 方法创建一个空的累加器。随后，函数的 <code>accumulate()</code> 方法对每一条输入行进行调用，以更新累加器。一旦所有的行都被处理完毕，函数的 <code>getValue()</code> 方法就会被调用来计算并返回最终结果。</p>
+<p>以下方法是每个 AggregateFunction 必须使用的。</p>
+<ul>
+<li>createAccumulator()</li>
+<li>accumulate()</li>
+<li>getValue()</li>
+</ul>
+<p>Flink 的类型提取设施可能无法识别复杂的数据类型，例如，如果它们不是基本类型或简单的 POJOs。所以与 ScalarFunction 和 TableFunction 类似，AggregateFunction 提供了指定结果类型（通过 AggregateFunction#getResultType()）和累加器类型（通过 AggregateFunction#getAccumulatorType()）的方法。</p>
+<p>除了上述方法外，还有一些签约方法可以选择实现。这些方法中的一些方法可以让系统更高效地执行查询，而另一些方法则是某些用例所必须的。例如，如果聚合函数应该在会话组窗口的上下文中应用，那么 <code>merge()</code> 方法是强制性的（当观察到有一行 &ldquo;连接 &ldquo;它们时，需要将两个会话窗口的累加器连接起来）。</p>
+<p>AggregateFunction 的以下方法是根据用例需要的。</p>
+<ul>
+<li><code>retract()</code> 对于有界 OVER 窗口上的聚合是需要的。</li>
+<li><code>merge()</code> 是许多批次聚合和会话窗口聚合所需要的。</li>
+<li><code>resetAccumulator()</code> 是许多批处理聚合所需要的。</li>
+</ul>
+<p>AggregateFunction 的所有方法都必须声明为 public，而不是 static，并且命名与上述名称完全一致。方法 createAccumulator、getValue、getResultType 和 getAccumulatorType 是在 AggregateFunction 抽象类中定义的，而其他方法则是合同方法。为了定义一个聚合函数，必须扩展基类 org.apache.flink.table.function.AggregateFunction，并实现一个（或多个）accumulate 方法。方法 accumulate 可以用不同的参数类型重载，并支持变量参数。</p>
+<p>下面给出了 AggregateFunction 所有方法的详细文档。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> Base class for user-defined aggregates and table aggregates.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam T   the type of the aggregation result.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam ACC the type of the aggregation accumulator. The accumulator is used to keep the
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             aggregated values which are needed to compute an aggregation result.
+</span><span class="cm">  </span><span class="cm">*/</span>
+<span class="k">abstract</span> <span class="k">class</span> <span class="nc">UserDefinedAggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">UserDefinedFunction</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Creates and init the Accumulator for this (table)aggregate function.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return the accumulator with the initial value
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">ACC</span> <span class="c1">// MANDATORY
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Returns the TypeInformation of the (table)aggregate function&#39;s result.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return The TypeInformation of the (table)aggregate function&#39;s result or null if the result
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">         type should be automatically inferred.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">getResultType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="kc">null</span> <span class="c1">// PRE-DEFINED
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Returns the TypeInformation of the (table)aggregate function&#39;s accumulator.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return The TypeInformation of the (table)aggregate function&#39;s accumulator or null if the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">         accumulator type should be automatically inferred.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">getAccumulatorType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">ACC</span><span class="o">]</span> <span class="k">=</span> <span class="kc">null</span> <span class="c1">// PRE-DEFINED
+</span><span class="c1"></span><span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> Base class for aggregation functions. 
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam T   the type of the aggregation result
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam ACC the type of the aggregation accumulator. The accumulator is used to keep the
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             aggregated values which are needed to compute an aggregation result.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             AggregateFunction represents its state using accumulator, thereby the state of the
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             AggregateFunction must be put into the accumulator.
+</span><span class="cm">  </span><span class="cm">*/</span>
+<span class="k">abstract</span> <span class="k">class</span> <span class="nc">AggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">UserDefinedAggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Processes the input values and update the provided accumulator instance. The method
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> accumulate can be overloaded with different custom types and arguments. An AggregateFunction
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> requires at least one accumulate() method.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator           the accumulator which contains the current aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param [user defined inputs] the input value (usually obtained from a new arrived data).
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">accumulate</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="o">[</span><span class="kt">user</span> <span class="kt">defined</span> <span class="kt">inputs</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// MANDATORY
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Retracts the input values from the accumulator instance. The current design assumes the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> inputs are the values that have been previously accumulated. The method retract can be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> overloaded with different custom types and arguments. This function must be implemented for
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> datastream bounded over aggregate.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator           the accumulator which contains the current aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param [user defined inputs] the input value (usually obtained from a new arrived data).
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">retract</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="o">[</span><span class="kt">user</span> <span class="kt">defined</span> <span class="kt">inputs</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Merges a group of accumulator instances into one accumulator instance. This function must be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> implemented for datastream session window grouping aggregate and dataset grouping aggregate.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator  the accumulator which will keep the merged aggregate results. It should
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     be noted that the accumulator may contain the previous aggregated
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     results. Therefore user should not replace or clean this instance in the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     custom merge method.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param its          an [[java.lang.Iterable]] pointed to a group of accumulators that will be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     merged.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="n">its</span><span class="k">:</span> <span class="kt">java.lang.Iterable</span><span class="o">[</span><span class="kt">ACC</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>  
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Called every time when an aggregation result should be materialized.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> The returned value could be either an early and incomplete result
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> (periodically emitted as data arrive) or the final result of the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> aggregation.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator the accumulator which contains the current
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                    aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return the aggregation result
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">getValue</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">)</span><span class="k">:</span> <span class="kt">T</span> <span class="c1">// MANDATORY
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Resets the accumulator for this [[AggregateFunction]]. This function must be implemented for
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> dataset grouping aggregate.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator  the accumulator which needs to be reset
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">resetAccumulator</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Returns true if this AggregateFunction can only be applied in an OVER window.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return true if the AggregateFunction requires an OVER window, false otherwise.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">requiresOver</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">false</span> <span class="c1">// PRE-DEFINED
+</span><span class="c1"></span><span class="o">}</span>
+</code></pre></div><p>下面的例子说明了如何进行</p>
+<ul>
+<li>定义一个 AggregateFunction，用于计算给定列的加权平均值。</li>
+<li>在 TableEnvironment 中注册该函数，并且</li>
+<li>在查询中使用该函数。</li>
+</ul>
+<p>为了计算加权平均值，累加器需要存储所有已积累的数据的加权和和计数。在我们的例子中，我们定义了一个类 WeightedAvgAccum 作为累加器。累积器由 Flink 的检查点机制自动备份，并在故障时恢复，以保证精确的唯一性语义。</p>
+<p>我们 WeightedAvg AggregateFunction 的 <code>accumulate()</code> 方法有三个输入。第一个是 WeightedAvgAccum 累加器，另外两个是用户自定义的输入：输入值 ivalue 和输入的权重 iweight。虽然 <code>retract()</code>、<code>merge()</code> 和 <code>resetAccumulator()</code> 方法对于大多数聚合类型来说并不是强制性的，但我们在下面提供它们作为例子。请注意，我们在 Scala 示例中使用了 Java 基元类型，并定义了 <code>getResultType()</code> 和  <code>getAccumulatorType()</code> 方法，因为 Flink 类型提取对于 Scala 类型并不十分有效。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">java.lang.</span><span class="o">{</span><span class="nc">Long</span> <span class="k">=&gt;</span> <span class="nc">JLong</span><span class="o">,</span> <span class="nc">Integer</span> <span class="k">=&gt;</span> <span class="nc">JInteger</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.api.java.tuple.</span><span class="o">{</span><span class="nc">Tuple1</span> <span class="k">=&gt;</span> <span class="nc">JTuple1</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.api.java.typeutils.TupleTypeInfo</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.api.Types</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.AggregateFunction</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> Accumulator for WeightedAvg.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">WeightedAvgAccum</span> <span class="k">extends</span> <span class="nc">JTuple1</span><span class="o">[</span><span class="kt">JLong</span>, <span class="kt">JInteger</span><span class="o">]</span> <span class="o">{</span>
+  <span class="n">sum</span> <span class="k">=</span> <span class="mi">0L</span>
+  <span class="n">count</span> <span class="k">=</span> <span class="mi">0</span>
+<span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> Weighted Average user-defined aggregate function.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">WeightedAvg</span> <span class="k">extends</span> <span class="nc">AggregateFunction</span><span class="o">[</span><span class="kt">JLong</span>, <span class="kt">CountAccumulator</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">new</span> <span class="nc">WeightedAvgAccum</span>
+  <span class="o">}</span>
+  
+  <span class="k">override</span> <span class="k">def</span> <span class="n">getValue</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span><span class="o">)</span><span class="k">:</span> <span class="kt">JLong</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kc">null</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+        <span class="n">acc</span><span class="o">.</span><span class="n">sum</span> <span class="o">/</span> <span class="n">acc</span><span class="o">.</span><span class="n">count</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  
+  <span class="k">def</span> <span class="n">accumulate</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span><span class="o">,</span> <span class="n">iValue</span><span class="k">:</span> <span class="kt">JLong</span><span class="o">,</span> <span class="n">iWeight</span><span class="k">:</span> <span class="kt">JInteger</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">sum</span> <span class="o">+=</span> <span class="n">iValue</span> <span class="o">*</span> <span class="n">iWeight</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="n">iWeight</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">retract</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span><span class="o">,</span> <span class="n">iValue</span><span class="k">:</span> <span class="kt">JLong</span><span class="o">,</span> <span class="n">iWeight</span><span class="k">:</span> <span class="kt">JInteger</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">sum</span> <span class="o">-=</span> <span class="n">iValue</span> <span class="o">*</span> <span class="n">iWeight</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">count</span> <span class="o">-=</span> <span class="n">iWeight</span>
+  <span class="o">}</span>
+    
+  <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span><span class="o">,</span> <span class="n">it</span><span class="k">:</span> <span class="kt">java.lang.Iterable</span><span class="o">[</span><span class="kt">WeightedAvgAccum</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">iter</span> <span class="k">=</span> <span class="n">it</span><span class="o">.</span><span class="n">iterator</span><span class="o">(</span><span class="o">)</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">iter</span><span class="o">.</span><span class="n">hasNext</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">val</span> <span class="n">a</span> <span class="k">=</span> <span class="n">iter</span><span class="o">.</span><span class="n">next</span><span class="o">(</span><span class="o">)</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="n">a</span><span class="o">.</span><span class="n">count</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">sum</span> <span class="o">+=</span> <span class="n">a</span><span class="o">.</span><span class="n">sum</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">resetAccumulator</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">WeightedAvgAccum</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">count</span> <span class="k">=</span> <span class="mi">0</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">sum</span> <span class="k">=</span> <span class="mi">0L</span>
+  <span class="o">}</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">getAccumulatorType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">WeightedAvgAccum</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">new</span> <span class="nc">TupleTypeInfo</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">WeightedAvgAccum</span><span class="o">]</span><span class="o">,</span> <span class="nc">Types</span><span class="o">.</span><span class="nc">LONG</span><span class="o">,</span> <span class="nc">Types</span><span class="o">.</span><span class="nc">INT</span><span class="o">)</span>
+  <span class="o">}</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">getResultType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">JLong</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Types</span><span class="o">.</span><span class="nc">LONG</span>
+<span class="o">}</span>
+
+<span class="c1">// register function
+</span><span class="c1"></span><span class="k">val</span> <span class="n">tEnv</span><span class="k">:</span> <span class="kt">StreamTableEnvironment</span> <span class="o">=</span> <span class="o">???</span>
+<span class="n">tEnv</span><span class="o">.</span><span class="n">registerFunction</span><span class="o">(</span><span class="s">&#34;wAvg&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">WeightedAvg</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+
+<span class="c1">// use function
+</span><span class="c1"></span><span class="n">tEnv</span><span class="o">.</span><span class="n">sqlQuery</span><span class="o">(</span><span class="s">&#34;SELECT user, wAvg(points, level) AS avgPoints FROM userScores GROUP BY user&#34;</span><span class="o">)</span>
+</code></pre></div><h2 id="表聚合函数">表聚合函数</h2>
+<p>用户定义表聚合函数(UDTAGGs)将一个表(具有一个或多个属性的一行或多行)聚合到一个具有多行和多列的结果表。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/udtagg-mechanism.png" alt="img"></p>
+<p>上图显示了一个表聚合的例子。假设你有一个包含饮料数据的表。该表由 id、名称和价格三列和 5 行组成。设想你需要找到表中所有饮料中价格最高的前 2 名，即执行 <code>top2()</code> 表聚合。你需要对 5 行中的每一行进行检查，结果将是一个具有前 2 个值的表。</p>
+<p>用户定义的表聚合函数是通过扩展 TableAggregateFunction 类来实现的。TableAggregateFunction 的工作原理如下。首先，它需要一个累加器，它是存放聚合中间结果的数据结构。通过调用 TableAggregateFunction 的 <code>createAccumulator()</code> 方法创建一个空的累加器。随后，对每一条输入行调用函数的 <code>accumulate()</code> 方法来更新累加器。一旦所有的行都被处理完毕，函数的 <code>emitValue()</code> 方法就会被调用来计算并返回最终结果。</p>
+<p>以下方法是每个 TableAggregateFunction 必须使用的。</p>
+<ul>
+<li>createAccumulator()</li>
+<li>accumulate()</li>
+</ul>
+<p>Flink 的类型提取设施可能无法识别复杂的数据类型，例如，如果它们不是基本类型或简单的 POJOs。因此，与 ScalarFunction 和 TableFunction 类似，TableAggregateFunction 提供了指定结果类型（通过 <code>TableAggregateFunction#getResultType()</code>）和累积器类型（通过 <code>TableAggregateFunction#getAccumulatorType()</code>）的方法。</p>
+<p>除了上述方法外，还有一些签约方法可以选择实现。这些方法中的一些方法可以让系统更高效地执行查询，而另一些方法则是某些用例所必须的。例如，如果聚合函数应该在会话组窗口的上下文中应用，那么 <code>merge()</code> 方法是强制性的（当观察到有一条记录&quot;连接&quot;它们时，需要将两个会话窗口的累加器连接起来）。</p>
+<p>TableAggregateFunction 的以下方法是需要的，这取决于用例。</p>
+<ul>
+<li><code>retract()</code> 对于有界 OVER 窗口上的聚合是需要的。</li>
+<li><code>merge()</code> 是许多批次聚合和会话窗口聚合所需要的。</li>
+<li><code>resetAccumulator()</code> 是许多批处理聚合所需要的。</li>
+<li><code>emitValue()</code> 是批处理和窗口聚合所需要的。</li>
+</ul>
+<p>TableAggregateFunction 的以下方法用于提高流作业的性能。</p>
+<ul>
+<li><code>emitUpdateWithRetract()</code> 用于发射在伸缩模式下更新的值。</li>
+</ul>
+<p>对于 emitValue 方法，则是根据累加器来发射完整的数据。以 TopN 为例，emitValue 每次都会发射所有前 n 个值。这可能会给流式作业带来性能问题。为了提高性能，用户也可以实现 emitUpdateWithRetract 方法来提高性能。该方法以回缩模式增量输出数据，即一旦有更新，我们必须在发送新的更新记录之前回缩旧记录。如果在表聚合函数中都定义了该方法，那么该方法将优先于 emitValue 方法使用，因为 emitUpdateWithRetract 被认为比 emitValue 更有效率，因为它可以增量输出值。</p>
+<p>TableAggregateFunction 的所有方法都必须声明为 public，而不是 static，并完全按照上面提到的名字命名。方法 createAccumulator、getResultType 和 getAccumulatorType 是在 TableAggregateFunction 的父抽象类中定义的，而其他方法则是收缩的方法。为了定义一个表聚合函数，必须扩展基类 org.apache.flink.table.function.TableAggregateFunction，并实现一个（或多个）accumulate 方法。积累方法可以用不同的参数类型重载，并支持变量参数。</p>
+<p>下面给出了 TableAggregateFunction 所有方法的详细文档。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> Base class for user-defined aggregates and table aggregates.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam T   the type of the aggregation result.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam ACC the type of the aggregation accumulator. The accumulator is used to keep the
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             aggregated values which are needed to compute an aggregation result.
+</span><span class="cm">  </span><span class="cm">*/</span>
+<span class="k">abstract</span> <span class="k">class</span> <span class="nc">UserDefinedAggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">UserDefinedFunction</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Creates and init the Accumulator for this (table)aggregate function.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return the accumulator with the initial value
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">ACC</span> <span class="c1">// MANDATORY
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Returns the TypeInformation of the (table)aggregate function&#39;s result.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return The TypeInformation of the (table)aggregate function&#39;s result or null if the result
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">         type should be automatically inferred.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">getResultType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="kc">null</span> <span class="c1">// PRE-DEFINED
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Returns the TypeInformation of the (table)aggregate function&#39;s accumulator.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @return The TypeInformation of the (table)aggregate function&#39;s accumulator or null if the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">         accumulator type should be automatically inferred.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">getAccumulatorType</span><span class="k">:</span> <span class="kt">TypeInformation</span><span class="o">[</span><span class="kt">ACC</span><span class="o">]</span> <span class="k">=</span> <span class="kc">null</span> <span class="c1">// PRE-DEFINED
+</span><span class="c1"></span><span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> Base class for table aggregation functions. 
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam T   the type of the aggregation result
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm"> @tparam ACC the type of the aggregation accumulator. The accumulator is used to keep the
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             aggregated values which are needed to compute an aggregation result.
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             TableAggregateFunction represents its state using accumulator, thereby the state of
+</span><span class="cm">  </span><span class="cm">*</span><span class="cm">             the TableAggregateFunction must be put into the accumulator.
+</span><span class="cm">  </span><span class="cm">*/</span>
+<span class="k">abstract</span> <span class="k">class</span> <span class="nc">TableAggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">UserDefinedAggregateFunction</span><span class="o">[</span><span class="kt">T</span>, <span class="kt">ACC</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Processes the input values and update the provided accumulator instance. The method
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> accumulate can be overloaded with different custom types and arguments. A TableAggregateFunction
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> requires at least one accumulate() method.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator           the accumulator which contains the current aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param [user defined inputs] the input value (usually obtained from a new arrived data).
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">accumulate</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="o">[</span><span class="kt">user</span> <span class="kt">defined</span> <span class="kt">inputs</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// MANDATORY
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Retracts the input values from the accumulator instance. The current design assumes the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> inputs are the values that have been previously accumulated. The method retract can be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> overloaded with different custom types and arguments. This function must be implemented for
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> datastream bounded over aggregate.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator           the accumulator which contains the current aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param [user defined inputs] the input value (usually obtained from a new arrived data).
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">retract</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="o">[</span><span class="kt">user</span> <span class="kt">defined</span> <span class="kt">inputs</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Merges a group of accumulator instances into one accumulator instance. This function must be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> implemented for datastream session window grouping aggregate and dataset grouping aggregate.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator  the accumulator which will keep the merged aggregate results. It should
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     be noted that the accumulator may contain the previous aggregated
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     results. Therefore user should not replace or clean this instance in the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     custom merge method.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param its          an [[java.lang.Iterable]] pointed to a group of accumulators that will be
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                     merged.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="n">its</span><span class="k">:</span> <span class="kt">java.lang.Iterable</span><span class="o">[</span><span class="kt">ACC</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>  
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Called every time when an aggregation result should be materialized. The returned value
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> could be either an early and incomplete result  (periodically emitted as data arrive) or
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> the final result of the  aggregation.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator the accumulator which contains the current
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                    aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param out         the collector used to output data
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">emitValue</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span>
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Called every time when an aggregation result should be materialized. The returned value
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> could be either an early and incomplete result (periodically emitted as data arrive) or
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> the final result of the aggregation.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Different from emitValue, emitUpdateWithRetract is used to emit values that have been updated.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> This method outputs data incrementally in retract mode, i.e., once there is an update, we
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> have to retract old records before sending new updated ones. The emitUpdateWithRetract
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> method will be used in preference to the emitValue method if both methods are defined in the
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> table aggregate function, because the method is treated to be more efficient than emitValue
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> as it can outputvalues incrementally.
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param accumulator the accumulator which contains the current
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                    aggregated results
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> @param out         the retractable collector used to output data. Use collect method
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                    to output(add) records and use retract method to retract(delete)
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm">                    records.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">def</span> <span class="n">emitUpdateWithRetract</span><span class="o">(</span><span class="n">accumulator</span><span class="k">:</span> <span class="kt">ACC</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">RetractableCollector</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="c1">// OPTIONAL
+</span><span class="c1"></span> 
+  <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> Collects a record and forwards it. The collector can output retract messages with the retract
+</span><span class="cm">    </span><span class="cm">*</span><span class="cm"> method. Note: only use it in `emitRetractValueIncrementally`.
+</span><span class="cm">    </span><span class="cm">*/</span>
+  <span class="k">trait</span> <span class="nc">RetractableCollector</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Collector</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="o">{</span>
+    
+    <span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> Retract a record.
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm">
+</span><span class="cm">      </span><span class="cm">*</span><span class="cm"> @param record The record to retract.
+</span><span class="cm">      </span><span class="cm">*/</span>
+    <span class="k">def</span> <span class="n">retract</span><span class="o">(</span><span class="n">record</span><span class="k">:</span> <span class="kt">T</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>下面的例子说明了如何进行</p>
+<ul>
+<li>定义一个 TableAggregateFunction，用于计算给定列上的前 2 个值。</li>
+<li>在 TableEnvironment 中注册该函数，并且</li>
+<li>在 Table API 查询中使用该函数(TableAggregateFunction 仅由 Table API 支持)。</li>
+</ul>
+<p>为了计算前 2 名的值，累加器需要存储所有已积累的数据中最大的 2 个值。在我们的例子中，我们定义了一个类 Top2Accum 作为累加器。累积器会被 Flink 的检查点机制自动备份，并在故障时恢复，以保证精确的 once 语义。</p>
+<p>我们 Top2 TableAggregateFunction 的 <code>accumulate()</code> 方法有两个输入。第一个是 Top2Accum 累加器，另一个是用户定义的输入：输入值 v，虽然 <code>merge()</code> 方法对于大多数表聚合类型来说不是强制性的，但我们在下面提供它作为例子。请注意，我们在 Scala 示例中使用了 Java 基元类型，并定义了 <code>getResultType()</code> 和 <code>getAccumulatorType()</code> 方法，因为 Flink 类型提取对 Scala 类型的效果并不好。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">java.lang.</span><span class="o">{</span><span class="nc">Integer</span> <span class="k">=&gt;</span> <span class="nc">JInteger</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.api.Types</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.TableAggregateFunction</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> Accumulator for top2.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">Top2Accum</span> <span class="o">{</span>
+  <span class="k">var</span> <span class="n">first</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+  <span class="k">var</span> <span class="n">second</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+<span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> The top2 user-defined table aggregate function.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">Top2</span> <span class="k">extends</span> <span class="nc">TableAggregateFunction</span><span class="o">[</span><span class="kt">JTuple2</span><span class="o">[</span><span class="kt">JInteger</span>, <span class="kt">JInteger</span><span class="o">]</span>, <span class="kt">Top2Accum</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Top2Accum</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">acc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Top2Accum</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">accumulate</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">Top2Accum</span><span class="o">,</span> <span class="n">v</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">v</span> <span class="o">&gt;</span> <span class="n">acc</span><span class="o">.</span><span class="n">first</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">first</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="k">=</span> <span class="n">v</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">v</span> <span class="o">&gt;</span> <span class="n">acc</span><span class="o">.</span><span class="n">second</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="n">v</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">merge</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">Top2Accum</span><span class="o">,</span> <span class="n">its</span><span class="k">:</span> <span class="kt">JIterable</span><span class="o">[</span><span class="kt">Top2Accum</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">iter</span> <span class="k">=</span> <span class="n">its</span><span class="o">.</span><span class="n">iterator</span><span class="o">(</span><span class="o">)</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">iter</span><span class="o">.</span><span class="n">hasNext</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">val</span> <span class="n">top2</span> <span class="k">=</span> <span class="n">iter</span><span class="o">.</span><span class="n">next</span><span class="o">(</span><span class="o">)</span>
+      <span class="n">accumulate</span><span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">top2</span><span class="o">.</span><span class="n">first</span><span class="o">)</span>
+      <span class="n">accumulate</span><span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">top2</span><span class="o">.</span><span class="n">second</span><span class="o">)</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">emitValue</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">Top2Accum</span><span class="o">,</span> <span class="n">out</span><span class="k">:</span> <span class="kt">Collector</span><span class="o">[</span><span class="kt">JTuple2</span><span class="o">[</span><span class="kt">JInteger</span>, <span class="kt">JInteger</span><span class="o">]</span><span class="o">]</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="c1">// emit the value and rank
+</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="o">!=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">first</span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">second</span><span class="o">,</span> <span class="mi">2</span><span class="o">)</span><span class="o">)</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// init table
+</span><span class="c1"></span><span class="k">val</span> <span class="n">tab</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// use function
+</span><span class="c1"></span><span class="n">tab</span>
+  <span class="o">.</span><span class="n">groupBy</span><span class="o">(</span>&#39;key<span class="o">)</span>
+  <span class="o">.</span><span class="n">flatAggregate</span><span class="o">(</span><span class="n">top2</span><span class="o">(</span>&#39;a<span class="o">)</span> <span class="n">as</span> <span class="o">(</span>&#39;v<span class="o">,</span> &#39;rank<span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span>&#39;key<span class="o">,</span> &#39;v<span class="o">,</span> &#39;rank<span class="o">)</span>
+</code></pre></div><p>下面的例子展示了如何使用 emitUpdateWithRetract 方法来只发送更新。在我们的例子中，为了只发出更新，累加器同时保留新旧 top2 的值。注意：如果 topN 的 N 很大，那么同时保留新旧值的效率可能很低。解决这种情况的方法之一是在累加方法中把输入的记录存储到累加器中，然后在 emitUpdateWithRetract 中进行计算。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">java.lang.</span><span class="o">{</span><span class="nc">Integer</span> <span class="k">=&gt;</span> <span class="nc">JInteger</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.api.Types</span>
+<span class="k">import</span> <span class="nn">org.apache.flink.table.functions.TableAggregateFunction</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> Accumulator for top2.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">Top2Accum</span> <span class="o">{</span>
+  <span class="k">var</span> <span class="n">first</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+  <span class="k">var</span> <span class="n">second</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+  <span class="k">var</span> <span class="n">oldFirst</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+  <span class="k">var</span> <span class="n">oldSecond</span><span class="k">:</span> <span class="kt">JInteger</span> <span class="o">=</span> <span class="k">_</span>
+<span class="o">}</span>
+
+<span class="cm">/*</span><span class="cm">*</span><span class="cm">
+</span><span class="cm"> </span><span class="cm">*</span><span class="cm"> The top2 user-defined table aggregate function.
+</span><span class="cm"> </span><span class="cm">*/</span>
+<span class="k">class</span> <span class="nc">Top2</span> <span class="k">extends</span> <span class="nc">TableAggregateFunction</span><span class="o">[</span><span class="kt">JTuple2</span><span class="o">[</span><span class="kt">JInteger</span>, <span class="kt">JInteger</span><span class="o">]</span>, <span class="kt">Top2Accum</span><span class="o">]</span> <span class="o">{</span>
+
+  <span class="k">override</span> <span class="k">def</span> <span class="n">createAccumulator</span><span class="o">(</span><span class="o">)</span><span class="k">:</span> <span class="kt">Top2Accum</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">acc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Top2Accum</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">oldFirst</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span><span class="o">.</span><span class="n">oldSecond</span> <span class="k">=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span>
+    <span class="n">acc</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">accumulate</span><span class="o">(</span><span class="n">acc</span><span class="k">:</span> <span class="kt">Top2Accum</span><span class="o">,</span> <span class="n">v</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">v</span> <span class="o">&gt;</span> <span class="n">acc</span><span class="o">.</span><span class="n">first</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">first</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="k">=</span> <span class="n">v</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">v</span> <span class="o">&gt;</span> <span class="n">acc</span><span class="o">.</span><span class="n">second</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="k">=</span> <span class="n">v</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="k">def</span> <span class="n">emitUpdateWithRetract</span><span class="o">(</span>
+    <span class="n">acc</span><span class="k">:</span> <span class="kt">Top2Accum</span><span class="o">,</span>
+    <span class="n">out</span><span class="k">:</span> <span class="kt">RetractableCollector</span><span class="o">[</span><span class="kt">JTuple2</span><span class="o">[</span><span class="kt">JInteger</span>, <span class="kt">JInteger</span><span class="o">]</span><span class="o">]</span><span class="o">)</span>
+  <span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">first</span> <span class="o">!=</span> <span class="n">acc</span><span class="o">.</span><span class="n">oldFirst</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// if there is an update, retract old value then emit new value.
+</span><span class="c1"></span>      <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">oldFirst</span> <span class="o">!=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">retract</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">oldFirst</span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+      <span class="o">}</span>
+      <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">first</span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span><span class="o">)</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">oldFirst</span> <span class="k">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">first</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="n">acc</span><span class="o">.</span><span class="n">oldSecond</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// if there is an update, retract old value then emit new value.
+</span><span class="c1"></span>      <span class="k">if</span> <span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">oldSecond</span> <span class="o">!=</span> <span class="nc">Int</span><span class="o">.</span><span class="nc">MinValue</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">retract</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">oldSecond</span><span class="o">,</span> <span class="mi">2</span><span class="o">)</span><span class="o">)</span>
+      <span class="o">}</span>
+      <span class="n">out</span><span class="o">.</span><span class="n">collect</span><span class="o">(</span><span class="nc">JTuple2</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">acc</span><span class="o">.</span><span class="n">second</span><span class="o">,</span> <span class="mi">2</span><span class="o">)</span><span class="o">)</span>
+      <span class="n">acc</span><span class="o">.</span><span class="n">oldSecond</span> <span class="k">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">second</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// init table
+</span><span class="c1"></span><span class="k">val</span> <span class="n">tab</span> <span class="k">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// use function
+</span><span class="c1"></span><span class="n">tab</span>
+  <span class="o">.</span><span class="n">groupBy</span><span class="o">(</span>&#39;key<span class="o">)</span>
+  <span class="o">.</span><span class="n">flatAggregate</span><span class="o">(</span><span class="n">top2</span><span class="o">(</span>&#39;a<span class="o">)</span> <span class="n">as</span> <span class="o">(</span>&#39;v<span class="o">,</span> &#39;rank<span class="o">)</span><span class="o">)</span>
+  <span class="o">.</span><span class="n">select</span><span class="o">(</span>&#39;key<span class="o">,</span> &#39;v<span class="o">,</span> &#39;rank<span class="o">)</span>
+</code></pre></div><p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/functions/udfs.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/functions/udfs.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/function" term="function" label="Function" />
                             
                         
                     
