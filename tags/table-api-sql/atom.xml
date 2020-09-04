@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/table-api-sql/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/table-api-sql/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/table-api-sql/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-09-04T09:42:50+08:00</updated>
+    <updated>2020-09-04T12:45:39+08:00</updated>
     
     
     
@@ -19,14 +19,1470 @@
     
         
         <entry>
+            <title type="html"><![CDATA[Hive Read and Write]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="related" type="text/html" title="HiveCatalog" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Hive Read and Write</blockquote><h1 id="hive-读写">Hive 读写</h1>
+<p>使用 HiveCatalog 和 Flink 与 Hive 的连接器，Flink 可以从 Hive 数据中读取和写入数据，作为 Hive 批处理引擎的替代。请务必按照说明在你的应用中加入正确的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#depedencies">依赖关系</a>。同时请注意，Hive 连接器只适用于 blink planner。</p>
+<h2 id="从-hive-读取数据">从 Hive 读取数据</h2>
+<p>假设 Hive 在其默认的数据库中包含一个名为 people 的单表，该表包含多条记录。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">hive&gt; show databases<span class="p">;</span>
+OK
+default
+Time taken: 0.841 seconds, Fetched: <span class="m">1</span> row<span class="o">(</span>s<span class="o">)</span>
+
+hive&gt; show tables<span class="p">;</span>
+OK
+Time taken: 0.087 seconds
+
+hive&gt; CREATE TABLE mytable<span class="o">(</span>name string, value double<span class="o">)</span><span class="p">;</span>
+OK
+Time taken: 0.127 seconds
+
+hive&gt; SELECT * FROM mytable<span class="p">;</span>
+OK
+Tom   4.72
+John  8.0
+Tom   24.2
+Bob   3.14
+Bob   4.72
+Tom   34.9
+Mary  4.79
+Tiff  2.72
+Bill  4.33
+Mary  77.7
+Time taken: 0.097 seconds, Fetched: <span class="m">10</span> row<span class="o">(</span>s<span class="o">)</span>
+</code></pre></div><p>数据准备好后，你可以<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#connecting-to-hive">连接到现有的 Hive 安装</a>并开始查询。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">Flink SQL&gt; show catalogs<span class="p">;</span>
+myhive
+default_catalog
+
+<span class="c1"># ------ Set the current catalog to be &#39;myhive&#39; catalog if you haven&#39;t set it in the yaml file ------</span>
+
+Flink SQL&gt; use catalog myhive<span class="p">;</span>
+
+<span class="c1"># ------ See all registered database in catalog &#39;mytable&#39; ------</span>
+
+Flink SQL&gt; show databases<span class="p">;</span>
+default
+
+<span class="c1"># ------ See the previously registered table &#39;mytable&#39; ------</span>
+
+Flink SQL&gt; show tables<span class="p">;</span>
+mytable
+
+<span class="c1"># ------ The table schema that Flink sees is the same that we created in Hive, two columns - name as string and value as double ------</span> 
+Flink SQL&gt; describe mytable<span class="p">;</span>
+root
+ <span class="p">|</span>-- name: name
+ <span class="p">|</span>-- type: STRING
+ <span class="p">|</span>-- name: value
+ <span class="p">|</span>-- type: DOUBLE
+
+<span class="c1"># ------ Select from hive table or hive view ------</span> 
+Flink SQL&gt; SELECT * FROM mytable<span class="p">;</span>
+
+   name      value
+__________ __________
+
+    Tom      4.72
+    John     8.0
+    Tom      24.2
+    Bob      3.14
+    Bob      4.72
+    Tom      34.9
+    Mary     4.79
+    Tiff     2.72
+    Bill     4.33
+    Mary     77.7
+</code></pre></div><h3 id="查询-hive-视图">查询 Hive 视图</h3>
+<p>如果你需要查询 Hive 视图，请注意。</p>
+<p>在查询该目录中的视图之前，必须先使用 Hive 目录作为当前目录。可以通过 Table API 中的 <code>tableEnv.useCatalog(...)</code> 或者 SQL Client 中的 USE CATALOG &hellip;来实现。
+Hive 和 Flink SQL 有不同的语法，例如，不同的保留关键字和字元。请确保视图的查询与 Flink 语法兼容。</p>
+<h2 id="写入-hive">写入 Hive</h2>
+<p>同样，也可以使用 INSERT 子句将数据写入 hive 中。</p>
+<p>考虑有一个名为 &ldquo;mytable &ldquo;的示例表，表中有两列：name 和 age，类型为 string 和 int。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># ------ INSERT INTO will append to the table or partition, keeping the existing data intact ------</span> 
+Flink SQL&gt; INSERT INTO mytable SELECT <span class="s1">&#39;Tom&#39;</span>, 25<span class="p">;</span>
+
+<span class="c1"># ------ INSERT OVERWRITE will overwrite any existing data in the table or partition ------</span> 
+Flink SQL&gt; INSERT OVERWRITE mytable SELECT <span class="s1">&#39;Tom&#39;</span>, 25<span class="p">;</span>
+</code></pre></div><p>我们也支持分区表，考虑有一个名为 myparttable 的分区表，有四列：name、age、my_type 和 my_date，在 type 中&hellip;<code>my_type</code> 和 <code>my_date</code> 是分区键。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># ------ Insert with static partition ------</span> 
+Flink SQL&gt; INSERT OVERWRITE myparttable PARTITION <span class="o">(</span><span class="nv">my_type</span><span class="o">=</span><span class="s1">&#39;type_1&#39;</span>, <span class="nv">my_date</span><span class="o">=</span><span class="s1">&#39;2019-08-08&#39;</span><span class="o">)</span> SELECT <span class="s1">&#39;Tom&#39;</span>, 25<span class="p">;</span>
+
+<span class="c1"># ------ Insert with dynamic partition ------</span> 
+Flink SQL&gt; INSERT OVERWRITE myparttable SELECT <span class="s1">&#39;Tom&#39;</span>, 25, <span class="s1">&#39;type_1&#39;</span>, <span class="s1">&#39;2019-08-08&#39;</span><span class="p">;</span>
+
+<span class="c1"># ------ Insert with static(my_type) and dynamic(my_date) partition ------</span> 
+Flink SQL&gt; INSERT OVERWRITE myparttable PARTITION <span class="o">(</span><span class="nv">my_type</span><span class="o">=</span><span class="s1">&#39;type_1&#39;</span><span class="o">)</span> SELECT <span class="s1">&#39;Tom&#39;</span>, 25, <span class="s1">&#39;2019-08-08&#39;</span><span class="p">;</span>
+</code></pre></div><h2 id="格式">格式</h2>
+<p>我们测试了以下表格存储格式：文本、csv、SequenceFile、ORC 和 Parquet。</p>
+<h2 id="优化">优化</h2>
+<h3 id="分区修剪">分区修剪</h3>
+<p>Flink 使用分区修剪作为一种性能优化，以限制 Flink 在查询 Hive 表时读取的文件和分区的数量。当你的数据被分区后，当查询符合某些过滤条件时，Flink 只会读取 Hive 表中的分区子集。</p>
+<h3 id="投影下推">投影下推</h3>
+<p>Flink 利用投影下推，通过从表扫描中省略不必要的字段，最大限度地减少 Flink 和 Hive 表之间的数据传输。</p>
+<p>当一个表包含许多列时，它尤其有利。</p>
+<h3 id="限制下推">限制下推</h3>
+<p>对于带有 LIMIT 子句的查询，Flink 会尽可能地限制输出记录的数量，以减少跨网络传输的数据量。</p>
+<h3 id="读取时的向量优化">读取时的向量优化</h3>
+<p>当满足以下条件时，会自动使用优化功能。</p>
+<ul>
+<li>格式： ORC 或 Parquet。</li>
+<li>没有复杂数据类型的列，如 hive 类型: List, Map, Struct, Union。</li>
+</ul>
+<p>这个功能默认是开启的。如果出现问题，可以使用这个配置选项来关闭 Vectorized Optimization。</p>
+<pre><code>table.exec.hive.fallback-mapred-reader=true
+</code></pre><h3 id="source-并行性推断">Source 并行性推断</h3>
+<p>默认情况下，Flink 根据分割次数来推断 hive 源的并行度，分割次数是根据文件的数量和文件中的块数来推断的。</p>
+<p>Flink 允许你灵活配置并行度推断的策略。你可以在 TableConfig 中配置以下参数（注意，这些参数会影响作业的所有源）。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">table.exec.hive.infer-source-parallelism</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">如果为真，则根据分割数来推断源的并行度，如果为假，则根据配置来设置源的并行度。如果为 false，则通过配置来设置源的并行度。</td>
+</tr>
+<tr>
+<td align="left">table.exec.hive.infer-source-parallelism.max</td>
+<td align="left">1000</td>
+<td align="left">Integer</td>
+<td align="left">设置源运算符的最大推断并行度。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="路线图">路线图</h2>
+<p>我们正在规划并积极开发支持功能，如:</p>
+<ul>
+<li>ACID 表</li>
+<li>分桶表</li>
+<li>更多格式</li>
+</ul>
+<p>更多功能需求请联系社区 <a href="https://flink.apache.org/community.html#mailing-lists">https://flink.apache.org/community.html#mailing-lists</a></p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_read_write.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_read_write.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/hive" term="hive" label="Hive" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Hive Streaming]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="related" type="text/html" title="HiveCatalog" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Hive Streaming</blockquote><h1 id="hive-流">Hive 流</h1>
+<p>一个典型的 hive 作业是周期性地安排执行的，所以会有较大的延迟。</p>
+<p>Flink 支持以流式的形式写入、读取和加入 hive 表。</p>
+<p>流式数据有三种类型。</p>
+<ul>
+<li>将流式数据写入 Hive 表。</li>
+<li>以流的形式增量读取 Hive 表。</li>
+<li>流式表使用 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/temporal_tables.html#temporal-table">Temporal 表</a>连接 Hive 表。</li>
+</ul>
+<h2 id="流式写入">流式写入</h2>
+<p>Hive 表支持流式写入，基于 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/connectors/filesystem.html#streaming-sink">Filesystem Streaming Sink</a>。</p>
+<p>Hive Streaming Sink 重用 Filesystem Streaming Sink，将 Hadoop OutputFormat/RecordWriter 整合到流式写入。Hadoop RecordWriters 是 Bulk-encoded Formats，Bulk Formats 在每个检查点上滚动文件。</p>
+<p>默认情况下，现在只有重命名提交者，这意味着 S3 文件系统不能支持精确的 once，如果你想在 S3 文件系统中使用 Hive 流媒体汇，你可以在 TableConfig 中把以下参数配置为 false，以使用 Flink 原生写入器（只对 parquet 和 orc 有效）（注意这些参数会影响所有作业的汇）。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">table.exec.hive.fallback-mapred-writer</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">如果是假的，用 flink native writer 写 parquet 和 orc 文件；如果是真的，用 hadoop mapred record writer 写 parquet 和 orc 文件。</td>
+</tr>
+</tbody>
+</table>
+<p>下面展示了如何使用流接收器写一个流式查询，将数据从 Kafka 写到一个有 partition-commit 的 Hive 表中，并运行一个批处理查询将这些数据读回。</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">SET</span> <span class="k">table</span><span class="p">.</span><span class="k">sql</span><span class="o">-</span><span class="n">dialect</span><span class="o">=</span><span class="n">hive</span><span class="p">;</span>
+<span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">hive_table</span> <span class="p">(</span>
+  <span class="n">user_id</span> <span class="n">STRING</span><span class="p">,</span>
+  <span class="n">order_amount</span> <span class="n">DOUBLE</span>
+<span class="p">)</span> <span class="n">PARTITIONED</span> <span class="k">BY</span> <span class="p">(</span><span class="n">dt</span> <span class="n">STRING</span><span class="p">,</span> <span class="n">hr</span> <span class="n">STRING</span><span class="p">)</span> <span class="n">STORED</span> <span class="k">AS</span> <span class="n">parquet</span> <span class="n">TBLPROPERTIES</span> <span class="p">(</span>
+  <span class="s1">&#39;</span><span class="s1">partition.time-extractor.timestamp-pattern</span><span class="s1">&#39;</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">$dt $hr:00:00</span><span class="s1">&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;</span><span class="s1">sink.partition-commit.trigger</span><span class="s1">&#39;</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">partition-time</span><span class="s1">&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;</span><span class="s1">sink.partition-commit.delay</span><span class="s1">&#39;</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">1 h</span><span class="s1">&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;</span><span class="s1">sink.partition-commit.policy.kind</span><span class="s1">&#39;</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">metastore,success-file</span><span class="s1">&#39;</span>
+<span class="p">)</span><span class="p">;</span>
+
+<span class="k">SET</span> <span class="k">table</span><span class="p">.</span><span class="k">sql</span><span class="o">-</span><span class="n">dialect</span><span class="o">=</span><span class="k">default</span><span class="p">;</span>
+<span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">kafka_table</span> <span class="p">(</span>
+  <span class="n">user_id</span> <span class="n">STRING</span><span class="p">,</span>
+  <span class="n">order_amount</span> <span class="n">DOUBLE</span><span class="p">,</span>
+  <span class="n">log_ts</span> <span class="k">TIMESTAMP</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="p">,</span>
+  <span class="n">WATERMARK</span> <span class="k">FOR</span> <span class="n">log_ts</span> <span class="k">AS</span> <span class="n">log_ts</span> <span class="o">-</span> <span class="nb">INTERVAL</span> <span class="s1">&#39;</span><span class="s1">5</span><span class="s1">&#39;</span> <span class="k">SECOND</span>
+<span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">;</span>
+
+<span class="c1">-- streaming sql, insert into hive table
+</span><span class="c1"></span><span class="k">INSERT</span> <span class="k">INTO</span> <span class="k">TABLE</span> <span class="n">hive_table</span> <span class="k">SELECT</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">order_amount</span><span class="p">,</span> <span class="n">DATE_FORMAT</span><span class="p">(</span><span class="n">log_ts</span><span class="p">,</span> <span class="s1">&#39;</span><span class="s1">yyyy-MM-dd</span><span class="s1">&#39;</span><span class="p">)</span><span class="p">,</span> <span class="n">DATE_FORMAT</span><span class="p">(</span><span class="n">log_ts</span><span class="p">,</span> <span class="s1">&#39;</span><span class="s1">HH</span><span class="s1">&#39;</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">kafka_table</span><span class="p">;</span>
+
+<span class="c1">-- batch sql, select with partition pruning
+</span><span class="c1"></span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">hive_table</span> <span class="k">WHERE</span> <span class="n">dt</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">2020-05-20</span><span class="s1">&#39;</span> <span class="k">and</span> <span class="n">hr</span><span class="o">=</span><span class="s1">&#39;</span><span class="s1">12</span><span class="s1">&#39;</span><span class="p">;</span>
+</code></pre></div><h2 id="流式读取">流式读取</h2>
+<p>为了提高 hive 读取的实时性，Flink 支持实时 Hive 表流读取。</p>
+<ul>
+<li>分区表，监控分区的生成，并逐步读取新分区。</li>
+<li>非分区表，监控文件夹中新文件的生成，并增量读取新文件。</li>
+</ul>
+<p>甚至可以采用 10 分钟级别的分区策略，利用 Flink 的 Hive 流式读取和 Hive 流式写入，大大提高 Hive 数据仓库的实时性能，达到准实时分钟级别。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">streaming-source.enable</td>
+<td align="left">false</td>
+<td align="left">Boolean</td>
+<td align="left">是否启用流媒体源。注意：请确保每个分区/文件都是以原子方式写入，否则读者可能会得到不完整的数据。请确保每个分区/文件都应该以原子方式写入，否则读者可能会得到不完整的数据。</td>
+</tr>
+<tr>
+<td align="left">streaming-source.monitor-interval</td>
+<td align="left">1 m</td>
+<td align="left">Duration</td>
+<td align="left">连续监控分区/文件的时间间隔。</td>
+</tr>
+<tr>
+<td align="left">streaming-source.consume-order</td>
+<td align="left">create-time</td>
+<td align="left">String</td>
+<td align="left">流源的消耗顺序，支持 create-time 和 partition-time。create-time 比较的是分区/文件的创建时间，这不是 Hive metaStore 中的分区创建时间，而是文件系统中的文件夹/文件修改时间；partition-time 比较的是分区名称所代表的时间，如果分区文件夹以某种方式得到更新，比如在文件夹中添加新文件，就会影响数据的消耗方式。对于非分区表，这个值应该一直是 &ldquo;创建时间&rdquo;。</td>
+</tr>
+<tr>
+<td align="left">streaming-source.consume-start-offset</td>
+<td align="left">1970-00-00</td>
+<td align="left">String</td>
+<td align="left">流式消费的起始偏移量。如何解析和比较偏移量取决于你的顺序。对于创建时间和分区时间，应该是一个时间戳字符串（yyyy-[m]m-[d]d [hh:mm:ss]）。对于分区时间，将使用分区时间提取器从分区中提取时间。</td>
+</tr>
+</tbody>
+</table>
+<p>注意:</p>
+<ul>
+<li>监控策略是现在扫描位置路径中的所有目录/文件。如果分区太多，会出现性能问题。</li>
+<li>非分区的流式读取需要将每个文件原子地放入目标目录中。</li>
+<li>分区的流式读取要求在 hive metastore 的视图中原子地添加每个分区。这意味着新添加到现有分区的数据不会被消耗掉。</li>
+<li>流读取不支持 Flink DDL 中的水印语法。所以它不能用于窗口操作符。</li>
+</ul>
+<p>下面展示了如何增量读取 Hive 表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">hive_table</span> <span class="cm">/*</span><span class="cm">+ OPTIONS(&#39;streaming-source.enable&#39;=&#39;true&#39;, &#39;streaming-source.consume-start-offset&#39;=&#39;2020-05-20&#39;) </span><span class="cm">*/</span><span class="p">;</span>
+</code></pre></div><h2 id="hive-表作为临时表">Hive 表作为临时表</h2>
+<p>您可以使用 Hive 表作为时态表，并将流式数据加入其中。请按照<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/streaming/temporal_tables.html#temporal-table">示例</a>来了解如何连接一个时态表。</p>
+<p>在执行 join 时，Hive 表将被缓存在 TM 内存中，并在 Hive 表中查找来自流的每一条记录，以决定是否找到匹配。你不需要任何额外的设置就可以使用 Hive 表作为时态表。但可以选择用以下属性配置 Hive 表缓存的 TTL。缓存过期后，将再次扫描 Hive 表以加载最新的数据。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">lookup.join.cache.ttl</td>
+<td align="left">60 min</td>
+<td align="left">Duration</td>
+<td align="left">在查找连接中构建表的缓存 TTL（例如 10 分钟）。默认情况下，TTL 为 60 分钟。</td>
+</tr>
+</tbody>
+</table>
+<p>注意:</p>
+<ol>
+<li>每个加入子任务都需要保留自己的 Hive 表的缓存。请确保 Hive 表可以放入 TM 任务槽的内存中。</li>
+<li>你应该为 lookup.join.cache.ttl 设置一个相对较大的值。如果你的 Hive 表需要太频繁的更新和重载，你可能会有性能问题。</li>
+<li>目前，每当缓存需要刷新时，我们只是简单地加载整个 Hive 表。没有办法区分新数据和旧数据。</li>
+</ol>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_streaming.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_streaming.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/hive" term="hive" label="Hive" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Hive 函数]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="related" type="text/html" title="HiveCatalog" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Hive Functions</blockquote><h1 id="hive-函数">Hive 函数</h1>
+<h2 id="通过-hivemodule-使用-hive-内置功能">通过 HiveModule 使用 Hive 内置功能</h2>
+<p>HiveModule 将 Hive 内置函数作为 Flink 系统（内置）函数提供给 Flink SQL 和 Table API 用户。</p>
+<p>具体信息请参考 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/modules.html#hivemodule">HiveModule</a>。</p>
+<ul>
+<li>Scala</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">name</span>            <span class="k">=</span> <span class="s">&#34;myhive&#34;</span>
+<span class="k">val</span> <span class="n">version</span>         <span class="k">=</span> <span class="s">&#34;2.3.4&#34;</span>
+
+<span class="n">tableEnv</span><span class="o">.</span><span class="n">loadModue</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="k">new</span> <span class="nc">HiveModule</span><span class="o">(</span><span class="n">version</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+</code></pre></div><ul>
+<li>YAML</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="k">modules</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="w">   </span>- <span class="k">name</span><span class="p">:</span><span class="w"> </span>core<span class="w">
+</span><span class="w">     </span><span class="k">type</span><span class="p">:</span><span class="w"> </span>core<span class="w">
+</span><span class="w">   </span>- <span class="k">name</span><span class="p">:</span><span class="w"> </span>myhive<span class="w">
+</span><span class="w">     </span><span class="k">type</span><span class="p">:</span><span class="w"> </span>hive<span class="w">
+</span></code></pre></div><ul>
+<li>注意，旧版本中的一些 Hive 内置功能存在<a href="https://issues.apache.org/jira/browse/HIVE-16183">线程安全问题</a>。我们建议用户给自己的 Hive 打上补丁来修复它们。</li>
+</ul>
+<h2 id="hive-用户定义的函数">Hive 用户定义的函数</h2>
+<p>用户可以在 Flink 中使用他们现有的 Hive 用户定义函数。</p>
+<p>支持的 UDF 类型包括:</p>
+<ul>
+<li>UDF</li>
+<li>GenericUDF</li>
+<li>GenericUDTF</li>
+<li>UDAF</li>
+<li>GenericUDAFResolver2</li>
+</ul>
+<p>在查询规划和执行时，Hive 的 UDF 和 GenericUDF 会自动翻译成 Flink 的 ScalarFunction，Hive 的 GenericUDTF 会自动翻译成 Flink 的 TableFunction，Hive 的 UDAF 和 GenericUDAFResolver2 会翻译成 Flink 的 AggregateFunction。</p>
+<p>要使用 Hive 的用户定义函数，用户必须做到:</p>
+<ul>
+<li>设置一个由 Hive Metastore 支持的 HiveCatalog 作为会话的当前目录，其中包含该函数。</li>
+<li>在 Flink 的 classpath 中加入一个包含该函数的 jar。</li>
+<li>使用 Blink 计划器。</li>
+</ul>
+<h2 id="使用-hive-用户定义函数">使用 Hive 用户定义函数</h2>
+<p>假设我们在 Hive Metastore 中注册了以下 Hive 函数。</p>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="cm">/**
+</span><span class="cm"> * Test simple udf. Registered under name &#39;myudf&#39;
+</span><span class="cm"> */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TestHiveSimpleUDF</span> <span class="kd">extends</span> <span class="n">UDF</span> <span class="o">{</span>
+
+	<span class="kd">public</span> <span class="n">IntWritable</span> <span class="nf">evaluate</span><span class="o">(</span><span class="n">IntWritable</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="k">new</span> <span class="n">IntWritable</span><span class="o">(</span><span class="n">i</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="kd">public</span> <span class="n">Text</span> <span class="nf">evaluate</span><span class="o">(</span><span class="n">Text</span> <span class="n">text</span><span class="o">)</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="k">new</span> <span class="n">Text</span><span class="o">(</span><span class="n">text</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+
+<span class="cm">/**
+</span><span class="cm"> * Test generic udf. Registered under name &#39;mygenericudf&#39;
+</span><span class="cm"> */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TestHiveGenericUDF</span> <span class="kd">extends</span> <span class="n">GenericUDF</span> <span class="o">{</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">ObjectInspector</span> <span class="nf">initialize</span><span class="o">(</span><span class="n">ObjectInspector</span><span class="o">[</span><span class="o">]</span> <span class="n">arguments</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">UDFArgumentException</span> <span class="o">{</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="n">arguments</span><span class="o">.</span><span class="na">length</span> <span class="o">=</span><span class="o">=</span> <span class="n">2</span><span class="o">)</span><span class="o">;</span>
+
+		<span class="n">checkArgument</span><span class="o">(</span><span class="n">arguments</span><span class="o">[</span><span class="n">1</span><span class="o">]</span> <span class="k">instanceof</span> <span class="n">ConstantObjectInspector</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">Object</span> <span class="n">constant</span> <span class="o">=</span> <span class="o">(</span><span class="o">(</span><span class="n">ConstantObjectInspector</span><span class="o">)</span> <span class="n">arguments</span><span class="o">[</span><span class="n">1</span><span class="o">]</span><span class="o">)</span><span class="o">.</span><span class="na">getWritableConstantValue</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="n">constant</span> <span class="k">instanceof</span> <span class="n">IntWritable</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="o">(</span><span class="o">(</span><span class="n">IntWritable</span><span class="o">)</span> <span class="n">constant</span><span class="o">)</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="o">)</span> <span class="o">=</span><span class="o">=</span> <span class="n">1</span><span class="o">)</span><span class="o">;</span>
+
+		<span class="k">if</span> <span class="o">(</span><span class="n">arguments</span><span class="o">[</span><span class="n">0</span><span class="o">]</span> <span class="k">instanceof</span> <span class="n">IntObjectInspector</span> <span class="o">|</span><span class="o">|</span>
+				<span class="n">arguments</span><span class="o">[</span><span class="n">0</span><span class="o">]</span> <span class="k">instanceof</span> <span class="n">StringObjectInspector</span><span class="o">)</span> <span class="o">{</span>
+			<span class="k">return</span> <span class="n">arguments</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">;</span>
+		<span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+			<span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="o">(</span><span class="s">&#34;Not support argument: &#34;</span> <span class="o">+</span> <span class="n">arguments</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">)</span><span class="o">;</span>
+		<span class="o">}</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">Object</span> <span class="nf">evaluate</span><span class="o">(</span><span class="n">DeferredObject</span><span class="o">[</span><span class="o">]</span> <span class="n">arguments</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">HiveException</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="n">arguments</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">String</span> <span class="nf">getDisplayString</span><span class="o">(</span><span class="n">String</span><span class="o">[</span><span class="o">]</span> <span class="n">children</span><span class="o">)</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="s">&#34;TestHiveGenericUDF&#34;</span><span class="o">;</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+
+<span class="cm">/**
+</span><span class="cm"> * Test split udtf. Registered under name &#39;mygenericudtf&#39;
+</span><span class="cm"> */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TestHiveUDTF</span> <span class="kd">extends</span> <span class="n">GenericUDTF</span> <span class="o">{</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">StructObjectInspector</span> <span class="nf">initialize</span><span class="o">(</span><span class="n">ObjectInspector</span><span class="o">[</span><span class="o">]</span> <span class="n">argOIs</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">UDFArgumentException</span> <span class="o">{</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="n">argOIs</span><span class="o">.</span><span class="na">length</span> <span class="o">=</span><span class="o">=</span> <span class="n">2</span><span class="o">)</span><span class="o">;</span>
+
+		<span class="c1">// TEST for constant arguments
+</span><span class="c1"></span>		<span class="n">checkArgument</span><span class="o">(</span><span class="n">argOIs</span><span class="o">[</span><span class="n">1</span><span class="o">]</span> <span class="k">instanceof</span> <span class="n">ConstantObjectInspector</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">Object</span> <span class="n">constant</span> <span class="o">=</span> <span class="o">(</span><span class="o">(</span><span class="n">ConstantObjectInspector</span><span class="o">)</span> <span class="n">argOIs</span><span class="o">[</span><span class="n">1</span><span class="o">]</span><span class="o">)</span><span class="o">.</span><span class="na">getWritableConstantValue</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="n">constant</span> <span class="k">instanceof</span> <span class="n">IntWritable</span><span class="o">)</span><span class="o">;</span>
+		<span class="n">checkArgument</span><span class="o">(</span><span class="o">(</span><span class="o">(</span><span class="n">IntWritable</span><span class="o">)</span> <span class="n">constant</span><span class="o">)</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="o">)</span> <span class="o">=</span><span class="o">=</span> <span class="n">1</span><span class="o">)</span><span class="o">;</span>
+
+		<span class="k">return</span> <span class="n">ObjectInspectorFactory</span><span class="o">.</span><span class="na">getStandardStructObjectInspector</span><span class="o">(</span>
+			<span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="s">&#34;col1&#34;</span><span class="o">)</span><span class="o">,</span>
+			<span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="n">PrimitiveObjectInspectorFactory</span><span class="o">.</span><span class="na">javaStringObjectInspector</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="kt">void</span> <span class="nf">process</span><span class="o">(</span><span class="n">Object</span><span class="o">[</span><span class="o">]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">HiveException</span> <span class="o">{</span>
+		<span class="n">String</span> <span class="n">str</span> <span class="o">=</span> <span class="o">(</span><span class="n">String</span><span class="o">)</span> <span class="n">args</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">;</span>
+		<span class="k">for</span> <span class="o">(</span><span class="n">String</span> <span class="n">s</span> <span class="o">:</span> <span class="n">str</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">)</span><span class="o">)</span> <span class="o">{</span>
+			<span class="n">forward</span><span class="o">(</span><span class="n">s</span><span class="o">)</span><span class="o">;</span>
+			<span class="n">forward</span><span class="o">(</span><span class="n">s</span><span class="o">)</span><span class="o">;</span>
+		<span class="o">}</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="kt">void</span> <span class="nf">close</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div><p>从 Hive CLI 中，我们可以看到他们已经注册了。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">hive&gt; show functions<span class="p">;</span>
+OK
+......
+mygenericudf
+myudf
+myudtf
+</code></pre></div><p>然后，用户可以在 SQL 中使用它们作为。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">Flink SQL&gt; <span class="k">select</span> mygenericudf<span class="o">(</span>myudf<span class="o">(</span>name<span class="o">)</span>, 1<span class="o">)</span> as a, mygenericudf<span class="o">(</span>myudf<span class="o">(</span>age<span class="o">)</span>, 1<span class="o">)</span> as b, s from mysourcetable, lateral table<span class="o">(</span>myudtf<span class="o">(</span>name, 1<span class="o">)</span><span class="o">)</span> as T<span class="o">(</span>s<span class="o">)</span><span class="p">;</span>
+</code></pre></div><p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_functions.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_functions.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/hive" term="hive" label="Hive" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Hive 方言]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="related" type="text/html" title="HiveCatalog" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Hive Dialect</blockquote><h1 id="hive-方言">Hive 方言</h1>
+<p>从 1.11.0 开始，当使用 Hive 方言时，Flink 允许用户用 Hive 语法编写 SQL 语句。通过提供与 Hive 语法的兼容性，我们旨在提高与 Hive 的互操作性，减少用户为了执行不同的语句而需要在 Flink 和 Hive 之间切换的情况。</p>
+<h2 id="使用-hive-方言">使用 Hive 方言</h2>
+<p>Flink 目前支持两种 SQL 方言：默认和 Hive。在使用 Hive 语法编写之前，需要先切换到 Hive 方言。下面介绍如何通过 SQL Client 和 Table API 来设置方言。同时注意，你可以为你执行的每一条语句动态切换方言。不需要重新启动会话来使用不同的方言。</p>
+<h3 id="sql-客户端">SQL 客户端</h3>
+<p>SQL 方言可以通过 table.sql-dialect 属性来指定，因此你可以在你的 SQL 客户端的 yaml 文件的配置部分设置初始方言。因此，你可以在 SQL 客户端的 yaml 文件的配置部分设置要使用的初始方言。</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="k">execution</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="w">  </span><span class="k">planner</span><span class="p">:</span><span class="w"> </span>blink<span class="w">
+</span><span class="w">  </span><span class="k">type</span><span class="p">:</span><span class="w"> </span>batch<span class="w">
+</span><span class="w">  </span><span class="k">result-mode</span><span class="p">:</span><span class="w"> </span>table<span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">configuration</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="w">  </span><span class="k">table.sql-dialect</span><span class="p">:</span><span class="w"> </span>hive<span class="w">
+</span></code></pre></div><p>你也可以在 SQL 客户端启动后设置方言。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">Flink SQL&gt; <span class="nb">set</span> table.sql-dialect<span class="o">=</span>hive<span class="p">;</span> -- to use hive dialect
+<span class="o">[</span>INFO<span class="o">]</span> Session property has been set.
+
+Flink SQL&gt; <span class="nb">set</span> table.sql-dialect<span class="o">=</span>default<span class="p">;</span> -- to use default dialect
+<span class="o">[</span>INFO<span class="o">]</span> Session property has been set.
+</code></pre></div><h3 id="table-api">Table API</h3>
+<p>You can set dialect for your TableEnvironment with Table API.</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">pyflink.table</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">settings</span> <span class="o">=</span> <span class="n">EnvironmentSettings</span><span class="o">.</span><span class="n">new_instance</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">in_batch_mode</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">use_blink_planner</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="p">)</span>
+<span class="n">t_env</span> <span class="o">=</span> <span class="n">BatchTableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">environment_settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+
+<span class="c1"># to use hive dialect</span>
+<span class="n">t_env</span><span class="o">.</span><span class="n">get_config</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">set_sql_dialect</span><span class="p">(</span><span class="n">SqlDialect</span><span class="o">.</span><span class="n">HIVE</span><span class="p">)</span>
+<span class="c1"># to use default dialect</span>
+<span class="n">t_env</span><span class="o">.</span><span class="n">get_config</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">set_sql_dialect</span><span class="p">(</span><span class="n">SqlDialect</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">)</span>
+</code></pre></div><h2 id="ddl">DDL</h2>
+<p>本节列出了 Hive 方言支持的 DDL。在这里我们将主要关注语法。关于每个 DDL 语句的语义，你可以参考 <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL">Hive 文档</a>。</p>
+<h3 id="database">DATABASE</h3>
+<ul>
+<li>Show</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">SHOW</span> <span class="n">DATABASES</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Create</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="p">(</span><span class="k">DATABASE</span><span class="o">|</span><span class="k">SCHEMA</span><span class="p">)</span> <span class="p">[</span><span class="k">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">database_name</span>
+  <span class="p">[</span><span class="k">COMMENT</span> <span class="n">database_comment</span><span class="p">]</span>
+  <span class="p">[</span><span class="k">LOCATION</span> <span class="n">fs_path</span><span class="p">]</span>
+  <span class="p">[</span><span class="k">WITH</span> <span class="n">DBPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span><span class="o">=</span><span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">]</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Alter</li>
+</ul>
+<p>更新属性</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="p">(</span><span class="k">DATABASE</span><span class="o">|</span><span class="k">SCHEMA</span><span class="p">)</span> <span class="n">database_name</span> <span class="k">SET</span> <span class="n">DBPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span><span class="o">=</span><span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">;</span>
+</code></pre></div><p>更新所有者</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="p">(</span><span class="k">DATABASE</span><span class="o">|</span><span class="k">SCHEMA</span><span class="p">)</span> <span class="n">database_name</span> <span class="k">SET</span> <span class="k">OWNER</span> <span class="p">[</span><span class="k">USER</span><span class="o">|</span><span class="k">ROLE</span><span class="p">]</span> <span class="n">user_or_role</span><span class="p">;</span>
+</code></pre></div><p>更新位置</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="p">(</span><span class="k">DATABASE</span><span class="o">|</span><span class="k">SCHEMA</span><span class="p">)</span> <span class="n">database_name</span> <span class="k">SET</span> <span class="k">LOCATION</span> <span class="n">fs_path</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Drop</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">DROP</span> <span class="p">(</span><span class="k">DATABASE</span><span class="o">|</span><span class="k">SCHEMA</span><span class="p">)</span> <span class="p">[</span><span class="k">IF</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">database_name</span> <span class="p">[</span><span class="k">RESTRICT</span><span class="o">|</span><span class="k">CASCADE</span><span class="p">]</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Use</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="n">USE</span> <span class="n">database_name</span><span class="p">;</span>
+</code></pre></div><h3 id="table">TABLE</h3>
+<ul>
+<li>Show</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">SHOW</span> <span class="n">TABLES</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Create</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="p">[</span><span class="k">EXTERNAL</span><span class="p">]</span> <span class="k">TABLE</span> <span class="p">[</span><span class="k">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="k">table_name</span>
+  <span class="p">[</span><span class="p">(</span><span class="n">col_name</span> <span class="n">data_type</span> <span class="p">[</span><span class="n">column_constraint</span><span class="p">]</span> <span class="p">[</span><span class="k">COMMENT</span> <span class="n">col_comment</span><span class="p">]</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span> <span class="p">[</span><span class="n">table_constraint</span><span class="p">]</span><span class="p">)</span><span class="p">]</span>
+  <span class="p">[</span><span class="k">COMMENT</span> <span class="n">table_comment</span><span class="p">]</span>
+  <span class="p">[</span><span class="n">PARTITIONED</span> <span class="k">BY</span> <span class="p">(</span><span class="n">col_name</span> <span class="n">data_type</span> <span class="p">[</span><span class="k">COMMENT</span> <span class="n">col_comment</span><span class="p">]</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">]</span>
+  <span class="p">[</span>
+    <span class="p">[</span><span class="k">ROW</span> <span class="n">FORMAT</span> <span class="n">row_format</span><span class="p">]</span>
+    <span class="p">[</span><span class="n">STORED</span> <span class="k">AS</span> <span class="n">file_format</span><span class="p">]</span>
+  <span class="p">]</span>
+  <span class="p">[</span><span class="k">LOCATION</span> <span class="n">fs_path</span><span class="p">]</span>
+  <span class="p">[</span><span class="n">TBLPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span><span class="o">=</span><span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">]</span>
+  
+<span class="n">row_format</span><span class="p">:</span>
+  <span class="p">:</span> <span class="n">DELIMITED</span> <span class="p">[</span><span class="n">FIELDS</span> <span class="n">TERMINATED</span> <span class="k">BY</span> <span class="nb">char</span> <span class="p">[</span><span class="n">ESCAPED</span> <span class="k">BY</span> <span class="nb">char</span><span class="p">]</span><span class="p">]</span> <span class="p">[</span><span class="n">COLLECTION</span> <span class="n">ITEMS</span> <span class="n">TERMINATED</span> <span class="k">BY</span> <span class="nb">char</span><span class="p">]</span>
+      <span class="p">[</span><span class="k">MAP</span> <span class="n">KEYS</span> <span class="n">TERMINATED</span> <span class="k">BY</span> <span class="nb">char</span><span class="p">]</span> <span class="p">[</span><span class="n">LINES</span> <span class="n">TERMINATED</span> <span class="k">BY</span> <span class="nb">char</span><span class="p">]</span>
+      <span class="p">[</span><span class="k">NULL</span> <span class="k">DEFINED</span> <span class="k">AS</span> <span class="nb">char</span><span class="p">]</span>
+  <span class="o">|</span> <span class="n">SERDE</span> <span class="n">serde_name</span> <span class="p">[</span><span class="k">WITH</span> <span class="n">SERDEPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span><span class="o">=</span><span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">]</span>
+  
+<span class="n">file_format</span><span class="p">:</span>
+  <span class="p">:</span> <span class="n">SEQUENCEFILE</span>
+  <span class="o">|</span> <span class="n">TEXTFILE</span>
+  <span class="o">|</span> <span class="n">RCFILE</span>
+  <span class="o">|</span> <span class="n">ORC</span>
+  <span class="o">|</span> <span class="n">PARQUET</span>
+  <span class="o">|</span> <span class="n">AVRO</span>
+  <span class="o">|</span> <span class="n">INPUTFORMAT</span> <span class="n">input_format_classname</span> <span class="n">OUTPUTFORMAT</span> <span class="n">output_format_classname</span>
+  
+<span class="n">column_constraint</span><span class="p">:</span>
+  <span class="p">:</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="p">[</span><span class="p">[</span><span class="n">ENABLE</span><span class="o">|</span><span class="n">DISABLE</span><span class="p">]</span> <span class="p">[</span><span class="n">VALIDATE</span><span class="o">|</span><span class="n">NOVALIDATE</span><span class="p">]</span> <span class="p">[</span><span class="n">RELY</span><span class="o">|</span><span class="n">NORELY</span><span class="p">]</span><span class="p">]</span>
+  
+<span class="n">table_constraint</span><span class="p">:</span>
+  <span class="p">:</span> <span class="p">[</span><span class="k">CONSTRAINT</span> <span class="k">constraint_name</span><span class="p">]</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span> <span class="p">[</span><span class="p">[</span><span class="n">ENABLE</span><span class="o">|</span><span class="n">DISABLE</span><span class="p">]</span> <span class="p">[</span><span class="n">VALIDATE</span><span class="o">|</span><span class="n">NOVALIDATE</span><span class="p">]</span> <span class="p">[</span><span class="n">RELY</span><span class="o">|</span><span class="n">NORELY</span><span class="p">]</span><span class="p">]</span>
+</code></pre></div><ul>
+<li>Alter</li>
+</ul>
+<p>重命名</p>
+<pre><code class="language-ssql" data-lang="ssql">ALTER TABLE table_name RENAME TO new_table_name;
+</code></pre><p>更新属性</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="k">SET</span> <span class="n">TBLPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span> <span class="p">)</span><span class="p">;</span>
+</code></pre></div><p>更新位置</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="p">[</span><span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">]</span> <span class="k">SET</span> <span class="k">LOCATION</span> <span class="n">fs_path</span><span class="p">;</span>
+</code></pre></div><p>partition_spec 如果存在，需要是一个完整的规格，即有所有分区列的值。而当它存在时，操作将被应用到相应的分区而不是表。</p>
+<p>更新文件格式</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="p">[</span><span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">]</span> <span class="k">SET</span> <span class="n">FILEFORMAT</span> <span class="n">file_format</span><span class="p">;</span>
+</code></pre></div><p>partition_spec 如果存在，需要是一个完整的规格，即有所有分区列的值。而当它存在时，操作将被应用到相应的分区而不是表。</p>
+<p>更新 SerDe 属性</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="p">[</span><span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">]</span> <span class="k">SET</span> <span class="n">SERDE</span> <span class="n">serde_class_name</span> <span class="p">[</span><span class="k">WITH</span> <span class="n">SERDEPROPERTIES</span> <span class="n">serde_properties</span><span class="p">]</span><span class="p">;</span>
+ 
+<span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="p">[</span><span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">]</span> <span class="k">SET</span> <span class="n">SERDEPROPERTIES</span> <span class="n">serde_properties</span><span class="p">;</span>
+ 
+<span class="n">serde_properties</span><span class="p">:</span>
+  <span class="p">:</span> <span class="p">(</span><span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span> <span class="p">)</span>
+</code></pre></div><p>partition_spec 如果存在，需要是一个完整的规格，即有所有分区列的值。而当它存在时，操作将被应用到相应的分区而不是表。</p>
+<p>添加分区</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="k">ADD</span> <span class="p">[</span><span class="k">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="p">(</span><span class="n">PARTITION</span> <span class="n">partition_spec</span> <span class="p">[</span><span class="k">LOCATION</span> <span class="n">fs_path</span><span class="p">]</span><span class="p">)</span><span class="o">+</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Drop Partitions</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="k">DROP</span> <span class="p">[</span><span class="k">IF</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">[</span><span class="p">,</span> <span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">]</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>新增/替换 列</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span>
+  <span class="k">ADD</span><span class="o">|</span><span class="k">REPLACE</span> <span class="n">COLUMNS</span> <span class="p">(</span><span class="n">col_name</span> <span class="n">data_type</span> <span class="p">[</span><span class="k">COMMENT</span> <span class="n">col_comment</span><span class="p">]</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span>
+  <span class="p">[</span><span class="k">CASCADE</span><span class="o">|</span><span class="k">RESTRICT</span><span class="p">]</span>
+</code></pre></div><ul>
+<li>Change Column</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">table_name</span> <span class="n">CHANGE</span> <span class="p">[</span><span class="k">COLUMN</span><span class="p">]</span> <span class="n">col_old_name</span> <span class="n">col_new_name</span> <span class="n">column_type</span>
+  <span class="p">[</span><span class="k">COMMENT</span> <span class="n">col_comment</span><span class="p">]</span> <span class="p">[</span><span class="k">FIRST</span><span class="o">|</span><span class="k">AFTER</span> <span class="k">column_name</span><span class="p">]</span> <span class="p">[</span><span class="k">CASCADE</span><span class="o">|</span><span class="k">RESTRICT</span><span class="p">]</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Drop</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">DROP</span> <span class="k">TABLE</span> <span class="p">[</span><span class="k">IF</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="k">table_name</span><span class="p">;</span>
+</code></pre></div><h2 id="view">VIEW</h2>
+<ul>
+<li>Create</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="k">VIEW</span> <span class="p">[</span><span class="k">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">view_name</span> <span class="p">[</span><span class="p">(</span><span class="k">column_name</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span> <span class="p">]</span>
+  <span class="p">[</span><span class="k">COMMENT</span> <span class="n">view_comment</span><span class="p">]</span>
+  <span class="p">[</span><span class="n">TBLPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">)</span><span class="p">]</span>
+  <span class="k">AS</span> <span class="k">SELECT</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Alter</li>
+</ul>
+<p>注意：改变视图只在表 API 中工作，但不支持通过 SQL 客户端。</p>
+<p>重命名</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">VIEW</span> <span class="n">view_name</span> <span class="k">RENAME</span> <span class="k">TO</span> <span class="n">new_view_name</span><span class="p">;</span>
+</code></pre></div><p>更新属性</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">VIEW</span> <span class="n">view_name</span> <span class="k">SET</span> <span class="n">TBLPROPERTIES</span> <span class="p">(</span><span class="n">property_name</span> <span class="o">=</span> <span class="n">property_value</span><span class="p">,</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span> <span class="p">)</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Update As Select</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span> <span class="k">VIEW</span> <span class="n">view_name</span> <span class="k">AS</span> <span class="n">select_statement</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Drop</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">DROP</span> <span class="k">VIEW</span> <span class="p">[</span><span class="k">IF</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">view_name</span><span class="p">;</span>
+</code></pre></div><h2 id="function">FUNCTION</h2>
+<ul>
+<li>Show</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">SHOW</span> <span class="n">FUNCTIONS</span><span class="p">;</span>
+</code></pre></div><ul>
+<li>Create</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="k">FUNCTION</span> <span class="n">function_name</span> <span class="k">AS</span> <span class="n">class_name</span><span class="p">;</span>
+</code></pre></div><p>Drop</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">DROP</span> <span class="k">FUNCTION</span> <span class="p">[</span><span class="k">IF</span> <span class="k">EXISTS</span><span class="p">]</span> <span class="n">function_name</span><span class="p">;</span>
+</code></pre></div><h2 id="dml">DML</h2>
+<h3 id="nsert">NSERT</h3>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">INSERT</span> <span class="p">(</span><span class="k">INTO</span><span class="o">|</span><span class="n">OVERWRITE</span><span class="p">)</span> <span class="p">[</span><span class="k">TABLE</span><span class="p">]</span> <span class="k">table_name</span> <span class="p">[</span><span class="n">PARTITION</span> <span class="n">partition_spec</span><span class="p">]</span> <span class="k">SELECT</span> <span class="p">.</span><span class="p">.</span><span class="p">.</span><span class="p">;</span>
+</code></pre></div><p>partition_spec，如果存在的话，可以是完整规格或部分规格。如果 partition_spec 是部分规格，动态分区列名可以省略。</p>
+<h2 id="dql">DQL</h2>
+<p>目前，Hive 方言支持的 DQL 语法与 Flink SQL 相同。详情请参考 Flink SQL 查询。而且建议切换到默认方言来执行 DQL。</p>
+<h2 id="注意事项">注意事项</h2>
+<p>以下是使用 Hive 方言的一些注意事项。</p>
+<ul>
+<li>Hive 方言只能用于操作 Hive 表，而不是通用表。而且 Hive 方言应该和 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_catalog.html">HiveCatalog</a> 一起使用。</li>
+<li>虽然所有的 Hive 版本都支持相同的语法，但是否有特定的功能还是取决于你使用的 <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#supported-hive-versions">Hive 版本</a>。例如，更新数据库位置只在 Hive-2.4.0 或更高版本中支持。</li>
+<li>Hive 和 Calcite 有不同的保留关键字集。例如，在 Calcite 中默认是保留关键字，而在 Hive 中是非保留关键字。即使是 Hive 方言，你也必须用反引号（`）来引用这些关键字，才能将它们作为标识符使用。</li>
+<li>由于扩展查询不兼容，在 Flink 中创建的视图不能在 Hive 中查询。</li>
+</ul>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_dialect.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_dialect.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/hive" term="hive" label="Hive" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Hive 集成 - 概览]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="related" type="text/html" title="HiveCatalog" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Overview</blockquote><h1 id="hive-集成">Hive 集成</h1>
+<p>Apache Hive 已经确立了自己作为数据仓库生态系统的焦点。它不仅是大数据分析和 ETL 的 SQL 引擎，也是一个数据管理平台，在这里，数据被发现、定义和发展。</p>
+<p>Flink 与 Hive 提供了两方面的整合。</p>
+<p>第一是利用 Hive 的 Metastore 作为一个持久性目录，与 Flink 的 HiveCatalog 进行跨会话存储 Flink 特定的元数据。例如，用户可以通过使用 HiveCatalog 将 Kafka 或 ElasticSearch 表存储在 Hive Metastore 中，并在以后的 SQL 查询中重复使用。</p>
+<p>二是提供 Flink 作为读写 Hive 表的替代引擎。</p>
+<p>HiveCatalog 的设计是 &ldquo;开箱即用&rdquo;，与现有的 Hive 安装兼容。您不需要修改现有的 Hive Metastore，也不需要改变数据位置或表的分区。</p>
+<h2 id="支持的-hive-版本">支持的 Hive 版本</h2>
+<p>Flink 支持以下 Hive 版本。</p>
+<ul>
+<li>1.0
+<ul>
+<li>1.0.0</li>
+<li>1.0.1</li>
+</ul>
+</li>
+<li>1.1
+<ul>
+<li>1.1.0</li>
+<li>1.1.1</li>
+</ul>
+</li>
+<li>1.2
+<ul>
+<li>1.2.0</li>
+<li>1.2.1</li>
+<li>1.2.2</li>
+</ul>
+</li>
+<li>2.0
+<ul>
+<li>2.0.0</li>
+<li>2.0.1</li>
+</ul>
+</li>
+<li>2.1
+<ul>
+<li>2.1.0</li>
+<li>2.1.1</li>
+</ul>
+</li>
+<li>2.2
+<ul>
+<li>2.2.0</li>
+</ul>
+</li>
+<li>2.3
+<ul>
+<li>2.3.0</li>
+<li>2.3.1</li>
+<li>2.3.2</li>
+<li>2.3.3</li>
+<li>2.3.4</li>
+<li>2.3.5</li>
+<li>2.3.6</li>
+</ul>
+</li>
+<li>3.1
+<ul>
+<li>3.1.0</li>
+<li>3.1.1</li>
+<li>3.1.2</li>
+</ul>
+</li>
+</ul>
+<p>请注意 Hive 本身在不同的版本有不同的功能，这些问题不是 Flink 造成的。</p>
+<ul>
+<li>1.2.0 及以后版本支持 Hive 内置函数。</li>
+<li>3.1.0 及以后版本支持列约束，即 PRIMARY KEY 和 NOT NULL。</li>
+<li>在 1.2.0 及以后的版本中，支持修改表的统计数据。</li>
+<li>在 1.2.0 及以后的版本中支持 DATE 列统计。</li>
+<li>在 2.0.x 中不支持写入 ORC 表。</li>
+</ul>
+<h3 id="依赖性">依赖性</h3>
+<p>为了与 Hive 集成，你需要在 Flink 发行版的 <code>/lib/</code> 目录下添加一些额外的依赖关系，以使集成工作在 Table API 程序或 SQL 客户端中。另外，你也可以将这些依赖项放在一个专门的文件夹中，并分别用 <code>-C</code> 或 <code>-l</code> 选项将它们添加到 <code>classpath</code> 中，用于 Table API 程序或 SQL Client。</p>
+<p>Apache Hive 是建立在 Hadoop 上的，所以首先需要 Hadoop 依赖，请参考提供 Hadoop 类。</p>
+<p>有两种方法可以添加 Hive 依赖。首先是使用 Flink 的捆绑式 Hive jars。你可以根据你使用的 metastore 的版本来选择捆绑的 Hive jar。第二种是分别添加每个所需的 jar。如果你使用的 Hive 版本没有在这里列出，第二种方式就会很有用。</p>
+<h4 id="使用捆绑的-hive-jar">使用捆绑的 Hive jar</h4>
+<p>下表列出了所有可用的捆绑的 hive jar，你可以选择一个到 Flink 发行版的 <code>/lib/</code> 目录下。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Metastore version</th>
+<th align="left">Maven dependency</th>
+<th align="left">SQL Client JAR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">1.0.0 - 1.2.2</td>
+<td align="left">flink-sql-connector-hive-1.2.2</td>
+<td align="left"><a href="https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-1.2.2_2.11/1.11.0/flink-sql-connector-hive-1.2.2_2.11-1.11.0.jar">Download</a></td>
+</tr>
+<tr>
+<td align="left">2.0.0 - 2.2.0</td>
+<td align="left">flink-sql-connector-hive-2.2.0</td>
+<td align="left"><a href="https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.2.0_2.11/1.11.0/flink-sql-connector-hive-2.2.0_2.11-1.11.0.jar">Download</a></td>
+</tr>
+<tr>
+<td align="left">2.3.0 - 2.3.6</td>
+<td align="left">flink-sql-connector-hive-2.3.6</td>
+<td align="left"><a href="https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.3.6_2.11/1.11.0/flink-sql-connector-hive-2.3.6_2.11-1.11.0.jar">Download</a></td>
+</tr>
+<tr>
+<td align="left">3.0.0 - 3.1.2</td>
+<td align="left">flink-sql-connector-hive-3.1.2</td>
+<td align="left"><a href="https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.11/1.11.0/flink-sql-connector-hive-3.1.2_2.11-1.11.0.jar">Download</a></td>
+</tr>
+</tbody>
+</table>
+<h4 id="用户定义的依赖性">用户定义的依赖性</h4>
+<p>请在下面找到不同 Hive 主要版本所需的依赖关系。</p>
+<ul>
+<li>Hive 2.3.4</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector.Contains flink-hadoop-compatibility and flink-orc jars
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-exec-2.3.4.jar
+</code></pre><ul>
+<li>Hive 1.0.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-metastore-1.0.0.jar
+       hive-exec-1.0.0.jar
+       libfb303-0.9.0.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
+       
+       // Orc dependencies -- required by the ORC vectorized optimizations
+       orc-core-1.4.3-nohive.jar
+       aircompressor-0.8.jar // transitive dependency of orc-core
+</code></pre><ul>
+<li>Hive 1.1.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-metastore-1.1.0.jar
+       hive-exec-1.1.0.jar
+       libfb303-0.9.2.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
+
+       // Orc dependencies -- required by the ORC vectorized optimizations
+       orc-core-1.4.3-nohive.jar
+       aircompressor-0.8.jar // transitive dependency of orc-core
+</code></pre><ul>
+<li>Hive 1.2.1</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-metastore-1.2.1.jar
+       hive-exec-1.2.1.jar
+       libfb303-0.9.2.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
+
+       // Orc dependencies -- required by the ORC vectorized optimizations
+       orc-core-1.4.3-nohive.jar
+       aircompressor-0.8.jar // transitive dependency of orc-core
+</code></pre><ul>
+<li>Hive 2.0.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-exec-2.0.0.jar
+</code></pre><ul>
+<li>Hive 2.1.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-exec-2.1.0.jar
+</code></pre><ul>
+<li>Hive 2.2.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-exec-2.2.0.jar
+
+       // Orc dependencies -- required by the ORC vectorized optimizations
+       orc-core-1.4.3.jar
+       aircompressor-0.8.jar // transitive dependency of orc-core
+</code></pre><ul>
+<li>Hive 3.1.0</li>
+</ul>
+<pre><code>/flink-1.11.0
+   /lib
+
+       // Flink's Hive connector
+       flink-connector-hive_2.11-1.11.0.jar
+
+       // Hive dependencies
+       hive-exec-3.1.0.jar
+       libfb303-0.9.3.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
+</code></pre><h3 id="program-maven">Program maven</h3>
+<p>如果你正在构建你自己的程序，你需要在你的 mvn 文件中加入以下依赖关系。建议不要在生成的 jar 文件中包含这些依赖关系。你应该在运行时添加上面所说的依赖关系。</p>
+<div class="highlight"><pre class="chroma"><code class="language-xml" data-lang="xml"><span class="c">&lt;!--</span><span class="c"> Flink Dependency </span><span class="c">--&gt;</span>
+<span class="nt">&lt;dependency</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;groupId</span><span class="nt">&gt;</span>org.apache.flink<span class="nt">&lt;/groupId&gt;</span>
+  <span class="nt">&lt;artifactId</span><span class="nt">&gt;</span>flink-connector-hive_2.11<span class="nt">&lt;/artifactId&gt;</span>
+  <span class="nt">&lt;version</span><span class="nt">&gt;</span>1.11.0<span class="nt">&lt;/version&gt;</span>
+  <span class="nt">&lt;scope</span><span class="nt">&gt;</span>provided<span class="nt">&lt;/scope&gt;</span>
+<span class="nt">&lt;/dependency&gt;</span>
+
+<span class="nt">&lt;dependency</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;groupId</span><span class="nt">&gt;</span>org.apache.flink<span class="nt">&lt;/groupId&gt;</span>
+  <span class="nt">&lt;artifactId</span><span class="nt">&gt;</span>flink-table-api-java-bridge_2.11<span class="nt">&lt;/artifactId&gt;</span>
+  <span class="nt">&lt;version</span><span class="nt">&gt;</span>1.11.0<span class="nt">&lt;/version&gt;</span>
+  <span class="nt">&lt;scope</span><span class="nt">&gt;</span>provided<span class="nt">&lt;/scope&gt;</span>
+<span class="nt">&lt;/dependency&gt;</span>
+
+<span class="c">&lt;!--</span><span class="c"> Hive Dependency </span><span class="c">--&gt;</span>
+<span class="nt">&lt;dependency</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;groupId</span><span class="nt">&gt;</span>org.apache.hive<span class="nt">&lt;/groupId&gt;</span>
+    <span class="nt">&lt;artifactId</span><span class="nt">&gt;</span>hive-exec<span class="nt">&lt;/artifactId&gt;</span>
+    <span class="nt">&lt;version</span><span class="nt">&gt;</span>${hive.version}<span class="nt">&lt;/version&gt;</span>
+    <span class="nt">&lt;scope</span><span class="nt">&gt;</span>provided<span class="nt">&lt;/scope&gt;</span>
+<span class="nt">&lt;/dependency&gt;</span>
+</code></pre></div><h2 id="连接到-hive">连接到 Hive</h2>
+<p>通过表环境或 YAML 配置，使用目录接口和 HiveCatalog 连接到现有的 Hive 安装。</p>
+<p>如果 <code>hive-conf/hive-site.xml</code> 文件存储在远程存储系统中，用户应先将 hive 配置文件下载到本地环境中。</p>
+<p>请注意，虽然 HiveCatalog 不需要特定的规划师，但读/写 Hive 表只适用于 blink 规划师。因此强烈建议您在连接 Hive 仓库时使用 blink planner。</p>
+<p>HiveCatalog 能够自动检测使用中的 Hive 版本。建议不要指定 Hive 版本，除非自动检测失败。</p>
+<p>以 Hive 2.3.4 版本为例。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">val</span> <span class="n">settings</span> <span class="k">=</span> <span class="nc">EnvironmentSettings</span><span class="o">.</span><span class="n">newInstance</span><span class="o">(</span><span class="o">)</span><span class="o">.</span><span class="n">inBatchMode</span><span class="o">(</span><span class="o">)</span><span class="o">.</span><span class="n">build</span><span class="o">(</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">tableEnv</span> <span class="k">=</span> <span class="nc">TableEnvironment</span><span class="o">.</span><span class="n">create</span><span class="o">(</span><span class="n">settings</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="n">name</span>            <span class="k">=</span> <span class="s">&#34;myhive&#34;</span>
+<span class="k">val</span> <span class="n">defaultDatabase</span> <span class="k">=</span> <span class="s">&#34;mydatabase&#34;</span>
+<span class="k">val</span> <span class="n">hiveConfDir</span>     <span class="k">=</span> <span class="s">&#34;/opt/hive-conf&#34;</span> <span class="c1">// a local path
+</span><span class="c1"></span>
+<span class="k">val</span> <span class="n">hive</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">HiveCatalog</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">defaultDatabase</span><span class="o">,</span> <span class="n">hiveConfDir</span><span class="o">)</span>
+<span class="n">tableEnv</span><span class="o">.</span><span class="n">registerCatalog</span><span class="o">(</span><span class="s">&#34;myhive&#34;</span><span class="o">,</span> <span class="n">hive</span><span class="o">)</span>
+
+<span class="c1">// set the HiveCatalog as the current catalog of the session
+</span><span class="c1"></span><span class="n">tableEnv</span><span class="o">.</span><span class="n">useCatalog</span><span class="o">(</span><span class="s">&#34;myhive&#34;</span><span class="o">)</span>
+</code></pre></div><h2 id="ddl">DDL</h2>
+<p>建议使用 <a href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect">Hive 方言</a>在 Flink 中执行 DDL 来创建 Hive 表、视图、分区、函数。</p>
+<h2 id="dml">DML</h2>
+<p>Flink 支持 DML 写入 Hive 表。请参考<a href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write">读写 Hive 表</a>的细节。</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/hive" term="hive" label="Hive" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[HiveCatalog]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>HiveCatalog</blockquote><h1 id="hivecatalog">HiveCatalog</h1>
+<p>Hive Metastore 经过多年的发展，已经成为 Hadoop 生态系统中事实上的元数据中心。很多公司在生产中都有一个 Hive Metastore 服务实例来管理他们所有的元数据，无论是 Hive 元数据还是非 Hive 元数据，都是真理的来源。</p>
+<p>对于同时部署了 Hive 和 Flink 的用户，HiveCatalog 可以让他们使用 Hive Metastore 来管理 Flink 的元数据。</p>
+<p>对于只有 Flink 部署的用户来说，HiveCatalog 是 Flink 开箱即用的唯一持久化目录。如果没有持久化目录，用户使用 <a href="https://ohmyweekly.github.io/notes/2020-08-22-create-statements">Flink SQL CREATE DDL</a> 必须在每个会话中反复创建元对象，比如 Kafka 表，这就浪费了很多时间。HiveCatalog 填补了这一空白，使用户只需创建一次表和其他元对象，以后就可以跨会话方便地引用和管理它们。</p>
+<h2 id="设置-hivecatalog">设置 HiveCatalog</h2>
+<h3 id="依赖性">依赖性</h3>
+<p>在 Flink 中设置 HiveCatalog 需要与 Flink-Hive 集成相同的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#dependencies">依赖关系</a>。</p>
+<h3 id="配置">配置</h3>
+<p>在 Flink 中设置 HiveCatalog 需要与 Flink-Hive 集成相同的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#connecting-to-hive">配置</a>。</p>
+<h2 id="如何使用-hivecatalog">如何使用 HiveCatalog</h2>
+<p>一旦配置得当，HiveCatalog 应该可以直接使用。用户可以用 DDL 创建 Flink 元对象，并在创建后立即看到它们。</p>
+<p>HiveCatalog 可以用来处理两种表。Hive 兼容表和通用表。Hive-compatible 表是指那些以 Hive 兼容的方式存储的表，在存储层的元数据和数据方面都是如此。因此，通过 Flink 创建的 Hive 兼容表可以从 Hive 端进行查询。</p>
+<p>而通用表则是针对 Flink 的。当使用 HiveCatalog 创建通用表时，我们只是使用 HMS 来持久化元数据。虽然这些表对 Hive 是可见的，但 Hive 不太可能理解这些元数据。因此在 Hive 中使用这样的表会导致未定义的行为。</p>
+<p>Flink 使用属性 &ldquo;is_generic&rdquo; 来判断一个表是与 Hive 兼容还是通用。当用 HiveCatalog 创建一个表时，它默认被认为是通用的。如果你想创建一个 Hive 兼容的表，请确保在你的表属性中把 is_generic 设置为 false。</p>
+<p>如上所述，通用表不应该从 Hive 使用。在 Hive CLI 中，你可以调用 describe FORMATTED 对一个表进行检查，通过检查 is_generic 属性来决定它是否是通用的。通用表会有 is_generic=true。</p>
+<h3 id="例子">例子</h3>
+<p>我们在这里将通过一个简单的例子进行讲解。</p>
+<p>第 1 步：设置 Hive Metastore。</p>
+<p>有一个 Hive Metastore 在运行。</p>
+<p>在这里，我们在本地路径 <code>/opt/hive-conf/hive-site.xml</code> 中设置一个本地 Hive Metastore 和我们的 hive-site.xml 文件。我们有如下的一些配置。</p>
+<div class="highlight"><pre class="chroma"><code class="language-xml" data-lang="xml"><span class="nt">&lt;configuration</span><span class="nt">&gt;</span>
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;name</span><span class="nt">&gt;</span>javax.jdo.option.ConnectionURL<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;value</span><span class="nt">&gt;</span>jdbc:mysql://localhost/metastore?createDatabaseIfNotExist=true<span class="nt">&lt;/value&gt;</span>
+      <span class="nt">&lt;description</span><span class="nt">&gt;</span>metadata is stored in a MySQL server<span class="nt">&lt;/description&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;name</span><span class="nt">&gt;</span>javax.jdo.option.ConnectionDriverName<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;value</span><span class="nt">&gt;</span>com.mysql.jdbc.Driver<span class="nt">&lt;/value&gt;</span>
+      <span class="nt">&lt;description</span><span class="nt">&gt;</span>MySQL JDBC driver class<span class="nt">&lt;/description&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;name</span><span class="nt">&gt;</span>javax.jdo.option.ConnectionUserName<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;value</span><span class="nt">&gt;</span>...<span class="nt">&lt;/value&gt;</span>
+      <span class="nt">&lt;description</span><span class="nt">&gt;</span>user name for connecting to mysql server<span class="nt">&lt;/description&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;name</span><span class="nt">&gt;</span>javax.jdo.option.ConnectionPassword<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;value</span><span class="nt">&gt;</span>...<span class="nt">&lt;/value&gt;</span>
+      <span class="nt">&lt;description</span><span class="nt">&gt;</span>password for connecting to mysql server<span class="nt">&lt;/description&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+       <span class="nt">&lt;name</span><span class="nt">&gt;</span>hive.metastore.uris<span class="nt">&lt;/name&gt;</span>
+       <span class="nt">&lt;value</span><span class="nt">&gt;</span>thrift://localhost:9083<span class="nt">&lt;/value&gt;</span>
+       <span class="nt">&lt;description</span><span class="nt">&gt;</span>IP address (or fully-qualified domain name) and port of the metastore host<span class="nt">&lt;/description&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+   <span class="nt">&lt;property</span><span class="nt">&gt;</span>
+       <span class="nt">&lt;name</span><span class="nt">&gt;</span>hive.metastore.schema.verification<span class="nt">&lt;/name&gt;</span>
+       <span class="nt">&lt;value</span><span class="nt">&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+   <span class="nt">&lt;/property&gt;</span>
+
+<span class="nt">&lt;/configuration&gt;</span>
+</code></pre></div><p>用 Hive Cli 测试连接到 HMS。运行一些命令，我们可以看到我们有一个名为 default 的数据库，里面没有表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">hive&gt; show databases<span class="p">;</span>
+OK
+default
+Time taken: 0.032 seconds, Fetched: <span class="m">1</span> row<span class="o">(</span>s<span class="o">)</span>
+
+hive&gt; show tables<span class="p">;</span>
+OK
+Time taken: 0.028 seconds, Fetched: <span class="m">0</span> row<span class="o">(</span>s<span class="o">)</span>
+</code></pre></div><p>步骤 2：配置 Flink 集群和 SQL CLI</p>
+<p>将所有 Hive 的依赖关系添加到 Flink 发行版的 <code>/lib</code> 目录下，并修改 SQL CLI 的 yaml 配置文件 sql-cli-defaults.yaml 如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="k">execution</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="w">    </span><span class="k">planner</span><span class="p">:</span><span class="w"> </span>blink<span class="w">
+</span><span class="w">    </span><span class="k">type</span><span class="p">:</span><span class="w"> </span>streaming<span class="w">
+</span><span class="w">    </span>...<span class="w">
+</span><span class="w">    </span><span class="k">current-catalog</span><span class="p">:</span><span class="w"> </span>myhive<span class="w">  </span><span class="c"># set the HiveCatalog as the current catalog of the session</span><span class="w">
+</span><span class="w">    </span><span class="k">current-database</span><span class="p">:</span><span class="w"> </span>mydatabase<span class="w">
+</span><span class="w">    
+</span><span class="w"></span><span class="k">catalogs</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="w">   </span>- <span class="k">name</span><span class="p">:</span><span class="w"> </span>myhive<span class="w">
+</span><span class="w">     </span><span class="k">type</span><span class="p">:</span><span class="w"> </span>hive<span class="w">
+</span><span class="w">     </span><span class="k">hive-conf-dir</span><span class="p">:</span><span class="w"> </span>/opt/hive-conf<span class="w">  </span><span class="c"># contains hive-site.xml</span><span class="w">
+</span></code></pre></div><p>第三步：建立 Kafka 集群</p>
+<p>Bootstrap 一个本地的 Kafka 2.3.0 集群，主题命名为 &ldquo;test&rdquo;，并以 name 和 age 的元组形式向主题产生一些简单的数据。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">localhost$ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic <span class="nb">test</span>
+&gt;tom,15
+&gt;john,21
+</code></pre></div><p>这些消息可以通过启动 Kafka 控制台消费者看到。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">localhost$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic <span class="nb">test</span> --from-beginning
+
+tom,15
+john,21
+</code></pre></div><p>第四步：启动 SQL Client，用 Flink SQL DDL 创建一个 Kafka 表。</p>
+<p>启动 Flink SQL Client，通过 DDL 创建一个简单的 Kafka 2.3.0 表，并验证其模式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="n">Flink</span> <span class="k">SQL</span><span class="o">&gt;</span> <span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">mykafka</span> <span class="p">(</span><span class="n">name</span> <span class="n">String</span><span class="p">,</span> <span class="n">age</span> <span class="nb">Int</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span>
+   <span class="s1">&#39;</span><span class="s1">connector.type</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">kafka</span><span class="s1">&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;</span><span class="s1">connector.version</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">universal</span><span class="s1">&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;</span><span class="s1">connector.topic</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">test</span><span class="s1">&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;</span><span class="s1">connector.properties.bootstrap.servers</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">localhost:9092</span><span class="s1">&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;</span><span class="s1">format.type</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">csv</span><span class="s1">&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;</span><span class="s1">update-mode</span><span class="s1">&#39;</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="s1">append</span><span class="s1">&#39;</span>
+<span class="p">)</span><span class="p">;</span>
+<span class="p">[</span><span class="n">INFO</span><span class="p">]</span> <span class="k">Table</span> <span class="n">has</span> <span class="n">been</span> <span class="n">created</span><span class="p">.</span>
+
+<span class="n">Flink</span> <span class="k">SQL</span><span class="o">&gt;</span> <span class="k">DESCRIBE</span> <span class="n">mykafka</span><span class="p">;</span>
+<span class="n">root</span>
+ <span class="o">|</span><span class="c1">-- name: STRING
+</span><span class="c1"></span> <span class="o">|</span><span class="c1">-- age: INT
+</span></code></pre></div><p>验证该表也是通过 Hive Cli 对 Hive 可见的，注意该表有属性 is_generic=true。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">hive&gt; show tables<span class="p">;</span>
+OK
+mykafka
+Time taken: 0.038 seconds, Fetched: <span class="m">1</span> row<span class="o">(</span>s<span class="o">)</span>
+
+hive&gt; describe formatted mykafka<span class="p">;</span>
+OK
+<span class="c1"># col_name            	data_type           	comment</span>
+
+
+<span class="c1"># Detailed Table Information</span>
+Database:           	default
+Owner:              	null
+CreateTime:         	......
+LastAccessTime:     	UNKNOWN
+Retention:          	<span class="m">0</span>
+Location:           	......
+Table Type:         	MANAGED_TABLE
+Table Parameters:
+	flink.connector.properties.bootstrap.servers	localhost:9092
+	flink.connector.topic	<span class="nb">test</span>
+	flink.connector.type	kafka
+	flink.connector.version	universal
+	flink.format.type   	csv
+	flink.generic.table.schema.0.data-type	VARCHAR<span class="o">(</span>2147483647<span class="o">)</span>
+	flink.generic.table.schema.0.name	name
+	flink.generic.table.schema.1.data-type	INT
+	flink.generic.table.schema.1.name	age
+	flink.update-mode   	append
+	is_generic          	<span class="nb">true</span>
+	transient_lastDdlTime	......
+
+<span class="c1"># Storage Information</span>
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat
+OutputFormat:       	org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
+Compressed:         	No
+Num Buckets:        	-1
+Bucket Columns:     	<span class="o">[</span><span class="o">]</span>
+Sort Columns:       	<span class="o">[</span><span class="o">]</span>
+Storage Desc Params:
+	serialization.format	<span class="m">1</span>
+Time taken: 0.158 seconds, Fetched: <span class="m">36</span> row<span class="o">(</span>s<span class="o">)</span>
+</code></pre></div><p>第五步：运行 Flink SQL 查询 Kakfa 表。</p>
+<p>在 Flink 集群中，无论是单机还是 yarn-session，从 Flink SQL Client 中运行一个简单的选择查询。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">Flink SQL&gt; <span class="k">select</span> * from mykafka<span class="p">;</span>
+</code></pre></div><p>在 Kafka 主题中多产生一些信息。</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">localhost$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic <span class="nb">test</span> --from-beginning
+
+tom,15
+john,21
+kitty,30
+amy,24
+kaiky,18
+</code></pre></div><p>你现在应该可以在 SQL Client 中看到 Flink 产生的结果，如。</p>
+<pre><code>             SQL Query Result (Table)
+ Refresh: 1 s    Page: Last of 1     
+
+        name                       age
+         tom                        15
+        john                        21
+       kitty                        30
+         amy                        24
+       kaiky                        18
+</code></pre><h2 id="支持的类型">支持的类型</h2>
+<p>HiveCatalog 支持通用表的所有 Flink 类型。</p>
+<p>对于 Hive 兼容的表，HiveCatalog 需要将 Flink 数据类型映射到相应的 Hive 类型，如下表所述。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Flink Data Type</th>
+<th align="left">Hive Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">CHAR(p)</td>
+<td align="left">CHAR(p)</td>
+</tr>
+<tr>
+<td align="left">VARCHAR(p)</td>
+<td align="left">VARCHAR(p)</td>
+</tr>
+<tr>
+<td align="left">STRING</td>
+<td align="left">STRING</td>
+</tr>
+<tr>
+<td align="left">BOOLEAN</td>
+<td align="left">BOOLEAN</td>
+</tr>
+<tr>
+<td align="left">TINYINT</td>
+<td align="left">TINYINT</td>
+</tr>
+<tr>
+<td align="left">SMALLINT</td>
+<td align="left">SMALLINT</td>
+</tr>
+<tr>
+<td align="left">INT</td>
+<td align="left">INT</td>
+</tr>
+<tr>
+<td align="left">BIGINT</td>
+<td align="left">LONG</td>
+</tr>
+<tr>
+<td align="left">FLOAT</td>
+<td align="left">FLOAT</td>
+</tr>
+<tr>
+<td align="left">DOUBLE</td>
+<td align="left">DOUBLE</td>
+</tr>
+<tr>
+<td align="left">DECIMAL(p, s)</td>
+<td align="left">DECIMAL(p, s)</td>
+</tr>
+<tr>
+<td align="left">DATE</td>
+<td align="left">DATE</td>
+</tr>
+<tr>
+<td align="left">TIMESTAMP(9)</td>
+<td align="left">TIMESTAMP</td>
+</tr>
+<tr>
+<td align="left">BYTES</td>
+<td align="left">BINARY</td>
+</tr>
+<tr>
+<td align="left">ARRAY<!-- raw HTML omitted --></td>
+<td align="left">LIST<!-- raw HTML omitted --></td>
+</tr>
+<tr>
+<td align="left">MAP&lt;K, V&gt;</td>
+<td align="left">MAP&lt;K, V&gt;</td>
+</tr>
+<tr>
+<td align="left">ROW</td>
+<td align="left">STRUCT</td>
+</tr>
+</tbody>
+</table>
+<p>关于类型映射需要注意的地方。</p>
+<ul>
+<li>Hive 的 CHAR(p) 最大长度为 255。</li>
+<li>Hive 的 VARCHAR(p) 最大长度为 65535。</li>
+<li>Hive 的 MAP 只支持基元键类型，而 Flink 的 MAP 可以是任何数据类型。</li>
+<li>不支持 Hive 的 UNION 类型。</li>
+<li>Hive 的 TIMESTAMP 的精度总是 9，不支持其他精度。而 Hive 的 UDF 则可以处理精度&lt;=9 的 TIMESTAMP 值。</li>
+<li>Hive 不支持 Flink 的 TIMESTAMP_WITH_TIME_ZONE、TIMESTAMP_WITH_LOCAL_TIME_ZONE 和 MULTISET。</li>
+<li>Flink 的 INTERVAL 类型还不能映射到 Hive 的 INTERVAL 类型。</li>
+</ul>
+<h2 id="scala-shell">Scala Shell</h2>
+<p>注意：由于目前 Scala Shell 并不支持 blink planner，所以不建议在 Scala Shell 中使用 Hive 连接器。</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_catalog.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_catalog.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
             <title type="html"><![CDATA[Streaming Aggregation]]></title>
             <link href="https://ohmyweekly.github.io/notes/2020-08-25-streaming-aggregation/?utm_source=atom_feed" rel="alternate" type="text/html" />
             
-                <link href="https://ohmyweekly.github.io/notes/2020-08-25-user-defined-sources-and-sinks/?utm_source=atom_feed" rel="related" type="text/html" title="User Defined Sources and Sinks" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-alter-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Alter 语句" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-catalogs/?utm_source=atom_feed" rel="related" type="text/html" title="Catalogs" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-create-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Create 语句" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-drop-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Drop 语句" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
             
                 <id>https://ohmyweekly.github.io/notes/2020-08-25-streaming-aggregation/</id>
             
@@ -159,11 +1615,11 @@
             <title type="html"><![CDATA[User Defined Sources and Sinks]]></title>
             <link href="https://ohmyweekly.github.io/notes/2020-08-25-user-defined-sources-and-sinks/?utm_source=atom_feed" rel="alternate" type="text/html" />
             
-                <link href="https://ohmyweekly.github.io/notes/2020-08-25-streaming-aggregation/?utm_source=atom_feed" rel="related" type="text/html" title="Streaming Aggregation" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-alter-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Alter 语句" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-catalogs/?utm_source=atom_feed" rel="related" type="text/html" title="Catalogs" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-create-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Create 语句" />
-                <link href="https://ohmyweekly.github.io/notes/2020-08-22-drop-statements/?utm_source=atom_feed" rel="related" type="text/html" title="Drop 语句" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
             
                 <id>https://ohmyweekly.github.io/notes/2020-08-25-user-defined-sources-and-sinks/</id>
             
@@ -683,6 +2139,274 @@ INSERT|Alice|18
   <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div><p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sourceSinks.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sourceSinks.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/table-api-sql" term="table-api-sql" label="Table API &amp; SQL" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[配置]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-08-25-configuration/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Read and Write" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-streaming/?utm_source=atom_feed" rel="related" type="text/html" title="Hive Streaming" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 函数" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 方言" />
+                <link href="https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/?utm_source=atom_feed" rel="related" type="text/html" title="Hive 集成 - 概览" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-08-25-configuration/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-08-25T00:00:00+08:00</published>
+            <updated>2020-08-25T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Configuration</blockquote><h1 id="配置">配置</h1>
+<p>默认情况下，Table &amp; SQL API 是预先配置的，可以在可接受的性能下产生准确的结果。</p>
+<p>根据表程序的要求，可能需要调整某些参数进行优化。例如，无约束的流程序可能需要确保所需的状态大小是有上限的（参见流概念）。</p>
+<h2 id="概述">概述</h2>
+<p>在每个表环境中，TableConfig 都提供了配置当前会话的选项。</p>
+<p>对于常见或重要的配置选项，TableConfig 提供了 getter 和 setter 方法，并提供了详细的内联文档。</p>
+<p>对于更高级的配置，用户可以直接访问底层的键值映射。下面的章节列出了所有可用的选项，可以用来调整 Flink Table &amp; SQL API 程序。</p>
+<p>注意: 由于在执行操作时，选项会在不同的时间点被读取，因此建议在实例化表环境后尽早设置配置选项。</p>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="c1">// instantiate table environment
+</span><span class="c1"></span><span class="k">val</span> <span class="n">tEnv</span><span class="k">:</span> <span class="kt">TableEnvironment</span> <span class="o">=</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+
+<span class="c1">// access flink configuration
+</span><span class="c1"></span><span class="k">val</span> <span class="n">configuration</span> <span class="k">=</span> <span class="n">tEnv</span><span class="o">.</span><span class="n">getConfig</span><span class="o">(</span><span class="o">)</span><span class="o">.</span><span class="n">getConfiguration</span><span class="o">(</span><span class="o">)</span>
+<span class="c1">// set low-level key-value options
+</span><span class="c1"></span><span class="n">configuration</span><span class="o">.</span><span class="n">setString</span><span class="o">(</span><span class="s">&#34;table.exec.mini-batch.enabled&#34;</span><span class="o">,</span> <span class="s">&#34;true&#34;</span><span class="o">)</span>
+<span class="n">configuration</span><span class="o">.</span><span class="n">setString</span><span class="o">(</span><span class="s">&#34;table.exec.mini-batch.allow-latency&#34;</span><span class="o">,</span> <span class="s">&#34;5 s&#34;</span><span class="o">)</span>
+<span class="n">configuration</span><span class="o">.</span><span class="n">setString</span><span class="o">(</span><span class="s">&#34;table.exec.mini-batch.size&#34;</span><span class="o">,</span> <span class="s">&#34;5000&#34;</span><span class="o">)</span>
+</code></pre></div><p>注意：目前，键值选项只支持 Blink 计划器。目前，键值选项只支持 Blink 计划器。</p>
+<h3 id="执行选项">执行选项</h3>
+<p>以下选项可以用来调整查询执行的性能。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">table.exec.async-lookup.buffer-capacity(Batch/Streaming)</td>
+<td align="left">100</td>
+<td align="left">Integer</td>
+<td align="left">异步查找连接可以触发的最大异步 i/o 操作数。</td>
+</tr>
+<tr>
+<td align="left">table.exec.async-lookup.timeout(Batch/Streaming)</td>
+<td align="left">&ldquo;3 min&rdquo;</td>
+<td align="left">String</td>
+<td align="left">异步操作完成的异步超时时间。</td>
+</tr>
+<tr>
+<td align="left">table.exec.disabled-operators(Batch)</td>
+<td align="left">(none)</td>
+<td align="left">String</td>
+<td align="left">主要用于测试。一个以逗号分隔的操作符名称列表，每个名称代表一种被禁用的操作符。可以禁用的操作符包括 &ldquo;NestedLoopJoin&rdquo;、&ldquo;ShuffleHashJoin&rdquo;、&ldquo;BroadcastHashJoin&rdquo;、&ldquo;SortMergeJoin&rdquo;、&ldquo;HashAgg&rdquo;、&ldquo;SortAgg&rdquo;。默认情况下，没有任何操作符被禁用。</td>
+</tr>
+<tr>
+<td align="left">table.exec.mini-batch.allow-latency(Streaming)</td>
+<td align="left">&ldquo;-1 ms&rdquo;</td>
+<td align="left">String</td>
+<td align="left">最大延迟可以用于 MiniBatch 来缓冲输入记录。MiniBatch 是一种优化，用于缓冲输入记录以减少状态访问。MiniBatch 会在允许的延迟间隔和达到最大缓冲记录数时触发。注意：如果 table.exec.mini-batch.enabled 被设置为 true，其值必须大于零。</td>
+</tr>
+<tr>
+<td align="left">table.exec.mini-batch.enabled(Streaming)</td>
+<td align="left">false</td>
+<td align="left">Boolean</td>
+<td align="left">指定是否启用 MiniBatch 优化。MiniBatch 是对输入记录进行缓冲以减少状态访问的优化。默认情况下，这个配置是禁用的。要启用这个功能，用户应该将这个配置设置为 true。注意：如果启用了 Mini-batch，必须设置&rsquo;table.exec.mini-batch.allow-latency'和&rsquo;table.exec.mini-batch.size&rsquo;。</td>
+</tr>
+<tr>
+<td align="left">table.exec.mini-batch.size(Streaming)</td>
+<td align="left">-1</td>
+<td align="left">Long</td>
+<td align="left">MiniBatch 可以缓冲的输入记录的最大数量。MiniBatch 是对输入记录进行缓冲的优化，以减少状态访问。MiniBatch 会在允许的延迟间隔和达到最大缓冲记录数时触发。注意：MiniBatch 目前只适用于非窗口聚合。如果 table.exec.mini-batch.enabled 被设置为 true，其值必须为正。</td>
+</tr>
+<tr>
+<td align="left">table.exec.resource.default-parallelism(Batch/Streaming)</td>
+<td align="left">-1</td>
+<td align="left">Integer</td>
+<td align="left">为所有操作符（如 aggregation、join、filter）设置默认的并行性，以便与并行实例一起运行。这个配置的优先级高于 StreamExecutionEnvironment 的并行性（实际上，这个配置覆盖了 StreamExecutionEnvironment 的并行性）。值为-1 表示没有设置默认的并行性，那么它将回落到使用 StreamExecutionEnvironment 的并行性。</td>
+</tr>
+<tr>
+<td align="left">table.exec.shuffle-mode(Batch)</td>
+<td align="left">&ldquo;ALL_EDGES_BLOCKING&rdquo;</td>
+<td align="left">String</td>
+<td align="left">设置执行 shuffle 的模式。接受的值是, ALL_EDGES_BLOCKING: 所有边缘都将使用阻塞洗牌。FORWARD_EDGES_PIPELINED: 正向边缘将使用流水线洗牌，其他边缘将使用阻塞洗牌。POINTWISE_EDGES_PIPELINED: POINTWISE_EDGES_PIPELINED: 点向边缘将使用管道式洗牌，其他边缘将被阻挡。POINTWISE_EDGES_PIPELINED: 点向边缘包括前向和重新缩放边缘。ALL_EDGES_PIPELINED: 所有的边缘都将使用 pipelined shuffle，其他的边缘则使用 blocks。所有边缘都将使用流水线洗牌。batch: 与 ALL_EDGES_BLOCKING 相同。已废弃。pipelined: 与 ALL_EDGES_PIPELINED 相同。已被弃用。注意：Blocking shuffle 意味着数据将在发送到消费者任务之前被完全生成。Pipelined shuffle 意味着数据一旦被生产出来，就会被发送到消费者任务中。</td>
+</tr>
+<tr>
+<td align="left">table.exec.sink.not-null-enforcer(Batch/Streaming)</td>
+<td align="left">ERROR</td>
+<td align="left">Enum,可能的值: [ERROR, DROP]</td>
+<td align="left">表上的 NOT NULL 列约束强制要求不能将空值插入到表中。Flink 支持 &ldquo;错误&rdquo;（默认）和 &ldquo;放弃 &ldquo;执行行为。默认情况下，当 NOT NULL 列中写入空值时，Flink 会检查值并抛出运行时异常。用户可以将行为改为&rsquo;drop&rsquo;，在不出现异常的情况下默默地删除这些记录。</td>
+</tr>
+<tr>
+<td align="left">table.exec.sort.async-merge-enabled(Batch)</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">是否异步合并排序后的 spill 文件。</td>
+</tr>
+<tr>
+<td align="left">table.exec.sort.default-limit(Batch)</td>
+<td align="left">-1</td>
+<td align="left">Integer</td>
+<td align="left">当用户在下单后没有设置限价时，默认限价。-1 表示该配置被忽略。</td>
+</tr>
+<tr>
+<td align="left">table.exec.sort.max-num-file-handles(Batch)</td>
+<td align="left">128</td>
+<td align="left">Integer</td>
+<td align="left">外部合并排序的最大扇入量。它限制了每个操作者的文件句柄数。如果太小，可能会造成中间合并。但如果太大，会造成同时打开的文件太多，消耗内存，导致随机读取。</td>
+</tr>
+<tr>
+<td align="left">table.exec.source.idle-timeout(Streaming)</td>
+<td align="left">&ldquo;-1 ms&rdquo;</td>
+<td align="left">String</td>
+<td align="left">当一个源在超时时间内没有收到任何元素时，它将被标记为暂时空闲。这样下游任务就可以提前打水印，而不需要在这个源空闲时等待它的水印。</td>
+</tr>
+<tr>
+<td align="left">table.exec.spill-compression.block-size(Batch)</td>
+<td align="left">&ldquo;64 kb&rdquo;</td>
+<td align="left">String</td>
+<td align="left">溢出数据时做压缩时使用的内存大小。内存越大，压缩比越高，但作业会消耗更多的内存资源。</td>
+</tr>
+<tr>
+<td align="left">table.exec.spill-compression.enabled(Batch)</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">是否压缩溢出数据。目前我们只支持压缩溢出数据的排序和哈希-agg 和哈希-join 操作符。</td>
+</tr>
+<tr>
+<td align="left">table.exec.window-agg.buffer-size-limit(Batch)</td>
+<td align="left">100000</td>
+<td align="left">Integer</td>
+<td align="left">设置组窗口 agg 运算符中使用的窗口元素缓冲区大小限制。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="优化选项">优化选项</h2>
+<p>以下选项可以用来调整查询优化器的行为，以获得更好的执行计划。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">table.optimizer.agg-phase-strategy(Batch/Streaming)</td>
+<td align="left">&ldquo;AUTO&rdquo;</td>
+<td align="left">String</td>
+<td align="left">聚合阶段的策略。只能设置 AUTO、TWO_PHASE 或 ONE_PHASE。AUTO：集合阶段无特殊执行器。选择两阶段聚合还是一阶段聚合取决于成本。TWO_PHASE: 强制使用两级聚合，其中包括 localAggregate 和 globalAggregate。请注意，如果聚合调用不支持优化为两阶段，我们仍将使用一个阶段的聚合。ONE_PHASE: 强制使用只有 CompleteGlobalAggregate 的单阶段聚合。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.distinct-agg.split.bucket-num(Streaming)</td>
+<td align="left">1024</td>
+<td align="left">Integer</td>
+<td align="left">配置拆分不同聚合时的桶数。这个数字在一级聚合中用于计算一个桶键&rsquo;hash_code(distinct_key) % BUCKET_NUM&rsquo;，这个桶键在拆分后作为一个额外的组键使用。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.distinct-agg.split.enabled(Streaming)</td>
+<td align="left">false</td>
+<td align="left">Boolean</td>
+<td align="left">指示优化器是否将 distinct aggregation(例如 COUNT(DISTINCT col)，SUM(DISTINCT col))分成两级。第一层聚合由一个额外的 key 进行洗牌，这个 key 是用 distinct_key 和 buckets 数量的 hashcode 计算出来的。当 distinct aggregation 中存在数据倾斜时，这种优化是非常有用的，并提供了扩展作业的能力。默认为 false。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.join-reorder-enabled(Batch/Streaming)</td>
+<td align="left">false</td>
+<td align="left">Boolean</td>
+<td align="left">在优化器中启用连接重排序。默认为禁用。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.join.broadcast-threshold(Batch)</td>
+<td align="left">1048576</td>
+<td align="left">Long</td>
+<td align="left">配置在执行连接时将向所有工作节点广播的表的最大字节数。将此值设置为-1，则禁用广播。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.reuse-source-enabled(Batch/Streaming)</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">当它为真时，优化器将尝试找出重复的表源并重用它们。这只有在 table.optimizer.reuse-sub-plan-enabled 为真时才会生效。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.reuse-sub-plan-enabled(Batch/Streaming)</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">当它为真时，优化器将尝试找出重复的子计划并重用它们。</td>
+</tr>
+<tr>
+<td align="left">table.optimizer.source.predicate-pushdown-enabled(Batch/Streaming)</td>
+<td align="left">true</td>
+<td align="left">Boolean</td>
+<td align="left">当该值为真时，优化器将向下推送谓词到 FilterableTableSource 中。默认值为 true。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="table-选项">Table 选项</h2>
+<p>以下选项可用于调整表计划器(planner)的行为:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Key</th>
+<th align="left">Default</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">table.dynamic-table-options.enabled(Batch/Streaming)</td>
+<td align="left">false</td>
+<td align="left">Boolean</td>
+<td align="left">启用或禁用 OPTIONS 提示，用于动态指定表选项，如果禁用，则如果指定了任何 OPTIONS 提示，就会产生异常。</td>
+</tr>
+<tr>
+<td align="left">table.sql-dialect(Batch/Streaming)</td>
+<td align="left">&ldquo;default&rdquo;</td>
+<td align="left">String</td>
+<td align="left">SQL 方言定义了如何解析一个 SQL 查询。不同的 SQL 方言可能支持不同的 SQL 语法。目前支持的方言有：默认和 hive。</td>
+</tr>
+</tbody>
+</table>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/config.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/config.html</a></p>
 ]]></content>
             
                  
