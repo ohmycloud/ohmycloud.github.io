@@ -1,0 +1,232 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    git on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/git/</link>
+        <description>Recent content  in git
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Sun, 04 Oct 2020 12:40:59 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/git/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>SSH Configuration: ssh_config</title>
+                <link>https://ohmyweekly.github.io/notes/2020-10-01-ssh-configuration/</link>
+                
+                
+                <description>&lt;blockquote&gt;SSH Configuration&lt;/blockquote&gt;&lt;p&gt;&lt;img src=&#34;https://gravitational.com/blog/images/2020/ssh-config-header.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;这篇博文涵盖了我最喜欢的一些设置，用于配置 ssh 客户端的行为（即在 &lt;code&gt;ssh_config&lt;/code&gt; 的 man 页面中的内容）。无论你是想添加一些额外的安全约束，减少失败，还是防止腕隧道，&lt;code&gt;ssh_config&lt;/code&gt; 都是一个经常未被充分利用的强大工具。&lt;/p&gt;
+&lt;p&gt;本文将介绍一些修改 &lt;code&gt;ssh_config&lt;/code&gt; 文件的有用方法，以达到更高的安全和控制程度。这篇文章并不是关于通过 &lt;code&gt;sshd_config&lt;/code&gt; 进行服务器端配置，后者值得单独写一篇文章。&lt;/p&gt;
+&lt;h2 id=&#34;什么是-ssh_config&#34;&gt;什么是 ssh_config?&lt;/h2&gt;
+&lt;p&gt;一些工程师可能会惊讶于 ssh 客户端行为有多少是可以通过配置文件来配置的。如果没有配置文件，为 ssh 指定命令行参数很快就会变得很麻烦。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;ssh -i /users/virag/keys/us-west/ed25519 -p &lt;span class=&#34;m&#34;&gt;1024&lt;/span&gt; -l virag &lt;span class=&#34;se&#34;&gt;\ &lt;/span&gt;myserver.aws-west.example.com
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这句话太长了，一次都打不完，更不用说一天打多次了。如果你要管理多台服务器和虚拟机，创建一个自定义的 &lt;code&gt;~/.ssh/ssh_config&lt;/code&gt; 是修剪常用 &lt;code&gt;ssh&lt;/code&gt; 命令的好方法。&lt;/p&gt;
+&lt;p&gt;我们可以通过编辑 &lt;code&gt;ssh_config&lt;/code&gt;，将上面的例子缩短为 &lt;code&gt;ssh myserver&lt;/code&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host myserver
+	Hostname myserver.aws-west.example.com
+	User virag
+	Port 1024
+	IdentityFile /users/virag/keys/us-west/ed25519
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;优雅而简单。现在我们有了基础知识，让我们看看这里到底发生了什么。我选择的 ed25519 在&lt;a href=&#34;https://gravitational.com/blog/comparing-ssh-keys/&#34;&gt;比较 SSH 密钥-RSA、DSA、ECDSA 或 EdDSA?&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&#34;ssh_config-如何工作&#34;&gt;ssh_config 如何工作&lt;/h2&gt;
+&lt;p&gt;ssh 客户端从三个地方读取配置，顺序如下:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;系统范围内的 &lt;code&gt;/etc/ssh/ssh_config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;在 &lt;code&gt;~/.ssh/ssh_config&lt;/code&gt; 中的用户特定配置。&lt;/li&gt;
+&lt;li&gt;直接提供给 ssh 的命令行标志&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这意味着命令行标志(#1)可以覆盖用户特定的配置(#2)，可以覆盖全局配置(#3)&lt;/p&gt;
+&lt;p&gt;当连接参数被重复使用时，通常在 &lt;code&gt;ssh_config&lt;/code&gt; 中定义这些参数比较容易，它们会在连接时自动应用。虽然它们通常是在用户第一次运行 ssh 时创建的，但目录和文件可以通过以下方式手动创建。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;touch ~/.ssh/ssh_config
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;回到上面的例子，你可能会注意到 &lt;code&gt;ssh_config&lt;/code&gt; 是以主机头开始的段落来组织的。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host [alias]
+	Option1 [Value]
+	Option2 [Value]
+	Option3 [Value]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;虽然技术上没有必要，但这种缩进的格式很容易被人类阅读。然而，ssh 客户端并不关心这种格式化，相反，它将通过将命令行中输入的 ssh 参数与所有主机头匹配来获取配置参数。通配符也可以作为主机头的一部分。考虑一下:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host myserver2
+	Hostname myserver2.aws-west.example.com
+Host myserver*
+	Hostname myserver1.aws-west.example.com
+	User virag
+	Port 1024
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;使用 &lt;code&gt;myserver1&lt;/code&gt; 的别名，我们可以从第二节中得到我们所期望的东西。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Hostname myserver1.aws-west.example.com
+User virag
+Port 1024
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;但 &lt;code&gt;myserver2&lt;/code&gt; 也有类似的选项列表。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Hostname myserver2.aws-west.example.com
+User virag
+Port 1024
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;ssh 客户端通过模式匹配获取这些信息，并在向下顺序读取文件时锁定值。因为 myserver2 同时匹配了 &lt;code&gt;myserver2&lt;/code&gt; 和 &lt;code&gt;myserver*&lt;/code&gt;，所以它会先从 myserver2 中获取 Hostname 值。然后，当到了第二种模式匹配时，就会使用 User 和 Port 的值，但 Hostname 字段已经被填满。让我再重复一遍，ssh 接受每个选项的第一个值。&lt;/p&gt;
+&lt;h2 id=&#34;常见的-ssh-配置选项&#34;&gt;常见的 SSH 配置选项&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;man 5 ssh_config&lt;/code&gt; 中，有近 100 个 ssh_config 选项。我整理了一份我个人使用的清单，其中许多选项将在后面的文章中使用。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Port&lt;/code&gt; - 远程 ssh 守护进程运行的端口。如果守护进程运行在默认的 22 号端口上，则不需要定义这个选项。在不同的端口上运行 ssh 守护进程被认为是一个很好的做法，因为这样可以减少僵尸探测的数量。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Hostname&lt;/code&gt; - 用于建立连接的真实主机名，如 DNS 或 IP 地址。这对缩短主机名很有用。例如，你可以让一个方便的 &lt;code&gt;ssh mongo&lt;/code&gt; 带你到 &lt;code&gt;mongo-12.staging.example.com&lt;/code&gt;。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;ProxyJump&lt;/code&gt; - 这个选项将通过连接的服务器进行隧道简化为一个标志，&lt;code&gt;-J&lt;/code&gt;，用一个别名来命名中间主机（本地客户端和最终目的地之间的主机）。这只适用于较新的客户端（&lt;a href=&#34;https://www.openssh.com/txt/release-7.3&#34;&gt;OpenSSH 7.3+&lt;/a&gt;）。下面我将详细介绍这个。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;ForwardAgent&lt;/code&gt; &amp;amp; &lt;code&gt;AddKeysToAgent&lt;/code&gt; - 在主机之间跳转（当你在另一个 &lt;code&gt;ssh&lt;/code&gt; 会话中再次键入 &lt;code&gt;ssh&lt;/code&gt; 时）需要重复验证。要做到这一点，&lt;code&gt;ssh&lt;/code&gt; 凭证必须存储在中间服务器上，但这不是一个安全的做法。这两个选项允许另一个通常被称为 &lt;code&gt;ssh-agent&lt;/code&gt; 的进程自动将你的本地 &lt;code&gt;ssh&lt;/code&gt; 凭证加载到内存中，并通过一个安全转发的 UNIX 套接字将其提供给中间机器的 ssh 客户端。&lt;code&gt;ForwardAgent&lt;/code&gt; 可以实现这种转发行为，而 &lt;code&gt;AddKeysToAgent&lt;/code&gt; 则可以自动将密钥加载到内存中。我将在下面提供更多细节。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;IdentityFile&lt;/code&gt; - 这个选项指定了 ssh 客户端应该尝试验证的密钥的路径。这并不妨碍 ssh 客户端尝试 &lt;code&gt;~/.ssh&lt;/code&gt; 或 &lt;code&gt;ssh-agent&lt;/code&gt; 中的密钥。常用于由于某种原因，密钥没有存储在默认位置的情况下。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;IdentitiesOnly&lt;/code&gt; - 通常和 &lt;code&gt;IdentityFile&lt;/code&gt; 一起使用，这个选项会告诉 ssh 客户端到底要提交哪个密钥，并放弃 &lt;code&gt;~/.ssh&lt;/code&gt; 或 &lt;code&gt;ssh-agent&lt;/code&gt; 中的任何密钥。因为如果尝试了太多无效的密钥，ssh 会抛出一个认证错误，这个选项可以帮助客户端精确地识别要提交的密钥。即使在 &lt;code&gt;ssh_config&lt;/code&gt; 中启用了 &lt;code&gt;IdentitiesOnly&lt;/code&gt;，任何在命令行输入的身份信息也会被尝试。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;CertificateFile&lt;/code&gt; - 考虑到密钥在很大程度上已经过时了，这个选项可以和 &lt;code&gt;IdentityFile&lt;/code&gt; 一起使用来指定要提交的证书。这并不总是必要的。当证书颁发机构签署一个密钥来创建证书时，&lt;code&gt;-cert.pub&lt;/code&gt; 将自动附加到密钥的文件名中。在加载密钥之前，ssh 客户端将首先尝试使用预期的命名惯例从提供的文件名中加载证书。然而，如果密钥和证书文件名不遵循这种模式，那么必须使用 &lt;code&gt;CertificateFile&lt;/code&gt;，否则将无法找到证书。&lt;a href=&#34;https://gravitational.com/blog/how-to-ssh-properly/&#34;&gt;阅读更多关于为什么你应该使用证书&lt;/a&gt;。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;SetEnv&lt;/code&gt; &amp;amp; &lt;code&gt;SendEnv&lt;/code&gt; - 这些选项允许 ssh 客户端向指定的主机发送本地环境变量。主机服务器必须通过在 &lt;code&gt;/etc/ssh/sshd_config&lt;/code&gt; 中将 &lt;code&gt;AcceptEnv&lt;/code&gt; 设置为 &lt;code&gt;Yes&lt;/code&gt; 来接受这些环境变量。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;ServerAliveInterval&lt;/code&gt; &amp;amp; &lt;code&gt;ServerAliveCountMax&lt;/code&gt; -如果 ssh 客户端在指定的时间间隔内没有收到任何数据，它将请求主机服务器做出响应。这可以防止负载均衡器和服务器因不活动而放弃连接。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;HostKeyAlias&lt;/code&gt; - ssh 客户端会被指示使用 &lt;code&gt;~/.ssh/known_hosts&lt;/code&gt; 中的密钥别名，而不是 HostName。这对于具有动态变化的 IP 地址的主机或在一台主机上运行的多个服务器来说非常有用。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;PreferredAuthentication&lt;/code&gt; - 这个选项决定了验证方法的尝试顺序。默认值是 &lt;code&gt;gssapi-with-mic&lt;/code&gt;, &lt;code&gt;hostbased&lt;/code&gt;, &lt;code&gt;publickey&lt;/code&gt;, &lt;code&gt;keyboard-interactive&lt;/code&gt; 和 &lt;code&gt;password&lt;/code&gt;。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;组织你的-ssh-配置&#34;&gt;组织你的 SSH 配置&lt;/h2&gt;
+&lt;p&gt;在前面两节所学内容的基础上进行扩展，让我们看看当我们拥有一支规模不大的舰队时，如何组织 &lt;code&gt;ssh_config&lt;/code&gt;。以下面的场景为例。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Virag 在六个环境下工作： 东岸和西岸 AWS 区域的 Dev、Test 和 Prod。&lt;/li&gt;
+&lt;li&gt;Virag 有普通用户访问开发和产品环境的权限，但在测试环境中是 root 用户。&lt;/li&gt;
+&lt;li&gt;Prod 环境有更严格的安全控制&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我没有记住几个 &lt;code&gt;ssh&lt;/code&gt; 命令组合，而是编辑了我的本地配置文件。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host east-prod
+	HostName east-prod.prod.example.com
+Host *-prod
+	HostName west-prod.prod.example.com
+	User virag
+	PasswordAuthentication no
+	PubKeyAuthentication yes
+	IdentityFile /users/virag/keys/production/ed25519
+	Host east-test
+	HostName east-test.test.example.com
+Host *-test
+	HostName west-test.test.example.com
+	User root
+Host east-dev
+	HostName east-dev.east.example.com
+Host *-dev
+	HostName west-dev.west.example.com
+	User virag   
+Host * !prod
+	PreferredAuthentications publickey
+Host *
+	HostName bastion.example.com
+	User Default
+	ServerAliveInternal 120
+	ServerAliveCountMax 5
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果我们运行 &lt;code&gt;ssh east-test&lt;/code&gt;，我们的全部选项列表将是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;HostName east-test.test.example.com
+User root
+PreferredAuthentications publickey
+ServerAliveInternal 30
+ServerAliveCountMax 5
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;客户端通过与 &lt;code&gt;east-test&lt;/code&gt;、&lt;code&gt;*-test&lt;/code&gt;、&lt;code&gt;* !prod&lt;/code&gt; 和 &lt;code&gt;*&lt;/code&gt; 匹配来获取预期的选项值。你可能会注意到 &lt;code&gt;Host *&lt;/code&gt; stanza 将适用于任何 ssh 参数。换句话说，&lt;code&gt;Host *&lt;/code&gt; 定义了所有用户的全局设置。这对于应用客户端可用的安全控制特别有用。上面，我们只用了两个，但有&lt;a href=&#34;https://man.openbsd.org/ssh_config.5&#34;&gt;几个关键字&lt;/a&gt;会加强安全，如 &lt;code&gt;CheckHostIP&lt;/code&gt;，&lt;code&gt;HashKnownHosts&lt;/code&gt;，&lt;code&gt;StrictHostKeyChecking&lt;/code&gt;，以及更多隐藏的宝石。&lt;/p&gt;
+&lt;p&gt;需要注意的是。因为 ssh 客户端是按顺序解释选项的, 通用配置应该放在文件的底部。如果放在最上面，在客户端读取下面的特定主机选项之前，选项值就会被固定下来。在上面的案例中，把 &lt;code&gt;Host *&lt;/code&gt; 放在文件的开头会导致用户为 &lt;code&gt;Default&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如果出现一次性的情况，一定要记住，在命令行输入的选项会覆盖 &lt;code&gt;ssh_config&lt;/code&gt; 中的选项：&lt;code&gt;ssh -o &amp;quot;User=root&amp;quot; dev&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;使用-ssh-代理&#34;&gt;使用 SSH 代理&lt;/h2&gt;
+&lt;p&gt;ssh 跳转服务器是站在客户端和其余 ssh 队伍之间的代理。跳跃主机通过强制所有的 ssh 流量通过一个单一的加固的位置，并最大限度地减少个别节点的 ssh 端点到外部世界，从而将威胁降到最低。&lt;/p&gt;
+&lt;p&gt;配置多跳设置的一种方法是在我们的跳转服务器上存储目标服务器的私钥。不要这样做。跳跃服务器通常是一个多用户环境，这意味着任何拥有高权限的单方都可以破坏任何私钥。解决这种安全威胁的方法是启用代理转发，我们在 &lt;code&gt;AddKeysToAgent&lt;/code&gt; 和 &lt;code&gt;ForwardAgent&lt;/code&gt; 中简单地提到了这个方法。鉴于这种方法是多么常见，当我建议也不要这样做时，你可能会感到惊讶。为了了解原因，我们来深入了解一下。&lt;/p&gt;
+&lt;h2 id=&#34;代理转发是如何工作的&#34;&gt;代理转发是如何工作的？&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;ssh-agent&lt;/code&gt; 是一个独立于 SSH 的密钥管理器。它在内存中保存用于验证的私钥和证书。它不向磁盘写入或导出密钥。相反，代理的转发功能允许我们的本地代理通过现有的 ssh 连接到达，并通过环境变量在远程服务器上进行认证。基本上，当客户端 ssh 接收到密钥挑战时，代理会将这些挑战上游转发到我们本地的机器上，通过本地存储的私钥构造挑战响应，并转发回下游的目的服务器进行认证。我个人在研究的时候觉得这种&lt;a href=&#34;http://www.unixwiz.net/techtips/ssh-agent-forwarding.html&#34;&gt;直观的解释&lt;/a&gt;很有帮助。&lt;/p&gt;
+&lt;p&gt;在幕后，ssh-agent 绑定到一个 unix-domain 的 socket 上与其他程序通信（&lt;code&gt;$SSH_AUTH_SOCK&lt;/code&gt; 环境变量）。问题是，任何在链上任何地方拥有 root 权限的人都可以使用创建的 socket 来劫持我们本地的 &lt;code&gt;ssh-agent&lt;/code&gt;。尽管套接字文件受到操作系统很好的保护，但一个 root 用户可以冒充其他用户，将 ssh 客户端指向自己的恶意代理。从本质上来说，使用代理转发就等于在整个链条上与任何一台机器上的 root 用户共享私钥。(深入阅读&lt;a href=&#34;http://rabexc.org/posts/pitfalls-of-ssh-agents&#34;&gt;使用 ssh-agent 的陷阱&lt;/a&gt;)&lt;/p&gt;
+&lt;p&gt;事实上，关于 &lt;code&gt;ForwardAgent&lt;/code&gt; 的 man 页面上写着。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;代理转发应谨慎启用。有能力绕过远程主机（对代理的 Unix-domain 套接字）上的文件权限的用户可以通过转发连接访问本地代理。攻击者无法从代理中获取密钥材料，然而他们可以对密钥进行操作，使他们能够使用加载到代理中的身份进行验证。&amp;rdquo;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;使用-proxyjump-代替&#34;&gt;使用 ProxyJump 代替&lt;/h2&gt;
+&lt;p&gt;为了在跳转服务器中导航，我们其实并不需要代理转发。现代的方法是使用 &lt;code&gt;ProxyJump&lt;/code&gt; 或其命令行等价物 &lt;code&gt;-J&lt;/code&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host myserver
+	HostName myserver.example.com
+	User virag
+	IdentityFile /users/virag/keys/ed25519
+	ProxyJump jump
+Host jump
+	HostName jump.example.com
+	User default
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;ProxyJump&lt;/code&gt; 没有通过代理转发密钥挑战响应，而是将我们本地客户端的 stdin 和 stdout 转发到目的主机。这样一来，我们不需要在 &lt;code&gt;jump.example.com&lt;/code&gt; 上运行 ssh。sshd 直接连接到 &lt;code&gt;myserver.example.com&lt;/code&gt;，并将该连接的控制权交给我们的本地客户端。作为一个额外的好处，由于跳转服务器在 ssh 隧道内是加密的，所以它不能看到任何通过它的流量。设置跳转服务器而不让 ssh 直接访问它的能力是安全和正确的 ssh 设置的一个重要组成部分。&lt;/p&gt;
+&lt;h2 id=&#34;多跳的代理跳转&#34;&gt;多跳的代理跳转&lt;/h2&gt;
+&lt;p&gt;让我们模拟一个更复杂的场景。我们正试图从家里访问公司网络深处的一个关键资源。我们必须首先通过一个具有动态 IP 的外部堡垒主机、一个内部跳转主机，最后到达资源。每台服务器必须针对我们机器上的唯一本地密钥进行验证。&lt;/p&gt;
+&lt;p&gt;多重跳转的 ssh 示意图:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://gravitational.com/blog/images/2020/ssh-config-1.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;p&gt;再一次，我们的本地配置文件将包含执行 &lt;code&gt;ssh myserver&lt;/code&gt; 所需的一切。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Host myserver
+	HostName myserver.example.com
+	User virag
+	IdentityFile /users/virag/keys/myserver-cert.pub
+	ProxyJump jump
+Host bastion
+	#Used because HostName is unreliable as IP address changes frequently
+	HostKeyAlias bastion.example
+	User external  
+Host jump
+	HostName jump.example.com
+	User internal  
+	IdentityFile /users/virag/keys/jump-cert.pub
+	ProxyJump bastion
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;现在想象一下，我们必须用内部配置的 OpenSSH 管理全国各地多个云提供商的几百个环境。(你可能会嗤之以鼻，但我们已经听过这些故事了！)仅仅依靠运行时命令，同时宣称要维护可信的安全程度是不可能的。在这种规模下，有效地管理一个舰队需要有意识地架构子网、DNS、代理链、密钥、文件结构等，这些子网、DNS、代理链、密钥、文件结构等遵循可预测的模式，并且可以抄录到 &lt;code&gt;~/.ssh/ssh_config&lt;/code&gt; 中。&lt;/p&gt;
+&lt;h2 id=&#34;结束语&#34;&gt;结束语&lt;/h2&gt;
+&lt;p&gt;从本文中得到的更广泛的启示是让生活变得简单。即使是最简单的配置选项，也可以通过巧妙的方式来实现。这些可以让我们保持对强大安全性的承诺，并最大限度地减少人为错误。&lt;/p&gt;
+&lt;p&gt;如果你想了解更多关于 ssh 访问的最佳实践，你可以考虑以下文章。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://gravitational.com/blog/how-to-ssh-properly/&#34;&gt;如何正确使用 SSH&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Teleport: &lt;a href=&#34;https://github.com/gravitational/teleport&#34;&gt;OpenSSH 的现代替代品&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://gravitational.com/blog/ssh-config/&#34;&gt;https://gravitational.com/blog/ssh-config/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/git">git</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/git">git</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/config">config</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-10-01-ssh-configuration/</guid>
+                <pubDate>Thu, 01 Oct 2020 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+
