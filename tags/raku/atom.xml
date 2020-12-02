@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
-    <generator uri="https://gohugo.io/" version="0.63.2">Hugo</generator><title type="html"><![CDATA[raku on 焉知非鱼]]></title>
+    <generator uri="https://gohugo.io/" version="0.79.0">Hugo</generator><title type="html"><![CDATA[raku on 焉知非鱼]]></title>
     
         <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
     
@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/raku/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/raku/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/raku/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-10-04T12:40:58+08:00</updated>
+    <updated>2020-12-02T23:22:21+08:00</updated>
     
     
     
@@ -62,7 +62,7 @@ my Junction \p1j = pair (42^43),R;
 if ( 42 == fst p1j) {
     say snd p1j; #=&gt; one(R, R)
 }
-</code></pre><p>这里发生的情况是，原始参数 <code>R</code> 已经不可逆转地变成了与自己的 junction，尽管我们从未明确地在 <code>R</code> 上创建过 junction，但还是发生了这种情况。这是将 junction 类型应用于函数的结果，它不是一个 bug，只是 junction 行为的一个影响。更详细的解释，请看我的文章&rdquo;<a href="https://gist.github.com/wimvanderbauwhede/19cc1e8d04e9a477f58cfe7288a6172e">重构 Raku 的 Junction</a>&quot;。</p>
+</code></pre><p>这里发生的情况是，原始参数 <code>R</code> 已经不可逆转地变成了与自己的 junction，尽管我们从未明确地在 <code>R</code> 上创建过 junction，但还是发生了这种情况。这是将 junction 类型应用于函数的结果，它不是一个 bug，只是 junction 行为的一个影响。更详细的解释，请看我的文章&quot;<a href="https://gist.github.com/wimvanderbauwhede/19cc1e8d04e9a477f58cfe7288a6172e">重构 Raku 的 Junction</a>&quot;。</p>
 <p><a href="https://docs.raku.org/type/Junction">Raku 关于 junction 的文档</a>中说，你不应该真正尝试从 junction 中获取值。</p>
 <p>&ldquo;Junction 是用来作为布尔上下文中的匹配器，不支持 junction 的自省。如果你觉得有自省 junction 的冲动，请使用 Set 或相关类型代替。&rdquo;</p>
 <p>然而，有一个 FAQ <a href="https://docs.raku.org/language/faq#index-entry-Junction_(FAQ)">勉强地告诉你如何做</a>。FAQ 再次警告不要这样做。</p>
@@ -201,7 +201,7 @@ data Junction a = Junction JType [a]
 <pre><code class="language-raku" data-lang="raku">so :: Junction Bool -&gt; Bool
 </code></pre><p>最后我们有 <code>collapse</code>，它从一个 Junction 返回值，前提是它是一个 Junction，所有存储的值都是一样的。</p>
 <pre><code class="language-raku" data-lang="raku">collapse :: (Show a,Eq a) =&gt; Junction a -&gt; a
-</code></pre><p>这似乎是一个奇怪的函数，但由于 Junction 的行为，它是必要的。正如我们将看到的，上述语义意味着 Junction 是贪婪的：如果一个函数的一个参数是 Junction，那么所有其他参数也会成为 Junction，但 Junction 中的所有值都是相同的。我已经在&rdquo;<a href="https://gist.github.com/wimvanderbauwhede/85fb4b88ec53a0b8149e6c05740adcf8">贪婪 Junction 的奇怪情况</a>&ldquo;中讨论过这个问题，但我们现在可以将这种行为形式化。</p>
+</code></pre><p>这似乎是一个奇怪的函数，但由于 Junction 的行为，它是必要的。正如我们将看到的，上述语义意味着 Junction 是贪婪的：如果一个函数的一个参数是 Junction，那么所有其他参数也会成为 Junction，但 Junction 中的所有值都是相同的。我已经在&quot;<a href="https://gist.github.com/wimvanderbauwhede/85fb4b88ec53a0b8149e6c05740adcf8">贪婪 Junction 的奇怪情况</a>&ldquo;中讨论过这个问题，但我们现在可以将这种行为形式化。</p>
 <h4 id="重新审视贪婪-junction-的奇怪情况">重新审视贪婪 Junction 的奇怪情况</h4>
 <p>假设我们有一个两个参数的函数 <code>f :: a -&gt; b -&gt; c</code>，我们对第一个参数应用一个结点 <code>j :: Junction</code> a 应用到第一个参数 <code>f •￮ j</code> 上，那么结果是一个部分应用的函数，包裹在一个 Junction 上：<code>fp :: Junction b -&gt; c</code>。如果我们现在想用 <code>fp ￮• v</code> 将这个函数应用于一个非结点的值 <code>v :: b</code>，那么结果就是 <code>Junction c</code> 类型的。</p>
 <p>现在，让我们考虑类型 <code>c</code> 是 <code>forall d . (a -&gt; b -&gt; d) -&gt; d</code> 的特殊情况。所以我们有 <code>Junction</code>(<code>forall d . (a-&gt;b-&gt;d) -&gt; d</code>)。这是一个函数，它接受一个函数参数并返回该函数的返回类型的东西。我们使用 <code>forall</code>，所以 <code>d</code> 可以是任何东西，但在实践中我们希望它是 <code>a</code> 或 <code>b</code>。</p>
@@ -369,7 +369,7 @@ my $anon_square = sub ($x) {
     $x*$x;
 }
 </code></pre><p>在 Python 中，这将是：</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="p">:</span>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span>
 
 <span class="c1"># anonymous subroutine </span>
@@ -391,21 +391,21 @@ my \list1 = 1,2,3; #=&gt; a list
 my $list2 = (1,2,3); #=&gt; also a list
 my \list3 = |(1 .. 10);  #=&gt; an array from a range because of the '|' flattening operation
 </code></pre><p>相应的 Python 代码为:</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">list1</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="p">)</span> <span class="c1">#=&gt; a list from a tuple</span>
-<span class="n">list2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="p">;</span> <span class="c1">#=&gt; a list, because of the &#39;[...]&#39;</span>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">list1</span> <span class="o">=</span> <span class="nb">list</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span> <span class="c1">#=&gt; a list from a tuple</span>
+<span class="n">list2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">];</span> <span class="c1">#=&gt; a list, because of the &#39;[...]&#39;</span>
 
 <span class="n">range1</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)</span> <span class="c1">#=&gt; a range 1 .. 10</span>
-<span class="n">list3</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)</span><span class="p">)</span><span class="p">;</span> <span class="c1">#=&gt; a list from a range</span>
+<span class="n">list3</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">));</span> <span class="c1">#=&gt; a list from a range</span>
 
 <span class="n">tuple1</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">;</span> <span class="c1">#=&gt; a tuple</span>
-<span class="n">tuple2</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="p">)</span> <span class="c1">#=&gt; a tuple from a list</span>
-<span class="n">tuple3</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)</span><span class="p">)</span> <span class="c1">#=&gt; creates a tuple from a range</span>
+<span class="n">tuple2</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span> <span class="c1">#=&gt; a tuple from a list</span>
+<span class="n">tuple3</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">))</span> <span class="c1">#=&gt; creates a tuple from a range</span>
 </code></pre></div><p>其他具体的语法或功能将针对具体的例子进行解释。</p>
 <h2 id="其他任何名称的函数---作为值的函数"><em>其他任何名称的函数</em> - 作为值的函数</h2>
 <p>函数是函数式编程的精髓。正如我在<a href="https://wimvanderbauwhede.github.io/articles/everything-is-a-function">&ldquo;万物皆函数&rdquo;</a>一文中所解释的那样，在适当的函数式语言中，所有的结构都是由函数构建的。</p>
 <p>所有现代编程语言都有函数、程序、子程序或方法的概念。它们是代码重用的重要机制。通常，我们认为函数是对一些输入值进行操作以产生一个或多个输出值的东西。输入值可以是全局声明的，也可以是一个类的属性，或者作为参数传递给函数。同样，输出值可以直接返回，到全局变量，作为类的属性或通过修改输入值。</p>
 <p>要想从函数式编程中获益最多，最好是函数是纯粹的，这意味着对函数的调用总是对相同的输入产生相同的输出。在实践中，如果函数只接受输入作为参数，并直接返回输出，这一点比较容易实现，但这并不是必不可少的。</p>
-<p>函数式编程的关键特征是，函数的输入值和输出值本身可以是函数。所以函数必须是你语言中的值。有时这被称为 &ldquo;函数必须是一等公民&rdquo;，一个接收和/或返回函数的函数有时被称为&quot;高阶函数&rdquo;。</p>
+<p>函数式编程的关键特征是，函数的输入值和输出值本身可以是函数。所以函数必须是你语言中的值。有时这被称为 &ldquo;函数必须是一等公民&rdquo;，一个接收和/或返回函数的函数有时被称为&quot;高阶函数&quot;。</p>
 <p>如果函数是值，那么我们就可以将它们赋值给变量。特别是我们会将它们赋值给其他函数的参数。但我们也可以将它们赋值给普通的变量。</p>
 <p>让我们考虑以下函数，<code>choose</code>，它需要三个参数 <code>t</code>，<code>f</code> 和 <code>c</code>。</p>
 <pre><code class="language-perl6" data-lang="perl6"># Raku
@@ -460,8 +460,8 @@ res_f(&quot;rumour&quot;) #=&gt; says &quot;False rumour!&quot;
 </code></pre><p>或者使用<a href="https://docs.raku.org/language/functions#index-entry-pointy_blocks">&lsquo;尖号块&rsquo;</a>语法，这样更紧凑一些:</p>
 <pre><code class="language-perl6" data-lang="perl6">my \ff = -&gt; \s { say &quot;False {s}!&quot; };
 </code></pre><p>Python 使用 <code>lambda</code> 关键字:</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">tt</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span> <span class="p">:</span> <span class="k">print</span><span class="p">(</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">True </span><span class="s2">&#34;</span><span class="o">+</span><span class="n">s</span><span class="o">+</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">!</span><span class="s2">&#34;</span> <span class="p">)</span>
-<span class="n">ff</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span> <span class="p">:</span> <span class="k">print</span><span class="p">(</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">False </span><span class="s2">&#34;</span><span class="o">+</span><span class="n">s</span><span class="o">+</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">!</span><span class="s2">&#34;</span> <span class="p">)</span>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">tt</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span> <span class="p">:</span> <span class="k">print</span><span class="p">(</span> <span class="s2">&#34;True &#34;</span><span class="o">+</span><span class="n">s</span><span class="o">+</span><span class="s2">&#34;!&#34;</span> <span class="p">)</span>
+<span class="n">ff</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span> <span class="p">:</span> <span class="k">print</span><span class="p">(</span> <span class="s2">&#34;False &#34;</span><span class="o">+</span><span class="n">s</span><span class="o">+</span><span class="s2">&#34;!&#34;</span> <span class="p">)</span>
 </code></pre></div><p>所以现在我们可以说:</p>
 <pre><code class="language-perl6" data-lang="perl6">my &amp;res_f = choose(tt, ff, True);
 
@@ -469,17 +469,17 @@ say &amp;res_f; #=&gt; says sub { }
 res_f(&quot;story&quot;); #=&gt; says &quot;True story!&quot;
 </code></pre><p>当我们打印出函数所绑定的变量时，Raku 返回 <code>sub { }</code> 来表示该变量包含一个函数。</p>
 <p>在 Python 中:</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">res_f</span> <span class="o">=</span> <span class="n">choose</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">ff</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span><span class="p">;</span>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">res_f</span> <span class="o">=</span> <span class="n">choose</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">ff</span><span class="p">,</span> <span class="bp">True</span><span class="p">);</span>
 
 <span class="k">print</span><span class="p">(</span> <span class="n">res_f</span><span class="p">)</span> <span class="c1">#=&gt; says &lt;function &lt;lambda&gt; at 0x7f829b298b80&gt;</span>
-<span class="n">res_f</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">story</span><span class="s2">&#34;</span><span class="p">)</span> <span class="c1">#=&gt; says &#34;True story!&#34;</span>
+<span class="n">res_f</span><span class="p">(</span><span class="s2">&#34;story&#34;</span><span class="p">)</span> <span class="c1">#=&gt; says &#34;True story!&#34;</span>
 </code></pre></div><h2 id="例子-map-grep-和-reduce">例子: <code>map</code>、 <code>grep</code> 和 <code>reduce</code></h2>
 <p>函数的功能有很多用途，我只想重点介绍三个在 Raku 中现成的例子：<code>map</code>、<code>reduce</code> 和 <code>grep</code>。Python 有 <code>map</code> 和 <code>filter</code>，并通过 <code>functools</code> 模块提供 <code>reduce</code>。这些函数的共同点是，它们提供了一种对列表进行 <code>for</code> 循环的替代方法。</p>
 <h3 id="map--对列表中的所有元素进行函数应用"><code>map</code> : 对列表中的所有元素进行函数应用</h3>
 <p><code>map</code> 有两个参数：一个函数和一个列表。它将函数按顺序应用于列表中的所有值，并返回结果，例如将列表中的所有值平方。</p>
 <pre><code class="language-perl6" data-lang="perl6">my \res = map -&gt; \x {x*x} , 1 .. 10;
 </code></pre><p>在 Python 中，我们需要显式地创建元组，但除了语法上的差异，结构是完全一样的。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">res</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span> <span class="nb">map</span><span class="p">(</span> <span class="k">lambda</span> <span class="n">x</span> <span class="p">:</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span> <span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">res</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span> <span class="nb">map</span><span class="p">(</span> <span class="k">lambda</span> <span class="n">x</span> <span class="p">:</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span> <span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">11</span><span class="p">)))</span>
 </code></pre></div><p>这是对传统 <code>for</code> 循环的功能替代。</p>
 <pre><code class="language-perl6" data-lang="perl6"># Raku
 my \res = [];
@@ -574,15 +574,15 @@ multi sub foldl (&amp;f, \acc, \lst) {
    foldl( &amp;f, f(acc, elt), rest);
 }
 </code></pre><p>Python 不允许这种模式匹配，所以我们需要使用条件来编写递归。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">foldl</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">lst</span><span class="p">)</span><span class="p">:</span>
-  <span class="k">if</span> <span class="n">lst</span> <span class="o">==</span> <span class="p">(</span><span class="p">)</span><span class="p">:</span> 
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">foldl</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">lst</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">lst</span> <span class="o">==</span> <span class="p">():</span> 
     <span class="k">return</span> <span class="n">acc</span> 
   <span class="k">else</span><span class="p">:</span>
   <span class="c1"># Python&#39;s way of splitting a tuple in the first elt and the rest</span>
   <span class="c1"># rest will be a list, not a tuple, but we&#39;ll let that pass</span>
    <span class="p">(</span><span class="n">elt</span><span class="p">,</span><span class="o">*</span><span class="n">rest</span><span class="p">)</span> <span class="o">=</span> <span class="n">lst</span> 
    <span class="c1"># The actual recursion</span>
-   <span class="k">return</span> <span class="n">foldl</span><span class="p">(</span> <span class="n">f</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">elt</span><span class="p">)</span><span class="p">,</span> <span class="n">rest</span><span class="p">)</span>
+   <span class="k">return</span> <span class="n">foldl</span><span class="p">(</span> <span class="n">f</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">elt</span><span class="p">),</span> <span class="n">rest</span><span class="p">)</span>
 </code></pre></div><p>在这个实现中，所有的变量都不会被更新。所以所有的变量都可以是不可变的。</p>
 <h4 id="right-fold">Right fold</h4>
 <p>右折与左折颇为相似。对于基于循环的版本，我们所做的只是将列表反转(<code>reverse</code>)。</p>
@@ -756,8 +756,8 @@ sub compose(&amp;f,&amp;g) {
 }
 </code></pre><p>Python 没有函数组成操作符，但你也可以很容易地在 Python 中拥有 <code>compose</code>。</p>
 <div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="c1"># Python</span>
-<span class="k">def</span> <span class="nf">compose</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="n">g</span><span class="p">)</span><span class="p">:</span>
-    <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">f</span><span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">compose</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="n">g</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">f</span><span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 </code></pre></div><h2 id="结论">结论</h2>
 <p>在这篇文章中，我用 Raku 和 Python 的例子介绍了三种关键的函数式编程技术：对函数进行操作的函数、返回函数的函数和函数组成。我已经展示了你如何使用函数 <code>map</code>、<code>reduce</code>(折叠)和 <code>grep</code>(过滤)来操作不可变的列表。我已经解释了哟(如何用递归和不递归实现这样的函数，以及递归实现的优势是什么。下面是《 <a href="https://github.com/wimvanderbauwhede/raku-examples/blob/master/decluttering-with-functional-programming.raku">Raku</a> 与 <a href="https://github.com/wimvanderbauwhede/raku-examples/blob/master/decluttering-with-functional-programming.py">Python</a>》一文中的代码。</p>
 <p>当然，函数式编程的内容还有很多，我也写了<a href="https://wimvanderbauwhede.github.io/articles/">几篇更高级的文章</a>。本文介绍的概念应该为理解那些更高级的主题打下良好的基础。如果你想了解更多关于函数式编程的知识，你可以考虑我的<a href="https://www.futurelearn.com/courses/functional-programming-haskell">免费在线课程</a>。</p>
@@ -817,7 +817,7 @@ sub compose(&amp;f,&amp;g) {
 <li><strong>[6.d]</strong> 结构(字面上的) <code>$()</code>、<code>@()</code> 和 <code>%()</code> 不复存在</li>
 <li><strong>[6.d]</strong> 带有 <code>:D</code>/<code>:U</code> 类型约束的变量默认为约束类型的类型对象(例如, 你可以在它们身上使用 <code>.new</code>)</li>
 <li><strong>[6.d]</strong> <code>start</code> 块在 sink 上下文中附加异常处理程序</li>
-<li>~~**[6.d]** 例程必须使用 <code>return-rw</code> 来返回一个 <code>Proxy</code>, 即使例程被标记为 <code>is raw</code> 或 <code>is rw</code>~~</li>
+<li><del><strong>[6.d]</strong> 例程必须使用 <code>return-rw</code> 来返回一个 <code>Proxy</code>, 即使例程被标记为 <code>is raw</code> 或 <code>is rw</code></del></li>
 <li><strong>[6.d]</strong> 原生的 <code>num</code> 类型默认为 <code>0e0</code> 而不是 <code>NaN</code></li>
 <li><strong>[6.d]</strong> 在子程序名中, 保留了键名为 <code>sym</code> 的冒号对（如<code>:sym&lt;foo&gt;</code>）, 以备将来使用</li>
 </ul>
@@ -1115,7 +1115,7 @@ sub compose(&amp;f,&amp;g) {
 <li>所有的 <code>Cool</code> 类型都提供了 <code>.Rat</code>/<code>.FatRat</code> 强转器</li>
 <li><code>IO::Path</code> 文件测试不缓存先前测试执行的结果</li>
 <li><code>Seq</code> eqv <code>List</code> 仅根据类型不匹配就定为 <code>False</code></li>
-<li><del><input disabled="" type="checkbox">在 <code>Hash </code>、<code>Hash </code> 和 <code>QuantHash</code> 上, 来自 <code>.kv</code>、<code>.values</code> 和 <code>.pair</code> 序列的值是可写的</del> 参见 <a href="https://github.com/Raku/roast/issues/614">Raku/roast#614</a> 和 <a href="https://github.com/Raku/doc/issues/3519">#3519</a></li>
+<li><del><input disabled="" type="checkbox"> 在 <code>Hash </code>、<code>Hash </code> 和 <code>QuantHash</code> 上, 来自 <code>.kv</code>、<code>.values</code> 和 <code>.pair</code> 序列的值是可写的</del> 参见 <a href="https://github.com/Raku/roast/issues/614">Raku/roast#614</a> 和 <a href="https://github.com/Raku/doc/issues/3519">#3519</a></li>
 <li><code>&amp;infix:&lt;∘&gt;</code>/<code>&amp;infix:&lt;o&gt;</code> 保留 LHF 的 <code>.of</code> 和 RHS 的 <code>.arity</code> 和 <code>.count</code></li>
 <li>完善了 regex 运算符副词中的可接受参数(例如:<code>:in(…)</code>)</li>
 <li>完善了 <code>IO::Handle.open</code> 中可接受的参数组合</li>
@@ -1145,7 +1145,7 @@ sub compose(&amp;f,&amp;g) {
 <li><code>IO::Handle.eof</code> 值在 <code>.seek</code> 过终点后再返回时也会相应改变</li>
 <li>定义了 <code>.succ'、</code>.pred<code>和</code>.Bool` 的同质异形体</li>
 <li>在核心 <code>Numeric</code> 上定义了 <code>.Bridge</code></li>
-<li><del><input disabled="" type="checkbox">在核心 <code>Numeric</code> 的类型对象上定义了 <code>.Numeric</code>/<code>.Real</code></del></li>
+<li><del><input disabled="" type="checkbox"> 在核心 <code>Numeric</code> 的类型对象上定义了 <code>.Numeric</code>/<code>.Real</code></del></li>
 <li>定义了关于零分母有理数的 <code>Rational.Bool</code></li>
 <li><code>say</code>/<code>note</code> 保证在 <code>Str</code> 的子类上调用 <code>.gist</code></li>
 <li>定义了 <code>Junction.Str</code> 返回 <code>Junction</code></li>

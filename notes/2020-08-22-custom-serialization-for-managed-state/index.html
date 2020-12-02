@@ -256,7 +256,7 @@
     
     <meta name="hugo-build-date" content=""/>
     <meta name="hugo-commit-hash" content=""/>
-    <meta name="generator" content="Hugo 0.63.2" />
+    <meta name="generator" content="Hugo 0.79.0" />
 </head>
 
 
@@ -325,7 +325,7 @@
                             <li class="__flink__"
                                 
                                 
-                                title="See all 67 posts categorized in ‘Flink’"
+                                title="See all 72 posts categorized in ‘Flink’"
                                 
                             >
                                 <a class="p-category" href="https://ohmyweekly.github.io/categories/flink/">Flink</a>
@@ -349,7 +349,7 @@
                             <li class="__flink__"
                                 
                                 
-                                title="See all 86 posts tagged with ‘Flink’"
+                                title="See all 91 posts tagged with ‘Flink’"
                                 
                             >
                                 <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
@@ -467,9 +467,9 @@
 <h2 id="使用自定义状态序列化器">使用自定义状态序列化器&nbsp;<a class="headline-hash no-text-decoration" href="#使用自定义状态序列化器">#</a> </h2>
 <p>当注册一个 managed operator 或 keyed state时，需要一个 <code>StateDescriptor</code> 来指定状态的名称，以及状态的类型信息。类型信息被 Flink 的<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/types_serialization.html">类型序列化框架</a>用来为状态创建合适的序列化器。</p>
 <p>也可以完全绕过这一点，让 Flink 使用自己的自定义序列化器来序列化被管理的状态，只需用自己的 <code>TypeSerializer</code> 实现直接实例化 <code>StateDescriptor</code> 即可。</p>
-<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">CustomTypeSerializer</span> <span class="k">extends</span> <span class="nc">TypeSerializer</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Integer</span><span class="o">)</span><span class="o">]</span> <span class="o">{</span><span class="o">.</span><span class="o">.</span><span class="o">.</span><span class="o">}</span>
+<div class="highlight"><pre class="chroma"><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">CustomTypeSerializer</span> <span class="k">extends</span> <span class="nc">TypeSerializer</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Integer</span><span class="o">)]</span> <span class="o">{...}</span>
 
-<span class="k">val</span> <span class="n">descriptor</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ListStateDescriptor</span><span class="o">[</span><span class="o">(</span><span class="kt">String</span>, <span class="kt">Integer</span><span class="o">)</span><span class="o">]</span><span class="o">(</span>
+<span class="k">val</span> <span class="n">descriptor</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ListStateDescriptor</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Integer</span><span class="o">)](</span>
     <span class="s">&#34;state-name&#34;</span><span class="o">,</span>
     <span class="k">new</span> <span class="nc">CustomTypeSerializer</span><span class="o">)</span>
 <span class="o">)</span>
@@ -487,17 +487,17 @@
 <p>为了让新的执行有状态的写入模式的信息，并检测模式是否发生了变化，在对操作符的状态进行保存点时，需要将状态序列器的快照和状态字节一起写入。这就是抽象出来的一个 <code>TypeSerializerSnapshot</code>，在下一小节解释。</p>
 <h3 id="typeserializersnapshot-抽象"><code>TypeSerializerSnapshot</code> 抽象&nbsp;<a class="headline-hash no-text-decoration" href="#typeserializersnapshot-抽象">#</a> </h3>
 <div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">TypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
-    <span class="kt">int</span> <span class="nf">getCurrentVersion</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="nf">getCurrentVersion</span><span class="o">();</span>
     <span class="kt">void</span> <span class="nf">writeSnapshot</span><span class="o">(</span><span class="n">DataOuputView</span> <span class="n">out</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span><span class="o">;</span>
     <span class="kt">void</span> <span class="nf">readSnapshot</span><span class="o">(</span><span class="kt">int</span> <span class="n">readVersion</span><span class="o">,</span> <span class="n">DataInputView</span> <span class="n">in</span><span class="o">,</span> <span class="n">ClassLoader</span> <span class="n">userCodeClassLoader</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span><span class="o">;</span>
-    <span class="n">TypeSerializerSchemaCompatibility</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">resolveSchemaCompatibility</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">newSerializer</span><span class="o">)</span><span class="o">;</span>
-    <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">restoreSerializer</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+    <span class="n">TypeSerializerSchemaCompatibility</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">resolveSchemaCompatibility</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">newSerializer</span><span class="o">);</span>
+    <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">restoreSerializer</span><span class="o">();</span>
 <span class="o">}</span>
 <span class="kd">public</span> <span class="kd">abstract</span> <span class="kd">class</span> <span class="nc">TypeSerializer</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>    
     
     <span class="c1">// ...
 </span><span class="c1"></span>    
-    <span class="kd">public</span> <span class="kd">abstract</span> <span class="n">TypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">snapshotConfiguration</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kd">abstract</span> <span class="n">TypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">snapshotConfiguration</span><span class="o">();</span>
 <span class="o">}</span>
 </code></pre></div><p>序列器的 TypeSerializerSnapshot 是一个时间点信息，它作为状态序列器的写模式的唯一真理来源，以及还原一个序列器所必须的任何额外信息，这些信息将与给定的时间点相同。关于在还原时应该写入和读取什么作为序列器快照的逻辑是在 <code>writeSnapshot和readSnapshot</code> 方法中定义的。</p>
 <p>请注意，快照本身的写模式也可能需要随着时间的推移而改变（例如，当你希望在快照中添加更多关于序列器的信息时）。为了方便，快照是有版本的，在 <code>getCurrentVersion</code> 方法中定义了当前的版本号。在还原时，当从保存点读取序列器快照时，将向 <code>readSnapshot</code> 方法提供写入快照的模式的版本，以便读取实现可以处理不同的版本。</p>
@@ -589,8 +589,8 @@
 </ul>
 <p>下面以 Flink 的 <code>IntSerializer</code> 为例，介绍 <code>SimpleTypeSerializerSnapshot</code> 的使用方法。</p>
 <div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">IntSerializerSnapshot</span> <span class="kd">extends</span> <span class="n">SimpleTypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="nf">IntSerializerSnapshot</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="o">(</span><span class="o">)</span> <span class="o">-</span><span class="o">&gt;</span> <span class="n">IntSerializer</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">IntSerializerSnapshot</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">IntSerializer</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">);</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div><p>IntSerializer 没有状态或配置。序列化格式完全由序列化器类自己定义，只能由另一个 IntSerializer 读取。因此，它适合 SimpleTypeSerializerSnapshot 的使用情况。</p>
@@ -601,33 +601,33 @@
 <p>在这种情况下，外层序列化器的快照也应该包含嵌套序列化器的快照，这样就可以独立检查嵌套序列化器的兼容性。在解决外层序列化器的兼容性时，需要考虑每个嵌套序列化器的兼容性。</p>
 <p>提供 CompositeTypeSerializerSnapshot 是为了协助实现这类复合序列器的快照。它处理嵌套序列化器快照的读写，以及考虑到所有嵌套序列化器的兼容性，解析最终的兼容性结果。</p>
 <p>下面以 Flink 的 MapSerializer 为例，介绍如何使用 CompositeTypeSerializerSnapshot。</p>
-<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapSerializerSnapshot</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">CompositeTypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span><span class="o">,</span> <span class="n">MapSerializer</span><span class="o">&gt;</span> <span class="o">{</span>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapSerializerSnapshot</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">CompositeTypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;,</span> <span class="n">MapSerializer</span><span class="o">&gt;</span> <span class="o">{</span>
 
     <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">CURRENT_VERSION</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
 
-    <span class="kd">public</span> <span class="nf">MapSerializerSnapshot</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="n">MapSerializer</span><span class="o">.</span><span class="na">class</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">MapSerializerSnapshot</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(</span><span class="n">MapSerializer</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="kd">public</span> <span class="nf">MapSerializerSnapshot</span><span class="o">(</span><span class="n">MapSerializer</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="n">mapSerializer</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="n">mapSerializer</span><span class="o">)</span><span class="o">;</span>
+        <span class="kd">super</span><span class="o">(</span><span class="n">mapSerializer</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getCurrentOuterSnapshotVersion</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getCurrentOuterSnapshotVersion</span><span class="o">()</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">CURRENT_VERSION</span><span class="o">;</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="n">MapSerializer</span> <span class="nf">createOuterSerializerWithNestedSerializers</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="n">nestedSerializers</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">K</span><span class="o">&gt;</span> <span class="n">keySerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">K</span><span class="o">&gt;</span><span class="o">)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">;</span>
-        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">valueSerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;</span><span class="o">)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">1</span><span class="o">]</span><span class="o">;</span>
-        <span class="k">return</span> <span class="k">new</span> <span class="n">MapSerializer</span><span class="o">&lt;</span><span class="o">&gt;</span><span class="o">(</span><span class="n">keySerializer</span><span class="o">,</span> <span class="n">valueSerializer</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">protected</span> <span class="n">MapSerializer</span> <span class="nf">createOuterSerializerWithNestedSerializers</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="n">nestedSerializers</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">K</span><span class="o">&gt;</span> <span class="n">keySerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">K</span><span class="o">&gt;)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
+        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">valueSerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">1</span><span class="o">];</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="n">MapSerializer</span><span class="o">&lt;&gt;(</span><span class="n">keySerializer</span><span class="o">,</span> <span class="n">valueSerializer</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="n">getNestedSerializers</span><span class="o">(</span><span class="n">MapSerializer</span> <span class="n">outerSerializer</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="k">new</span> <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="o">{</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getKeySerializer</span><span class="o">(</span><span class="o">)</span><span class="o">,</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getValueSerializer</span><span class="o">(</span><span class="o">)</span> <span class="o">}</span><span class="o">;</span>
+    <span class="kd">protected</span> <span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="n">getNestedSerializers</span><span class="o">(</span><span class="n">MapSerializer</span> <span class="n">outerSerializer</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="o">{</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getKeySerializer</span><span class="o">(),</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getValueSerializer</span><span class="o">()</span> <span class="o">};</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div><p>当实现一个新的序列器快照作为 CompositeTypeSerializerSnapshot 的子类时，必须实现以下三个方法。</p>
@@ -645,52 +645,52 @@
 </ul>
 <p>默认情况下，CompositeTypeSerializerSnapshot 假设没有任何外部快照信息可读/可写，因此上述方法的默认实现为空。如果子类有外部快照信息，那么这三个方法必须全部实现。</p>
 <p>下面以 Flink 的 GenericArraySerializer 为例，说明 CompositeTypeSerializerSnapshot 如何用于确实有外部快照信息的复合序列器快照。</p>
-<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">GenericArraySerializerSnapshot</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">CompositeTypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">C</span><span class="o">[</span><span class="o">]</span><span class="o">,</span> <span class="n">GenericArraySerializer</span><span class="o">&gt;</span> <span class="o">{</span>
+<div class="highlight"><pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">GenericArraySerializerSnapshot</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">CompositeTypeSerializerSnapshot</span><span class="o">&lt;</span><span class="n">C</span><span class="o">[],</span> <span class="n">GenericArraySerializer</span><span class="o">&gt;</span> <span class="o">{</span>
 
     <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">CURRENT_VERSION</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
 
     <span class="kd">private</span> <span class="n">Class</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="n">componentClass</span><span class="o">;</span>
 
-    <span class="kd">public</span> <span class="nf">GenericArraySerializerSnapshot</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="n">GenericArraySerializer</span><span class="o">.</span><span class="na">class</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">GenericArraySerializerSnapshot</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kd">super</span><span class="o">(</span><span class="n">GenericArraySerializer</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="kd">public</span> <span class="nf">GenericArraySerializerSnapshot</span><span class="o">(</span><span class="n">GenericArraySerializer</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="n">genericArraySerializer</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">(</span><span class="n">genericArraySerializer</span><span class="o">)</span><span class="o">;</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">=</span> <span class="n">genericArraySerializer</span><span class="o">.</span><span class="na">getComponentClass</span><span class="o">(</span><span class="o">)</span><span class="o">;</span>
+        <span class="kd">super</span><span class="o">(</span><span class="n">genericArraySerializer</span><span class="o">);</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">=</span> <span class="n">genericArraySerializer</span><span class="o">.</span><span class="na">getComponentClass</span><span class="o">();</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="kt">int</span> <span class="nf">getCurrentOuterSnapshotVersion</span><span class="o">(</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">protected</span> <span class="kt">int</span> <span class="nf">getCurrentOuterSnapshotVersion</span><span class="o">()</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">CURRENT_VERSION</span><span class="o">;</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
     <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">writeOuterSnapshot</span><span class="o">(</span><span class="n">DataOutputView</span> <span class="n">out</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
-        <span class="n">out</span><span class="o">.</span><span class="na">writeUTF</span><span class="o">(</span><span class="n">componentClass</span><span class="o">.</span><span class="na">getName</span><span class="o">(</span><span class="o">)</span><span class="o">)</span><span class="o">;</span>
+        <span class="n">out</span><span class="o">.</span><span class="na">writeUTF</span><span class="o">(</span><span class="n">componentClass</span><span class="o">.</span><span class="na">getName</span><span class="o">());</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
     <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">readOuterSnapshot</span><span class="o">(</span><span class="kt">int</span> <span class="n">readOuterSnapshotVersion</span><span class="o">,</span> <span class="n">DataInputView</span> <span class="n">in</span><span class="o">,</span> <span class="n">ClassLoader</span> <span class="n">userCodeClassLoader</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">=</span> <span class="n">InstantiationUtil</span><span class="o">.</span><span class="na">resolveClassByName</span><span class="o">(</span><span class="n">in</span><span class="o">,</span> <span class="n">userCodeClassLoader</span><span class="o">)</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">=</span> <span class="n">InstantiationUtil</span><span class="o">.</span><span class="na">resolveClassByName</span><span class="o">(</span><span class="n">in</span><span class="o">,</span> <span class="n">userCodeClassLoader</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
     <span class="kd">protected</span> <span class="kt">boolean</span> <span class="nf">resolveOuterSchemaCompatibility</span><span class="o">(</span><span class="n">GenericArraySerializer</span> <span class="n">newSerializer</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">=</span><span class="o">=</span> <span class="n">newSerializer</span><span class="o">.</span><span class="na">getComponentClass</span><span class="o">(</span><span class="o">)</span><span class="o">)</span>
+        <span class="k">return</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">componentClass</span> <span class="o">==</span> <span class="n">newSerializer</span><span class="o">.</span><span class="na">getComponentClass</span><span class="o">())</span>
             <span class="o">?</span> <span class="n">OuterSchemaCompatibility</span><span class="o">.</span><span class="na">COMPATIBLE_AS_IS</span>
             <span class="o">:</span> <span class="n">OuterSchemaCompatibility</span><span class="o">.</span><span class="na">INCOMPATIBLE</span><span class="o">;</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="n">GenericArraySerializer</span> <span class="nf">createOuterSerializerWithNestedSerializers</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="n">nestedSerializers</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="n">componentSerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span><span class="o">)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">0</span><span class="o">]</span><span class="o">;</span>
-        <span class="k">return</span> <span class="k">new</span> <span class="n">GenericArraySerializer</span><span class="o">&lt;</span><span class="o">&gt;</span><span class="o">(</span><span class="n">componentClass</span><span class="o">,</span> <span class="n">componentSerializer</span><span class="o">)</span><span class="o">;</span>
+    <span class="kd">protected</span> <span class="n">GenericArraySerializer</span> <span class="nf">createOuterSerializerWithNestedSerializers</span><span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="n">nestedSerializers</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;</span> <span class="n">componentSerializer</span> <span class="o">=</span> <span class="o">(</span><span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="n">C</span><span class="o">&gt;)</span> <span class="n">nestedSerializers</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="n">GenericArraySerializer</span><span class="o">&lt;&gt;(</span><span class="n">componentClass</span><span class="o">,</span> <span class="n">componentSerializer</span><span class="o">);</span>
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="n">getNestedSerializers</span><span class="o">(</span><span class="n">GenericArraySerializer</span> <span class="n">outerSerializer</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="k">new</span> <span class="n">TypeSerializer</span><span class="o">&lt;</span><span class="o">?</span><span class="o">&gt;</span><span class="o">[</span><span class="o">]</span> <span class="o">{</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getComponentSerializer</span><span class="o">(</span><span class="o">)</span> <span class="o">}</span><span class="o">;</span>
+    <span class="kd">protected</span> <span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="n">getNestedSerializers</span><span class="o">(</span><span class="n">GenericArraySerializer</span> <span class="n">outerSerializer</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="n">TypeSerializer</span><span class="o">&lt;?&gt;[]</span> <span class="o">{</span> <span class="n">outerSerializer</span><span class="o">.</span><span class="na">getComponentSerializer</span><span class="o">()</span> <span class="o">};</span>
     <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div><p>在上面的代码片段中，有两个重要的事情需要注意。首先，由于这个 <code>CompositeTypeSerializerSnapshot</code> 实现的外快照信息是作为快照的一部分写入的，所以每当外快照信息的序列化格式发生变化时，由 <code>getCurrentOuterSnapshotVersion()</code> 定义的外快照版本必须被上调。</p>
@@ -755,7 +755,7 @@
     <li><a href="#使用自定义状态序列化器">使用自定义状态序列化器</a>
       <ul>
         <li><a href="#状态序列化器和模式演进">状态序列化器和模式演进</a></li>
-        <li><a href="#typeserializersnapshot-抽象">TypeSerializerSnapshot 抽象</a></li>
+        <li><a href="#typeserializersnapshot-抽象"><code>TypeSerializerSnapshot</code> 抽象</a></li>
         <li><a href="#预先定义方便的-typeserializersnapshot-类">预先定义方便的 TypeSerializerSnapshot 类</a></li>
         <li><a href="#实施说明和最佳实践">实施说明和最佳实践</a></li>
         <li><a href="#从-flink-17-之前的废弃序列化快照-api-迁移">从 Flink 1.7 之前的废弃序列化快照 API 迁移</a></li>
@@ -832,7 +832,7 @@
                             <li class="__flink__"
                                 
                                 
-                                title="See all 67 posts categorized in ‘Flink’"
+                                title="See all 72 posts categorized in ‘Flink’"
                                 
                             >
                                 <a class="p-category" href="https://ohmyweekly.github.io/categories/flink/">Flink</a>
@@ -856,7 +856,7 @@
                             <li class="__flink__"
                                 
                                 
-                                title="See all 86 posts tagged with ‘Flink’"
+                                title="See all 91 posts tagged with ‘Flink’"
                                 
                             >
                                 <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
@@ -959,7 +959,7 @@
 
 
 <p class="generated no-text-decoration">
-    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo 0.63.2</span>
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo 0.79.0</span>
 </p>
 
 <p>

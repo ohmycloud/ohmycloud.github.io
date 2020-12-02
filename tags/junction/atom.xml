@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
-    <generator uri="https://gohugo.io/" version="0.63.2">Hugo</generator><title type="html"><![CDATA[Junction on 焉知非鱼]]></title>
+    <generator uri="https://gohugo.io/" version="0.79.0">Hugo</generator><title type="html"><![CDATA[Junction on 焉知非鱼]]></title>
     
         <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
     
@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/junction/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/junction/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/junction/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-10-04T12:40:58+08:00</updated>
+    <updated>2020-12-02T23:22:21+08:00</updated>
     
     
     
@@ -62,7 +62,7 @@ my Junction \p1j = pair (42^43),R;
 if ( 42 == fst p1j) {
     say snd p1j; #=&gt; one(R, R)
 }
-</code></pre><p>这里发生的情况是，原始参数 <code>R</code> 已经不可逆转地变成了与自己的 junction，尽管我们从未明确地在 <code>R</code> 上创建过 junction，但还是发生了这种情况。这是将 junction 类型应用于函数的结果，它不是一个 bug，只是 junction 行为的一个影响。更详细的解释，请看我的文章&rdquo;<a href="https://gist.github.com/wimvanderbauwhede/19cc1e8d04e9a477f58cfe7288a6172e">重构 Raku 的 Junction</a>&quot;。</p>
+</code></pre><p>这里发生的情况是，原始参数 <code>R</code> 已经不可逆转地变成了与自己的 junction，尽管我们从未明确地在 <code>R</code> 上创建过 junction，但还是发生了这种情况。这是将 junction 类型应用于函数的结果，它不是一个 bug，只是 junction 行为的一个影响。更详细的解释，请看我的文章&quot;<a href="https://gist.github.com/wimvanderbauwhede/19cc1e8d04e9a477f58cfe7288a6172e">重构 Raku 的 Junction</a>&quot;。</p>
 <p><a href="https://docs.raku.org/type/Junction">Raku 关于 junction 的文档</a>中说，你不应该真正尝试从 junction 中获取值。</p>
 <p>&ldquo;Junction 是用来作为布尔上下文中的匹配器，不支持 junction 的自省。如果你觉得有自省 junction 的冲动，请使用 Set 或相关类型代替。&rdquo;</p>
 <p>然而，有一个 FAQ <a href="https://docs.raku.org/language/faq#index-entry-Junction_(FAQ)">勉强地告诉你如何做</a>。FAQ 再次警告不要这样做。</p>
@@ -201,7 +201,7 @@ data Junction a = Junction JType [a]
 <pre><code class="language-raku" data-lang="raku">so :: Junction Bool -&gt; Bool
 </code></pre><p>最后我们有 <code>collapse</code>，它从一个 Junction 返回值，前提是它是一个 Junction，所有存储的值都是一样的。</p>
 <pre><code class="language-raku" data-lang="raku">collapse :: (Show a,Eq a) =&gt; Junction a -&gt; a
-</code></pre><p>这似乎是一个奇怪的函数，但由于 Junction 的行为，它是必要的。正如我们将看到的，上述语义意味着 Junction 是贪婪的：如果一个函数的一个参数是 Junction，那么所有其他参数也会成为 Junction，但 Junction 中的所有值都是相同的。我已经在&rdquo;<a href="https://gist.github.com/wimvanderbauwhede/85fb4b88ec53a0b8149e6c05740adcf8">贪婪 Junction 的奇怪情况</a>&ldquo;中讨论过这个问题，但我们现在可以将这种行为形式化。</p>
+</code></pre><p>这似乎是一个奇怪的函数，但由于 Junction 的行为，它是必要的。正如我们将看到的，上述语义意味着 Junction 是贪婪的：如果一个函数的一个参数是 Junction，那么所有其他参数也会成为 Junction，但 Junction 中的所有值都是相同的。我已经在&quot;<a href="https://gist.github.com/wimvanderbauwhede/85fb4b88ec53a0b8149e6c05740adcf8">贪婪 Junction 的奇怪情况</a>&ldquo;中讨论过这个问题，但我们现在可以将这种行为形式化。</p>
 <h4 id="重新审视贪婪-junction-的奇怪情况">重新审视贪婪 Junction 的奇怪情况</h4>
 <p>假设我们有一个两个参数的函数 <code>f :: a -&gt; b -&gt; c</code>，我们对第一个参数应用一个结点 <code>j :: Junction</code> a 应用到第一个参数 <code>f •￮ j</code> 上，那么结果是一个部分应用的函数，包裹在一个 Junction 上：<code>fp :: Junction b -&gt; c</code>。如果我们现在想用 <code>fp ￮• v</code> 将这个函数应用于一个非结点的值 <code>v :: b</code>，那么结果就是 <code>Junction c</code> 类型的。</p>
 <p>现在，让我们考虑类型 <code>c</code> 是 <code>forall d . (a -&gt; b -&gt; d) -&gt; d</code> 的特殊情况。所以我们有 <code>Junction</code>(<code>forall d . (a-&gt;b-&gt;d) -&gt; d</code>)。这是一个函数，它接受一个函数参数并返回该函数的返回类型的东西。我们使用 <code>forall</code>，所以 <code>d</code> 可以是任何东西，但在实践中我们希望它是 <code>a</code> 或 <code>b</code>。</p>
