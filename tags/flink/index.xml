@@ -10,10 +10,159 @@
         <description>Recent content  in flink
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Wed, 02 Dec 2020 23:23:36 +0800</lastBuildDate>
+        <lastBuildDate>Thu, 10 Dec 2020 21:59:13 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/tags/flink/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>执行模式(批/流)</title>
+                <link>https://ohmyweekly.github.io/notes/2020-12-10-execution-mode/</link>
+                
+                
+                <description>&lt;blockquote&gt;Execution Mode(Batch/Streaming)&lt;/blockquote&gt;&lt;h1 id=&#34;执行模式流批&#34;&gt;执行模式(流/批)&lt;/h1&gt;
+&lt;p&gt;DataStream API 支持不同的运行时执行模式，你可以根据用例的要求和作业的特点从中选择。&lt;/p&gt;
+&lt;p&gt;DataStream API 有一种&amp;quot;经典&amp;quot;的执行行为，我们称之为 &lt;strong&gt;STREAMING&lt;/strong&gt; 执行模式。这应该用于需要连续增量处理并预计无限期保持在线的无边界作业。&lt;/p&gt;
+&lt;p&gt;此外，还有一种批式执行模式，我们称之为 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式。这种执行作业的方式更容易让人联想到批处理框架，如 MapReduce。这应该用于有边界的作业，对于这些作业，你有一个已知的固定输入，并且不会连续运行。&lt;/p&gt;
+&lt;p&gt;Apache Flink 对流和批处理的统一方法意味着，无论配置何种执行模式，在有界输入上执行的 DataStream 应用都会产生相同的最终结果。重要的是要注意这里的 final 是什么意思：在 streaming 模式下执行的作业可能会产生增量更新（想想数据库中的 upserts），而 batch 作业在最后只会产生一个最终结果。如果解释正确的话，最终的结果是一样的，但是到达那里的方式可能是不同的。&lt;/p&gt;
+&lt;p&gt;通过启用 &lt;strong&gt;BATCH&lt;/strong&gt; 执行，我们允许 Flink 应用额外的优化，而这些优化只有在我们知道我们的输入是有边界的情况下才能进行。例如，可以使用不同的 join/aggregation 策略，此外还可以使用不同的 shuffle 实现，允许更高效的任务调度和故障恢复行为。下面我们将介绍一些执行行为的细节。&lt;/p&gt;
+&lt;h2 id=&#34;什么时候可以应该使用-batch-执行模式&#34;&gt;什么时候可以/应该使用 BATCH 执行模式？&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;BATCH&lt;/strong&gt; 执行模式只能用于有边界的 Job/Link 程序。边界性是数据源的一个属性，它告诉我们在执行之前，来自该数据源的所有输入是否都是已知的，或者是否会有新的数据出现，可能是无限的。而一个作业，如果它的所有源都是有界的，则是有界的，否则就是无界的。&lt;/p&gt;
+&lt;p&gt;另一方面，&lt;strong&gt;STREAMING&lt;/strong&gt; 执行模式既可以用于有界作业，也可以用于无界作业。&lt;/p&gt;
+&lt;p&gt;作为经验法则，当你的程序是有界的时候，你应该使用 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式，因为这样会更有效率。当你的程序是无边界的时候，你必须使用 &lt;strong&gt;STREAMING&lt;/strong&gt; 执行模式，因为只有这种模式足够通用，能够处理连续的数据流。&lt;/p&gt;
+&lt;p&gt;一个明显的例外情况是，当你想使用一个有界作业来引导一些作业状态，然后你想在一个无界作业中使用。例如，通过使用 &lt;strong&gt;STREAMING&lt;/strong&gt; 模式运行一个有界作业，取一个保存点，然后在一个无界作业上恢复该保存点。这是一个非常特殊的用例，当我们允许将保存点作为 &lt;strong&gt;BATCH&lt;/strong&gt; 执行作业的额外输出时，这个用例可能很快就会过时。&lt;/p&gt;
+&lt;p&gt;另一个可能使用 &lt;strong&gt;STREAMING&lt;/strong&gt; 模式运行有边界作业的情况是为最终将在无边界源中运行的代码编写测试时。对于测试来说，在这些情况下使用有界源可能更自然。&lt;/p&gt;
+&lt;h2 id=&#34;配置-batch-执行模式&#34;&gt;配置 BATCH 执行模式&lt;/h2&gt;
+&lt;p&gt;执行模式可以通过 &lt;code&gt;execute.runtim-mode&lt;/code&gt; 设置来配置。有三种可能的值:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;STREAMING&lt;/strong&gt;: 经典的 DataStream 执行模式(默认)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;BATCH&lt;/strong&gt;: 在 DataStream API 上进行批量式执行&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;AUTOMATIC&lt;/strong&gt;：让系统根据源的边界性来决定&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这可以通过 &lt;code&gt;bin/flink run ...&lt;/code&gt; 的命令行参数进行配置，或者在创建/配置 StreamExecutionEnvironment 时进行编程。&lt;/p&gt;
+&lt;p&gt;下面是如何通过命令行配置执行模式:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ bin/flink run -Dexecution.runtime-mode&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;BATCH examples/streaming/WordCount.jar
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个例子展示了如何在代码中配置执行模式:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;n&#34;&gt;StreamExecutionEnvironment&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;StreamExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;setRuntimeMode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;RuntimeExecutionMode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;BATCH&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;注意：我们建议用户不要在程序中设置运行模式，而是在提交应用程序时使用命令行进行设置。保持应用程序代码的免配置可以让程序更加灵活，因为同一个应用程序可以在任何执行模式下执行。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;执行行为&#34;&gt;执行行为&lt;/h2&gt;
+&lt;p&gt;本节概述了 BATCH 执行模式的执行行为，并与 STREAMING 执行模式进行了对比。详细内容请参考介绍该功能的 &lt;a href=&#34;https://cwiki.apache.org/confluence/x/4i94CQ&#34;&gt;FLIP-134&lt;/a&gt; 和 &lt;a href=&#34;https://cwiki.apache.org/confluence/x/kDh4CQ&#34;&gt;FLIP-140&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;任务调度和网络洗牌shuffle&#34;&gt;任务调度和网络洗牌(Shuffle)&lt;/h3&gt;
+&lt;p&gt;Flink 作业(job)由不同的操作(operation)组成，这些操作在数据流图中连接在一起。系统决定如何在不同的进程/机器（TaskManager）上安排这些操作的执行，以及如何在它们之间洗牌（发送）数据。&lt;/p&gt;
+&lt;p&gt;多个操作/运算符可以使用一种称为&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/operators/#task-chaining-and-resource-groups&#34;&gt;链式&lt;/a&gt;的功能链在一起。Flink 认为作为调度单位的一组一个或多个（链式）运算符(operators )被称为任务(&lt;em&gt;task&lt;/em&gt;)。通常，子任务(subtask)一词用来指在多个 TaskManager 上并行运行的单个任务实例，但我们在这里只使用任务(task)一词。&lt;/p&gt;
+&lt;p&gt;任务调度和网络洗牌对于 &lt;strong&gt;BATCH&lt;/strong&gt; 和 &lt;strong&gt;STREAMING&lt;/strong&gt; 执行模式的工作方式不同。主要是由于我们知道我们的输入数据在 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式下是有边界的，这使得 Flink 可以使用更高效的数据结构和算法。&lt;/p&gt;
+&lt;p&gt;我们将用这个例子来解释任务调度和网络传输的差异。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;n&#34;&gt;StreamExecutionEnvironment&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;StreamExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;DataStreamSource&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;source&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;fromElements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...);&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;source&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map1&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map2&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;rebalance&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;()&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map3&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map4&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;((&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map5&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;map6&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
+	&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;sinkTo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(...).&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;sink&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;暗示操作之间1对1连接模式的操作，如 &lt;code&gt;map()&lt;/code&gt;、&lt;code&gt;flatMap()&lt;/code&gt; 或 &lt;code&gt;filter()&lt;/code&gt;，可以直接将数据转发到下一个操作，这使得这些操作可以链在一起。这意味着 Flink 通常不会在它们之间插入网络洗牌。&lt;/p&gt;
+&lt;p&gt;而 &lt;code&gt;keyBy()&lt;/code&gt; 或 &lt;code&gt;rebalance()&lt;/code&gt; 等操作则需要在不同的任务并行实例之间进行数据洗牌。这就会引起网络洗牌。&lt;/p&gt;
+&lt;p&gt;对于上面的例子，Flink 会把操作分组为这样的任务。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Task1: source, map1 和 map2&lt;/li&gt;
+&lt;li&gt;Task2: map3, map4&lt;/li&gt;
+&lt;li&gt;Task3: map5, map6 和 sink&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;而我们在任务1和2，以及任务2和3之间进行网络洗牌。这是该作业的可视化表示。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/fig/datastream-example-job-graph.svg&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;streaming-执行模式&#34;&gt;STREAMING 执行模式&lt;/h3&gt;
+&lt;p&gt;在 &lt;strong&gt;STREAMING&lt;/strong&gt; 执行模式下，所有任务需要一直在线/运行。这使得 Flink 可以通过整个管道立即处理新的记录，而我们需要的是连续和低延迟的流处理。这也意味着分配给一个任务的 TaskManagers 需要有足够的资源来同时运行所有的任务。&lt;/p&gt;
+&lt;p&gt;网络洗牌是流水线式的，这意味着记录会被立即发送到下游任务，并在网络层上进行一些缓冲。同样，这也是需要的，因为当处理连续的数据流时，在任务（或任务的管道）之间没有自然的数据点（时间点）可以物化。这与 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式形成了鲜明的对比，在 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式下，中间的结果可以被具体化，如下所述。&lt;/p&gt;
+&lt;h3 id=&#34;batch-执行模式&#34;&gt;BATCH 执行模式&lt;/h3&gt;
+&lt;p&gt;在 &lt;strong&gt;BATCH&lt;/strong&gt; 执行模式下，一个作业的任务可以被分离成可以一个接一个执行的阶段。我们之所以能做到这一点，是因为输入是有边界的，因此 Flink 可以在进入下一个阶段之前完全处理管道的一个阶段。在上面的例子中，工作会有三个阶段，对应着被洗牌障碍分开的三个任务。&lt;/p&gt;
+&lt;p&gt;分阶段处理并不是像上面针对 STREAMING 模式所解释的那样，立即向下游任务发送记录，而是需要 Flink 将任务的中间结果物化到一些非永续存储中，让下游任务在上游任务已经下线后再读取。这将增加处理的延迟，但也会带来其他有趣的特性。首先，这允许 Flink 在故障发生时回溯到最新的可用结果，而不是重新启动整个任务。另一个副作用是，BATCH 作业可以在更少的资源上执行（就 TaskManagers 的可用槽而言），因为系统可以一个接一个地顺序执行任务。&lt;/p&gt;
+&lt;p&gt;TaskManagers 将至少在下游任务没有消耗它们的情况下保留中间结果。(从技术上讲，它们将被保留到消耗的流水线区域产生它们的输出为止)。在这之后，只要空间允许，它们就会被保留，以便在失败的情况下，可以回溯到前面提到的结果。&lt;/p&gt;
+&lt;h3 id=&#34;状态后端状态&#34;&gt;状态后端/状态&lt;/h3&gt;
+&lt;p&gt;在 STREAMING 模式下，Flink 使用 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/state_backends.html&#34;&gt;StateBackend&lt;/a&gt; 来控制状态的存储方式和检查点的工作方式。&lt;/p&gt;
+&lt;p&gt;在 BATCH 模式下，配置的状态后端被忽略。取而代之的是，keyed 操作的输入按键分组（使用排序），然后我们依次处理一个键的所有记录。这样就可以同时只保留一个键的状态。当转到下一个键时，一个给定键的状态将被丢弃。&lt;/p&gt;
+&lt;p&gt;关于这方面的背景信息，请参见 &lt;a href=&#34;https://cwiki.apache.org/confluence/x/kDh4CQ&#34;&gt;FLIP-140&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;事件时间水印&#34;&gt;事件时间/水印&lt;/h3&gt;
+&lt;p&gt;在支持&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/event_time.html&#34;&gt;事件时间&lt;/a&gt;方面，Flink 的流运行时建立在一个悲观的假设上，即事件可能会出现顺序外，即一个时间戳t的事件可能会在一个时间戳t+1的事件之后出现。正因为如此，系统永远无法确定在给定的时间戳T下，未来不会再有时间戳 &lt;code&gt;t&amp;lt;T&lt;/code&gt; 的元素出现。为了摊平这种失序性对最终结果的影响，同时使系统实用，在 STREAMING 模式下，Flink 使用了一种名为 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/concepts/timely-stream-processing.html#event-time-and-watermarks&#34;&gt;Watermarks&lt;/a&gt; 的启发式方法。一个带有时间戳T的水印标志着没有时间戳 &lt;code&gt;t&amp;lt;T&lt;/code&gt; 的元素会跟随。&lt;/p&gt;
+&lt;p&gt;在 BATCH 模式下，输入的数据集是事先已知的，不需要这样的启发式，因为至少可以按照时间戳对元素进行排序，从而按照时间顺序进行处理。对于熟悉流的读者来说，在 BATCH 中，我们可以假设&amp;quot;完美的水印&amp;quot;。&lt;/p&gt;
+&lt;p&gt;鉴于上述情况，在 BATCH 模式下，我们只需要在输入的末尾有一个与每个键相关的 MAX_WATERMARK，如果输入流没有键，则在输入的末尾有一个。基于这个方案，所有注册的定时器都会在时间结束时触发，用户定义的 WatermarkAssigners 或 WatermarkStrategies 会被忽略。&lt;/p&gt;
+&lt;h3 id=&#34;处理时间&#34;&gt;处理时间&lt;/h3&gt;
+&lt;p&gt;处理时间是指在处理记录的具体实例上，处理记录的机器上的挂钟时间。根据这个定义，我们看到，基于处理时间的计算结果是不可重复的。这是因为同一条记录被处理两次，会有两个不同的时间戳。&lt;/p&gt;
+&lt;p&gt;尽管如此，在 STREAMING 模式下使用处理时间还是很有用的。原因与流媒体管道经常实时摄取其无限制的输入有关，所以事件时间和处理时间之间存在相关性。此外，由于上述原因，在 STREAMING 模式下，事件时间的1h往往可以几乎是1h的处理时间，也就是挂钟时间。所以使用处理时间可以用于早期（不完全）发射，给出预期结果的提示。&lt;/p&gt;
+&lt;p&gt;在批处理世界中，这种相关性并不存在，因为在批处理世界中，输入的数据集是静态的，是预先知道的。鉴于此，在 BATCH 模式中，我们允许用户请求当前的处理时间，并注册处理时间计时器，但与事件时间的情况一样，所有的计时器都要在输入结束时发射。&lt;/p&gt;
+&lt;p&gt;在概念上，我们可以想象，在作业执行过程中，处理时间不会提前，当整个输入处理完毕后，我们会快进到时间结束。&lt;/p&gt;
+&lt;h3 id=&#34;故障恢复&#34;&gt;故障恢复&lt;/h3&gt;
+&lt;p&gt;在 STREAMING 执行模式下，Flink 使用检查点进行故障恢复。请看一下&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/checkpointing.html&#34;&gt;检查点文档&lt;/a&gt;，了解关于这个和如何配置它的实践文档。关于&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/learn-flink/fault_tolerance.html&#34;&gt;通过状态快照进行容错&lt;/a&gt;，也有一个比较入门的章节，从更高的层面解释了这些概念。&lt;/p&gt;
+&lt;p&gt;Checkpointing 用于故障恢复的特点之一是，Flink 在发生故障时，会从检查点重新启动所有正在运行的任务。这可能比我们在 BATCH 模式下所要做的事情更昂贵（如下文所解释），这也是如果你的任务允许的话应该使用 BATCH 执行模式的原因之一。&lt;/p&gt;
+&lt;p&gt;在 BATCH 执行模式下，Flink 会尝试并回溯到之前的处理阶段，对于这些阶段，仍然有中间结果。潜在地，只有失败的任务（或它们在图中的前辈）才需要重新启动，与从检查点重新启动所有任务相比，可以提高作业的处理效率和整体处理时间。&lt;/p&gt;
+&lt;h3 id=&#34;重要的考虑因素&#34;&gt;重要的考虑因素&lt;/h3&gt;
+&lt;p&gt;与经典的 STREAMING 执行模式相比，在 BATCH 模式下，有些东西可能无法按照预期工作。一些功能的工作方式会略有不同，而其他功能则不支持。&lt;/p&gt;
+&lt;p&gt;BATCH 模式下的行为变化。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&amp;ldquo;滚动&amp;quot;操作，如 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/operators/#reduce&#34;&gt;&lt;code&gt;reduce()&lt;/code&gt;&lt;/a&gt; 或 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/operators/#aggregations&#34;&gt;&lt;code&gt;sum()&lt;/code&gt;&lt;/a&gt;，会对 STREAMING 模式下每一条新记录发出增量更新。在 BATCH 模式下，这些操作不是&amp;quot;滚动&amp;rdquo;。它们只发出最终结果。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;BATCH 模式下不支持的:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/concepts/stateful-stream-processing.html#stateful-stream-processing&#34;&gt;Checkpointing&lt;/a&gt; 和任何依赖于 checkpointing 的操作都不工作。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/broadcast_state.html&#34;&gt;广播状态&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/operators/#iterate&#34;&gt;迭代&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;自定义操作符应谨慎执行，否则可能会有不恰当的行为。更多细节请参见下面的补充说明。&lt;/p&gt;
+&lt;h3 id=&#34;检查点&#34;&gt;检查点&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/datastream_execution_mode.html#failure-recovery&#34;&gt;如上&lt;/a&gt;所述，批处理程序的故障恢复不使用检查点。&lt;/p&gt;
+&lt;p&gt;重要的是要记住，因为没有检查点，某些功能如 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/api/java/org/apache/flink/api/common/state/CheckpointListener.html&#34;&gt;CheckpointListener&lt;/a&gt;，以及因此，Kafka 的 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/connectors/kafka.html#kafka-producers-and-fault-tolerance&#34;&gt;EXACTLY_ONCE&lt;/a&gt; 模式或 StreamingFileSink 的 &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/connectors/streamfile_sink.html#rolling-policy&#34;&gt;OnCheckpointRollingPolicy&lt;/a&gt; 将无法工作。如果你需要一个在 BATCH 模式下工作的事务型接收器，请确保它使用 &lt;a href=&#34;https://cwiki.apache.org/confluence/x/KEJ4CQ&#34;&gt;FLIP-143&lt;/a&gt; 中提出的统一接收器 API。&lt;/p&gt;
+&lt;p&gt;你仍然可以使用所有的状态&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/state.html#working-with-state&#34;&gt;原语&lt;/a&gt;，只是用于故障恢复的机制会有所不同。&lt;/p&gt;
+&lt;h3 id=&#34;广播状态&#34;&gt;广播状态&lt;/h3&gt;
+&lt;p&gt;引入这个特性是为了让用户实现这样的用例：一个&amp;quot;控制&amp;quot;流需要被广播到所有下游任务，而广播的元素，例如规则，需要应用到另一个流的所有输入元素。&lt;/p&gt;
+&lt;p&gt;在这种模式下，Flink 不提供关于读取输入的顺序的保证。像上面这样的用例在流媒体世界中是有意义的，因为在这个世界中，作业预计会运行很长时间，而输入数据是事先不知道的。在这些设置中，需求可能会随着时间的推移而改变，这取决于输入的数据。&lt;/p&gt;
+&lt;p&gt;但在批处理世界中，我们认为这种用例没有太大意义，因为输入（包括元素和控制流）是静态的，而且是预先知道的。&lt;/p&gt;
+&lt;p&gt;我们计划在未来为BATCH处理支持这种模式的变化，即完全先处理广播端。&lt;/p&gt;
+&lt;h3 id=&#34;编写自定义操作符&#34;&gt;编写自定义操作符&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;注意：自定义操作符是 Apache Flink 的一种高级使用模式。对于大多数的使用情况，可以考虑使用(keyed-)过程函数来代替。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在编写自定义操作符时，记住 BATCH 执行模式的假设是很重要的。否则，一个在 STREAMING 模式下运行良好的操作符可能会在 BATCH 模式下产生错误的结果。操作符永远不会被限定在一个特定的键上，这意味着他们看到了 Flink 试图利用的 BATCH 处理的一些属性。&lt;/p&gt;
+&lt;p&gt;首先你不应该在一个操作符内缓存最后看到的水印。在 BATCH 模式下，我们会逐个键处理记录。因此，水印会在每个键之间从 MAX_VALUE 切换到 MIN_VALUE。你不应该认为水印在一个操作符中总是上升的。出于同样的原因，定时器将首先按键的顺序发射，然后按每个键内的时间戳顺序发射。此外，不支持手动更改键的操作。&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2020-12-10-execution-mode/</guid>
+                <pubDate>Thu, 10 Dec 2020 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -2835,279 +2984,6 @@ INSERT|Alice|18
                     
                 
                 <guid>https://ohmyweekly.github.io/notes/2020-08-25-user-defined-sources-and-sinks/</guid>
-                <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>数据类型和序列化</title>
-                <link>https://ohmyweekly.github.io/notes/2020-08-25-datatypes-serialization/</link>
-                
-                
-                <description>&lt;blockquote&gt;Datatypes Serialization&lt;/blockquote&gt;&lt;h1 id=&#34;数据类型和序列化&#34;&gt;数据类型和序列化&lt;/h1&gt;
-&lt;p&gt;Apache Flink 以独特的方式处理数据类型和序列化，包含自己的类型描述符、通用类型提取和类型序列化框架。本文档描述了这些概念和它们背后的原理。&lt;/p&gt;
-&lt;h2 id=&#34;支持的数据类型&#34;&gt;支持的数据类型&lt;/h2&gt;
-&lt;p&gt;Flink 对 DataSet 或 DataStream 中的元素类型进行了一些限制。这样做的原因是系统分析类型以确定高效的执行策略。&lt;/p&gt;
-&lt;p&gt;有七种不同类别的数据类型。&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Java Tuples 和 Scala Case 类&lt;/li&gt;
-&lt;li&gt;Java POJOs&lt;/li&gt;
-&lt;li&gt;Primitive Types&lt;/li&gt;
-&lt;li&gt;Regular Classes&lt;/li&gt;
-&lt;li&gt;Values&lt;/li&gt;
-&lt;li&gt;Hadoop Writables&lt;/li&gt;
-&lt;li&gt;特殊类型&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3 id=&#34;tuples-和-case-类&#34;&gt;Tuples 和 Case 类&lt;/h3&gt;
-&lt;p&gt;Scala case 类（以及 Scala tuples，它是 case 类的一种特殊类型），是包含固定数量的各种类型的字段的复合类型。元组字段由它们的 1-offset 名称寻址，例如第一个字段为 &lt;code&gt;_1&lt;/code&gt;。case 类字段用它们的名字来访问。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;case&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WordCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;word&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromElements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
-    &lt;span class=&#34;nc&#34;&gt;WordCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;),&lt;/span&gt;
-    &lt;span class=&#34;nc&#34;&gt;WordCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;world&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;))&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// Case Class Data Set
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;word&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// key by field expression &amp;#34;word&amp;#34;
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input2&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromElements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;((&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;),&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;world&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;))&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// Tuple2 Data Set
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;input2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// key by field positions 0 and 1
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;pojos&#34;&gt;POJOs&lt;/h3&gt;
-&lt;p&gt;如果 Java 和 Scala 类满足以下要求，Flink 会将其作为一种特殊的 POJO 数据类型。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;类必须是公共的。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;它必须有一个没有参数的公共构造函数（默认构造函数）。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;所有字段要么是公共的，要么必须通过 getter 和 setter 函数来访问。对于一个名为 foo 的字段，getter 和 setter 方法必须命名为 &lt;code&gt;getFoo()&lt;/code&gt; 和 &lt;code&gt; setFoo()&lt;/code&gt;。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;字段的类型必须由注册的序列器支持。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;POJOs 通常用 PojoTypeInfo 表示，并用 PojoSerializer 序列化（使用 &lt;a href=&#34;https://github.com/EsotericSoftware/kryo&#34;&gt;Kryo&lt;/a&gt; 作为可配置的回退）。例外的情况是当 POJOs 实际上是 Avro 类型（Avro 特定记录）或作为 &amp;ldquo;Avro 反射类型 &amp;ldquo;产生。在这种情况下，POJO 由 AvroTypeInfo 表示，并通过 AvroSerializer 序列化。如果需要，您也可以注册您自己的自定义序列化器；更多信息请参见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-stable/dev/types_serialization.html#serialization-of-pojo-types&#34;&gt;序列化&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;Flink 分析 POJO 类型的结构，也就是说，它学习 POJO 的字段。因此，POJO 类型比一般类型更容易使用。此外，Flink 可以比一般类型更有效地处理 POJO。&lt;/p&gt;
-&lt;p&gt;下面的例子显示了一个简单的 POJO，它有两个公共字段。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WordWithCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;var&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;word&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;var&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;count&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;this&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;()&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-      &lt;span class=&#34;k&#34;&gt;this&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kc&#34;&gt;null&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fromElements&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WordWithCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;),&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;WordWithCount&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;world&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;))&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// Case Class Data Set
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;keyBy&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;word&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// key by field expression &amp;#34;word&amp;#34;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;原始类型&#34;&gt;原始类型&lt;/h3&gt;
-&lt;p&gt;Flink 支持所有的 Java 和 Scala 基元类型，如 Integer, String 和 Double。&lt;/p&gt;
-&lt;h3 id=&#34;通用类类型&#34;&gt;通用类类型&lt;/h3&gt;
-&lt;p&gt;Flink 支持大多数 Java 和 Scala 类（API 和自定义）。限制适用于包含不能序列化的字段的类，如文件指针、I/O 流或其他本地资源。遵循 Java Beans 约定的类一般都能很好地工作。&lt;/p&gt;
-&lt;p&gt;所有没有被确定为 POJO 类型的类（见上面的 POJO 要求）都被 Flink 作为一般类类型处理。Flink 将这些数据类型视为黑盒，无法访问它们的内容（例如，为了有效的排序）。一般类型使用序列化框架 &lt;a href=&#34;https://github.com/EsotericSoftware/kryo&#34;&gt;Kryo&lt;/a&gt; 进行去/序列化。&lt;/p&gt;
-&lt;h3 id=&#34;值&#34;&gt;值&lt;/h3&gt;
-&lt;p&gt;Value 类型手动描述它们的序列化和反序列化。它们不需要通过一个通用的序列化框架，而是通过实现 org.apache.flinktypes.Value 接口的读写方法，为这些操作提供自定义代码。当通用序列化会非常低效时，使用 Value 类型是合理的。一个例子是一个数据类型，它将一个稀疏的元素向量实现为一个数组。知道数组大部分是零，就可以对非零元素使用特殊的编码，而通用序列化会简单地写入所有数组元素。&lt;/p&gt;
-&lt;p&gt;org.apache.flinktypes.CopyableValue 接口以类似的方式支持手动内部克隆逻辑。&lt;/p&gt;
-&lt;p&gt;Flink 自带了预先定义的 Value 类型，对应基本数据类型。ByteValue、ShortValue、IntValue、LongValue、FloatValue、DoubleValue、StringValue、CharValue、BooleanValue）。这些 Value 类型作为基本数据类型的可变体。它们的值可以被改变，允许程序员重用对象并减轻垃圾收集器的压力。&lt;/p&gt;
-&lt;h3 id=&#34;hadoop-可写类型&#34;&gt;Hadoop 可写类型&lt;/h3&gt;
-&lt;p&gt;你可以使用实现 org.apache.hadoop.Writable 接口的类型。在 &lt;code&gt;write()&lt;/code&gt; 和 &lt;code&gt;readFields()&lt;/code&gt; 方法中定义的序列化逻辑将被用于序列化。&lt;/p&gt;
-&lt;h3 id=&#34;特殊类型&#34;&gt;特殊类型&lt;/h3&gt;
-&lt;p&gt;你可以使用特殊类型，包括 Scala 的 Either、Option 和 Try。Java API 对 Either 有自己的自定义实现。类似于 Scala 的 Either，它代表了两种可能的类型的值，左或右。Either 对于错误处理或需要输出两种不同类型记录的操作符来说非常有用。&lt;/p&gt;
-&lt;h3 id=&#34;类型擦除和类型推断&#34;&gt;类型擦除和类型推断。&lt;/h3&gt;
-&lt;p&gt;注意：本节只与 Java 相关。&lt;/p&gt;
-&lt;p&gt;Java 编译器在编译后会丢弃很多通用类型信息。这在 Java 中被称为类型清除。这意味着在运行时，一个对象的实例不再知道它的通用类型。例如，&lt;code&gt;DataStream&amp;lt;String&amp;gt;&lt;/code&gt; 和 &lt;code&gt;DataStream&amp;lt;Long&amp;gt;&lt;/code&gt; 的实例在 JVM 看来是一样的。&lt;/p&gt;
-&lt;p&gt;Flink 在准备执行程序时（调用程序的主方法时）需要类型信息。Flink Java API 试图重建以各种方式扔掉的类型信息，并将其显式存储在数据集和运算符中。你可以通过 &lt;code&gt;DataStream.getType()&lt;/code&gt; 来检索类型。该方法返回一个 TypeInformation 的实例，这是 Flink 内部表示类型的方式。&lt;/p&gt;
-&lt;p&gt;类型推理有其局限性，在某些情况下需要程序员的 &amp;ldquo;配合&amp;rdquo;。例如从集合中创建数据集的方法，如 &lt;code&gt;ExecutionEnvironment.fromCollection()&lt;/code&gt;，你可以传递一个描述类型的参数。但是像 &lt;code&gt;MapFunction&amp;lt;I, O&amp;gt;&lt;/code&gt; 这样的通用函数也可能需要额外的类型信息。&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://github.com/apache/flink/blob/master//flink-core/src/main/java/org/apache/flink/api/java/typeutils/ResultTypeQueryable.java&#34;&gt;ResultTypeQueryable&lt;/a&gt; 接口可以由输入格式和函数实现，以明确地告诉 API 它们的返回类型。函数被调用的输入类型通常可以通过前面操作的结果类型来推断。&lt;/p&gt;
-&lt;h2 id=&#34;flink-中的类型处理&#34;&gt;Flink 中的类型处理&lt;/h2&gt;
-&lt;p&gt;Flink 试图推断出很多关于分布式计算过程中交换和存储的数据类型的信息。把它想象成一个数据库，推断表的模式。在大多数情况下，Flink 自己就能无缝地推断出所有必要的信息。有了类型信息，Flink 就可以做一些很酷的事情。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Flink 对数据类型了解得越多，序列化和数据布局方案就越好。这对于 Flink 中的内存使用范式相当重要（尽可能在堆内/堆外对序列化数据进行工作，并使序列化非常便宜）。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;最后，在大多数情况下，这也免去了用户对序列化框架的担心，也免去了对类型的注册。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;一般来说，关于数据类型的信息是在飞行前阶段需要的&amp;ndash;也就是说，当程序对 DataStream 和 DataSet 进行调用时，以及在对 &lt;code&gt;execute()&lt;/code&gt;、&lt;code&gt;print()&lt;/code&gt;、&lt;code&gt;count()&lt;/code&gt; 或 &lt;code&gt;collect()&lt;/code&gt; 进行任何调用之前。&lt;/p&gt;
-&lt;h2 id=&#34;最常见的问题&#34;&gt;最常见的问题&lt;/h2&gt;
-&lt;p&gt;用户最经常需要与 Flink 的数据类型处理进行交互的问题是。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;注册子类型。如果函数签名只描述了超类型，但它们在执行过程中实际使用了这些子类型，那么让 Flink 意识到这些子类型可能会提高很多性能。为此，可以在 StreamExecutionEnvironment 或 ExecutionEnvironment 上为每个子类型调用 &lt;code&gt;.registerType(clazz)&lt;/code&gt;。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;注册自定义序列器。Flink 对于那些自己不透明处理的类型又回到了 &lt;a href=&#34;https://github.com/EsotericSoftware/kryo&#34;&gt;Kryo&lt;/a&gt;。并非所有类型都能被 Kryo 无缝处理（因此也能被 Flink 处理）。例如，许多 Google Guava 集合类型在默认情况下不能很好地工作。解决的办法是为导致问题的类型注册额外的序列器。在 StreamExecutionEnvironment 或 ExecutionEnvironment 上调用.getConfig().addDefaultKryoSerializer( clazz, serializer)。许多库中都有额外的 Kryo 序列化器。有关使用自定义序列器的更多细节，请参见&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/custom_serializers.html&#34;&gt;自定义序列器&lt;/a&gt;。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;添加类型提示。有时，当 Flink 尽管使用了所有技巧也无法推断出通用类型时，用户必须传递一个类型提示。这一般只在 Java API 中才需要。&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/types_serialization.html#type-hints-in-the-java-api&#34;&gt;类型提示&lt;/a&gt;一节对此进行了更详细的描述。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;手动创建一个 TypeInformation。对于一些 API 调用来说，这可能是必要的，由于 Java 的通用类型擦除，Flink 不可能推断出数据类型。详情请看&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/types_serialization.html#creating-a-typeinformation-or-typeserializer&#34;&gt;创建 TypeInformation 或 TypeSerializer&lt;/a&gt;。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id=&#34;flink-的-typeinformation-类&#34;&gt;Flink 的 TypeInformation 类&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://github.com/apache/flink/blob/master//flink-core/src/main/java/org/apache/flink/api/common/typeinfo/TypeInformation.java&#34;&gt;TypeInformation&lt;/a&gt; 类是所有类型描述符的基础类。它揭示了类型的一些基本属性，并且可以生成序列器，在特殊化中，可以生成类型的比较器。(注意，Flink 中的比较器的作用远不止定义一个顺序&amp;ndash;它们基本上是处理键的实用程序)&lt;/p&gt;
-&lt;p&gt;在内部，Flink 对类型做了如下区分。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;基本类型。所有的 Java 基元和它们的盒子形式，加上 void，String，Date，BigDecimal 和 BigInteger。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;基元数组和对象数组：基本类型：所有的 Java 基元和它们的盒子形式，加上 void、String、Date、BigDecimal 和 BigInteger。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;复合型&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Flink Java Tuples(Flink Java API 的一部分)：最多 25 个字段，不支持 null 字段。&lt;/li&gt;
-&lt;li&gt;Scala case 类（包括 Scala tuples）：不支持 null 字段。&lt;/li&gt;
-&lt;li&gt;Row：具有任意数量字段的元组，支持 null 字段。&lt;/li&gt;
-&lt;li&gt;POJOs：遵循某种 bean-like 模式的类。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;辅助类型(Option、Either、Lists、Maps&amp;hellip;)&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;通用类型。这些类型不会由 Flink 本身序列化，而是由 Kryo 序列化。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;POJOs 特别值得关注，因为它们支持创建复杂类型和在键的定义中使用字段名：&lt;code&gt;dataSet.join(another).where(&amp;quot;name&amp;quot;).equalTo(&amp;quot;personName&amp;quot;)&lt;/code&gt;。它们对运行时也是透明的，可以被 Flink 非常有效地处理。&lt;/p&gt;
-&lt;h3 id=&#34;pojo-类型的规则&#34;&gt;POJO 类型的规则&lt;/h3&gt;
-&lt;p&gt;如果满足以下条件，Flink 将数据类型识别为 POJO 类型（并允许 &amp;ldquo;按名称 &amp;ldquo;字段引用）。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;类是公共的和独立的（没有非静态的内部类）。&lt;/li&gt;
-&lt;li&gt;该类有一个公共的无参数构造函数。&lt;/li&gt;
-&lt;li&gt;该类（以及所有超级类）中所有非静态、非瞬态的字段要么是公共的（是非最终的），要么有一个公共的 &lt;code&gt;getter-&lt;/code&gt; 和 &lt;code&gt;setter-&lt;/code&gt; 方法，遵循 Java beans 中 getter 和 setter 的命名惯例。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;请注意，当用户定义的数据类型不能被识别为 POJO 类型时，它必须被处理为 GenericType 并通过 Kryo 进行序列化。&lt;/p&gt;
-&lt;h3 id=&#34;创建一个-typeinformation-或-typeserializer&#34;&gt;创建一个 TypeInformation 或 TypeSerializer。&lt;/h3&gt;
-&lt;p&gt;要为一个类型创建 TypeInformation 对象，请使用语言特定的方式。&lt;/p&gt;
-&lt;p&gt;在 Scala 中，Flink 使用在编译时运行的宏，并捕捉所有通用类型信息，而它仍然可用。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// important: this import is needed to access the &amp;#39;createTypeInformation&amp;#39; macro function
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.streaming.api.scala._&lt;/span&gt;
-
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;stringInfo&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;createTypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt;
-
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tupleInfo&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;createTypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Double&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)]&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你仍然可以使用与 Java 中相同的方法作为后备。&lt;/p&gt;
-&lt;p&gt;要创建一个 TypeSerializer，只需在 TypeInformation 对象上调用 typeInfo.createSerializer(config)。&lt;/p&gt;
-&lt;p&gt;config 参数的类型是 ExecutionConfig，并持有程序注册的自定义序列器的信息。在可能的情况下，尽量传递程序的正确的 ExecutionConfig。你通常可以通过调用 &lt;code&gt;getExecutionConfig()&lt;/code&gt; 从 DataStream 或 DataSet 中获取它。在函数内部（比如 MapFunction），你可以通过将函数变成 Rich Function，然后调用 &lt;code&gt;getRuntimeContext().getExecutionConfig()&lt;/code&gt; 来获取它。&lt;/p&gt;
-&lt;h2 id=&#34;scala-api-中的类型信息&#34;&gt;Scala API 中的类型信息&lt;/h2&gt;
-&lt;p&gt;Scala 通过类型清单和类标签对运行时类型信息有非常详细的概念。一般来说，类型和方法可以访问其通用参数的类型&amp;ndash;因此，Scala 程序不会像 Java 程序那样受到类型擦除的影响。&lt;/p&gt;
-&lt;p&gt;此外，Scala 允许通过 Scala Macros 在 Scala 编译器中运行自定义代码&amp;ndash;这意味着每当你编译一个针对 Flink 的 Scala API 编写的 Scala 程序时，一些 Flink 代码就会被执行。&lt;/p&gt;
-&lt;p&gt;我们在编译过程中使用宏来查看所有用户函数的参数类型和返回类型&amp;ndash;这时当然所有的类型信息都是完全可用的。在宏中，我们为函数的返回类型（或参数类型）创建一个 TypeInformation，并将其作为操作的一部分。&lt;/p&gt;
-&lt;h3 id=&#34;没有隐式值的证据参数错误&#34;&gt;没有隐式值的证据参数错误&lt;/h3&gt;
-&lt;p&gt;在 TypeInformation 不能被创建的情况下，程序编译失败，并出现 &amp;ldquo;could not find implicit value for evidence parameter of type TypeInformation&amp;rdquo; 的错误。&lt;/p&gt;
-&lt;p&gt;一个常见的原因是生成 TypeInformation 的代码没有被导入。请确保导入整个 &lt;code&gt;flink.api.scala&lt;/code&gt; 包。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;import&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;org.apache.flink.api.scala._&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;另一个常见的原因是通用方法，它可以在下面的章节中进行修复。&lt;/p&gt;
-&lt;h3 id=&#34;通用方法&#34;&gt;通用方法&lt;/h3&gt;
-&lt;p&gt;请考虑以下案例。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selectFirst&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;](&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;, &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)])&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;map&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;data&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;String&lt;/span&gt;, &lt;span class=&#34;kt&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;...&lt;/span&gt;
-
-&lt;span class=&#34;kt&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;result&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;selectFirst&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;data&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;对于这样的通用方法，每次调用时，函数参数和返回类型的数据类型可能不一样，在定义方法的站点不知道。上面的代码会导致一个错误，即没有足够的隐含证据。&lt;/p&gt;
-&lt;p&gt;在这种情况下，必须在调用站点生成类型信息并传递给方法。Scala 为此提供了隐式参数。&lt;/p&gt;
-&lt;p&gt;下面的代码告诉 Scala 将 T 的类型信息带入函数中。然后，类型信息将在方法被调用的站点生成，而不是在方法被定义的站点生成。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;def&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;selectFirst&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;](&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[(&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;, &lt;span class=&#34;k&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)])&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;n&#34;&gt;input&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;map&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;v&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_1&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;java-api-中的类型信息&#34;&gt;Java API 中的类型信息&lt;/h2&gt;
-&lt;p&gt;在一般情况下，Java 会擦除通用类型信息，而 Flink 试图通过反射来重建尽可能多的类型信息，使用 Java 保留的少量信息（主要是函数签名和子类信息）。Flink 试图通过反射来重建尽可能多的类型信息，使用 Java 保留的少量信息（主要是函数签名和子类信息）。这个逻辑还包含了一些简单的类型推理，用于函数的返回类型取决于其输入类型的情况。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AppendOne&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;implements&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;MapFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Tuple2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-
-    &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Tuple2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-        &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Tuple2&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;1L&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
-    &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在有些情况下，Flink 无法重建所有的通用类型信息。在这种情况下，用户必须通过类型提示来帮忙。&lt;/p&gt;
-&lt;h3 id=&#34;java-api-中的类型提示&#34;&gt;Java API 中的类型提示&lt;/h3&gt;
-&lt;p&gt;在 Flink 无法重建被擦除的通用类型信息的情况下，Java API 提供了所谓的类型提示。类型提示告诉系统一个函数产生的数据流或数据集的类型。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;n&#34;&gt;DataSet&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SomeType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;result&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;dataSet&lt;/span&gt;
-    &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;MyGenericNonInferrableFunction&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Long&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;SomeType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;())&lt;/span&gt;
-        &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;returns&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;SomeType&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;class&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;returns&lt;/code&gt; 语句指定产生的类型，在本例中是通过一个类。提示支持类型定义，通过:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;类，适用于非参数化类型(无属类)&lt;/li&gt;
-&lt;li&gt;TypeHint 以 &lt;code&gt;returns(new TypeHint&amp;lt;Tuple2&amp;lt;Integer, SomeType&amp;gt;&amp;gt;(){})&lt;/code&gt; 的形式存在。TypeHint 类可以捕获通用类型信息，并将其保存到运行时（通过匿名子类）。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;java-8-lambdas-的类型提取&#34;&gt;Java 8 lambdas 的类型提取。&lt;/h3&gt;
-&lt;p&gt;Java 8 lambdas 的类型提取与非 lambdas 的工作方式不同，因为 lambdas 不与扩展函数接口的实现类相关联。&lt;/p&gt;
-&lt;p&gt;目前，Flink 试图找出哪个方法实现了 lambda，并使用 Java 的通用签名来确定参数类型和返回类型。然而，并不是所有的编译器都能为 lambdas 生成这些签名（在写这篇文档时，只有 4.5 以后的 Eclipse JDT 编译器能可靠地生成）。&lt;/p&gt;
-&lt;h3 id=&#34;pojo-类型的序列化&#34;&gt;POJO 类型的序列化&lt;/h3&gt;
-&lt;p&gt;PojoTypeInfo 正在为 POJO 内部的所有字段创建序列器。标准类型，如 int、long、String 等，由 Flink 附带的序列器处理。对于所有其他类型，我们回到了 &lt;a href=&#34;https://github.com/EsotericSoftware/kryo&#34;&gt;Kryo&lt;/a&gt;。&lt;/p&gt;
-&lt;p&gt;如果 Kryo 不能处理类型，你可以要求 PojoTypeInfo 使用 &lt;a href=&#34;https://avro.apache.org/&#34;&gt;Avro&lt;/a&gt; 来序列化 POJO。要做到这一点，你必须调用&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;final&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ExecutionEnvironment&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;enableForceAvro&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，Flink 是用 Avro 序列化器自动序列化 Avro 生成的 POJO。&lt;/p&gt;
-&lt;p&gt;如果您想让整个 POJO 类型被 Kryo 序列化器处理，请设置&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;final&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ExecutionEnvironment&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;env&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getExecutionEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;enableForceKryo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果 Kryo 无法序列化你的 POJO，你可以在 Kryo 中添加一个自定义序列化器，使用&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;addDefaultKryoSerializer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Class&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;?&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;type&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Class&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;?&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Serializer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;?&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;serializerClass&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这些方法有不同的变体。&lt;/p&gt;
-&lt;h2 id=&#34;禁用-kryo-fallback&#34;&gt;禁用 Kryo Fallback&lt;/h2&gt;
-&lt;p&gt;有些情况下，程序可能希望明确避免使用 Kryo 作为通用类型的后备。最常见的情况是希望确保所有类型都能通过 Flink 自己的序列化器或通过用户定义的自定义序列化器进行有效序列化。&lt;/p&gt;
-&lt;p&gt;下面的设置会在遇到会通过 Kryo 的数据类型时引发异常。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;disableGenericTypes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;使用工厂定义类型信息&#34;&gt;使用工厂定义类型信息&lt;/h2&gt;
-&lt;p&gt;类型信息工厂允许将用户定义的类型信息插入到 Flink 类型系统中。你必须实现 &lt;code&gt;org.apache.flink.api.common.typeinfo.TypeInfoFactory&lt;/code&gt; 来返回你的自定义类型信息。如果相应的类型已经被 &lt;code&gt;@org.apache.flink.api.common.typeinfo.TypeInfo&lt;/code&gt; 注解，那么在类型提取阶段就会调用这个工厂。&lt;/p&gt;
-&lt;p&gt;类型信息工厂可以在 Java 和 Scala API 中使用。&lt;/p&gt;
-&lt;p&gt;在类型的层次结构中，在向上遍历时将选择最接近的工厂，然而，内置工厂具有最高的优先级。工厂也比 Flink 的内置类型有更高的优先级，因此你应该知道你在做什么。&lt;/p&gt;
-&lt;p&gt;下面的例子展示了如何在 Java 中使用工厂来注释一个自定义类型 MyTuple 并为其提供自定义类型信息。&lt;/p&gt;
-&lt;p&gt;注解的自定义类型:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;nd&#34;&gt;@TypeInfo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MyTupleTypeInfoFactory&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;class&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyTuple&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;T0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-  &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T0&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;myfield0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
-  &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T1&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;myfield1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;工厂供应自定义类型信息:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;MyTupleTypeInfoFactory&lt;/span&gt; &lt;span class=&#34;kd&#34;&gt;extends&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;TypeInfoFactory&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MyTuple&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-
-  &lt;span class=&#34;nd&#34;&gt;@Override&lt;/span&gt;
-  &lt;span class=&#34;kd&#34;&gt;public&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;TypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MyTuple&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;createTypeInfo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Type&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Map&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;TypeInformation&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;?&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;genericParameters&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;{&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;MyTupleTypeInfo&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;genericParameters&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;get&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;T0&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;),&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;genericParameters&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;get&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;T1&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;));&lt;/span&gt;
-  &lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;span class=&#34;o&#34;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;方法 &lt;code&gt;createTypeInfo(Type, Map&amp;lt;String, TypeInformation&amp;lt;?&amp;gt;)&lt;/code&gt; 为工厂的目标类型创建类型信息。参数提供了关于类型本身的附加信息，以及类型的通用类型参数（如果可用）。&lt;/p&gt;
-&lt;p&gt;如果你的类型包含了可能需要从 Flink 函数的输入类型中导出的通用参数，请确保同时实现 &lt;code&gt;org.apache.flink.api.common.typeinfo.TypeInformation#getGenericParameters&lt;/code&gt; 来实现通用参数到类型信息的双向映射。&lt;/p&gt;
-&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/types_serialization.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/types_serialization.html&lt;/a&gt;&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/serialization">Serialization</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2020-08-25-datatypes-serialization/</guid>
                 <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
             </item>
         
