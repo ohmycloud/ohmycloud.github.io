@@ -205,7 +205,7 @@
 <h2 id="从静态站点到静态站点生成器">从静态站点到静态站点生成器</h2>
 <p>我打算解决的问题是使用曾经在SourceForge.net上托管的旧静态网站，并将其迁移到令人兴奋的新&hellip;嗯&hellip;静态网站。但是，这一次，它将成为静态网站的现代版本。而不是手动编辑HTML并使用自制的页面munging脚本来执行诸如使用正则表达式在内容div顶部插入新闻项目或更改日志条目，我将使用现代静态网站生成器。有几个可供选择，包括用Ruby编写的着名的Jekyll，用Go构建的Hugo，以及在Perl中运行此站点的Statocles。对于我的项目，我选择了<a href="https://gohugo.io/">Hugo</a>，因为它的速度和成熟度。</p>
 <p>与大多数现代静态站点生成器一样，Hugo希望内容采用Markdown格式，文件顶部有一些元数据。我想把我们硬梆梆的旧HTML转换成下面的例子，看起来有点像这样：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#f92672">-</span><span style="color:#f92672">-</span><span style="color:#f92672">-</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#f92672">---</span>
 title: <span style="color:#e6db74">&#34;Frobnitz 3.141593 released&#34;</span>
 date: <span style="color:#ae81ff">2016</span><span style="color:#f92672">-</span><span style="color:#ae81ff">10</span><span style="color:#f92672">-</span><span style="color:#ae81ff">10</span>
 description: <span style="color:#e6db74">&#34;This release includes a fog-flavored bauble of three equal sides, providing the restless...&#34;</span>
@@ -213,7 +213,7 @@ categories: <span style="color:#f92672">[]</span>
 aliases: <span style="color:#f92672">[]</span>
 toc: false
 draft: false
-<span style="color:#f92672">-</span><span style="color:#f92672">-</span><span style="color:#f92672">-</span>
+<span style="color:#f92672">---</span>
 This release includes a fog<span style="color:#f92672">-</span>flavored bauble of three equal sides, providing 
 the restless digital spirits a brief respite from their painful awareness of
 impermanence<span style="color:#f92672">.</span>
@@ -223,14 +223,14 @@ You can find the <span style="color:#66d9ef">new</span> version under the usual 
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::UserAgent;
 
 <span style="color:#66d9ef">my</span> $url <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;intro&#39;</span>;
-<span style="color:#66d9ef">my</span> $ua  <span style="color:#f92672">=</span> Mojo::UserAgent<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>;
-<span style="color:#66d9ef">my</span> $tx <span style="color:#f92672">=</span> $ua<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get(<span style="color:#e6db74">&#34;example.tld/$url.html&#34;</span>);
+<span style="color:#66d9ef">my</span> $ua  <span style="color:#f92672">=</span> Mojo::UserAgent<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>;
+<span style="color:#66d9ef">my</span> $tx <span style="color:#f92672">=</span> $ua<span style="color:#f92672">-&gt;</span>get(<span style="color:#e6db74">&#34;example.tld/$url.html&#34;</span>);
 </code></pre></div><p>而已！我们刚刚获取了一个网页。您可能想要打印 <code>$tx</code> 以查看其中的内容（这就是我所做的，而不是首先阅读文档）。但是，它是一个<a href="https://mojolicious.org/perldoc/Mojo/Transaction/HTTP">Mojo::Transaction::HTTP</a>对象。我们必须深入了解层次结构，首先查看<code>res</code>属性，它是一个<a href="https://mojolicious.org/perldoc/Mojo/Message/Response">Mojo::Message::Response</a>对象，它有一个<code>body</code>方法：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">print</span> $tx<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>res<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>body();
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">print</span> $tx<span style="color:#f92672">-&gt;</span>res<span style="color:#f92672">-&gt;</span>body();
 </code></pre></div><p>这将显示响应正文及其HTML内容。但是，这并不是很有趣。但是，我们可以通过Mojo响应轻松地完成更多有趣和强大的事情。</p>
 <h2 id="css选择器">CSS选择器</h2>
 <p>该<code>res</code>响应对象提供了一个<code>dom</code>对象，给出了选择使用CSS选择HTML文档的部件的能力。所以，如果我有一个带<code>#main</code>div 的文档，我可以使用以下内容检索该div的内容：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $main <span style="color:#f92672">=</span> $tx<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>res<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>dom<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>find(<span style="color:#e6db74">&#34;#main&#34;</span>);
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $main <span style="color:#f92672">=</span> $tx<span style="color:#f92672">-&gt;</span>res<span style="color:#f92672">-&gt;</span>dom<span style="color:#f92672">-&gt;</span>find(<span style="color:#e6db74">&#34;#main&#34;</span>);
 </code></pre></div><p>当然，如果你熟悉CSS选择器，你知道它可以比那更精确。那么，让我们谈谈具体的事情。就我而言，我有几种不同类型的页面。一个是新闻项目的页面，其中有许多部分明确地描述为人类读者，但它们不在他们自己的div中，或者在HTML解析器可以分辨的情况下分组。它们只是一堆模糊的HTML形状。</p>
 <p>我想将这些新闻项目分成各自的页面，然后可以按照我喜欢的方式进行聚合，例如将它们放在分页列表中，或者将最新项目包含在首页的div中。网站。</p>
 <p>这些新闻在旧网站上看起来像这样：</p>
@@ -260,41 +260,41 @@ Becomes bees<span style="color:#f92672">.</span>
 </code></pre></div><p>请注意，这种结构是常规的，但不能用任何一个div或一个标记来选择。我可以使用选择器<code>h3</code>来获取标题，但每个新闻项的文本只是一个段落，我们也想分别获取日期。</p>
 <p>因此，我想抓住所有标题，标题后面的段落和日期，并将它们全部放入某种数据结构中，这样我就可以将它们吐出自己的页面。</p>
 <p>让我们从头衔开始吧，因为它会显示一个巧妙的技巧Mojo已经袖手旁观。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $main <span style="color:#f92672">=</span> $tx<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>res<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>dom<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>at(<span style="color:#e6db74">&#39;#main&#39;</span>);
-<span style="color:#66d9ef">my</span> @headers <span style="color:#f92672">=</span> $main<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>find(<span style="color:#e6db74">&#39;h3&#39;</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>map(<span style="color:#e6db74">&#39;text&#39;</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>each;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $main <span style="color:#f92672">=</span> $tx<span style="color:#f92672">-&gt;</span>res<span style="color:#f92672">-&gt;</span>dom<span style="color:#f92672">-&gt;</span>at(<span style="color:#e6db74">&#39;#main&#39;</span>);
+<span style="color:#66d9ef">my</span> @headers <span style="color:#f92672">=</span> $main<span style="color:#f92672">-&gt;</span>find(<span style="color:#e6db74">&#39;h3&#39;</span>)<span style="color:#f92672">-&gt;</span>map(<span style="color:#e6db74">&#39;text&#39;</span>)<span style="color:#f92672">-&gt;</span>each;
 </code></pre></div><p>你看到了吗？<code>find</code>这里的方法是返回一个<a href="https://mojolicious.org/perldoc/Mojo/Collection">Mojo::Collection</a>。“集合”是一种说“列表”的奇特方式，但这些列表有一堆有用的实用方法，类似于在列表上运行的一些核心Perl函数，以及在其中找到的方法<code>List::Util</code>。它具有通常的嫌疑人，像<code>join</code>，<code>grep</code>，<code>map</code>，和<code>each</code>。因此，收藏品很花哨，它们应该得到一个奇特的名字。在上面，在返回的每个项目上<code>map</code>调用方法，并将结果作为列表返回。<code>text``find``each</code></p>
 <p>在此之后，<code>@headers</code>将包含所有标题。我无法用简单的正则表达式来做到这一点（并且，我们可以将所有这些链接起来，包括找到<code>#main</code>一行，但我再次重新使用<code>#main</code>，所以我将它放入一个变量中）。</p>
 <p>现在，与正则表达式相关的更棘手的事情就是找到这些标题的后续兄弟。但是，使用Mojo::DOM，我们可以通过几行代码来获取它（可能有一种方法可以用更少的代码来实现它，但这是我在几分钟的实验中提出的）。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> @paras;
-<span style="color:#66d9ef">for</span> <span style="color:#66d9ef">my</span> $header ($main<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>find(<span style="color:#e6db74">&#39;h3&#39;</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>each) {
-  push (@paras, $header<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">next</span><span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>content);
+<span style="color:#66d9ef">for</span> <span style="color:#66d9ef">my</span> $header ($main<span style="color:#f92672">-&gt;</span>find(<span style="color:#e6db74">&#39;h3&#39;</span>)<span style="color:#f92672">-&gt;</span>each) {
+  push (@paras, $header<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">next</span><span style="color:#f92672">-&gt;</span>content);
 }
 </code></pre></div><p>这将再次选择<code>h3</code>元素，并迭代生成的DOM对象集合，将每个对象放入其中<code>$header</code>。然后，我们挑选出<code>content</code>的的<code>next</code>元素（这在我的情况下，始终是一个段落，有时包含一个或多个<code>br</code>标签），并把它们全部推入<code>@paras</code>。</p>
 <p>所以，现在我们有一个标题数组，以下段落的数组，我们只需要获取日期。这个实际上非常简单，因为HTML模板使用<code>date</code>类标记日期。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> @dates <span style="color:#f92672">=</span> $main<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>find(<span style="color:#e6db74">&#39;.date&#39;</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>map(<span style="color:#e6db74">&#39;text&#39;</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>each;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> @dates <span style="color:#f92672">=</span> $main<span style="color:#f92672">-&gt;</span>find(<span style="color:#e6db74">&#39;.date&#39;</span>)<span style="color:#f92672">-&gt;</span>map(<span style="color:#e6db74">&#39;text&#39;</span>)<span style="color:#f92672">-&gt;</span>each;
 </code></pre></div><p>啪！我们完成了。好的，不太好。我们还没有完成这篇文章标题的“重复”部分。我们拥有来自我们糟糕的旧HTML网站的数据，现在让我们用它做点什么。</p>
 <h2 id="munging-the-dates">Munging the Dates</h2>
 <p>如上面的示例Hugo内容项所示，我想在元数据中包含日期。幸运的是，我们有与每个新闻项目相关的日期。不幸的是，它们不符合Hugo期望的格式。我对CPAN进行了一些挖掘，发现了<a href="https://metacpan.org/pod/Time::Piece">Time::Piece</a>，它是一个聪明的模块，可以解析和转换大多数常见格式的时间和日期。</p>
 <p>我需要我的日期看起来像<code>2017-09-30</code>，所以我使用了下面的代码（假设这是一个循环，它将每个后续日期放在<code>@dates</code>我们上面的数组中<code>$date</code>）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Time::Piece;
-<span style="color:#66d9ef">my</span> $tp <span style="color:#f92672">=</span> Time::Piece<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>strptime($date, <span style="color:#e6db74">&#34;%B %d, %Y&#34;</span>);
-<span style="color:#66d9ef">my</span> $fixed <span style="color:#f92672">=</span> $tp<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>strftime(<span style="color:#e6db74">&#34;%Y-%m-%d&#34;</span>);
+<span style="color:#66d9ef">my</span> $tp <span style="color:#f92672">=</span> Time::Piece<span style="color:#f92672">-&gt;</span>strptime($date, <span style="color:#e6db74">&#34;%B %d, %Y&#34;</span>);
+<span style="color:#66d9ef">my</span> $fixed <span style="color:#f92672">=</span> $tp<span style="color:#f92672">-&gt;</span>strftime(<span style="color:#e6db74">&#34;%Y-%m-%d&#34;</span>);
 </code></pre></div><h2 id="munging进入markdown">Munging进入Markdown</h2>
 <p>我还需要转换为Markdown。我已经使用<a href="https://metacpan.org/pod/HTML::WikiConverter">HTML::WikiConverter</a>完成任务。</p>
 <p>在最简单的形式中，我们可以做这样的事情（再次假设我们在一个循环中<code>$para</code>从<code>@paras</code>每次迭代获取一个值：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> HTML::WikiConverter;
-<span style="color:#66d9ef">my</span> $wc <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HTML::WikiConverter(dialect <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;Markdown&#39;</span>);
-<span style="color:#66d9ef">my</span> $md <span style="color:#f92672">=</span> $wc<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>html2wiki( $para );
+<span style="color:#66d9ef">my</span> $wc <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HTML::WikiConverter(dialect <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;Markdown&#39;</span>);
+<span style="color:#66d9ef">my</span> $md <span style="color:#f92672">=</span> $wc<span style="color:#f92672">-&gt;</span>html2wiki( $para );
 </code></pre></div><p>完成！</p>
 <h2 id="生成元数据">生成元数据</h2>
 <p>正如我们之前看到的，Hugo帖子在Markdown内容之前有元数据，并包含诸如作者信息，发布日期，描述等信息。有些是可选的，但有些是强制性的（我需要日期以便我可以显示最新的新网站首页上的新闻。我需要根据从原始HTML收集的信息自动生成所有这些内容。</p>
 <p>我将着眼于如何<code>@entries</code>构建数据结构，但我会提到它是一个包含上面我们发现的三个数据的哈希数组。如果你想看到坚韧不拔的细节，我还会在最后用真实世界的代码链接到GitHub仓库。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File;
-<span style="color:#66d9ef">use</span> String::Truncate <span style="color:#e6db74">qw(</span><span style="color:#e6db74">elide</span><span style="color:#e6db74">)</span>;
+<span style="color:#66d9ef">use</span> String::Truncate <span style="color:#e6db74">qw(elide)</span>;
 
 <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">my</span> $e (@entries) {
-  <span style="color:#66d9ef">my</span> $desc <span style="color:#f92672">=</span> elide($e<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{<span style="color:#e6db74">&#39;text&#39;</span>}, <span style="color:#ae81ff">100</span>, {at_space <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>});
-  <span style="color:#66d9ef">my</span> $md <span style="color:#f92672">=</span> <span style="color:#e6db74">&lt;&lt;</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">EOF</span><span style="color:#e6db74">&#34;;
+  <span style="color:#66d9ef">my</span> $desc <span style="color:#f92672">=</span> elide($e<span style="color:#f92672">-&gt;</span>{<span style="color:#e6db74">&#39;text&#39;</span>}, <span style="color:#ae81ff">100</span>, {at_space <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span>});
+  <span style="color:#66d9ef">my</span> $md <span style="color:#f92672">=</span> <span style="color:#e6db74">&lt;&lt;&#34;</span><span style="color:#e6db74">EOF</span><span style="color:#e6db74">&#34;;
 </span><span style="color:#e6db74">---
 </span><span style="color:#e6db74">title: &#34;$e-&gt;{&#39;title&#39;}&#34;
 </span><span style="color:#e6db74">date: $e-&gt;{&#39;date&#39;}
@@ -307,11 +307,11 @@ Becomes bees<span style="color:#f92672">.</span>
 </span><span style="color:#e6db74">$e-&gt;{&#39;text&#39;}
 </span><span style="color:#e6db74"></span><span style="color:#e6db74">EOF</span>
 
-  <span style="color:#66d9ef">my</span> $filename <span style="color:#f92672">=</span> lc $e<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{<span style="color:#e6db74">&#39;title&#39;</span>};
+  <span style="color:#66d9ef">my</span> $filename <span style="color:#f92672">=</span> lc $e<span style="color:#f92672">-&gt;</span>{<span style="color:#e6db74">&#39;title&#39;</span>};
   $filename <span style="color:#f92672">=~</span> <span style="color:#e6db74">s/\s/-/g</span>;
   $filename <span style="color:#f92672">=~</span> <span style="color:#e6db74">s/[!,()&#39;&#34;\/]//g</span>;
-  <span style="color:#66d9ef">my</span> $file <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>(<span style="color:#e6db74">&#34;content/news/$filename.md&#34;</span>);
-  $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>spurt($md);
+  <span style="color:#66d9ef">my</span> $file <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>(<span style="color:#e6db74">&#34;content/news/$filename.md&#34;</span>);
+  $file<span style="color:#f92672">-&gt;</span>spurt($md);
 }
 </code></pre></div><p>这里有很多内容，我只会简单地解释一下，因为它与Mojo无关。</p>
 <p>循环的第一行创建描述，通常是摘要或其他。在我的情况下，主站点将显示描述为可点击链接，因此用户将在主页面上获得新闻项目的简短摘要，然后单击它以查看整个项目。我正在使用<a href="https://metacpan.org/pod/String::Truncate">String::Truncate</a>模块，该模块有一个<code>elide</code>方法将截断字边界上的字符串并添加省略号以指示文本被遗漏。</p>

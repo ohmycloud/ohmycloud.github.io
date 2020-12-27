@@ -286,7 +286,7 @@ sub prefix:« ⏱ »   (Code $block --&gt; Any) {…}
 <p>需要注意的是，由于我们今天觉得需要额外的约束，所以我们要利用 Raku 的<a href="https://docs.raku.org/language/typesystem">类型系统</a>，严格地对我们使用的每一个变量和参数进行类型化。当然，由于 Raku 的静态类型化是<a href="https://en.wikipedia.org/wiki/Gradual_typing">渐进式</a>的，所以如果我们后来把这些类型声明中的每一个都去掉，代码的工作原理还是完全一样的&hellip;&hellip;只是这样一来，编译器就不能很好地保护我们不受自己的愚蠢影响了。</p>
 <p><code>timed</code> 运算符将一个 <code>Code</code> 对象作为参数，执行它(<code>$block()</code>)，用额外的定时信息增强结果，并返回增强后的结果。可以是任何类型(<code>--&gt; Any</code>)。</p>
 <p>通过将名为 <code>Timed</code> 的通用类组件(一个<a href="https://docs.raku.org/syntax/role">角色</a>)定义的一些额外的能力混合到返回的对象中，该定时信息被添加到块的结果中。该角色赋予了存储和访问持续时间的能力(<code>has Duration $.timing</code>)，以及用于增强定时对象的字符串化和打印方式的方法(方法 <code>Str</code> 和方法 <code>gist</code>)。重载的 <code>.Str</code> 方法调用对象的同一方法的原始版本(<code>callsame</code>)来做实际工作，然后将定时信息附加到它上面，整齐地用 <code>sprintf</code> 格式化。覆盖的 <code>.gist</code> 只是重用了 <code>.Str</code>。</p>
-<p>最有趣的特点是，当我们将定时信息添加到块的结果中时(<code>but Timed(...)</code>)，我们通过从周围子程序被输入的当前瞬间(<code>ENTER now</code>)减去块执行后的瞬间(<code>now</code>)来计算块的执行时间。在任何表达式前加上 <code>ENTER</code>，都会设置一个&quot;phaser&rdquo;(是的，我们知道：我们是无法治愈的怪胎）。phaser 是一个块或 <a href="https://docs.raku.org/language/glossary#index-entry-Thunk_">thunk</a>，当周围的块被输入时就会执行。然后，<code>ENTER</code> 会记住由 thunk 产生的值，并在周围的代码执行时对其进行求值：在本例中，当它试图从 <code>now</code> 的值中减去 <code>ENTER</code> 的值时。</p>
+<p>最有趣的特点是，当我们将定时信息添加到块的结果中时(<code>but Timed(...)</code>)，我们通过从周围子程序被输入的当前瞬间(<code>ENTER now</code>)减去块执行后的瞬间(<code>now</code>)来计算块的执行时间。在任何表达式前加上 <code>ENTER</code>，都会设置一个&quot;phaser&quot;(是的，我们知道：我们是无法治愈的怪胎）。phaser 是一个块或 <a href="https://docs.raku.org/language/glossary#index-entry-Thunk_">thunk</a>，当周围的块被输入时就会执行。然后，<code>ENTER</code> 会记住由 thunk 产生的值，并在周围的代码执行时对其进行求值：在本例中，当它试图从 <code>now</code> 的值中减去 <code>ENTER</code> 的值时。</p>
 <p>您可以在 Raku 中的任何地方使用同样的技术，作为一种方便的方式来为任何特定的代码块计时。您也可以使用其他 phaser(如 <code>LEAVE</code>，当控制离开周围的块时执行)将整个操作内嵌到一个易于粘贴的片段中。例如，为了给 <code>for</code> 循环的每次迭代计时，你可以在循环块的开始处添加一行:</p>
 <pre><code class="language-raku" data-lang="raku">for @values -&gt; $value {
     LEAVE say &quot;$value took &quot;, (now - ENTER now), &quot; seconds&quot;;
@@ -541,7 +541,7 @@ default                     { .Seq            }
 assess -&gt; \x { (1 + x⁻¹)**(x) }
 </code></pre><p>&hellip;字符串 &ldquo;Bernoulli&rsquo;s limit&rdquo; 会自动附加到传递给 <code>assess</code> 的块中。我们也可以将文档注释放在代码块之后，使用 <code>#=</code> 作为注释引入符，而不是 <code>#|</code>:</p>
 <pre><code class="language-raku" data-lang="raku">assess -&gt; \x { (1+x⁻¹)**x }   #= Bernoulli's limit
-</code></pre><p>无论哪种方式，Raku 的高级内省设施意味着我们可以在程序执行过程中检索该文档，只需调用块的 <code>.WHY</code> 方法(因为注释应该是告诉你&quot;为什么&rdquo;(WHY)，而不是 &ldquo;如何&rdquo;(HOW))。</p>
+</code></pre><p>无论哪种方式，Raku 的高级内省设施意味着我们可以在程序执行过程中检索该文档，只需调用块的 <code>.WHY</code> 方法(因为注释应该是告诉你&quot;为什么&quot;(WHY)，而不是 &ldquo;如何&rdquo;(HOW))。</p>
 <p>所以我们可以通过询问代码块的行号和文档来生成我们的描述，如果没有提供文档注释，就用一个空字符串来解决(<code>&quot;[$block.line()] {$block.WHY // ''}&quot;</code>)。</p>
 <p>现在我们已经准备好运行测试并生成报告了。我们首先在报告中插入一个空行&hellip;&hellip;通过声明一个 <code>Spacer</code> 对象。然后，我们在值列表中迭代，以及它们相关的标签，用 &ldquo;zip&rdquo; 操作符(Z)将两者交错在一起。标签是我们之前建立的初始标签，然后是一个空字符串，然后是一个 &ldquo;whatever&rdquo;(<code>*</code>)，它告诉 <code>zip</code> 操作符重复使用前面的空字符串，次数不限，以匹配 <code>@values</code> 的剩余元素。这样一来，我们在试验的第一行就能得到完整的标签，但之后就不会重复了。</p>
 <p><code>zip</code> 产生了一系列的双元素数组：一个值，一个标签。然后我们在这些数组中迭代，为每个测试建立一个合适的 <code>Result</code> 对象:</p>

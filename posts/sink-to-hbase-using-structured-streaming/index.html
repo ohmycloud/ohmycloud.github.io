@@ -205,9 +205,9 @@ package org.apache.spark.sql.execution.datasources.hbase import org.apache.spark
 <span style="color:#66d9ef">import</span> org.apache.spark.sql.streaming.OutputMode
 <span style="color:#66d9ef">import</span> org.apache.spark.sql.catalyst.CatalystTypeConverters
 
-<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HBaseSink</span><span style="color:#f92672">(</span>options<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Map</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">Sink</span> <span style="color:#66d9ef">with</span> <span style="color:#a6e22e">Logging</span> <span style="color:#f92672">{</span>
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HBaseSink</span><span style="color:#f92672">(</span>options<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Map</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">])</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">Sink</span> <span style="color:#66d9ef">with</span> <span style="color:#a6e22e">Logging</span> <span style="color:#f92672">{</span>
   <span style="color:#75715e">// String with HBaseTableCatalog.tableCatalog
-</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">val</span> hBaseCatalog <span style="color:#66d9ef">=</span> options<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;hbasecat&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toString<span style="color:#f92672">)</span><span style="color:#f92672">.</span>getOrElse<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;&#34;</span><span style="color:#f92672">)</span>
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">val</span> hBaseCatalog <span style="color:#66d9ef">=</span> options<span style="color:#f92672">.</span>get<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;hbasecat&#34;</span><span style="color:#f92672">).</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toString<span style="color:#f92672">).</span>getOrElse<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;&#34;</span><span style="color:#f92672">)</span>
 
   <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> addBatch<span style="color:#f92672">(</span>batchId<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span> data<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">DataFrame</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> synchronized <span style="color:#f92672">{</span>
 
@@ -215,28 +215,28 @@ package org.apache.spark.sql.execution.datasources.hbase import org.apache.spark
 
     <span style="color:#66d9ef">val</span> res <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>queryExecution<span style="color:#f92672">.</span>toRdd<span style="color:#f92672">.</span>mapPartitions <span style="color:#f92672">{</span> rows <span style="color:#66d9ef">=&gt;</span>
       <span style="color:#66d9ef">val</span> converter <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CatalystTypeConverters</span><span style="color:#f92672">.</span>createToScalaConverter<span style="color:#f92672">(</span>schema<span style="color:#f92672">)</span>
-      rows<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>converter<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>asInstanceOf<span style="color:#f92672">[</span><span style="color:#66d9ef">Row</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span>
+      rows<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>converter<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">).</span>asInstanceOf<span style="color:#f92672">[</span><span style="color:#66d9ef">Row</span><span style="color:#f92672">])</span>
     <span style="color:#f92672">}</span>
 
     <span style="color:#66d9ef">val</span> df <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>sparkSession<span style="color:#f92672">.</span>createDataFrame<span style="color:#f92672">(</span>res<span style="color:#f92672">,</span> schema<span style="color:#f92672">)</span>
 
     df<span style="color:#f92672">.</span>write
       <span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">Map</span><span style="color:#f92672">(</span><span style="color:#a6e22e">HBaseTableCatalog</span><span style="color:#f92672">.</span>tableCatalog<span style="color:#f92672">-&gt;</span>hBaseCatalog<span style="color:#f92672">,</span>
-        <span style="color:#a6e22e">HBaseTableCatalog</span><span style="color:#f92672">.</span>newTable <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#34;5&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;org.apache.spark.sql.execution.datasources.hbase&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>save<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+        <span style="color:#a6e22e">HBaseTableCatalog</span><span style="color:#f92672">.</span>newTable <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#34;5&#34;</span><span style="color:#f92672">))</span>
+      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;org.apache.spark.sql.execution.datasources.hbase&#34;</span><span style="color:#f92672">).</span>save<span style="color:#f92672">()</span>
   <span style="color:#f92672">}</span>
 <span style="color:#f92672">}</span>
 
 <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HBaseSinkProvider</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">StreamSinkProvider</span> <span style="color:#66d9ef">with</span> <span style="color:#a6e22e">DataSourceRegister</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">def</span> createSink<span style="color:#f92672">(</span>
                   sqlContext<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SQLContext</span><span style="color:#f92672">,</span>
-                  parameters<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Map</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
-                  partitionColumns<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span><span style="color:#f92672">,</span>
+                  parameters<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Map</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span>, <span style="color:#66d9ef">String</span><span style="color:#f92672">],</span>
+                  partitionColumns<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">],</span>
                   outputMode<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">OutputMode</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Sink</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
     <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">HBaseSink</span><span style="color:#f92672">(</span>parameters<span style="color:#f92672">)</span>
   <span style="color:#f92672">}</span>
 
-  <span style="color:#66d9ef">def</span> shortName<span style="color:#f92672">(</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;hbase&#34;</span>
+  <span style="color:#66d9ef">def</span> shortName<span style="color:#f92672">()</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;hbase&#34;</span>
 <span style="color:#f92672">}</span>
 </code></pre></div><p>把上面的代码起个名字叫 <code>HBaseSinkProvider.scala</code>, 放在 <code>shc/core/src/main/scala/org/apache/spark/sql/execution/datasources/hbase</code> 目录下：</p>
 <p><img src="http://photo.fanfou.com/v1/mss_3d027b52ec5a4d589e68050845611e68/ff/n0/0g/qt/er_381775.jpg@596w_1l.jpg" alt="img"></p>
@@ -265,26 +265,26 @@ package org.apache.spark.sql.execution.datasources.hbase import org.apache.spark
 <p>在 <code>hbase-env.sh</code> 中导出 <strong>JAVA_HOME</strong></p>
 <pre><code>export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_144.jdk/Contents/Home
 </code></pre><p>在 <code>hbase-site.xml</code> 中添加/修改配置如下:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration</span><span style="color:#f92672">&gt;</span>
-  <span style="color:#f92672">&lt;property</span><span style="color:#f92672">&gt;</span>
-	  <span style="color:#f92672">&lt;name</span><span style="color:#f92672">&gt;</span>zookeeper.znode.parent<span style="color:#f92672">&lt;/name&gt;</span>
-	  <span style="color:#f92672">&lt;value</span><span style="color:#f92672">&gt;</span>/hbase<span style="color:#f92672">&lt;/value&gt;</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;configuration&gt;</span>
+  <span style="color:#f92672">&lt;property&gt;</span>
+	  <span style="color:#f92672">&lt;name&gt;</span>zookeeper.znode.parent<span style="color:#f92672">&lt;/name&gt;</span>
+	  <span style="color:#f92672">&lt;value&gt;</span>/hbase<span style="color:#f92672">&lt;/value&gt;</span>
   <span style="color:#f92672">&lt;/property&gt;</span>
-  <span style="color:#f92672">&lt;property</span><span style="color:#f92672">&gt;</span>
-    <span style="color:#f92672">&lt;name</span><span style="color:#f92672">&gt;</span>hbase.rootdir<span style="color:#f92672">&lt;/name&gt;</span>
-    <span style="color:#f92672">&lt;value</span><span style="color:#f92672">&gt;</span>/Users/ohmycloud/opt/tmp/myhbase<span style="color:#f92672">&lt;/value&gt;</span>
+  <span style="color:#f92672">&lt;property&gt;</span>
+    <span style="color:#f92672">&lt;name&gt;</span>hbase.rootdir<span style="color:#f92672">&lt;/name&gt;</span>
+    <span style="color:#f92672">&lt;value&gt;</span>/Users/ohmycloud/opt/tmp/myhbase<span style="color:#f92672">&lt;/value&gt;</span>
   <span style="color:#f92672">&lt;/property&gt;</span>
-  <span style="color:#f92672">&lt;property</span><span style="color:#f92672">&gt;</span>
-    <span style="color:#f92672">&lt;name</span><span style="color:#f92672">&gt;</span>hbase.zookeeper.quorum<span style="color:#f92672">&lt;/name&gt;</span>
-    <span style="color:#f92672">&lt;value</span><span style="color:#f92672">&gt;</span>localhost<span style="color:#f92672">&lt;/value&gt;</span>
+  <span style="color:#f92672">&lt;property&gt;</span>
+    <span style="color:#f92672">&lt;name&gt;</span>hbase.zookeeper.quorum<span style="color:#f92672">&lt;/name&gt;</span>
+    <span style="color:#f92672">&lt;value&gt;</span>localhost<span style="color:#f92672">&lt;/value&gt;</span>
   <span style="color:#f92672">&lt;/property&gt;</span>
-  <span style="color:#f92672">&lt;property</span><span style="color:#f92672">&gt;</span>
-    <span style="color:#f92672">&lt;name</span><span style="color:#f92672">&gt;</span>hbase.zookeeper.property.dataDir<span style="color:#f92672">&lt;/name&gt;</span>
-    <span style="color:#f92672">&lt;value</span><span style="color:#f92672">&gt;</span>/Users/ohmycloud/opt/tmp/myhbase/zookeeper<span style="color:#f92672">&lt;/value&gt;</span>
+  <span style="color:#f92672">&lt;property&gt;</span>
+    <span style="color:#f92672">&lt;name&gt;</span>hbase.zookeeper.property.dataDir<span style="color:#f92672">&lt;/name&gt;</span>
+    <span style="color:#f92672">&lt;value&gt;</span>/Users/ohmycloud/opt/tmp/myhbase/zookeeper<span style="color:#f92672">&lt;/value&gt;</span>
   <span style="color:#f92672">&lt;/property&gt;</span>
-  <span style="color:#f92672">&lt;property</span><span style="color:#f92672">&gt;</span>
-    <span style="color:#f92672">&lt;name</span><span style="color:#f92672">&gt;</span>hbase.zookeeper.property.clientPort<span style="color:#f92672">&lt;/name&gt;</span>
-    <span style="color:#f92672">&lt;value</span><span style="color:#f92672">&gt;</span>2181<span style="color:#f92672">&lt;/value&gt;</span>
+  <span style="color:#f92672">&lt;property&gt;</span>
+    <span style="color:#f92672">&lt;name&gt;</span>hbase.zookeeper.property.clientPort<span style="color:#f92672">&lt;/name&gt;</span>
+    <span style="color:#f92672">&lt;value&gt;</span>2181<span style="color:#f92672">&lt;/value&gt;</span>
   <span style="color:#f92672">&lt;/property&gt;</span>
 <span style="color:#f92672">&lt;/configuration&gt;</span>
 </code></pre></div><ul>
@@ -322,19 +322,19 @@ sudo ./start-hbase.sh
 <span style="color:#66d9ef">import</span> org.apache.spark.sql._
 <span style="color:#66d9ef">import</span> org.apache.spark.sql.streaming.<span style="color:#f92672">{</span><span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">Trigger</span><span style="color:#f92672">}</span>
 
-<span style="color:#75715e">/*</span><span style="color:#75715e">*</span><span style="color:#75715e">
-</span><span style="color:#75715e">  </span><span style="color:#75715e">*</span><span style="color:#75715e"> 读取 parquet 文件写到 HBase
-</span><span style="color:#75715e">  </span><span style="color:#75715e">*/</span>
+<span style="color:#75715e">/**
+</span><span style="color:#75715e">  * 读取 parquet 文件写到 HBase
+</span><span style="color:#75715e">  */</span>
 <span style="color:#66d9ef">object</span> <span style="color:#a6e22e">WriteParquet2Hbase</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">def</span> main<span style="color:#f92672">(</span>args<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">def</span> main<span style="color:#f92672">(</span>args<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
     <span style="color:#66d9ef">val</span> spark<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SparkSession</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">SparkSession</span>
       <span style="color:#f92672">.</span>builder
       <span style="color:#f92672">.</span>master<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;local[2]&#34;</span><span style="color:#f92672">)</span>
       <span style="color:#f92672">.</span>appName<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Write Parquet to HBase using Structured Streaming&#34;</span><span style="color:#f92672">)</span>
       <span style="color:#f92672">.</span>config<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;spark.driver.host&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;localhost&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>getOrCreate<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>getOrCreate<span style="color:#f92672">()</span>
 
-    <span style="color:#66d9ef">val</span> parquetSchema <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> <span style="color:#a6e22e">ParquetSchema</span><span style="color:#f92672">)</span><span style="color:#f92672">.</span>schema
+    <span style="color:#66d9ef">val</span> parquetSchema <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> <span style="color:#a6e22e">ParquetSchema</span><span style="color:#f92672">).</span>schema
 
     <span style="color:#66d9ef">val</span> ds<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">DataFrame</span> <span style="color:#f92672">=</span> spark<span style="color:#f92672">.</span>readStream
       <span style="color:#f92672">.</span>schema<span style="color:#f92672">(</span>parquetSchema<span style="color:#f92672">)</span>
@@ -350,28 +350,28 @@ sudo ./start-hbase.sh
       $<span style="color:#e6db74">&#34;loc_lat84&#34;</span>
     <span style="color:#f92672">)</span>
 
-    <span style="color:#66d9ef">def</span> catalog <span style="color:#66d9ef">=</span> <span style="color:#e6db74">s&#34;&#34;&#34;</span><span style="color:#e6db74">{
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">table</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">namespace</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">default</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">name</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">ohmytest</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">},
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">rowkey</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">vin</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">,
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">columns</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">vin</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">cf</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">rowkey</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">col</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">vin</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">type</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">string</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">},
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">veh_spd</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">cf</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">info</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">col</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">veh_spd</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">type</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">string</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">},
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">veh_soc</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">cf</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">info</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">col</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">veh_soc</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">type</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">string</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">},
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">loc_lon84</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">cf</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">info</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">col</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">loc_lon84</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">type</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">string</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">},
-</span><span style="color:#e6db74">                     |</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">loc_lat84</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:{</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">cf</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">info</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">col</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">loc_lat84</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">, </span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">type</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">:</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">string</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">}
+    <span style="color:#66d9ef">def</span> catalog <span style="color:#66d9ef">=</span> <span style="color:#e6db74">s&#34;&#34;&#34;{
+</span><span style="color:#e6db74">                     |&#34;table&#34;:{&#34;namespace&#34;:&#34;default&#34;, &#34;name&#34;:&#34;ohmytest&#34;},
+</span><span style="color:#e6db74">                     |&#34;rowkey&#34;:&#34;vin&#34;,
+</span><span style="color:#e6db74">                     |&#34;columns&#34;:{
+</span><span style="color:#e6db74">                     |&#34;vin&#34;:{&#34;cf&#34;:&#34;rowkey&#34;, &#34;col&#34;:&#34;vin&#34;, &#34;type&#34;:&#34;string&#34;},
+</span><span style="color:#e6db74">                     |&#34;veh_spd&#34;:{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;veh_spd&#34;, &#34;type&#34;:&#34;string&#34;},
+</span><span style="color:#e6db74">                     |&#34;veh_soc&#34;:{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;veh_soc&#34;, &#34;type&#34;:&#34;string&#34;},
+</span><span style="color:#e6db74">                     |&#34;loc_lon84&#34;:{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;loc_lon84&#34;, &#34;type&#34;:&#34;string&#34;},
+</span><span style="color:#e6db74">                     |&#34;loc_lat84&#34;:{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;loc_lat84&#34;, &#34;type&#34;:&#34;string&#34;}
 </span><span style="color:#e6db74">                     |}
-</span><span style="color:#e6db74">                     |}</span><span style="color:#e6db74">&#34;&#34;&#34;</span><span style="color:#f92672">.</span>stripMargin
+</span><span style="color:#e6db74">                     |}&#34;&#34;&#34;</span><span style="color:#f92672">.</span>stripMargin
 
     <span style="color:#66d9ef">val</span> ddf <span style="color:#66d9ef">=</span> df2<span style="color:#f92672">.</span>writeStream
       <span style="color:#f92672">.</span>queryName<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;hbase writer&#34;</span><span style="color:#f92672">)</span>
       <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;org.apache.spark.sql.execution.datasources.hbase.HBaseSinkProvider&#34;</span><span style="color:#f92672">)</span>
       <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;checkpointLocation&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;/tmp/gac&#34;</span><span style="color:#f92672">)</span>
       <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;hbasecat&#34;</span><span style="color:#f92672">,</span> catalog<span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>outputMode<span style="color:#f92672">(</span><span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Append</span><span style="color:#f92672">(</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>trigger<span style="color:#f92672">(</span><span style="color:#a6e22e">Trigger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTime</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;30 seconds&#34;</span><span style="color:#f92672">)</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>start<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>outputMode<span style="color:#f92672">(</span><span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Append</span><span style="color:#f92672">())</span>
+      <span style="color:#f92672">.</span>trigger<span style="color:#f92672">(</span><span style="color:#a6e22e">Trigger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTime</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;30 seconds&#34;</span><span style="color:#f92672">))</span>
+      <span style="color:#f92672">.</span>start<span style="color:#f92672">()</span>
 
-      ddf<span style="color:#f92672">.</span>awaitTermination<span style="color:#f92672">(</span><span style="color:#f92672">)</span>
+      ddf<span style="color:#f92672">.</span>awaitTermination<span style="color:#f92672">()</span>
   <span style="color:#f92672">}</span>
 <span style="color:#f92672">}</span>
 </code></pre></div><p>提交命令：</p>

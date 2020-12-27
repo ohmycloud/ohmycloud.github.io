@@ -301,8 +301,8 @@ else {
 </code></pre><p>虽然 <code>for ... else</code>  不是合法的 Raku 语法(或语义), 但那只是个非常小的问题。</p>
 <p>但是, 就像平时那样, 这在 Raku 中就不算事儿。</p>
 <p>为了解决这个问题, 我们仅需要重新定义 <code>for</code> 关键字&hellip;&hellip;</p>
-<p>为了替换 <code>for</code> 的标准定义，我们需要告诉编译器两件事：新的定义是什么样的，以及它如何工作。换句话说，我们需要定义如何识别新的 <code>for</code> 语法，以及如何将新的语法转换成编译器可以优化和执行的操作码的&quot;抽象语法树&rdquo;。当然，我们还需要告诉编译器使用这些新组件而不是标准组件。</p>
-<p>在 Raku 中，我们用来解释代码的任何部分的语法和语义被称为&quot;子语言&rdquo;，简称&quot;slang&rdquo;，一个典型的 Raku 程序由许多方言编织而成：主 Raku 子语言、Pod 文档子语言、字符串子语言、regex 子语言等。实现这些不同的活动子语言的对象可以通过一个编译时变量：<code>$*LANG</code> 获得。</p>
+<p>为了替换 <code>for</code> 的标准定义，我们需要告诉编译器两件事：新的定义是什么样的，以及它如何工作。换句话说，我们需要定义如何识别新的 <code>for</code> 语法，以及如何将新的语法转换成编译器可以优化和执行的操作码的&quot;抽象语法树&quot;。当然，我们还需要告诉编译器使用这些新组件而不是标准组件。</p>
+<p>在 Raku 中，我们用来解释代码的任何部分的语法和语义被称为&quot;子语言&quot;，简称&quot;slang&quot;，一个典型的 Raku 程序由许多方言编织而成：主 Raku 子语言、Pod 文档子语言、字符串子语言、regex 子语言等。实现这些不同的活动子语言的对象可以通过一个编译时变量：<code>$*LANG</code> 获得。</p>
 <p>在这个例子中，我们需要增强主乐俚语，所以我们为扩展的 <code>for</code> 语法创建了一个带有新语法规则的角色，然后将该新语法混入现有语法中。同样，我们需要扩展编译器在遇到新语法时采取的动作，所以我们创建第二个角色，指定这些动作，之后将其混入现有的动作中。</p>
 <p>新的 grammar 规则的最简单的形式看起来像这样:</p>
 <pre><code class="language-raku" data-lang="raku"># 在可组合角色中封装一个新的 grammar 组件...
@@ -314,7 +314,7 @@ role ForElse::Grammar {
         [ 'else'  &lt;pblock(0)&gt; ]?
     }
 }
-</code></pre><p>我们声明将包含新语法规则的角色 <code>ForElse::Grammar</code>，然后声明规则本身。该规则的名称是： <code>statement_control:sym&lt;for&gt;</code>， 它告诉编译器它是一个语句级的控制结构，由符号 <code>for</code> 引入。在规则的正文中，我们首先匹配该符号 <code>&lt;sym&gt;</code>，然后是一个&quot;表达式块&rdquo;(<code>&lt;xblock(2)&gt;</code>)。表达式块只是匹配一个非选项表达式的简写，后面是一个非选项块。传入调用 <code>xblock</code> 的 2 告诉子规则，它所匹配的块必须包含某种主题变量（因为 <code>for</code> 循环总是设置一个主题变量，我们不妨在解析源代码时强制执行）。</p>
+</code></pre><p>我们声明将包含新语法规则的角色 <code>ForElse::Grammar</code>，然后声明规则本身。该规则的名称是： <code>statement_control:sym&lt;for&gt;</code>， 它告诉编译器它是一个语句级的控制结构，由符号 <code>for</code> 引入。在规则的正文中，我们首先匹配该符号 <code>&lt;sym&gt;</code>，然后是一个&quot;表达式块&quot;(<code>&lt;xblock(2)&gt;</code>)。表达式块只是匹配一个非选项表达式的简写，后面是一个非选项块。传入调用 <code>xblock</code> 的 2 告诉子规则，它所匹配的块必须包含某种主题变量（因为 <code>for</code> 循环总是设置一个主题变量，我们不妨在解析源代码时强制执行）。</p>
 <p>在解析完 <code>for</code> 组件后，我们现在要允许一个可选的 <code>else</code>，所以我们将其指定为一个字面(<code>'else'</code>)，之后我们期待一个参数化的块(<code>&lt;pblock(0)&gt;</code>)。零参数告诉子规则，不期望 <code>else</code> 块有一个主题变量。然后我们将整个 <code>else</code> 语法用非捕获括号（<code>[...]</code>）包裹起来，并使其成为可选的（<code>?</code>)。</p>
 <p>请注意，我们不需要为 <code>&lt;xblock&gt;</code> 和 <code>&lt;pblock&gt;</code> 指定规则。它们的规则已经在标准的 Raku 语法中定义了，我们最终会在其中添加新的 <code>statement_control:sym&lt;for&gt;</code> 规则。</p>
 <p>这条两行规则足以解析每一个有效的 <code>for...else</code>，但它也会成功解析其他几个无效的构造。所以我们接下来加入少量的额外组件来防止这种情况的发生。该规则的扩展版本是这样的。</p>

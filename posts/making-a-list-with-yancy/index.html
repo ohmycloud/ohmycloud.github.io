@@ -205,15 +205,15 @@ use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite data
 
 <span style="color:#75715e"># Connect to the SQLite database and load our schema from the</span>
 <span style="color:#75715e"># &#39;@@ migrations&#39; section, below</span>
-<span style="color:#66d9ef">my</span> $db <span style="color:#f92672">=</span> Mojo::SQLite<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;sqlite:thelist.db&#39;</span> );
-$db<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>auto_migrate(<span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>migrations<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>from_data();
+<span style="color:#66d9ef">my</span> $db <span style="color:#f92672">=</span> Mojo::SQLite<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;sqlite:thelist.db&#39;</span> );
+$db<span style="color:#f92672">-&gt;</span>auto_migrate(<span style="color:#ae81ff">1</span>)<span style="color:#f92672">-&gt;</span>migrations<span style="color:#f92672">-&gt;</span>from_data();
 
 <span style="color:#75715e"># Start the app. Must be the last code of the script.</span>
-app<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>start;
+app<span style="color:#f92672">-&gt;</span>start;
 
 __DATA__
 @@ migrations
-<span style="color:#f92672">-</span><span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> up
+<span style="color:#f92672">--</span> <span style="color:#ae81ff">1</span> up
 CREATE TABLE the_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR NOT NULL,
@@ -223,17 +223,17 @@ CREATE TABLE the_list (
 );
 </code></pre></div><p>创建我们的架构后，我们可以添加 <a href="http://metacpan.org/pod/Yancy">Yancy</a>。 Yancy是一个简单的 CMS，用于编辑内容和简化数据驱动的网站开发。我们将告诉 Yancy 阅读我们的数据库架构以进行自我配置，但我们也会给它一些提示，以便更轻松地编辑内容。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#75715e"># Configure Yancy</span>
-plugin Yancy <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> {
-    backend <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> { sqlite <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $db },
+plugin Yancy <span style="color:#f92672">=&gt;</span> {
+    backend <span style="color:#f92672">=&gt;</span> { sqlite <span style="color:#f92672">=&gt;</span> $db },
     <span style="color:#75715e"># Read the schema configuration from the database</span>
-    read_schema <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>,
-    collections <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> {
-        the_list <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> {
+    read_schema <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span>,
+    collections <span style="color:#f92672">=&gt;</span> {
+        the_list <span style="color:#f92672">=&gt;</span> {
             <span style="color:#75715e"># Show these columns in the Yancy editor</span>
-            <span style="color:#e6db74">&#39;x-list-columns&#39;</span> <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> [<span style="color:#e6db74">qw(</span><span style="color:#e6db74"> name address is_nice is_delivered </span><span style="color:#e6db74">)</span>],
-            properties <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> {
+            <span style="color:#e6db74">&#39;x-list-columns&#39;</span> <span style="color:#f92672">=&gt;</span> [<span style="color:#e6db74">qw( name address is_nice is_delivered )</span>],
+            properties <span style="color:#f92672">=&gt;</span> {
                 <span style="color:#75715e"># `id` is auto-increment, so hide it when creating rows</span>
-                id <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> { readOnly <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span> },
+                id <span style="color:#f92672">=&gt;</span> { readOnly <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span> },
             },
         },
     },
@@ -248,12 +248,12 @@ plugin Yancy <span style="color:#f92672">=</span><span style="color:#f92672">&gt
 <p>Yancy带有控制器，只需配置路径并创建要渲染的模板，即可轻松列出我们的数据。首先我们配置路由以使用 <a href="https://metacpan.org/pod/Yancy::Controller::Yancy#list">Yancy::Controller::Yancy list</a> 方法：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#75715e"># Display the naughty rows of the list</span>
 get <span style="color:#e6db74">&#39;/&#39;</span>, {
-    controller <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;yancy&#39;</span>,
-    action <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;list&#39;</span>,
-    template <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
-    collection <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
-    filter <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> {
-        is_nice <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>,
+    controller <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;yancy&#39;</span>,
+    action <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;list&#39;</span>,
+    template <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
+    collection <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
+    filter <span style="color:#f92672">=&gt;</span> {
+        is_nice <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">0</span>,
     },
 }, <span style="color:#e6db74">&#39;the_list.list&#39;</span>;
 </code></pre></div><p>现在我们构建我们的模板。 Yancy 带有一个 <a href="http://getbootstrap.com/">Bootstrap 4</a>，我们可以使用它来制作漂亮的名称和地址列表。</p>
@@ -290,11 +290,11 @@ get <span style="color:#e6db74">&#39;/&#39;</span>, {
 <p>Yancy可以轻松更新数据，这次使用 <a href="https://metacpan.org/pod/Yancy::Controller::Yancy#set">Yancy::Controller::Yancy中的“set”操作</a>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#75715e"># Set the delivered state of a list row</span>
 post <span style="color:#e6db74">&#39;/deliver/:id&#39;</span>, {
-    controller <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;yancy&#39;</span>,
-    action <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;set&#39;</span>,
-    collection <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
-    properties <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> [<span style="color:#e6db74">qw(</span><span style="color:#e6db74"> is_delivered </span><span style="color:#e6db74">)</span>],
-    forward_to <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;the_list.list&#39;</span>,
+    controller <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;yancy&#39;</span>,
+    action <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;set&#39;</span>,
+    collection <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;the_list&#39;</span>,
+    properties <span style="color:#f92672">=&gt;</span> [<span style="color:#e6db74">qw( is_delivered )</span>],
+    forward_to <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;the_list.list&#39;</span>,
 }, <span style="color:#e6db74">&#39;the_list.deliver&#39;</span>;
 </code></pre></div><p>配置路由后，我们需要向模板添加表单。我们将使用 <a href="https://mojolicious.org/perldoc/Mojolicious/Plugin/TagHelpers#form_for">Mojolicious 的 form_for 助手</a>。表单将为每一行显示“是/否”切换按钮。 Yancy 默认是安全的，因此我们需要确保我们的表单包含 <a href="https://mojolicious.org/perldoc/Mojolicious/Guides/Rendering#Cross-site-request-forgery">CSRF 令牌</a>（使用 <a href="https://mojolicious.org/perldoc/Mojolicious/Plugin/TagHelpers#csrf_field">csrf_field 助手程序</a>）以防止跨站点请求。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-html" data-lang="html">@@ the_list.html.ep
@@ -314,10 +314,10 @@ post <span style="color:#e6db74">&#39;/deliver/:id&#39;</span>, {
                 % my $delivered = $item-&gt;{is_delivered};
                 &lt;<span style="color:#f92672">div</span> <span style="color:#a6e22e">class</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;btn-group btn-group-toggle&#34;</span>&gt;
                     &lt;<span style="color:#f92672">label</span> <span style="color:#a6e22e">class</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;btn btn-xs &lt;%= $delivered ? &#39;btn-success active&#39; : &#39;btn-outline-success&#39; %&gt;&#34;</span>&gt;
-                        &lt;<span style="color:#f92672">input</span> <span style="color:#a6e22e">type</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;radio&#34;</span> <span style="color:#a6e22e">name</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;is_delivered&#34;</span> <span style="color:#a6e22e">value</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;true&#34;</span> <span style="color:#960050;background-color:#1e0010">&lt;</span><span style="color:#960050;background-color:#1e0010">%</span><span style="color:#960050;background-color:#1e0010">=</span><span style="color:#960050;background-color:#1e0010">=</span> <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#a6e22e">delivered</span> <span style="color:#960050;background-color:#1e0010">?</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">checked</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#a6e22e">:</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#960050;background-color:#1e0010">%</span>&gt;&gt; Yes
+                        &lt;<span style="color:#f92672">input</span> <span style="color:#a6e22e">type</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;radio&#34;</span> <span style="color:#a6e22e">name</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;is_delivered&#34;</span> <span style="color:#a6e22e">value</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;true&#34;</span> <span style="color:#960050;background-color:#1e0010">&lt;%==</span> <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#a6e22e">delivered</span> <span style="color:#960050;background-color:#1e0010">?</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">checked</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#a6e22e">:</span> <span style="color:#960050;background-color:#1e0010">&#39;&#39;</span> <span style="color:#960050;background-color:#1e0010">%</span>&gt;&gt; Yes
                     &lt;/<span style="color:#f92672">label</span>&gt;
                     &lt;<span style="color:#f92672">label</span> <span style="color:#a6e22e">class</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;btn btn-xs &lt;%= $delivered ? &#39;btn-outline-danger&#39; : &#39;btn-danger active&#39; %&gt;&#34;</span>&gt;
-                        &lt;<span style="color:#f92672">input</span> <span style="color:#a6e22e">type</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;radio&#34;</span> <span style="color:#a6e22e">name</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;is_delivered&#34;</span> <span style="color:#a6e22e">value</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;false&#34;</span> <span style="color:#960050;background-color:#1e0010">&lt;</span><span style="color:#960050;background-color:#1e0010">%</span><span style="color:#960050;background-color:#1e0010">=</span><span style="color:#960050;background-color:#1e0010">=</span> <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#a6e22e">delivered</span> <span style="color:#960050;background-color:#1e0010">?</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#a6e22e">:</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">checked</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#960050;background-color:#1e0010">%</span>&gt;&gt; No
+                        &lt;<span style="color:#f92672">input</span> <span style="color:#a6e22e">type</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;radio&#34;</span> <span style="color:#a6e22e">name</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;is_delivered&#34;</span> <span style="color:#a6e22e">value</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;false&#34;</span> <span style="color:#960050;background-color:#1e0010">&lt;%==</span> <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#a6e22e">delivered</span> <span style="color:#960050;background-color:#1e0010">?</span> <span style="color:#960050;background-color:#1e0010">&#39;&#39;</span> <span style="color:#a6e22e">:</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">checked</span><span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#960050;background-color:#1e0010">%</span>&gt;&gt; No
                     &lt;/<span style="color:#f92672">label</span>&gt;
                 &lt;/<span style="color:#f92672">div</span>&gt;
             % end

@@ -199,73 +199,73 @@ package Mojo::File::Role::rebase { use Mojo::Base qw(-role -signatures); sub reb
       <p><img src="https://mojolicious.io/blog/2018/12/13/taking-on-roles/banner.jpg" alt="img"></p>
 <p>在我之前的 Advent 文章中，我创建了<a href="https://mojolicious.io/blog/2018/12/03/higher-order-promises/">高阶 promise</a>并向您展示了如何使用它们。我没有告诉你它们如何工作的魔力。现在我将从另一个方向开发另一个例子。</p>
 <p>有时候我希望 <a href="https://mojolicious.org/perldoc/Mojo/File">Mojo::File</a> 的行为有点不同。我经常有一个路径，我想只将基本名称与不同的目录结合起来。我最终为两者制作 <code>Mojo::File</code> 对象，然后使用目录对象来获得我想要的东西：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File <span style="color:#e6db74">qw(</span><span style="color:#e6db74">path</span><span style="color:#e6db74">)</span>;
-<span style="color:#66d9ef">my</span> $path     <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> );
-<span style="color:#66d9ef">my</span> $dir      <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/usr/local/bin&#39;</span> );
-<span style="color:#66d9ef">my</span> $new_path <span style="color:#f92672">=</span> $dir<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>child( $path<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>basename );
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File <span style="color:#e6db74">qw(path)</span>;
+<span style="color:#66d9ef">my</span> $path     <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> );
+<span style="color:#66d9ef">my</span> $dir      <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/usr/local/bin&#39;</span> );
+<span style="color:#66d9ef">my</span> $new_path <span style="color:#f92672">=</span> $dir<span style="color:#f92672">-&gt;</span>child( $path<span style="color:#f92672">-&gt;</span>basename );
 
 say $new_path;  <span style="color:#75715e"># /usr/local/bin/interesting.txt</span>
 </code></pre></div><p>那很烦人。我不喜欢它需要这么多步骤。我想要一些方法。我宁愿能够像这样编写它，我从有趣的文件开始并继续处理它而不是切换到其他对象：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File <span style="color:#e6db74">qw(</span><span style="color:#e6db74">path</span><span style="color:#e6db74">)</span>;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File <span style="color:#e6db74">qw(path)</span>;
 
 <span style="color:#66d9ef">my</span> $new_path <span style="color:#f92672">=</span> Mojo::File
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> )
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin&#39;</span> );   <span style="color:#75715e"># this isn&#39;t a method</span>
+    <span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> )
+    <span style="color:#f92672">-&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin&#39;</span> );   <span style="color:#75715e"># this isn&#39;t a method</span>
 
 say $new_path;  <span style="color:#75715e"># /usr/local/bin/interesting.txt</span>
 </code></pre></div><p>我可以通过各种 Perl 技巧通过<a href="https://mojolicious.org/perldoc/Mojo/Util#monkey_patch">猴子补丁</a>或子类化将此方法添加到 <code>Mojo::File</code>。但是，像往常一样，Mojolicious 期待我的愿望并提供一种方法来做到这一点。我可以添加一个角色，</p>
 <p>当我跳进它时，你可以自己阅读角色。首先，我创建一个代表我的角色的类。我定义了我想要的方法。我使用我想要影响的包的名称，添加 <code>::Role::</code>，然后我想使用的名称;它的小写并不重要。 <code>Mojo::Base</code> 设置了当我导入 <code>-role</code> 时所需的一切：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">package</span> Mojo::File::Role::rebase {
-    <span style="color:#66d9ef">use</span> Mojo::Base <span style="color:#e6db74">qw(</span><span style="color:#e6db74">-role -signatures</span><span style="color:#e6db74">)</span>;
+    <span style="color:#66d9ef">use</span> Mojo::Base <span style="color:#e6db74">qw(-role -signatures)</span>;
 
     <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">rebase</span> ($file, $dir) {
-        $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( $dir, $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>basename )
+        $file<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( $dir, $file<span style="color:#f92672">-&gt;</span>basename )
         }
     }
 </code></pre></div><p>我在我想要影响的类上使用 <code>with_roles</code> 来应用我的新功能。因为我使用命名约定通过在它前面加上目标类（<code>Mojo::File</code>），然后是 <code>::Role::</code>，然后是我想要的短名称。当我应用这个时，我可以省去大部分包裹名称，并使用前面加号的短名称：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>with_roles( <span style="color:#e6db74">&#39;+rebase&#39;</span> );
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span>with_roles( <span style="color:#e6db74">&#39;+rebase&#39;</span> );
 </code></pre></div><p>或者我可以输入完整的包名：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>with_roles(
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span>with_roles(
     <span style="color:#e6db74">&#39;Mojo::File::Role::rebase&#39;</span> );
 </code></pre></div><p>如果我没有遵循命名约定，我需要使用它：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>with_roles(
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file_class <span style="color:#f92672">=</span> Mojo::File<span style="color:#f92672">-&gt;</span>with_roles(
     <span style="color:#e6db74">&#39;I::Totally::Rejected::The::Convention::rebase&#39;</span> );
 </code></pre></div><p><code>$file_class</code> 是具有新类名的字符串。在那个课程的后面有一些多重继承魔法，你会更乐意忽略它。我不需要使用裸字类名来调用类方法;标量变量中的字符串也可以正常工作。现在我可以使用我的 <code>rebase</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">say $file_class
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> )
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin/&#39;</span> );
+    <span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> )
+    <span style="color:#f92672">-&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin/&#39;</span> );
 </code></pre></div><p>这比我之前做的要干净得多，我喜欢它的流动方式。但是，如果我从其他东西获得已经创建的 <a href="https://mojolicious.org/perldoc/Mojo/File">Mojo::File</a> 对象怎么办？我也可以应用 ad hoc 角色：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $file <span style="color:#f92672">=</span> path( <span style="color:#e6db74">&#39;/Users/brian/bin/interesting.txt&#39;</span> );
 
 say $file
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>with_roles( <span style="color:#e6db74">&#39;+rebase&#39;</span> )
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin/&#39;</span> );
+    <span style="color:#f92672">-&gt;</span>with_roles( <span style="color:#e6db74">&#39;+rebase&#39;</span> )
+    <span style="color:#f92672">-&gt;</span>rebase( <span style="color:#e6db74">&#39;/usr/local/bin/&#39;</span> );
 </code></pre></div><p>我可以走得更远我添加到我的角色的任何方法都成为该类的一部分。我经常想要获取文件的摘要，虽然 <a href="https://mojolicious.org/perldoc/Mojo/Util">Mojo::Util</a> 通过一些便利功能使这更容易，但我想要更方便。我为我的角色添加了几种方法来为我做啜食：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">use</span> Mojo::File;
 
 <span style="color:#66d9ef">package</span> Mojo::File::Role::MyUtils {
-    <span style="color:#66d9ef">use</span> Mojo::Base <span style="color:#e6db74">qw(</span><span style="color:#e6db74">-role -signatures</span><span style="color:#e6db74">)</span>;
-    <span style="color:#66d9ef">use</span> Mojo::Util <span style="color:#e6db74">qw(</span><span style="color:#e6db74">md5_sum sha1_sum</span><span style="color:#e6db74">)</span>;
+    <span style="color:#66d9ef">use</span> Mojo::Base <span style="color:#e6db74">qw(-role -signatures)</span>;
+    <span style="color:#66d9ef">use</span> Mojo::Util <span style="color:#e6db74">qw(md5_sum sha1_sum)</span>;
 
     <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">rebase</span> ($file, $dir) {
-        $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( $dir, $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>basename )
+        $file<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( $dir, $file<span style="color:#f92672">-&gt;</span>basename )
         }
 
     <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">md5</span> ($file) {
-        md5_sum( $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>slurp )
+        md5_sum( $file<span style="color:#f92672">-&gt;</span>slurp )
         }
 
     <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">sha1</span> ($file) {
-        sha1_sum( $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>slurp )
+        sha1_sum( $file<span style="color:#f92672">-&gt;</span>slurp )
         }
     }
 
 <span style="color:#66d9ef">my</span> $file <span style="color:#f92672">=</span> Mojo::File
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>with_roles( <span style="color:#e6db74">&#39;+MyUtils&#39;</span> )
-    <span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>(shift);
+    <span style="color:#f92672">-&gt;</span>with_roles( <span style="color:#e6db74">&#39;+MyUtils&#39;</span> )
+    <span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>(shift);
 
-say $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>sha1;
-say $file<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>md5;
+say $file<span style="color:#f92672">-&gt;</span>sha1;
+say $file<span style="color:#f92672">-&gt;</span>md5;
 </code></pre></div><p>您可以在 Joel Berger 的 2017 Mojolicious Advent Calendar 条目第13天：<a href="https://mojolicious.io/blog/2017/12/13/day-13-more-about-roles/">更多关于角色</a>中阅读更多关于角色的信息。奇怪的是那也是在第13天，虽然我不认为乔尔或我是否足够聪明来计划。</p>
 
     </div>

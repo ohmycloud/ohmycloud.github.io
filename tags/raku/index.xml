@@ -7,10 +7,34 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>❤ 焉知非鱼</copyright>
-    <lastBuildDate>Fri, 21 Aug 2020 13:33:35 +0800</lastBuildDate>
+    <lastBuildDate>Sun, 27 Dec 2020 20:49:15 +0800</lastBuildDate><atom:link href="https://ohmycloud.github.io/tags/raku/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>强制转换文件</title>
+      <link>https://ohmycloud.github.io/posts/2020-12-25-coercive-files/</link>
+      <pubDate>Sun, 27 Dec 2020 20:49:15 +0800</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/2020-12-25-coercive-files/</guid>
+      <description>许多 API 都有一两个例程可以接受一个文件作为参数。在 Raku 中，我们可以很容易地把 Str 变成 IO::Path，随后再变成 IO::Handle。作为模块作者，提供 MMD 变体是一种礼貌的举动，所以用户可以提供他们喜欢的东西。
+sub s($file is copy where { $_ ~~ Str|IO::Path|IO::Handle or fail(&amp;amp;?ROUTINE.name ~ &#39; likes Str, IO::Path and IO::Handle.&#39;) } ) { given $file { when Str { $file = .IO.open; } when IO::Path { $file = .open; } when IO::Handle { } } say ?$file; } 这是个模板. 在 Raku 之国几乎是被禁止的. 使用新的强转协议，我们可以实现一个角色，从此快乐地节省时间。
+role Filish[*%mode] is IO::Handle { proto method COERCE($) {*} multi method COERCE(Str:D $s) { my $handle = self.</description>
+    </item>
     
-	<atom:link href="https://ohmycloud.github.io/tags/raku/index.xml" rel="self" type="application/rss+xml" />
-    
+    <item>
+      <title>关于强转方法的返回值</title>
+      <link>https://ohmycloud.github.io/posts/2020-12-27-on-coercion-method-return-value/</link>
+      <pubDate>Sun, 27 Dec 2020 20:37:37 +0800</pubDate>
+      
+      <guid>https://ohmycloud.github.io/posts/2020-12-27-on-coercion-method-return-value/</guid>
+      <description>Wenzel P.P. Peppmeyer 继续着他关于 Raku 的精彩博文，他涉及了一些非常有趣的主题。他的最后一篇文章是关于在一个模块中实现 DWIM 原则，以使用户减少对模板代码的关心。单单这一点就不会让我写这篇文章，但 Wenzel 提出了一个我以为会引起困惑的问题。而显然我没有看错。
+以下是帖子中的一段话。
+ 新的强转协议非常有用，但有一个缺陷：它强迫我返回包含 COERCE-method 的类型。在一个没有太大意义的角色中，它迫使我与 IO::Handle 打交道。
+ 基本上，这个要求归结为下面的片段。
+role Foo { multi method COERCE(Str:D $s) { $s.IO.open: :r } } sub foo(Foo() $v) { say $v.WHICH; } foo($?FILE); 试图运行它，会得到。
+ Impossible coercion from &amp;lsquo;Str&amp;rsquo; into &amp;lsquo;Foo&amp;rsquo;: method COERCE returned an instance of IO::Handle.
+ 我们来看看为什么这里的错误是合法的。
+简短的答案是：强转，虽然在某种程度上是放松的，但最上是一种类型约束。
+较长的答案是：用户期望 Foo 在 $v 中的 sub foo。我提议做一个小的思想实验，就是在 Foo 这个角色中加入一个方法。例如，我们想在文件中用空格来填充文本。为此，我们在角色 Foo 中实现 method shift-right(Int:D $columns) {.</description>
+    </item>
     
     <item>
       <title>接口多态性被认为是可爱的</title>
@@ -19,7 +43,7 @@
       
       <guid>https://ohmycloud.github.io/posts/2020-08-21-rfc265-interface-polymorphism-considered-lovely/</guid>
       <description>先说点题外话。在写这篇文章的过程中，我遭遇了系统管理员最可怕的噩梦：服务器丢失，然后是备份不好。直到最后一刻，我都有充分的理由担心自己根本无法完成这篇文章。幸运的是，我与生命做了休战，得到了暂时的喘息。结论是什么？不要在 ESXi 上使用 bareos。或者，可能就是不要使用裸 OS&amp;hellip;
-在为我之前的 advent 日志领取 RFC 的时候，我完全把注意力放在了语言对象部分。我花了几遍时间才找到合适的内容。但在这期间，我发现列表中居然少了一个非常重要的主题。&amp;ldquo;不可能！&amp;rdquo; - 我自言自语道，随后又继续搜索。然而，无论是搜索&amp;quot;抽象类&amp;rdquo;，还是搜索&amp;quot;角色&amp;rdquo;，都没有任何结果。我本想放弃，并做出结论，这个想法是后来才有的，当时写提纲的时候还是这样的。
+在为我之前的 advent 日志领取 RFC 的时候，我完全把注意力放在了语言对象部分。我花了几遍时间才找到合适的内容。但在这期间，我发现列表中居然少了一个非常重要的主题。&amp;ldquo;不可能！&amp;rdquo; - 我自言自语道，随后又继续搜索。然而，无论是搜索&amp;quot;抽象类&amp;quot;，还是搜索&amp;quot;角色&amp;quot;，都没有任何结果。我本想放弃，并做出结论，这个想法是后来才有的，当时写提纲的时候还是这样的。
 但是，等等，OO 相关的 RFC 中提到的主题是什么接口？哦，那个接口! 就像请求正文中所说的那样。
  增加一个机制来声明类的接口 还有一个方法来声明一个类实现了上述接口。
  此时我再次意识到，现在已经落后了整整20年。这段文字来自于很多人认为 Java 是唯一正确的 OO 实现的时代! 而事实上，通过进一步的阅读，我们发现下面的说法，很可能是受到当时一些流行观点的影响。
@@ -64,7 +88,7 @@ my @pairs = a =&amp;gt; 42, 1 =&amp;gt; 2; say @pairs[0]; # a =&amp;gt; 42 say @
     </item>
     
     <item>
-      <title>2020 08 21 Rfc200 Revamp Tie to Support Extensibility</title>
+      <title>改造 tie 以支持可扩展性</title>
       <link>https://ohmycloud.github.io/posts/2020-08-21-rfc200-revamp-tie-to-support-extensibility/</link>
       <pubDate>Fri, 21 Aug 2020 12:10:47 +0800</pubDate>
       
@@ -175,7 +199,7 @@ RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的
       <description>RFC 25, 作者：Damian Conway。运算符: 多路比较 这个 RFC 最初是在8月4日提出的, 一个月后被冻结。
 它描述了一个简单直观的功能, 使代码服从我的意思规则:
 if ( 0 &amp;lt;= $x &amp;lt;= 10 ) { print &amp;quot;digit&amp;quot; } 二十年前, 不指望能如愿以偿, 这并不是一个很大的惊喜。
-现在我们可以称之为&amp;quot;运算符链&amp;rdquo;, 现在它在编程语言中并不常见。人们可以想到很多原因, 其中包括没有把它当作一个重要的功能, 需要打破向后的兼容性, 有时只是没有想到。
+现在我们可以称之为&amp;quot;运算符链&amp;quot;, 现在它在编程语言中并不常见。人们可以想到很多原因, 其中包括没有把它当作一个重要的功能, 需要打破向后的兼容性, 有时只是没有想到。
 然而, 在 Raku 编程语言设计过程中, 各种智者提出自己的想法成为可能。
 虽然有人可能会认为这是一个太小的值得努力的功能, 但 Raku 是在 &amp;ldquo;修复语言, 而不是修复用户&amp;quot;的旗帜下设计的, 因此, 即使是这样的改变也是想要的。
 虽然这个功能原本在 Perl 中是缺失的, 但自 v5.32 版本发布后, 它最终得到了这样的逻辑链式支持。
@@ -223,10 +247,10 @@ sub find_special_square { for 1.</description>
 许多参与者花了很大的力气来创建高效而准确的解决方案：跟踪每个月的最后一天，正确检测闰年，计算出特定日期的月日公式，管理所需的复杂日期运算。
 但是，鉴于 Raku 中内置了强大的 Date 类，这些令人钦佩的劳作其实大部分都没有必要。
 整个任务可以通过简单地从给定年份的1月1日到12月31日来完成，首先检查每个日期是否是星期五（即&amp;quot;星期几&amp;quot;的值是5），然后检查下一个星期五（即正好一周后的日期）是否恰好在不同的月份。
-如果这两个条件都为真，那么我们就有一个&amp;quot;本月最后一个星期五&amp;rdquo;，所以我们只需打印出来。
+如果这两个条件都为真，那么我们就有一个&amp;quot;本月最后一个星期五&amp;quot;，所以我们只需打印出来。
 换句话说:
 for Date.new($year,1,1) .. Date.new($year,12,31) -&amp;gt; $date { if $date.day-of-week == 5 &amp;amp;&amp;amp; $date.later(:1week).month != $date.month { say $date; } } 我们不需要明确地担心每个月有多长，一年是否是闰年，或者如何计算出某一天是否是星期五；Date 类为我们解决了所有这些问题。
-而这不是运气，完全是设计好的。Raku 有大量类似这样的内置数据类型；它们是另一种&amp;quot;合适的工具，就在手边&amp;rdquo;。
+而这不是运气，完全是设计好的。Raku 有大量类似这样的内置数据类型；它们是另一种&amp;quot;合适的工具，就在手边&amp;quot;。
 当然，因为 Raku 是多范式的，所以有很多其他的方法可以将解决方案包裹在 Date 类的便利性中，这取决于你喜欢如何思考这个世界。
 如果你喜欢纯韩式式的解决方案，可以这样写:
 say join &amp;quot;\n&amp;quot;, grep { .later(:1week).month != .month }, grep { .day-of-week == 5 }, Date.new($year,1,1) .. Date.new($year,12,31); 或者你更喜欢一个（潜在的）并行的管道，然后通过一系列独立的过滤器和处理器来过滤日期序列:
@@ -267,7 +291,7 @@ say first !*.is-prime, # Print the first non-prime from map *+1, # all numbers o
 最近，这个想法又在我脑海中全面浮现。在上周的每周挑战中，第二个任务是把文件路径列表，找到最长的共同初始子路径（即它们都共享的最深的目录）。
 各个注册参与者提供的解决方案都非常简洁，而且通常既高效又优雅。然而他们中的大多数都是同一个程序解决方案的变体。在目录分隔符上拆分每条路径，然后对于1到N： 比较所有第N个组件，如果它们不一样就退出。类似于:
 my @components = @list.map({.split(&#39;/&#39;)}; for 1..* -&amp;gt; $n { next if all(@components).elems &amp;gt; $n &amp;amp;&amp;amp; [~~] @components.values».[$n]; say @components.first.[0..$n-1].join(&#39;/&#39;); last; } 并不是说这种方法有什么不好。
-只是感觉比实际需要的&amp;quot;体力劳动&amp;quot;多了很多；很多低级的程序化的&amp;quot;告诉我怎么做&amp;rdquo;，而不是高级的声明性或功能性的&amp;quot;告诉我做什么&amp;rdquo;。
+只是感觉比实际需要的&amp;quot;体力劳动&amp;quot;多了很多；很多低级的程序化的&amp;quot;告诉我怎么做&amp;rdquo;，而不是高级的声明性或功能性的&amp;quot;告诉我做什么&amp;quot;。
 当我自己来解决这个问题的时候，我是这样想的。
 我的搜索空间是所有可能的初始子路径的所有路径。在这个空间内，我需要找到所有路径共享的最长的初始子路径。换句话说，我需要将每条路径转换成一组越来越长的子路径，然后找到这些集合的交集，再找到该交集中最长的元素。它可以直接翻译成 Raku，比如这样:
 @list.map({m:ex{^.*\/}».Str}).reduce({$^a∩$^b}).keys.max(*.chars).say; 或（对于喜欢注释的人）喜欢这样:
@@ -415,7 +439,7 @@ for @errors -&amp;gt; $error { note $error if DEBUG; LAST die X::CompilationFail
       <guid>https://ohmycloud.github.io/posts/six-slices-of-pie/</guid>
       <description>第 15 周挑战赛的第一个任务是找到甜品的最佳排队位置。
 这是对创造越野车鞭子或牛仔电影或实体书店或碳基能源的老难题的重新表述：什么时候才是选择在一个不断缩小的馅饼中获得一块不断增加的最佳时机？
-在这个任务中，馅饼足够大，可以容纳100个人，但排在第一位的人只能得到相当于其中1%的一块。第二个人得到剩下的2%，第三个人得到之后剩下的3%，等等，等等，直到第一百个人得到前面99个人分到自己那份后剩下的100%的碎屑。换句话说，我们要&amp;quot;让苹果派再次伟大！&amp;rdquo;
+在这个任务中，馅饼足够大，可以容纳100个人，但排在第一位的人只能得到相当于其中1%的一块。第二个人得到剩下的2%，第三个人得到之后剩下的3%，等等，等等，直到第一百个人得到前面99个人分到自己那份后剩下的100%的碎屑。换句话说，我们要&amp;quot;让苹果派再次伟大！&amp;quot;
 实际的任务是确定哪一个是队伍中的最佳位置。是早早地进入，得到一小块还算大的馅饼呢？还是等待，最终获得一块更大的剩饼？让我们用六种不同的方式来回答这个问题。
 必需的切片 我的开发者生涯是以C语言程序员的身份开始的，我仍然觉得以命令式模式来处理像这样的小问题是很自然的。所以，我第一次尝试回答这个问题（幸好是用 Raku 而不是C语言）的时候是这样的。
 # Start with a full pie, and no idea who gets the most... my $pie = 1.00; # i.e. 100% my $max-share = 0.00; # i.e. 0% my $max-index; # For everyone in line... for 1..100 -&amp;gt; $N { # Take N% of what’s left as the next share... my $share = $pie * $N/100; $pie -= $share; # Remember it if it’s maximal.</description>
@@ -451,7 +475,7 @@ my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code
       <description>toggle 字面意思是开关, 函数签名如下：
 method toggle(Any:D: *@conditions where .all ~~ Callable:D, Bool :$off --&amp;gt; Seq:D) 它接收一个数组, 数组中的每个元素都是一个 Callable。
 它迭代调用者, 产生一个 Seq, 根据开关是开还是关把接收到的值填充到结果中, 开关是开还是关取决于 @conditions 数组里面调用 Callables 的结果:
-say (1..15).toggle(* &amp;lt; 5, * &amp;gt; 10, * &amp;lt; 15); # OUTPUT: «(1 2 3 4 11 12 13 14)␤» say (1..15).toggle(:off, * &amp;gt; 2, * &amp;lt; 5, * &amp;gt; 10, * &amp;lt; 15); # OUTPUT: «(3 4 11 12 13 14)␤» 想象一下开关是打开还是关闭（True或False），如果它打开则产生值。默认情况下，该开关的初始状态处于 &amp;ldquo;on&amp;rdquo; 位置，除非 :$off 设置为 true 值，在这种情况下，初始状态将为&amp;quot;off&amp;rdquo;。</description>
+say (1..15).toggle(* &amp;lt; 5, * &amp;gt; 10, * &amp;lt; 15); # OUTPUT: «(1 2 3 4 11 12 13 14)␤» say (1..15).toggle(:off, * &amp;gt; 2, * &amp;lt; 5, * &amp;gt; 10, * &amp;lt; 15); # OUTPUT: «(3 4 11 12 13 14)␤» 想象一下开关是打开还是关闭（True或False），如果它打开则产生值。默认情况下，该开关的初始状态处于 &amp;ldquo;on&amp;rdquo; 位置，除非 :$off 设置为 true 值，在这种情况下，初始状态将为&amp;quot;off&amp;quot;。</description>
     </item>
     
     <item>

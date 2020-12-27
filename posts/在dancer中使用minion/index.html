@@ -234,25 +234,25 @@ package MyJob::JobQueue; use Moose; use Minion; use MyJob::Models::FooBar; with 
 <span style="color:#66d9ef">use</span> MyJob::Models::FooBar;
 with <span style="color:#e6db74">&#39;MyJob::Roles::ConfigReader&#39;</span>;
 
-has <span style="color:#e6db74">&#39;runner&#39;</span> <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> (
-    is      <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;ro&#39;</span>,
-    isa     <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;Minion&#39;</span>,
-    lazy    <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>,
-    default <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> sub( $self ) {
+has <span style="color:#e6db74">&#39;runner&#39;</span> <span style="color:#f92672">=&gt;</span> (
+    is      <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;ro&#39;</span>,
+    isa     <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;Minion&#39;</span>,
+    lazy    <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span>,
+    default <span style="color:#f92672">=&gt;</span> sub( $self ) {
         $ENV{ MOJO_PUBSUB_EXPERIMENTAL } <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-        Minion<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( mysql <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> 
-          MyJob::DBConnectionManager<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get_connection_uri({ 
-            db_type <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;feeds&#39;</span>, 
-            io_type <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;rw&#39;</span>,
+        Minion<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( mysql <span style="color:#f92672">=&gt;</span> 
+          MyJob::DBConnectionManager<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-&gt;</span>get_connection_uri({ 
+            db_type <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;feeds&#39;</span>, 
+            io_type <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;rw&#39;</span>,
         }));
     },
 );
 </code></pre></div><p>我们在Minion周围包含了一个简单的Moose类，以便使用我们想要的额外功能轻松添加到任何类或Dancer应用程序。</p>
 <p>我们在作业未运行的某一点遇到了问题，因为我们将它们添加到没有工作程序配置为处理的队列中。为了防止再次发生这种情况，我们添加了一些代码以防止我们将代码添加到不存在的队列中：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> @QUEUE_TYPES <span style="color:#f92672">=</span> <span style="color:#e6db74">qw(</span><span style="color:#e6db74"> default InstantXML PayrollXML ChangeRequest </span><span style="color:#e6db74">)</span>;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> @QUEUE_TYPES <span style="color:#f92672">=</span> <span style="color:#e6db74">qw( default InstantXML PayrollXML ChangeRequest )</span>;
 
 <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">has_invalid_queues</span>( $self, @queues ) {
-    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">if</span> $self<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get_invalid_queues( @queues );
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">if</span> $self<span style="color:#f92672">-&gt;</span>get_invalid_queues( @queues );
     <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 }
 
@@ -264,19 +264,19 @@ has <span style="color:#e6db74">&#39;runner&#39;</span> <span style="color:#f926
 }
 </code></pre></div><p>有了这个，如果开发人员试图将作业添加到无效队列，我们的 <code>queue_job()</code> 方法很容易抛出错误：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">queue_job</span>( $self, $args ) {
-    <span style="color:#66d9ef">my</span> $job_name <span style="color:#f92672">=</span> $args<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ name     } <span style="color:#f92672">or</span> die <span style="color:#e6db74">&#34;queue_job(): must define job name!&#34;</span>;
-    <span style="color:#66d9ef">my</span> $guid     <span style="color:#f92672">=</span> $args<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ guid     } <span style="color:#f92672">or</span> die <span style="color:#e6db74">&#34;queue_job(): must have GUID to process!&#34;</span>;
-    <span style="color:#66d9ef">my</span> $title    <span style="color:#f92672">=</span> $args<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ title    } <span style="color:#e6db74">//</span> $job_name;
-    <span style="color:#66d9ef">my</span> $queue    <span style="color:#f92672">=</span> $args<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ queue    } <span style="color:#e6db74">//</span> <span style="color:#e6db74">&#39;default&#39;</span>;
-    <span style="color:#66d9ef">my</span> $job_args <span style="color:#f92672">=</span> $args<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ job_args };
+    <span style="color:#66d9ef">my</span> $job_name <span style="color:#f92672">=</span> $args<span style="color:#f92672">-&gt;</span>{ name     } <span style="color:#f92672">or</span> die <span style="color:#e6db74">&#34;queue_job(): must define job name!&#34;</span>;
+    <span style="color:#66d9ef">my</span> $guid     <span style="color:#f92672">=</span> $args<span style="color:#f92672">-&gt;</span>{ guid     } <span style="color:#f92672">or</span> die <span style="color:#e6db74">&#34;queue_job(): must have GUID to process!&#34;</span>;
+    <span style="color:#66d9ef">my</span> $title    <span style="color:#f92672">=</span> $args<span style="color:#f92672">-&gt;</span>{ title    } <span style="color:#e6db74">//</span> $job_name;
+    <span style="color:#66d9ef">my</span> $queue    <span style="color:#f92672">=</span> $args<span style="color:#f92672">-&gt;</span>{ queue    } <span style="color:#e6db74">//</span> <span style="color:#e6db74">&#39;default&#39;</span>;
+    <span style="color:#66d9ef">my</span> $job_args <span style="color:#f92672">=</span> $args<span style="color:#f92672">-&gt;</span>{ job_args };
 
     die <span style="color:#e6db74">&#34;queue_job(): Invalid job queue &#39;$queue&#39; specified&#34;</span> 
-        <span style="color:#66d9ef">if</span> $self<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>has_invalid_queues( $queue );
+        <span style="color:#66d9ef">if</span> $self<span style="color:#f92672">-&gt;</span>has_invalid_queues( $queue );
 
-    <span style="color:#66d9ef">my</span> %notes <span style="color:#f92672">=</span> ( title <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $title, guid  <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $guid );
+    <span style="color:#66d9ef">my</span> %notes <span style="color:#f92672">=</span> ( title <span style="color:#f92672">=&gt;</span> $title, guid  <span style="color:#f92672">=&gt;</span> $guid );
 
-    <span style="color:#66d9ef">return</span> $self<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>runner<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>enqueue( $job_name <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $job_args <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> 
-        { notes <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">\</span>%notes, queue <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $queue });
+    <span style="color:#66d9ef">return</span> $self<span style="color:#f92672">-&gt;</span>runner<span style="color:#f92672">-&gt;</span>enqueue( $job_name <span style="color:#f92672">=&gt;</span> $job_args <span style="color:#f92672">=&gt;</span> 
+        { notes <span style="color:#f92672">=&gt;</span> <span style="color:#f92672">\</span>%notes, queue <span style="color:#f92672">=&gt;</span> $queue });
 }
 </code></pre></div><h2 id="creating-jobs">Creating Jobs</h2>
 <p>在我们的基础模型类（基于Moose）中，我们将为我们的作业运行器创建一个属性：</p>
@@ -287,19 +287,19 @@ has <span style="color:#e6db74">&#39;runner&#39;</span> <span style="color:#f926
     default =&gt; sub( $self ) { return Empowered::JobQueue-&gt;new-&gt;runner; },
 );
 </code></pre><p>在模型本身中，创建新的可排队任务非常简单：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$self<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>runner<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>add_task( InstantXML <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> 
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$self<span style="color:#f92672">-&gt;</span>runner<span style="color:#f92672">-&gt;</span>add_task( InstantXML <span style="color:#f92672">=&gt;</span> 
     sub( $job, $request_path, $guid, $company_db, $force, $die_on_error <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> ) {
-        $job<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>note( 
-            request_path <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $request_path,
-            feed_id      <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2098</span>,
-            group        <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $company_db,
+        $job<span style="color:#f92672">-&gt;</span>note( 
+            request_path <span style="color:#f92672">=&gt;</span> $request_path,
+            feed_id      <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">2098</span>,
+            group        <span style="color:#f92672">=&gt;</span> $company_db,
         );
-        MyJob::Models::FooBar<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>( request_path <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> 
-          $request_path )<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>generate_xml({
-            pdf_guid     <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $guid,
-            group        <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $company_db,
-            force        <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $force,
-            die_on_error <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $die_on_error,
+        MyJob::Models::FooBar<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>( request_path <span style="color:#f92672">=&gt;</span> 
+          $request_path )<span style="color:#f92672">-&gt;</span>generate_xml({
+            pdf_guid     <span style="color:#f92672">=&gt;</span> $guid,
+            group        <span style="color:#f92672">=&gt;</span> $company_db,
+            force        <span style="color:#f92672">=&gt;</span> $force,
+            die_on_error <span style="color:#f92672">=&gt;</span> $die_on_error,
         });
 });
 </code></pre></div><h2 id="running-jobs">Running Jobs</h2>
@@ -308,21 +308,21 @@ has <span style="color:#e6db74">&#39;runner&#39;</span> <span style="color:#f926
 <span style="color:#66d9ef">use</span> MyJob::JobQueue;
 
 <span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">job_queue</span> {
-    <span style="color:#66d9ef">return</span> MyJob::JobQueue<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>;
+    <span style="color:#66d9ef">return</span> MyJob::JobQueue<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>;
 }
 
-get <span style="color:#e6db74">&#39;/my/api/route/:guid/:group/:force&#39;</span> <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">sub</span> {
-    <span style="color:#66d9ef">my</span> $guid  <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get( <span style="color:#e6db74">&#39;guid&#39;</span> );
-    <span style="color:#66d9ef">my</span> $group <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get( <span style="color:#e6db74">&#39;group&#39;</span> );
-    <span style="color:#66d9ef">my</span> $force <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get( <span style="color:#e6db74">&#39;force&#39;</span> );
+get <span style="color:#e6db74">&#39;/my/api/route/:guid/:group/:force&#39;</span> <span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">sub</span> {
+    <span style="color:#66d9ef">my</span> $guid  <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-&gt;</span>get( <span style="color:#e6db74">&#39;guid&#39;</span> );
+    <span style="color:#66d9ef">my</span> $group <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-&gt;</span>get( <span style="color:#e6db74">&#39;group&#39;</span> );
+    <span style="color:#66d9ef">my</span> $force <span style="color:#f92672">=</span> route_parameters<span style="color:#f92672">-&gt;</span>get( <span style="color:#e6db74">&#39;force&#39;</span> );
 
     debug <span style="color:#e6db74">&#34;GENERATING XML ONLY FOR $guid&#34;</span>;
-    job_queue<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>queue_job({
-        name     <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#34;InstantXML&#34;</span>,
-        guid     <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> $guid,
-        title    <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#34;Instant XML Generator&#34;</span>,
-        queue    <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#39;InstantXML&#39;</span>,
-        job_args <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> [ $self<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>request_path, $guid, $group, $force ],
+    job_queue<span style="color:#f92672">-&gt;</span>queue_job({
+        name     <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;InstantXML&#34;</span>,
+        guid     <span style="color:#f92672">=&gt;</span> $guid,
+        title    <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;Instant XML Generator&#34;</span>,
+        queue    <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;InstantXML&#39;</span>,
+        job_args <span style="color:#f92672">=&gt;</span> [ $self<span style="color:#f92672">-&gt;</span>request_path, $guid, $group, $force ],
     }); 
 }
 </code></pre></div><h2 id="creating-and-configuring-the-job-queue-worker">Creating and Configuring the Job Queue Worker</h2>
@@ -356,46 +356,46 @@ jcrome<span style="color:#f92672">-</span>precision<span style="color:#f92672">-
 <span style="color:#66d9ef">use</span> MyJob::JobQueue;
 <span style="color:#66d9ef">use</span> MyJob::Log4p;
 <span style="color:#66d9ef">use</span> MyJob::Util::Logger;
-<span style="color:#66d9ef">use</span> MyJob::Util::SysTools <span style="color:#e6db74">qw(</span><span style="color:#e6db74">get_hostname</span><span style="color:#e6db74">)</span>;
+<span style="color:#66d9ef">use</span> MyJob::Util::SysTools <span style="color:#e6db74">qw(get_hostname)</span>;
 
-<span style="color:#66d9ef">my</span> $config     <span style="color:#f92672">=</span> MyJob::Config<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>config;
+<span style="color:#66d9ef">my</span> $config     <span style="color:#f92672">=</span> MyJob::Config<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-&gt;</span>config;
 <span style="color:#66d9ef">my</span> $hostconfig <span style="color:#f92672">=</span> get_hostconfig();
-<span style="color:#66d9ef">my</span> $minion     <span style="color:#f92672">=</span> MyJob::JobQueue<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>;
-<span style="color:#66d9ef">my</span> $worker     <span style="color:#f92672">=</span> $minion<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>runner<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>worker;
+<span style="color:#66d9ef">my</span> $minion     <span style="color:#f92672">=</span> MyJob::JobQueue<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>;
+<span style="color:#66d9ef">my</span> $worker     <span style="color:#f92672">=</span> $minion<span style="color:#f92672">-&gt;</span>runner<span style="color:#f92672">-&gt;</span>worker;
 
-<span style="color:#66d9ef">my</span> $log_eng <span style="color:#f92672">=</span> MyJob::Log4p<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>({ logger_name <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#34;Minion&#34;</span> });
-<span style="color:#66d9ef">my</span> $logger  <span style="color:#f92672">=</span> MyJob::Util::Logger<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>logger($log_eng);
+<span style="color:#66d9ef">my</span> $log_eng <span style="color:#f92672">=</span> MyJob::Log4p<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>({ logger_name <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;Minion&#34;</span> });
+<span style="color:#66d9ef">my</span> $logger  <span style="color:#f92672">=</span> MyJob::Util::Logger<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span><span style="color:#f92672">-&gt;</span>logger($log_eng);
 </code></pre></div><p>以上是我们的典型样板。阅读我们的配置，并创建一个 worker 可以使用的 logger。</p>
 <p>接下来，当作业出列时，我们要记录 worker 选择了一个作业（审计目的所需），并且我们更改了进程名称，因此如果进程挂起，我们就知道该进程正在尝试运行什么。如果作业中发生未经检查的异常，则 worker 将捕获该异常并将其记录给我们：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>on( dequeue <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> sub( $worker, $job ) {
-    <span style="color:#66d9ef">my</span> $id    <span style="color:#f92672">=</span> $job<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>id;
-    <span style="color:#66d9ef">my</span> $notes <span style="color:#f92672">=</span> $job<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>info<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ notes };
-    <span style="color:#66d9ef">my</span> $title <span style="color:#f92672">=</span> $notes<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ title };
-    <span style="color:#66d9ef">my</span> $guid  <span style="color:#f92672">=</span> $notes<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ guid };
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$worker<span style="color:#f92672">-&gt;</span>on( dequeue <span style="color:#f92672">=&gt;</span> sub( $worker, $job ) {
+    <span style="color:#66d9ef">my</span> $id    <span style="color:#f92672">=</span> $job<span style="color:#f92672">-&gt;</span>id;
+    <span style="color:#66d9ef">my</span> $notes <span style="color:#f92672">=</span> $job<span style="color:#f92672">-&gt;</span>info<span style="color:#f92672">-&gt;</span>{ notes };
+    <span style="color:#66d9ef">my</span> $title <span style="color:#f92672">=</span> $notes<span style="color:#f92672">-&gt;</span>{ title };
+    <span style="color:#66d9ef">my</span> $guid  <span style="color:#f92672">=</span> $notes<span style="color:#f92672">-&gt;</span>{ guid };
 
-    $job<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>on( spawn <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> sub( $job, $pid ) {  
+    $job<span style="color:#f92672">-&gt;</span>on( spawn <span style="color:#f92672">=&gt;</span> sub( $job, $pid ) {  
         $0 <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;$title $guid&#34;</span>;
-        $logger<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>info( 
+        $logger<span style="color:#f92672">-&gt;</span>info( 
             <span style="color:#e6db74">&#34;$title: Created child process $pid for job $id by parent $$ - $guid&#34;</span>);
     });
         
-    $job<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>on( failed <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> sub( $job, $error ) {
+    $job<span style="color:#f92672">-&gt;</span>on( failed <span style="color:#f92672">=&gt;</span> sub( $job, $error ) {
         chomp $error;
-        $logger<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>error( $error );
+        $logger<span style="color:#f92672">-&gt;</span>error( $error );
     });
 });
 </code></pre></div><p>为了帮助我们进行未来的容量规划，我们希望我们的 worker 告诉我们他们是否正在以峰值容量运行，因此请在发生此事件时进行记录：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>on( busy <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> sub( $worker ) {
-    <span style="color:#66d9ef">my</span> $max <span style="color:#f92672">=</span> $worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>status<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ jobs };
-    $logger<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>log( <span style="color:#e6db74">&#34;$0: Running at capacity (performing $max jobs).&#34;</span> );
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl">$worker<span style="color:#f92672">-&gt;</span>on( busy <span style="color:#f92672">=&gt;</span> sub( $worker ) {
+    <span style="color:#66d9ef">my</span> $max <span style="color:#f92672">=</span> $worker<span style="color:#f92672">-&gt;</span>status<span style="color:#f92672">-&gt;</span>{ jobs };
+    $logger<span style="color:#f92672">-&gt;</span>log( <span style="color:#e6db74">&#34;$0: Running at capacity (performing $max jobs).&#34;</span> );
 });
 </code></pre></div><p>现在，我们将配置（如下所示）应用于 worker。当 worker 启动时，它会告诉我们有关它是如何配置的信息（这在开发期间非常有用）：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $max_jobs <span style="color:#f92672">=</span> $hostconfig<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ max_children };
-<span style="color:#66d9ef">my</span> @queues   <span style="color:#f92672">=</span> @{ $hostconfig<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ queues }};
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">my</span> $max_jobs <span style="color:#f92672">=</span> $hostconfig<span style="color:#f92672">-&gt;</span>{ max_children };
+<span style="color:#66d9ef">my</span> @queues   <span style="color:#f92672">=</span> @{ $hostconfig<span style="color:#f92672">-&gt;</span>{ queues }};
 
-<span style="color:#66d9ef">if</span>( $minion<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>has_invalid_queues( @queues ) ){
+<span style="color:#66d9ef">if</span>( $minion<span style="color:#f92672">-&gt;</span>has_invalid_queues( @queues ) ){
     <span style="color:#66d9ef">print</span> <span style="color:#e6db74">&#34;Invalid job queues specified: &#34;</span> <span style="color:#f92672">.</span> join( <span style="color:#e6db74">&#39;,&#39;</span>, 
-        $minion<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>get_invalid_queues( @queues ) );
+        $minion<span style="color:#f92672">-&gt;</span>get_invalid_queues( @queues ) );
     say <span style="color:#e6db74">&#34;. Aborting!&#34;</span>;
     exit <span style="color:#ae81ff">1</span>;
 }
@@ -403,19 +403,19 @@ jcrome<span style="color:#f92672">-</span>precision<span style="color:#f92672">-
 say <span style="color:#e6db74">&#34;Starting Job Queue Worker on &#34;</span> <span style="color:#f92672">.</span> get_hostname();
 say <span style="color:#e6db74">&#34;- Configured to run a max of $max_jobs jobs&#34;</span>;
 say <span style="color:#e6db74">&#34;- Listening for jobs on queues: &#34;</span>, join(<span style="color:#e6db74">&#39;, &#39;</span>, @queues );
-$worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>status<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ jobs }   <span style="color:#f92672">=</span> $max_jobs;
-$worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>status<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ queues } <span style="color:#f92672">=</span> <span style="color:#f92672">\</span>@queues;
-$worker<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>run;
+$worker<span style="color:#f92672">-&gt;</span>status<span style="color:#f92672">-&gt;</span>{ jobs }   <span style="color:#f92672">=</span> $max_jobs;
+$worker<span style="color:#f92672">-&gt;</span>status<span style="color:#f92672">-&gt;</span>{ queues } <span style="color:#f92672">=</span> <span style="color:#f92672">\</span>@queues;
+$worker<span style="color:#f92672">-&gt;</span>run;
 </code></pre></div><p>还记得我们上面配置的YAML文件吗？最后一点从该 worker 所在的运行的主机拉取信息（<code>get_hostname()</code>是一个自行生成的主机名函数）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">get_hostconfig</span> {
     <span style="color:#66d9ef">my</span> $minion_config <span style="color:#f92672">=</span> 
-        MyJob::Config<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">new</span>({ filename <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#e6db74">&#34;environments/minions.yml&#34;</span> })<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>config;
+        MyJob::Config<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">new</span>({ filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;environments/minions.yml&#34;</span> })<span style="color:#f92672">-&gt;</span>config;
     <span style="color:#66d9ef">my</span> $hostname      <span style="color:#f92672">=</span> get_hostname();
 
-    <span style="color:#66d9ef">if</span>( exists $minion_config<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ $hostname }) {
-        <span style="color:#66d9ef">return</span> $minion_config<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ $hostname };
+    <span style="color:#66d9ef">if</span>( exists $minion_config<span style="color:#f92672">-&gt;</span>{ $hostname }) {
+        <span style="color:#66d9ef">return</span> $minion_config<span style="color:#f92672">-&gt;</span>{ $hostname };
     } <span style="color:#66d9ef">else</span> {
-        <span style="color:#66d9ef">return</span> $minion_config<span style="color:#f92672">-</span><span style="color:#f92672">&gt;</span>{ default };
+        <span style="color:#66d9ef">return</span> $minion_config<span style="color:#f92672">-&gt;</span>{ default };
     }
 }
 </code></pre></div><h2 id="monitoring-the-workers">Monitoring the Workers</h2>

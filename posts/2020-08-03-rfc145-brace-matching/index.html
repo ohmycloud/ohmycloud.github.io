@@ -233,8 +233,8 @@ RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的
 <p>当开口括号有多个选项时，第一个子任务在 regex 中变得很棘手。第二个子任务很难，有一个更深刻的原因，这个原因叫做 <a href="https://en.wikipedia.org/wiki/Dyck_language">&ldquo;Dyck语言&rdquo;</a>。Dyck 语言是所有正确配对的小括号字符串的集合（它们之间的假设内容被抹去）。它是计算机科学意义上的语言的原型例子，它不是有规律的，但仍然是无上下文的，这意味着它以某种方式需要一个堆栈来跟踪嵌套级别。当然，regex 比计算机科学意义上的正则表达式更强大，但这一事实可能仍然证明了为什么这是一件困难的事情。Eric Roode 认识到了这个在解析结构化数据中非常常见的任务应该有多容易，与它之间的差距，于是写了一个 RFC。</p>
 <p>他提出了一个 <code>use matchpairs</code> 编译指令来解决子任务 №1，提供一个从开括号到收括号的映射。编译指令在词法作用域中被激活，并影响其中所有的 regex 匹配。对于子任务 №2，我们提出了两个新的  regex  元字符，<code>\m</code> 和 <code>\M</code> 用于匹配和记忆相应的括号。使用这些钩子，嵌套层的业务被卸载到 regex 引擎上。</p>
 <h2 id="规范和解决方案">规范和解决方案</h2>
-<p>RFC 145 被标记为&quot;开发中&rdquo;，这意味着它在 Perl 6 和现在的 Raku 规范中没有得到充分的解决。（关于模式匹配的启示录5包含了对 RFC 145 的<a href="https://raku.org/archive/doc/design/apo/A05.html#RFC%20145:%20Brace-matching%20for%20Perl%20Regular%20Expressions">回应</a>）但是有一些相关的改进，我将在这一节中使用这些改进来展示如何在今天的 Raku 中处理一开始提出的问题。</p>
-<p>使用编译指令来建立一个有效的括号表，然后使用&quot;括号&rdquo; regex 元字符的想法并没有实现，但是无论如何都要重新设计 regex 语言，设计者从括号匹配中推断出了一个新的用于嵌套结构的 regex 操作符，即 <a href="https://docs.raku.org/language/regexes#index-entry-regex__tilde-_regex__~-Tilde_for_nesting_structures">tilde</a>。这个操作符的使用方法是这样的。</p>
+<p>RFC 145 被标记为&quot;开发中&quot;，这意味着它在 Perl 6 和现在的 Raku 规范中没有得到充分的解决。（关于模式匹配的启示录5包含了对 RFC 145 的<a href="https://raku.org/archive/doc/design/apo/A05.html#RFC%20145:%20Brace-matching%20for%20Perl%20Regular%20Expressions">回应</a>）但是有一些相关的改进，我将在这一节中使用这些改进来展示如何在今天的 Raku 中处理一开始提出的问题。</p>
+<p>使用编译指令来建立一个有效的括号表，然后使用&quot;括号&quot; regex 元字符的想法并没有实现，但是无论如何都要重新设计 regex 语言，设计者从括号匹配中推断出了一个新的用于嵌套结构的 regex 操作符，即 <a href="https://docs.raku.org/language/regexes#index-entry-regex__tilde-_regex__~-Tilde_for_nesting_structures">tilde</a>。这个操作符的使用方法是这样的。</p>
 <pre><code class="language-raku" data-lang="raku">anon regex { '(' ~ ')' &lt;body&gt; }
 </code></pre><p>并且它实现了两点：它将 <code>body</code> 和闭合括号转置，使这两个定界符相互靠近，即使 <code>&lt;body&gt;</code> 很长，它还为没有找到闭合括号时设置了错误报告。</p>
 <p>我们可以利用这个新功能稍微改进一下 regex 结构，并免费获得错误报告，但它不会跟踪小括号的嵌套级别，如果开头的小括号有多个选项，它也不会为我们计算收尾括号。</p>

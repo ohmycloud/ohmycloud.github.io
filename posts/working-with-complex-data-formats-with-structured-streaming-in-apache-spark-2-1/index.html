@@ -243,8 +243,8 @@ events = spark.readStream \ .format(&#34;json&#34;) \ # or parquet, kafka, orc..
 <p>在我们<a href="https://databricks.com/blog/2017/01/19/real-time-streaming-etl-structured-streaming-apache-spark-2-1.html">之前的博客文章</a>中，我们讨论了如何将Cloudtrail Logs从JSON转换为Parquet，将我们的即席查询的运行时间缩短了10倍。 Spark SQL允许用户从批处理和流式查询中提取这些数据源类中的数据。 它本身支持以Parquet，ORC，JSON，CSV和文本格式读取和写入数据，并且Spark包中还存在大量其他连接器。 您还可以使用JDBC DataSource连接到SQL数据库。</p>
 <p>Apache Spark可用于交换数据格式，如下所示：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">events <span style="color:#66d9ef">=</span> spark<span style="color:#f92672">.</span>readStream \
-  <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;json&#34;</span><span style="color:#f92672">)</span> \           <span style="color:#66d9ef">#</span> or parquet<span style="color:#f92672">,</span> kafka<span style="color:#f92672">,</span> orc<span style="color:#f92672">.</span><span style="color:#f92672">.</span><span style="color:#f92672">.</span>
-  <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#f92672">)</span> \                 <span style="color:#66d9ef">#</span> format specific options
+  <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;json&#34;</span><span style="color:#f92672">)</span> \           <span style="color:#66d9ef">#</span> or parquet<span style="color:#f92672">,</span> kafka<span style="color:#f92672">,</span> orc<span style="color:#f92672">...</span>
+  <span style="color:#f92672">.</span>option<span style="color:#f92672">()</span> \                 <span style="color:#66d9ef">#</span> format specific options
   <span style="color:#f92672">.</span>schema<span style="color:#f92672">(</span>my_schema<span style="color:#f92672">)</span> \        <span style="color:#66d9ef">#</span> required
   <span style="color:#f92672">.</span>load<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;path/to/data&#34;</span><span style="color:#f92672">)</span>
 
@@ -260,7 +260,7 @@ output<span style="color:#f92672">.</span>writeStream \          <span style="co
 <p>让我们看一些关于Spark SQL如何允许您使用一些数据转换技术随意调整数据的示例。</p>
 <h2 id="selecting-from-nested-columns">Selecting from nested columns</h2>
 <p>点（<code>.</code>）可用于访问结构体和 map 的嵌套列。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: {
      <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>
@@ -271,13 +271,13 @@ output<span style="color:#f92672">.</span>writeStream \          <span style="co
 Scala: events.select(&ldquo;a.b&rdquo;)
 SQL: select a.b from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>
 }
 </code></pre></div><h2 id="flattening-structs">Flattening structs</h2>
 <p>星号（<code>*</code>）可用于选择结构体中的所有子字段。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: {
      <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>,
@@ -289,14 +289,14 @@ SQL: select a.b from events</p>
 Scala:  events.select(&ldquo;a.</em>&quot;)
 SQL:  select a.* from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>,
   <span style="color:#f92672">&#34;c&#34;</span>: <span style="color:#ae81ff">2</span>
 }
 </code></pre></div><h2 id="nesting-columns">Nesting columns</h2>
 <p>struct 函数或SQL中的括号可用于创建新结构体。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#ae81ff">1</span>,
   <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">2</span>,
@@ -307,7 +307,7 @@ SQL:  select a.* from events</p>
 Scala: events.select(struct(&lsquo;a as &lsquo;y) as &lsquo;x)
 SQL: select named_struct(&ldquo;y&rdquo;, a) as x from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;x&#34;</span>: {
     <span style="color:#f92672">&#34;y&#34;</span>: <span style="color:#ae81ff">1</span>
@@ -315,7 +315,7 @@ SQL: select named_struct(&ldquo;y&rdquo;, a) as x from events</p>
 }
 </code></pre></div><h2 id="nesting-all-columns">Nesting all columns</h2>
 <p>星号（<code>*</code>）也可用于包含嵌套结构体中的所有列。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#ae81ff">1</span>,
   <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">2</span>
@@ -325,7 +325,7 @@ SQL: select named_struct(&ldquo;y&rdquo;, a) as x from events</p>
 Scala: events.select(struct(&quot;</em>&quot;) as &lsquo;x)
 SQL: select struct(*) as x from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;x&#34;</span>: {
     <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#ae81ff">1</span>,
@@ -334,7 +334,7 @@ SQL: select struct(*) as x from events</p>
 }
 </code></pre></div><h2 id="selecting-a-single-array-or-map-element">Selecting a single array or map element</h2>
 <p><code>getItem()</code> 或方括号（即 <code>[]</code>）可用于从数组或map中选择单个元素。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: [<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>]
 }
@@ -343,9 +343,9 @@ SQL: select struct(*) as x from events</p>
 Scala: events.select(&lsquo;a.getItem(0) as &lsquo;x)
 SQL: select a[0] as x from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 { <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#ae81ff">1</span> }
-<span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: {
     <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>
@@ -356,11 +356,11 @@ SQL: select a[0] as x from events</p>
 Scala: events.select(&lsquo;a.getItem(&ldquo;b&rdquo;) as &lsquo;x)
 SQL: select a[&lsquo;b&rsquo;] as x from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 { <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#ae81ff">1</span> }
 </code></pre></div><h2 id="creating-a-row-for-each-array-or-map-element">Creating a row for each array or map element</h2>
 <p><code>explode()</code> 可用于为数组中的每个元素或每个键值对创建一个新行。 这类似于 HiveQL 中的 LATERAL VIEW EXPLODE。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: [<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>]
 }
@@ -369,9 +369,9 @@ SQL: select a[&lsquo;b&rsquo;] as x from events</p>
 Scala: events.select(explode(&lsquo;a) as &lsquo;x)
 SQL: select explode(a) as x from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 [{ <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#ae81ff">1</span> }, { <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#ae81ff">2</span> }]
-</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: {
     <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>,
@@ -383,11 +383,11 @@ SQL: select explode(a) as x from events</p>
 Scala: events.select(explode(&lsquo;a) as Seq(&ldquo;x&rdquo;, &ldquo;y&rdquo;))
 SQL: select explode(a) as (x, y) from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 [{ <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#e6db74">&#34;b&#34;</span>, <span style="color:#f92672">&#34;y&#34;</span>: <span style="color:#ae81ff">1</span> }, { <span style="color:#f92672">&#34;x&#34;</span>: <span style="color:#e6db74">&#34;c&#34;</span>, <span style="color:#f92672">&#34;y&#34;</span>: <span style="color:#ae81ff">2</span> }]
 </code></pre></div><h2 id="selecting-one-field-from-each-item-in-an-array">Selecting one field from each item in an array</h2>
 <p>在数组上使用点表示法时，我们返回一个新数组，其中从每个数组元素中选择了该字段。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: [
     {<span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>},
@@ -399,7 +399,7 @@ SQL: select explode(a) as (x, y) from events</p>
 Scala: events.select(&ldquo;a.b&rdquo;)
 SQL: select a.b from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;b&#34;</span>: [<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>]
 }
@@ -407,7 +407,7 @@ SQL: select a.b from events</p>
 <p>如果您真的想要保留列的复杂结构但是需要将其编码为字符串来存储它，该怎么办？ 你注定了吗？ 当然不是！ Spark SQL提供了类似 <code>to_json()</code> 的函数来将结构编码为字符串，而 <code>from_json()</code> 则将结构作为复杂类型进行检索。 在读取或写入像Kafka这样的流式源时，使用JSON字符串作为列非常有用。 每个Kafka键值记录都会增加一些元数据，例如Kafka中的摄取时间戳，Kafka中的偏移量等。如果包含数据的“value”字段是JSON，则可以使用<code>from_json()</code> 来提取您的数据，丰富它，清理它，然后再将其下游推送到Kafka或将其写入文件。</p>
 <h2 id="encode-a-struct-as-json">Encode a struct as json</h2>
 <p><code>to_json()</code> 可用于将结构转换为JSON字符串。 在将数据写入Kafka时，如果要将多个列重新编码为单个列，此方法特别有用。 SQL中目前不提供此方法。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: {
     <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>
@@ -417,13 +417,13 @@ SQL: select a.b from events</p>
 <p>Python: events.select(to_json(&ldquo;a&rdquo;).alias(&ldquo;c&rdquo;))
 Scala: events.select(to_json(&lsquo;a) as &lsquo;c)</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;c&#34;</span>: <span style="color:#e6db74">&#34;{\&#34;b\&#34;:1}&#34;</span>
 }
 </code></pre></div><h2 id="decode-json-column-as-a-struct">Decode json column as a struct</h2>
 <p><code>from_json()</code> 可用于将带有JSON数据的字符串列转换为结构。 然后，您可以如上所述展平结构以具有单独的列。 SQL中目前不提供此方法。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#e6db74">&#34;{\&#34;b\&#34;:1}&#34;</span>
 }
@@ -435,14 +435,14 @@ Scala:
 val schema = new StructType().add(&ldquo;b&rdquo;, IntegerType)
 events.select(from_json(&lsquo;a, schema) as &lsquo;c)</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;c&#34;</span>: {
     <span style="color:#f92672">&#34;b&#34;</span>: <span style="color:#ae81ff">1</span>
   }
 }
 </code></pre></div><p>有时您可能希望将JSON字符串的一部分保留为JSON，以避免模式中的过多复杂性。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#e6db74">&#34;{\&#34;b\&#34;:{\&#34;x\&#34;:1,\&#34;y\&#34;:{\&#34;z\&#34;:2}}}&#34;</span>
 }
@@ -456,7 +456,7 @@ val schema = new StructType().add(&ldquo;b&rdquo;, new StructType().add(&ldquo;x
 .add(&ldquo;y&rdquo;, StringType))
 events.select(from_json(&lsquo;a, schema) as &lsquo;c)</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 {
   <span style="color:#f92672">&#34;c&#34;</span>: {
     <span style="color:#f92672">&#34;b&#34;</span>: {
@@ -467,7 +467,7 @@ events.select(from_json(&lsquo;a, schema) as &lsquo;c)</p>
 }
 </code></pre></div><h2 id="parse-a-set-of-fields-from-a-column-containing-json">Parse a set of fields from a column containing JSON</h2>
 <p><code>json_tuple()</code> 可用于提取带有JSON数据的字符串列中可用的字段。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 {
   <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#e6db74">&#34;{\&#34;b\&#34;:1}&#34;</span>
 }
@@ -476,19 +476,19 @@ events.select(from_json(&lsquo;a, schema) as &lsquo;c)</p>
 Scala:  events.select(json_tuple(&lsquo;a, &ldquo;b&rdquo;) as &lsquo;c)
 SQL:    select json_tuple(a, &ldquo;b&rdquo;) as c from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 { <span style="color:#f92672">&#34;c&#34;</span>: <span style="color:#ae81ff">1</span> }
 </code></pre></div><p>有时字符串列可能不会自我描述为JSON，但可能仍然具有格式良好的结构。 例如，它可以是使用特定Log4j格式生成的日志消息。 Spark SQL可以轻松地为您构建这些字符串！</p>
 <h2 id="parse-a-well-formed-string-column">Parse a well-formed string column</h2>
 <p><code>regexp_extract()</code> 可用于使用正则表达式解析字符串。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">i</span><span style="color:#960050;background-color:#1e0010">n</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">input</span>
 [{ <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#e6db74">&#34;x: 1&#34;</span> }, { <span style="color:#f92672">&#34;a&#34;</span>: <span style="color:#e6db74">&#34;y: 2&#34;</span> }]
 </code></pre></div><blockquote>
-<p>Python: events.select(regexp_extract(&ldquo;a&rdquo;, &ldquo;([a-z]):&quot;, 1).alias(&ldquo;c&rdquo;))
-Scala:  events.select(regexp_extract(&lsquo;a, &ldquo;([a-z]):&quot;, 1) as &lsquo;c)
-SQL:    select regexp_extract(a, &ldquo;([a-z]):&quot;, 1) as c from events</p>
+<p>Python: events.select(regexp_extract(&ldquo;a&rdquo;, &ldquo;([a-z]):&rdquo;, 1).alias(&ldquo;c&rdquo;))
+Scala:  events.select(regexp_extract(&lsquo;a, &ldquo;([a-z]):&rdquo;, 1) as &lsquo;c)
+SQL:    select regexp_extract(a, &ldquo;([a-z]):&rdquo;, 1) as c from events</p>
 </blockquote>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#960050;background-color:#1e0010">/</span> <span style="color:#960050;background-color:#1e0010">o</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span><span style="color:#960050;background-color:#1e0010">p</span><span style="color:#960050;background-color:#1e0010">u</span><span style="color:#960050;background-color:#1e0010">t</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="color:#960050;background-color:#1e0010">//</span> <span style="color:#960050;background-color:#1e0010">output</span>
 [{ <span style="color:#f92672">&#34;c&#34;</span>: <span style="color:#e6db74">&#34;x&#34;</span> }, { <span style="color:#f92672">&#34;c&#34;</span>: <span style="color:#e6db74">&#34;y&#34;</span> }]
 </code></pre></div><p>这是很多转变！ 现在让我们看看一些现实生活中的用例，以便充分利用所有这些数据格式和数据处理功能。</p>
 <h1 id="利用所有这些力量">利用所有这些力量</h1>
