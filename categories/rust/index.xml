@@ -1,0 +1,191 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    Rust on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/categories/rust/</link>
+        <description>Recent content  in Rust
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Tue, 19 Jan 2021 23:19:17 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/categories/rust/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Parser API - 解析 INI</title>
+                <link>https://ohmyweekly.github.io/notes/2021-01-19-parser-api-example-ini/</link>
+                
+                
+                <description>&lt;blockquote&gt;Parser API - Example: INI&lt;/blockquote&gt;&lt;h2 id=&#34;例子-ini&#34;&gt;例子: INI&lt;/h2&gt;
+&lt;p&gt;INI(initialization 的简称)文件是简单的配置文件。由于没有标准的格式，我们将编写一个能够解析这个例子文件的程序。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-ini&#34; data-lang=&#34;ini&#34;&gt;&lt;span class=&#34;na&#34;&gt;username&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;noha&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;password&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;plain_text&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;salt&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;NaCl&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;[server_1]&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;interface&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;eth0&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;ip&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;127.0.0.1&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;document_root&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;/var/www/example.org&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;[empty_section]&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;[second_server]&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;document_root&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;/var/www/example.com&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;ip&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;
+&lt;span class=&#34;na&#34;&gt;interface&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;eth1&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;每一行都包含一个键和值，中间用等号隔开；或者包含一个用方括号括起来的章节名；或者是空白，没有任何意义。&lt;/p&gt;
+&lt;p&gt;每当出现一个节名，下面的键和值就属于该节，直到下一个节名。文件开头的键值对属于一个隐式的 &amp;ldquo;空&amp;quot;节。&lt;/p&gt;
+&lt;h2 id=&#34;编写-grammar&#34;&gt;编写 grammar&lt;/h2&gt;
+&lt;p&gt;首先使用 Cargo &lt;a href=&#34;https://pest.rs/book/examples/csv.html#setup&#34;&gt;初始化一个新项目&lt;/a&gt;，添加依赖关系 &lt;code&gt;pest = &amp;quot;2.0&amp;quot;&lt;/code&gt; 和  &lt;code&gt;pest_derive = &amp;quot;2.0&amp;quot;&lt;/code&gt;。创建一个新文件 &lt;code&gt;src/ini.pest&lt;/code&gt; 来保存 grammar。&lt;/p&gt;
+&lt;p&gt;我们文件中感兴趣的文本 - &lt;code&gt;username&lt;/code&gt;、&lt;code&gt;/var/www/example.org&lt;/code&gt; 等 - 只由几个字符组成。让我们制定一个规则来识别该集合中的单个字符。内置的规则 &lt;code&gt;ASCII_ALPHANUMERIC&lt;/code&gt; 是表示任何大写或小写 ASCII 字母或任何数字的快捷方式。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;char = { ASCII_ALPHANUMERIC | &amp;quot;.&amp;quot; | &amp;quot;_&amp;quot; | &amp;quot;/&amp;quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;节名和属性键不能为空，但属性值可以为空（如上文中的 &lt;code&gt;ip=&lt;/code&gt; 行）。也就是说，前者由一个或多个字符组成，&lt;code&gt;char+&lt;/code&gt;; 后者由零或多个字符组成，&lt;code&gt;char*&lt;/code&gt;。我们将其含义分为两条规则。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;name = { char+ }
+value = { char* }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;现在很容易表达这两种输入行。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;section = { &amp;quot;[&amp;quot; ~ name ~ &amp;quot;]&amp;quot; }
+property = { name ~ &amp;quot;=&amp;quot; ~ value }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;最后，我们需要一个规则来表示整个输入文件。表达式 &lt;code&gt;(section | property)?&lt;/code&gt; 匹配 &lt;code&gt;section&lt;/code&gt;、&lt;code&gt;property&lt;/code&gt;，否则什么也不匹配。使用内置规则 &lt;code&gt;NEWLINE&lt;/code&gt; 来匹配行尾。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;file = {
+    SOI ~
+    ((section | property)? ~ NEWLINE)* ~
+    EOI
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;要将解析器编译成 Rust，我们需要在 &lt;code&gt;src/main.rs&lt;/code&gt; 中添加以下内容。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;extern&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;crate&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pest&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[macro_use]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;extern&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;crate&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pest_derive&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;pest&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Parser&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Parser)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[grammar = &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;ini.pest&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;INIParser&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;程序初始化&#34;&gt;程序初始化&lt;/h2&gt;
+&lt;p&gt;现在我们可以读取文件，并用 &lt;code&gt;pest&lt;/code&gt; 进行解析。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;collections&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;HashMap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;fs&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unparsed_file&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fs&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;read_to_string&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;config.ini&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;).&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;cannot read file&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;file&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;INIParser&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;parse&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Rule&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;file&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unparsed_file&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;unsuccessful parse&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// unwrap the parse result
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// get and unwrap the `file` rule; never fails
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我们将使用嵌套的 &lt;code&gt;HashMap&lt;/code&gt; 来表达属性列表。外层哈希 map 将以章节名称作为键，以章节内容（内部哈希 map）作为值。每个内部哈希 map 将有属性键和属性值。例如，要访问 &lt;code&gt;server_1&lt;/code&gt; 的 &lt;code&gt;document_root&lt;/code&gt;，我们可以写 &lt;code&gt;properties[&amp;quot;server_1&amp;quot;][&amp;quot;document_root&amp;quot;]&lt;/code&gt;。隐含的 &amp;ldquo;空&amp;quot;节将由常规部分表示，名称为空字符串 &lt;code&gt;&amp;quot;&amp;quot;&lt;/code&gt;，这样 &lt;code&gt;properties[&amp;quot;&amp;quot;][&amp;quot;salt&amp;quot;]&lt;/code&gt; 就是有效的。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;properties&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;HashMap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;HashMap&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;HashMap&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，哈希 map 的键和值都是 &lt;code&gt;&amp;amp;str&lt;/code&gt;，即借用的字符串。&lt;code&gt;pest&lt;/code&gt; 解析器不会复制他们解析的输入，而是借用。所有用于检查解析结果的方法都会返回从原始解析字符串中借用字符串。&lt;/p&gt;
+&lt;h2 id=&#34;主循环&#34;&gt;主循环&lt;/h2&gt;
+&lt;p&gt;现在我们解释解析结果。我们循环浏览文件的每一行，这一行要么是节名，要么是键值属性对。如果遇到一个节名，我们更新一个变量。如果遇到一个属性对，我们就获取一个对当前章节的哈希 map 的引用，然后把这个属性对插入到这个哈希 map 中。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;current_section_name&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;in&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;file&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;into_inner&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_rule&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Rule&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;section&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inner_rules&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;into_inner&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// { name }
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;current_section_name&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inner_rules&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Rule&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;property&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inner_rules&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;into_inner&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// { name ~ &amp;#34;=&amp;#34; ~ value }
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inner_rules&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inner_rules&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// Insert an empty inner hash map if the outer hash map hasn&amp;#39;t
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// seen this section name before.
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;section&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;properties&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;entry&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;current_section_name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;).&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;or_default&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;section&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;insert&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Rule&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;EOI&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unreachable&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在输出方面，我们用&lt;a href=&#34;https://doc.rust-lang.org/std/fmt/index.html#sign0&#34;&gt;漂亮的打印&lt;/a&gt; &lt;code&gt;Debug&lt;/code&gt; 格式简单地转储哈希 map。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;main&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// ...
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;{:#?}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;properties&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;空白&#34;&gt;空白&lt;/h2&gt;
+&lt;p&gt;如果你把本章顶部的例子 INI 文件复制到 &lt;code&gt;config.ini&lt;/code&gt; 文件中并运行程序，它将无法解析。我们已经忘记了等号周围的可选空格!&lt;/p&gt;
+&lt;p&gt;对于大型 grammar 来说，处理空白会很不方便。显示地编写 &lt;code&gt;whitespace&lt;/code&gt; 规则并手动插入空白会让 grammar 变得难以阅读和修改。&lt;code&gt;pest&lt;/code&gt; 提供了一个&lt;a href=&#34;https://pest.rs/book/grammars/syntax.html#implicit-whitespace&#34;&gt;特殊规则 &lt;code&gt;WHITESPACE&lt;/code&gt;&lt;/a&gt; 的解决方案。如果定义了 &lt;code&gt;WHITESPACE&lt;/code&gt;，它将被隐式地运行，尽可能多次地在每个波浪号 &lt;code&gt;~&lt;/code&gt; 和每个重复之间运行（例如，&lt;code&gt;*&lt;/code&gt; 和 &lt;code&gt;+&lt;/code&gt;）。对于我们的 INI 解析器，只有空格才是合法的 whitespace。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;WHITESPACE = _{ &amp;quot; &amp;quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们用一个前导的下划线 &lt;code&gt;_{ ... }&lt;/code&gt; 来标记 &lt;code&gt;WHITESPACE&lt;/code&gt; 规则的&lt;a href=&#34;https://pest.rs/book/grammars/syntax.html#silent-and-atomic-rules&#34;&gt;静默&lt;/a&gt;。}. 这样，即使它匹配，也不会出现在其他规则中。如果它不是静默的，解析就会复杂得多，因为对  &lt;code&gt;Pairs::next(...)&lt;/code&gt; 的每次调用都有可能返回 &lt;code&gt;Rule::WHITESPACE&lt;/code&gt; 而不是想要的下一条规则。&lt;/p&gt;
+&lt;p&gt;但是等等! 节名、键或值中不应该有空格！目前，空格是自动插入的。目前，在 &lt;code&gt;name = { char+ }&lt;/code&gt; 中，空格会自动插入字符之间。对空格敏感的规则需要用前导符号 &lt;code&gt;@{ ... }&lt;/code&gt; 来标记&lt;a href=&#34;https://pest.rs/book/grammars/syntax.html#atomic&#34;&gt;原子&lt;/a&gt;。}. 在原子规则中，自动的空白处理是被禁用的，而内部规则是静默的。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;name = @{ char+ }
+value = @{ char* }
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;完工&#34;&gt;完工&lt;/h2&gt;
+&lt;p&gt;试试吧！确保文件 &lt;code&gt;config.ini&lt;/code&gt; 存在，然后运行程序! 你应该看到这样的东西。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ cargo run
+  [ ... ]
+{
+    &amp;quot;&amp;quot;: {
+        &amp;quot;password&amp;quot;: &amp;quot;plain_text&amp;quot;,
+        &amp;quot;username&amp;quot;: &amp;quot;noha&amp;quot;,
+        &amp;quot;salt&amp;quot;: &amp;quot;NaCl&amp;quot;
+    },
+    &amp;quot;second_server&amp;quot;: {
+        &amp;quot;ip&amp;quot;: &amp;quot;&amp;quot;,
+        &amp;quot;document_root&amp;quot;: &amp;quot;/var/www/example.com&amp;quot;,
+        &amp;quot;interface&amp;quot;: &amp;quot;eth1&amp;quot;
+    },
+    &amp;quot;server_1&amp;quot;: {
+        &amp;quot;interface&amp;quot;: &amp;quot;eth0&amp;quot;,
+        &amp;quot;document_root&amp;quot;: &amp;quot;/var/www/example.org&amp;quot;,
+        &amp;quot;ip&amp;quot;: &amp;quot;127.0.0.1&amp;quot;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rust">Rust</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rust">Rust</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/grammar">Grammar</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-01-19-parser-api-example-ini/</guid>
+                <pubDate>Tue, 19 Jan 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+

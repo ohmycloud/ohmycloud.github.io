@@ -10,12 +10,804 @@
             <link href="https://ohmyweekly.github.io/tags/julia/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/julia/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/julia/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2020-12-27T22:46:58+08:00</updated>
+    <updated>2021-01-19T23:19:17+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/tags/julia/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[元编程]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2020-12-29-metaprogramming/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-21-repl-in-julia/?utm_source=atom_feed" rel="related" type="text/html" title="Julia 中的 REPL" />
+            
+                <id>https://ohmyweekly.github.io/notes/2020-12-29-metaprogramming/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2020-12-29T00:00:00+08:00</published>
+            <updated>2020-12-29T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Metaprogramming</blockquote><h1 id="元编程">元编程</h1>
+<p>在Julia语言中，Lisp最强的遗产是它对元编程的支持。和Lisp一样，Julia也将自己的代码表示为语言本身的数据结构。由于代码是由可以在语言内部创建和操作的对象来表示的，所以程序可以转换和生成自己的代码。这使得复杂的代码生成不需要额外的构建步骤，也允许真正的Lisp式的宏在<a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">抽象语法树</a>的层次上操作。相比之下，预处理器的 &ldquo;宏 &ldquo;系统，就像C和C++一样，在任何实际的解析或解释发生之前，都会进行文本操作和替换。由于Julia中所有的数据类型和代码都是由Julia数据结构来表示的，因此，强大的<a href="https://en.wikipedia.org/wiki/Reflection_%28computer_programming%29">反射</a>功能可以像其他数据一样探索程序及其类型的内部。</p>
+<h2 id="程序表示">程序表示</h2>
+<p>每个Julia程序都是以字符串的形式开始的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">prog</span> <span class="o">=</span> <span class="s">&#34;1 + 1&#34;</span>
+<span class="s">&#34;1 + 1&#34;</span>
+</code></pre></div><p><strong>接下来会发生什么？</strong></p>
+<p>下一步是将每个字符串<a href="https://en.wikipedia.org/wiki/Parsing#Computer_languages">解析</a>成一个对象，称为表达式，用Julia类型 <a href="https://docs.julialang.org/en/v1/base/base/#Core.Expr">Expr</a> 表示。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex1</span> <span class="o">=</span> <span class="n">Meta</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">prog</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ex1</span><span class="p">)</span>
+<span class="kt">Expr</span>
+</code></pre></div><p>Expr对象包含两部分。</p>
+<p>a 符号标识表达式的种类。符号是一个内嵌的字符串标识符（下文将详细讨论）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex1</span><span class="o">.</span><span class="n">head</span>
+<span class="o">:</span><span class="n">call</span>
+</code></pre></div><p>表达式参数，可以是符号、其他表达式或文字值。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex1</span><span class="o">.</span><span class="n">args</span>
+<span class="mi">3</span><span class="o">-</span><span class="n">element</span> <span class="kt">Array</span><span class="p">{</span><span class="kt">Any</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span><span class="o">:</span>
+  <span class="o">:+</span>
+ <span class="mi">1</span>
+ <span class="mi">1</span>
+</code></pre></div><p>也可以直接用前缀符号构造表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex2</span> <span class="o">=</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:+</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre></div><p>上面构造的两个表达式&ndash;通过解析和直接构造&ndash;是等价的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex1</span> <span class="o">==</span> <span class="n">ex2</span>
+<span class="kc">true</span>
+</code></pre></div><p>这里的关键点是，Julia代码在内部被表示为一个数据结构，可以从语言本身访问。</p>
+<p>dump函数提供了Expr对象的缩进和注释显示。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">dump</span><span class="p">(</span><span class="n">ex2</span><span class="p">)</span>
+<span class="kt">Expr</span>
+  <span class="n">head</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">call</span>
+  <span class="n">args</span><span class="o">:</span> <span class="kt">Array</span><span class="p">{</span><span class="kt">Any</span><span class="p">}((</span><span class="mi">3</span><span class="p">,))</span>
+    <span class="mi">1</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="o">+</span>
+    <span class="mi">2</span><span class="o">:</span> <span class="kt">Int64</span> <span class="mi">1</span>
+    <span class="mi">3</span><span class="o">:</span> <span class="kt">Int64</span> <span class="mi">1</span>
+</code></pre></div><p>Expr对象也可以被嵌套。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex3</span> <span class="o">=</span> <span class="n">Meta</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&#34;(4 + 4) / 2&#34;</span><span class="p">)</span>
+<span class="o">:</span><span class="p">((</span><span class="mi">4</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+</code></pre></div><p>另一种查看表达式的方法是使用Meta.show_sexpr，它可以显示给定Expr的S表达式形式，这对于Lisp的用户来说可能看起来非常熟悉。下面是一个例子，说明如何在嵌套的Expr上显示。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">Meta</span><span class="o">.</span><span class="n">show_sexpr</span><span class="p">(</span><span class="n">ex3</span><span class="p">)</span>
+<span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:/</span><span class="p">,</span> <span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:+</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+</code></pre></div><p>符号</p>
+<p>在Julia中，:字符有两种语法用途。第一种形式是创建一个Symbol，一个内部字符串，作为表达式的一个构件。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="n">foo</span>
+<span class="o">:</span><span class="n">foo</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ans</span><span class="p">)</span>
+<span class="kt">Symbol</span>
+</code></pre></div><p>符号构造函数接受任何数量的参数，并通过将它们的字符串表示连接在一起来创建一个新的符号。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="n">foo</span> <span class="o">==</span> <span class="kt">Symbol</span><span class="p">(</span><span class="s">&#34;foo&#34;</span><span class="p">)</span>
+<span class="kc">true</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="kt">Symbol</span><span class="p">(</span><span class="s">&#34;func&#34;</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<span class="o">:</span><span class="n">func10</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="kt">Symbol</span><span class="p">(</span><span class="o">:</span><span class="n">var</span><span class="p">,</span><span class="sc">&#39;_&#39;</span><span class="p">,</span><span class="s">&#34;sym&#34;</span><span class="p">)</span>
+<span class="o">:</span><span class="n">var_sym</span>
+</code></pre></div><p>请注意，要使用 : 语法，符号的名称必须是一个有效的标识符。否则必须使用Symbol(str)构造函数。</p>
+<p>在表达式的上下文中，符号用于指示对变量的访问；当表达式被评估时，符号会被替换为在适当的作用域中与该符号绑定的值。</p>
+<p>有时，为了避免在解析时产生歧义，需要在 : 的参数周围加括号。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="p">(</span><span class="o">:</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="o">:</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="p">(</span><span class="o">::</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="o">::</span><span class="p">)</span>
+</code></pre></div><p>表达式和评价</p>
+<dl>
+<dt>引用</dt>
+<dd>
+<p>字符的第二个语法目的是在不使用显式Expr构造函数的情况下创建表达式对象。这就是所谓的引用。在Julia代码的单条语句周围，用成对的括号跟上 : 字符，就可以根据所附的代码生成一个Expr对象。下面是用于引用一个算术表达式的简短形式的例子。</p>
+</dd>
+</dl>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="o">*</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="kt">Expr</span>
+</code></pre></div><p>(要查看这个表达式的结构，可以试试ex.head和ex.args，或者使用上面的dump或Meta.@dump)</p>
+<p>注意，可以使用Meta.parse或直接使用Expr形式构造等价的表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span>      <span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">c</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>       <span class="o">==</span>
+       <span class="n">Meta</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&#34;a + b*c + 1&#34;</span><span class="p">)</span> <span class="o">==</span>
+       <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:+</span><span class="p">,</span> <span class="o">:</span><span class="n">a</span><span class="p">,</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:*</span><span class="p">,</span> <span class="o">:</span><span class="n">b</span><span class="p">,</span> <span class="o">:</span><span class="n">c</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+<span class="kc">true</span>
+</code></pre></div><p>解析器提供的表达式一般只有符号、其他表达式和字面值作为其args，而Julia代码构建的表达式可以有任意的运行时值，没有字面形式作为args。在这个具体的例子中，+和a是符号，*(b,c)是一个子表达式，1是一个64位有符号整数的文字形式。</p>
+<p>对于多个表达式，还有第二种引用的语法形式：用引号&hellip;&hellip;结尾括起来的代码块。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="k">quote</span>
+           <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
+           <span class="n">y</span> <span class="o">=</span> <span class="mi">2</span>
+           <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+       <span class="k">end</span>
+<span class="k">quote</span>
+    <span class="cm">#= none:2 =#</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="cm">#= none:3 =#</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="cm">#= none:4 =#</span>
+    <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+<span class="k">end</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="kt">Expr</span>
+</code></pre></div><p>插值</p>
+<p>用值参数直接构造Expr对象是很强大的，但与 &ldquo;正常的 &ldquo;Julia语法相比，Expr构造函数可能很乏味。作为一种替代方法，Julia允许将字元或表达式插值到引用的表达式中。插值由前缀$表示。</p>
+<p>在这个例子中，变量a的值被内插了。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+</code></pre></div><p>不支持向未引用的表达式插值，并会导致编译时错误。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="o">$</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="n">ERROR</span><span class="o">:</span> <span class="n">syntax</span><span class="o">:</span> <span class="s">&#34;$&#34;</span> <span class="n">expression</span> <span class="n">outside</span> <span class="k">quote</span>
+</code></pre></div><p>在这个例子中，元组(1,2,3)作为表达式被内插到一个条件测试中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="kp">in</span> <span class="o">$:</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span> <span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="kp">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</code></pre></div><p>在表达式插值中使用$是有意让人联想到字符串插值和命令插值。表达式插值可以方便的、可读的程序化构造复杂的Julia表达式。</p>
+<p>劈叉插值</p>
+<p>请注意，$插值语法只允许在一个包围表达式中插入一个表达式。偶尔，你有一个表达式数组，需要它们全部成为包围表达式的参数。这可以用语法$(xs&hellip;)来完成。例如，下面的代码生成了一个函数调用，其中的参数数是通过编程确定的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="o">:</span><span class="n">x</span><span class="p">,</span> <span class="o">:</span><span class="n">y</span><span class="p">,</span> <span class="o">:</span><span class="n">z</span><span class="p">];</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">$</span><span class="p">(</span><span class="n">args</span><span class="o">...</span><span class="p">)))</span>
+<span class="o">:</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span>
+</code></pre></div><p>嵌套引用</p>
+<p>自然，引号表达式有可能包含其他引号表达式。在这些情况下，理解内插是如何工作的可能有点棘手。考虑一下这个例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">);</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nb">e</span> <span class="o">=</span> <span class="k">quote</span> <span class="k">quote</span> <span class="o">$</span><span class="n">x</span> <span class="k">end</span> <span class="k">end</span>
+<span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="k">quote</span><span class="p">,</span> <span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:$</span><span class="p">,</span> <span class="o">:</span><span class="n">x</span><span class="p">))</span>
+<span class="k">end</span><span class="p">))</span>
+<span class="k">end</span>
+</code></pre></div><p>注意，结果中包含$x，这意味着x还没有被评估。换句话说，$表达式 &ldquo;属于 &ldquo;内部引号表达式，因此它的参数只有在内部引号表达式时才会被评估。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="nb">e</span><span class="p">)</span>
+<span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span>
+<span class="k">end</span>
+</code></pre></div><p>但是，外引号表达式能够对内引号中的$内的值进行插值。这是用多个$来完成的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nb">e</span> <span class="o">=</span> <span class="k">quote</span> <span class="k">quote</span> <span class="o">$$</span><span class="n">x</span> <span class="k">end</span> <span class="k">end</span>
+<span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="k">quote</span><span class="p">,</span> <span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:$</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)))</span>
+<span class="k">end</span><span class="p">))</span>
+<span class="k">end</span>
+</code></pre></div><p>注意到(1+2)现在出现在结果中，而不是符号x。对这个表达式进行评估，得到一个内插的3。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="nb">e</span><span class="p">)</span>
+<span class="k">quote</span>
+    <span class="cm">#= none:1 =#</span>
+    <span class="mi">3</span>
+<span class="k">end</span>
+</code></pre></div><p>这种行为背后的直觉是，x对每个$都会被评估一次：一个$的工作原理类似于eval(:x)，给出x的值，而两个$的工作原理相当于eval(eval(:x))。</p>
+<p>QuoteNode</p>
+<p>引号形式在AST中的通常表示是一个带头:quote的Expr。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">dump</span><span class="p">(</span><span class="n">Meta</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&#34;:(1+2)&#34;</span><span class="p">))</span>
+<span class="kt">Expr</span>
+  <span class="n">head</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="k">quote</span>
+  <span class="n">args</span><span class="o">:</span> <span class="kt">Array</span><span class="p">{</span><span class="kt">Any</span><span class="p">}((</span><span class="mi">1</span><span class="p">,))</span>
+    <span class="mi">1</span><span class="o">:</span> <span class="kt">Expr</span>
+      <span class="n">head</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">call</span>
+      <span class="n">args</span><span class="o">:</span> <span class="kt">Array</span><span class="p">{</span><span class="kt">Any</span><span class="p">}((</span><span class="mi">3</span><span class="p">,))</span>
+        <span class="mi">1</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="o">+</span>
+        <span class="mi">2</span><span class="o">:</span> <span class="kt">Int64</span> <span class="mi">1</span>
+        <span class="mi">3</span><span class="o">:</span> <span class="kt">Int64</span> <span class="mi">2</span>
+</code></pre></div><p>正如我们所看到的，这类表达式支持用$进行插值，但是在某些情况下，有必要在不进行插值的情况下引用代码。这种引用还没有语法，但在内部表示为一个类型为QuoteNode的对象。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">Meta</span><span class="o">.</span><span class="n">quot</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:$</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">2</span><span class="p">))))</span>
+<span class="mi">3</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="kt">QuoteNode</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:$</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">2</span><span class="p">))))</span>
+<span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:$</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))))</span>
+</code></pre></div><p>该解析器产生的QuoteNodes用于简单的引用项目，如符号。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">dump</span><span class="p">(</span><span class="n">Meta</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s">&#34;:x&#34;</span><span class="p">))</span>
+<span class="kt">QuoteNode</span>
+  <span class="n">value</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">x</span>
+</code></pre></div><p>QuoteNode还可以用于某些高级元编程任务。</p>
+<p>评估表达式</p>
+<p>给定一个表达式对象，可以使用eval使Julia在全局范围内对其进行评估（执行）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ans</span><span class="p">)</span>
+<span class="mi">3</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="n">ERROR</span><span class="o">:</span> <span class="kt">UndefVarError</span><span class="o">:</span> <span class="n">b</span> <span class="n">not</span> <span class="n">defined</span>
+<span class="p">[</span><span class="o">...</span><span class="p">]</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="mi">3</span>
+</code></pre></div><p>每个模块都有自己的 eval 函数，它可以在全局范围内评估表达式。传递给eval的表达式并不局限于返回值&ndash;它们也可以产生副作用，改变模块环境的状态。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span>
+<span class="n">ERROR</span><span class="o">:</span> <span class="kt">UndefVarError</span><span class="o">:</span> <span class="n">x</span> <span class="n">not</span> <span class="n">defined</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="mi">1</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span>
+<span class="mi">1</span>
+</code></pre></div><p>在这里，对表达式对象的评价会导致一个值被分配给全局变量x。</p>
+<p>由于表达式只是Expr对象，可以通过编程构造，然后进行评估，因此可以动态生成任意代码，然后使用eval进行运行。下面是一个简单的例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:+</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="o">:</span><span class="n">b</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="mi">3</span>
+</code></pre></div><p>a的值用于构造表达式ex，该表达式将+函数应用于值1和变量b，注意a和b的使用方式的重要区别。</p>
+<p>变量a的值在表达式构造时被用作表达式中的即时值。因此，当表达式被评估时，a的值不再重要：表达式中的值已经是1，无论a的值是多少，都是独立的。
+另一方面，在表达式的构造中使用了符号:b，所以变量b的值在那个时候是无关紧要的&ndash;:b只是一个符号，变量b甚至不需要被定义。但在表达式评估时，符号:b的值是通过查找变量b的值来解决的。
+表达式上的函数</p>
+<p>如上所述，Julia的一个极其有用的特性是在Julia本身内部生成和操作Julia代码的能力。我们已经看到了一个函数返回Expr对象的例子：parse函数，它接收一串Julia代码并返回相应的Expr。一个函数也可以接受一个或多个Expr对象作为参数，并返回另一个Expr。下面是一个简单的、激励性的例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span> <span class="n">math_expr</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">op2</span><span class="p">)</span>
+           <span class="n">expr</span> <span class="o">=</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">op2</span><span class="p">)</span>
+           <span class="k">return</span> <span class="n">expr</span>
+       <span class="k">end</span>
+<span class="n">math_expr</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span>  <span class="n">ex</span> <span class="o">=</span> <span class="n">math_expr</span><span class="p">(</span><span class="o">:+</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:*</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">5</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="mi">21</span>
+</code></pre></div><p>作为另一个例子，这里有一个函数，它可以将任何数字参数翻倍，但不考虑表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span> <span class="n">make_expr2</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">opr1</span><span class="p">,</span> <span class="n">opr2</span><span class="p">)</span>
+           <span class="n">opr1f</span><span class="p">,</span> <span class="n">opr2f</span> <span class="o">=</span> <span class="n">map</span><span class="p">(</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="kp">isa</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="kt">Number</span><span class="p">)</span> <span class="o">?</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span> <span class="o">:</span> <span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">opr1</span><span class="p">,</span> <span class="n">opr2</span><span class="p">))</span>
+           <span class="n">retexpr</span> <span class="o">=</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">opr1f</span><span class="p">,</span> <span class="n">opr2f</span><span class="p">)</span>
+           <span class="k">return</span> <span class="n">retexpr</span>
+       <span class="k">end</span>
+<span class="n">make_expr2</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">make_expr2</span><span class="p">(</span><span class="o">:+</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="n">make_expr2</span><span class="p">(</span><span class="o">:+</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">call</span><span class="p">,</span> <span class="o">:*</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="mi">42</span>
+</code></pre></div><h2 id="宏">宏</h2>
+<p>宏提供了一种将生成的代码包含在程序的最后主体中的方法。宏将一个参数元组映射到一个返回的表达式，生成的表达式直接被编译，而不需要运行时 <a href="https://docs.julialang.org/en/v1/base/base/#Base.MainInclude.eval">eval</a> 调用。宏参数可以包括表达式、字面值和符号。</p>
+<h3 id="基础知识">基础知识</h3>
+<p>这里有一个特别简单的宏。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">sayhello</span><span class="p">()</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span> <span class="n">println</span><span class="p">(</span><span class="s">&#34;Hello, world!&#34;</span><span class="p">)</span> <span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@sayhello</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>在 Julia 的语法中，宏有一个专门的字符：<code>@</code>(at 符号)，后面是 <code>macro NAME ... end</code> 块中声明的唯一名称&hellip;.。在这个例子中，编译器将用 <code>@sayhello</code> 替换所有的实例。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="o">:</span><span class="p">(</span> <span class="n">println</span><span class="p">(</span><span class="s">&#34;Hello, world!&#34;</span><span class="p">)</span> <span class="p">)</span>
+</code></pre></div><p>当在 REPL 中输入 <code>@sayhello</code> 时，表达式会立即执行，因此我们只看到求值结果。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@sayhello</span><span class="p">()</span>
+<span class="n">Hello</span><span class="p">,</span> <span class="n">world!</span>
+</code></pre></div><p>现在，考虑一个稍微复杂的宏。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">sayhello</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span> <span class="n">println</span><span class="p">(</span><span class="s">&#34;Hello, &#34;</span><span class="p">,</span> <span class="o">$</span><span class="n">name</span><span class="p">)</span> <span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@sayhello</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>这个宏只取一个参数：<code>name</code>。当遇到 <code>@sayhello</code> 时，引用的表达式会被展开，将参数的值内插到最终的表达式中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@sayhello</span><span class="p">(</span><span class="s">&#34;human&#34;</span><span class="p">)</span>
+<span class="n">Hello</span><span class="p">,</span> <span class="n">human</span>
+</code></pre></div><p>我们可以使用函数 <a href="https://docs.julialang.org/en/v1/base/base/#Base.macroexpand">macroexpand</a> 查看引用的返回表达式（重要提示：这是调试宏的一个极其有用的工具）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="n">macroexpand</span><span class="p">(</span><span class="n">Main</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="nd">@sayhello</span><span class="p">(</span><span class="s">&#34;human&#34;</span><span class="p">))</span> <span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="n">Main</span><span class="o">.</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;Hello, &#34;</span><span class="p">,</span> <span class="s">&#34;human&#34;</span><span class="p">))</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="kt">Expr</span>
+</code></pre></div><p>我们可以看到，&ldquo;human&rdquo; 的字面值已经被插进了表达式中。</p>
+<p>此外，还存在一个宏 <a href="https://docs.julialang.org/en/v1/base/base/#Base.@macroexpand">@macroexpand</a>，也许比 <code>macroexpand</code> 函数更方便一些。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@macroexpand</span> <span class="nd">@sayhello</span> <span class="s">&#34;human&#34;</span>
+<span class="o">:</span><span class="p">(</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;Hello, &#34;</span><span class="p">,</span> <span class="s">&#34;human&#34;</span><span class="p">))</span>
+</code></pre></div><h3 id="等等为什么是宏">等等：为什么是宏？</h3>
+<p>我们在前一节已经看到了一个函数 <code>f(::Expr...) -&gt; Expr</code>。其实，<a href="https://docs.julialang.org/en/v1/base/base/#Base.macroexpand">macroexpand</a> 也是这样一个函数。那么，为什么要有宏的存在呢？</p>
+<p>宏是必要的，因为它们在代码解析时执行，因此，宏允许程序员在完整程序运行之前生成并包含自定义代码的片段。为了说明两者的区别，请考虑下面的例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">twostep</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+           <span class="n">println</span><span class="p">(</span><span class="s">&#34;I execute at parse time. The argument is: &#34;</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;I execute at runtime. The argument is: &#34;</span><span class="p">,</span> <span class="o">$</span><span class="n">arg</span><span class="p">))</span>
+       <span class="k">end</span>
+<span class="nd">@twostep</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span> <span class="o">=</span> <span class="n">macroexpand</span><span class="p">(</span><span class="n">Main</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="nd">@twostep</span> <span class="o">:</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="p">);</span>
+<span class="nb">I</span> <span class="n">execute</span> <span class="n">at</span> <span class="n">parse</span> <span class="n">time</span><span class="o">.</span> <span class="n">The</span> <span class="n">argument</span> <span class="n">is</span><span class="o">:</span> <span class="o">:</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+</code></pre></div><p>当调用 <a href="https://docs.julialang.org/en/v1/base/base/#Base.macroexpand">macroexpand</a> 时，会执行对 <a href="https://docs.julialang.org/en/v1/base/io-network/#Base.println">println</a> 的第一次调用。结果的表达式只包含第二个 <code>println</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="kt">Expr</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ex</span>
+<span class="o">:</span><span class="p">(</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;I execute at runtime. The argument is: &#34;</span><span class="p">,</span> <span class="o">$</span><span class="p">(</span><span class="kt">Expr</span><span class="p">(</span><span class="o">:</span><span class="n">copyast</span><span class="p">,</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="kt">QuoteNode</span><span class="p">(</span><span class="o">:</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))))))))</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">eval</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+<span class="nb">I</span> <span class="n">execute</span> <span class="n">at</span> <span class="n">runtime</span><span class="o">.</span> <span class="n">The</span> <span class="n">argument</span> <span class="n">is</span><span class="o">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</code></pre></div><h3 id="宏调用">宏调用</h3>
+<p>宏的调用有以下一般语法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="nd">@name</span> <span class="n">expr1</span> <span class="n">expr2</span> <span class="o">...</span>
+<span class="nd">@name</span><span class="p">(</span><span class="n">expr1</span><span class="p">,</span> <span class="n">expr2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div><p>注意在宏名前有区别的 <code>@</code>，第一种形式的参数表达式之间没有逗号，第二种形式的 <code>@</code> 名后没有空格。两种样式不能混用。例如，下面的语法与上面的例子不同，它将元组 (expr1, expr2, &hellip;) 作为一个参数传递给宏。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="nd">@name</span> <span class="p">(</span><span class="n">expr1</span><span class="p">,</span> <span class="n">expr2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div><p>在数组字面量（或解析）上调用宏的另一种方法是将两者并列，而不使用括号。在这种情况下，数组将是唯一输入宏的表达式。下面的语法是等价的（与 <code>@name [a b] * v</code> 不同）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="nd">@name</span><span class="p">[</span><span class="n">a</span> <span class="n">b</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span>
+<span class="nd">@name</span><span class="p">([</span><span class="n">a</span> <span class="n">b</span><span class="p">])</span> <span class="o">*</span> <span class="n">v</span>
+</code></pre></div><p>需要强调的是，宏以表达式、字面值或符号的形式接收其参数。探索宏参数的一种方法是在宏体中调用 <a href="https://docs.julialang.org/en/v1/base/io-network/#Base.show-Tuple%7BIO,Any%7D">show</a> 函数。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">showarg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="n">show</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="c"># ... remainder of macro, returning an expression</span>
+       <span class="k">end</span>
+<span class="nd">@showarg</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@showarg</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="o">:</span><span class="n">a</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@showarg</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@showarg</span><span class="p">(</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;Yo!&#34;</span><span class="p">))</span>
+<span class="o">:</span><span class="p">(</span><span class="n">println</span><span class="p">(</span><span class="s">&#34;Yo!&#34;</span><span class="p">))</span>
+</code></pre></div><p>除了给定的参数列表之外，每个宏都会被传递额外的参数 <code>__source__</code> 和 <code>__module__</code>。</p>
+<p>参数 <code>__source__</code> 提供了关于来自宏调用的 <code>@</code> 符号的解析器位置的信息（以 <code>LineNumberNode</code> 对象的形式）。这使得宏能够包含更好的错误诊断信息，并且通常被日志、字符串解析器宏和文档等使用，例如，也被用来实现 <a href="https://docs.julialang.org/en/v1/base/file/#Base.@__LINE__">@<strong>LINE</strong></a>、<a href="https://docs.julialang.org/en/v1/base/file/#Base.@__FILE__">@<strong>FILE</strong></a> 和 <a href="https://docs.julialang.org/en/v1/base/file/#Base.@__DIR__">@<strong>DIR</strong></a> 宏。</p>
+<p>位置信息可以通过引用 <code>__source__.line</code> 和 <code>__source__.file</code> 来访问。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">__LOCATION__</span><span class="p">();</span> <span class="k">return</span> <span class="kt">QuoteNode</span><span class="p">(</span><span class="n">__source__</span><span class="p">);</span> <span class="k">end</span>
+<span class="nd">@__LOCATION__</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">dump</span><span class="p">(</span>
+            <span class="nd">@__LOCATION__</span><span class="p">(</span>
+       <span class="p">))</span>
+<span class="kt">LineNumberNode</span>
+  <span class="n">line</span><span class="o">:</span> <span class="kt">Int64</span> <span class="mi">2</span>
+  <span class="n">file</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">none</span>
+</code></pre></div><p>参数 <code>__module__</code> 提供了关于宏调用的扩展上下文的信息（以 <code>Module</code> 对象的形式）。这允许宏查找上下文信息，如现有的绑定，或者将该值作为额外的参数插入到在当前模块中做自省的运行时函数调用中。</p>
+<h3 id="构建一个高级宏">构建一个高级宏</h3>
+<p>这里是 Julia 的 <a href="https://docs.julialang.org/en/v1/base/base/#Base.@assert">@assert</a> 宏的简化定义。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">assert</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span> <span class="o">$</span><span class="n">ex</span> <span class="o">?</span> <span class="nb">nothing</span> <span class="o">:</span> <span class="n">throw</span><span class="p">(</span><span class="kt">AssertionError</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="n">string</span><span class="p">(</span><span class="n">ex</span><span class="p">))))</span> <span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@assert</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>这个宏可以这样使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@assert</span> <span class="mi">1</span> <span class="o">==</span> <span class="mf">1.0</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@assert</span> <span class="mi">1</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="n">ERROR</span><span class="o">:</span> <span class="kt">AssertionError</span><span class="o">:</span> <span class="mi">1</span> <span class="o">==</span> <span class="mi">0</span>
+</code></pre></div><p>宏调用在解析时扩展到它的返回结果。这就相当于写。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="mi">1</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="o">?</span> <span class="nb">nothing</span> <span class="o">:</span> <span class="n">throw</span><span class="p">(</span><span class="kt">AssertionError</span><span class="p">(</span><span class="s">&#34;1 == 1.0&#34;</span><span class="p">))</span>
+<span class="mi">1</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">?</span> <span class="nb">nothing</span> <span class="o">:</span> <span class="n">throw</span><span class="p">(</span><span class="kt">AssertionError</span><span class="p">(</span><span class="s">&#34;1 == 0&#34;</span><span class="p">))</span>
+</code></pre></div><p>也就是说，在第一次调用中，表达式 <code>:(1 == 1.0)</code> 被拼接到测试条件槽中，而 <code>string(:(1 == 1.0))</code> 的值被拼接到断言消息槽中。这样构造出来的整个表达式，就被放到了发生 <code>@assert</code> 宏调用的语法树中。然后在执行时，如果测试表达式评估为真，那么返回 <a href="https://docs.julialang.org/en/v1/base/constants/#Core.nothing">nothing</a>，而如果测试为假，则会引发一个错误，表明断言表达式是假的。注意，如果把这个写成函数就不行了，因为只有条件的值，不可能在错误信息中显示计算条件的表达式。</p>
+<p>Julia Base 中 <code>@assert</code> 的实际定义比较复杂。它允许用户有选择地指定自己的错误信息，而不是只打印失败的表达式。就像在参数数可变的函数（<a href="https://docs.julialang.org/en/v1/manual/functions/#Varargs-Functions">Varargs Functions</a>）中一样，在最后一个参数后面用省略号来指定。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">assert</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">msgs</span><span class="o">...</span><span class="p">)</span>
+           <span class="n">msg_body</span> <span class="o">=</span> <span class="n">isempty</span><span class="p">(</span><span class="n">msgs</span><span class="p">)</span> <span class="o">?</span> <span class="n">ex</span> <span class="o">:</span> <span class="n">msgs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+           <span class="n">msg</span> <span class="o">=</span> <span class="n">string</span><span class="p">(</span><span class="n">msg_body</span><span class="p">)</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="n">ex</span> <span class="o">?</span> <span class="nb">nothing</span> <span class="o">:</span> <span class="n">throw</span><span class="p">(</span><span class="kt">AssertionError</span><span class="p">(</span><span class="o">$</span><span class="n">msg</span><span class="p">)))</span>
+       <span class="k">end</span>
+<span class="nd">@assert</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>现在 <code>@assert</code> 有两种操作模式，取决于它接收到的参数数量！如果只有一个参数，那么 <code>msgs</code> 捕获的表达式元组将是空的，它的行为和上面的简单定义一样。如果只有一个参数，msgs 捕获的表达式元组将是空的，它的行为与上面的简单定义相同。但现在如果用户指定了第二个参数，它将被打印在消息正文中，而不是失败的表达式。你可以用 <a href="https://docs.julialang.org/en/v1/base/base/#Base.@macroexpand">@macroexpand</a> 宏来检查宏扩展的结果。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@macroexpand</span> <span class="nd">@assert</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span>
+<span class="o">:</span><span class="p">(</span><span class="k">if</span> <span class="n">Main</span><span class="o">.</span><span class="n">a</span> <span class="o">==</span> <span class="n">Main</span><span class="o">.</span><span class="n">b</span>
+        <span class="n">Main</span><span class="o">.</span><span class="nb">nothing</span>
+    <span class="k">else</span>
+        <span class="n">Main</span><span class="o">.</span><span class="n">throw</span><span class="p">(</span><span class="n">Main</span><span class="o">.</span><span class="kt">AssertionError</span><span class="p">(</span><span class="s">&#34;a == b&#34;</span><span class="p">))</span>
+    <span class="k">end</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@macroexpand</span> <span class="nd">@assert</span> <span class="n">a</span><span class="o">==</span><span class="n">b</span> <span class="s">&#34;a should equal b!&#34;</span>
+<span class="o">:</span><span class="p">(</span><span class="k">if</span> <span class="n">Main</span><span class="o">.</span><span class="n">a</span> <span class="o">==</span> <span class="n">Main</span><span class="o">.</span><span class="n">b</span>
+        <span class="n">Main</span><span class="o">.</span><span class="nb">nothing</span>
+    <span class="k">else</span>
+        <span class="n">Main</span><span class="o">.</span><span class="n">throw</span><span class="p">(</span><span class="n">Main</span><span class="o">.</span><span class="kt">AssertionError</span><span class="p">(</span><span class="s">&#34;a should equal b!&#34;</span><span class="p">))</span>
+    <span class="k">end</span><span class="p">)</span>
+</code></pre></div><p>实际的 <code>@assert</code> 宏还可以处理另一种情况：如果除了打印 &ldquo;a should equal b&rdquo; 之外，我们还想打印它们的值呢？人们可能会天真地尝试在自定义消息中使用字符串插值，例如，<code>@assert a==b &quot;a ($a) should equal b ($b)!&quot;</code>，但这在上面的宏中不会像预期的那样工作。你能明白为什么吗？从<a href="https://docs.julialang.org/en/v1/manual/strings/#string-interpolation">字符串插值</a>回想一下，插值后的字符串会被改写成对<a href="https://docs.julialang.org/en/v1/base/strings/#Base.string">字符串</a>的调用。比较一下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="o">:</span><span class="p">(</span><span class="s">&#34;a should equal b&#34;</span><span class="p">))</span>
+<span class="n">String</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">typeof</span><span class="p">(</span><span class="o">:</span><span class="p">(</span><span class="s">&#34;a (</span><span class="si">$a</span><span class="s">) should equal b (</span><span class="si">$b</span><span class="s">)!&#34;</span><span class="p">))</span>
+<span class="kt">Expr</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">dump</span><span class="p">(</span><span class="o">:</span><span class="p">(</span><span class="s">&#34;a (</span><span class="si">$a</span><span class="s">) should equal b (</span><span class="si">$b</span><span class="s">)!&#34;</span><span class="p">))</span>
+<span class="kt">Expr</span>
+  <span class="n">head</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">string</span>
+  <span class="n">args</span><span class="o">:</span> <span class="kt">Array</span><span class="p">{</span><span class="kt">Any</span><span class="p">}((</span><span class="mi">5</span><span class="p">,))</span>
+    <span class="mi">1</span><span class="o">:</span> <span class="n">String</span> <span class="s">&#34;a (&#34;</span>
+    <span class="mi">2</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">a</span>
+    <span class="mi">3</span><span class="o">:</span> <span class="n">String</span> <span class="s">&#34;) should equal b (&#34;</span>
+    <span class="mi">4</span><span class="o">:</span> <span class="kt">Symbol</span> <span class="n">b</span>
+    <span class="mi">5</span><span class="o">:</span> <span class="n">String</span> <span class="s">&#34;)!&#34;</span>
+</code></pre></div><p>因此，现在宏不是在 <code>msg_body</code> 中得到一个普通的字符串，而是接收一个完整的表达式，这个表达式需要被评估，以便按照预期的方式显示。这可以直接拼接到返回的表达式中，作为<a href="https://docs.julialang.org/en/v1/base/strings/#Base.string">字符串</a>调用的一个参数；完整的实现请参见 <a href="https://github.com/JuliaLang/julia/blob/master/base/error.jl">error.jl</a>。</p>
+<p><code>@assert</code> 宏很好地利用了拼接成引号的表达式，简化了宏体内部对表达式的操作。</p>
+<h3 id="卫生宏">卫生宏</h3>
+<p>在比较复杂的宏中会出现一个问题，那就是<a href="https://en.wikipedia.org/wiki/Hygienic_macro">卫生</a>问题。简而言之，宏必须确保它们在返回的表达式中引入的变量不会意外地与它们扩展到的周围代码中的现有变量发生冲突。相反，作为参数传入宏中的表达式往往要在周围代码的上下文中进行评估，与现有变量进行交互和修改。另一个关注点来自于一个事实，即一个宏可能会在与它被定义的模块不同的地方被调用。在这种情况下，我们需要确保所有的全局变量被解析到正确的模块中。与具有文本宏扩展的语言（如C语言）相比，Julia 已经有了很大的优势，因为它只需要考虑返回的表达式。所有其他的变量（比如上面 <code>@assert</code> 中的 <code>msg</code>）都遵循<a href="https://docs.julialang.org/en/v1/manual/variables-and-scoping/#scope-of-variables">正常的作用域块行为</a>。</p>
+<p>为了证明这些问题，让我们考虑写一个 <code>@time</code> 宏，它接受一个表达式作为参数，记录时间，评估表达式，再次记录时间，打印前后时间的差值，然后以表达式的值作为其最终值。这个宏可能是这样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">macro</span> <span class="n">time</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">quote</span>
+        <span class="kd">local</span> <span class="n">t0</span> <span class="o">=</span> <span class="n">time_ns</span><span class="p">()</span>
+        <span class="kd">local</span> <span class="n">val</span> <span class="o">=</span> <span class="o">$</span><span class="n">ex</span>
+        <span class="kd">local</span> <span class="n">t1</span> <span class="o">=</span> <span class="n">time_ns</span><span class="p">()</span>
+        <span class="n">println</span><span class="p">(</span><span class="s">&#34;elapsed time: &#34;</span><span class="p">,</span> <span class="p">(</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span><span class="o">/</span><span class="mf">1e9</span><span class="p">,</span> <span class="s">&#34; seconds&#34;</span><span class="p">)</span>
+        <span class="n">val</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div><p>在这里，我们希望 <code>t0</code>、<code>t1</code> 和 <code>val</code> 是私有的临时变量，我们希望 <code>time</code> 引用 Julia Base 中的 <a href="https://docs.julialang.org/en/v1/base/base/#Base.Libc.time-Tuple%7B%7D">time</a> 函数，而不是用户可能拥有的任何 <code>time</code> 变量（同样适用于 <code>println</code>）。想象一下，如果用户表达式 <code>ex</code> 也包含了对一个叫 <code>t0</code> 的变量的赋值，或者定义了自己的 <code>time</code> 变量，可能会出现的问题。我们可能会得到错误，或者神秘的不正确行为。</p>
+<p>Julia 的宏扩展器用以下方式解决了这些问题。首先，宏结果中的变量被分为局部或全局。如果一个变量被分配给（而不是声明为全局）、声明为局部，或者被用作函数参数名，那么它被认为是局部的。否则，它被认为是全局变量。局部变量就会被重命名为唯一的（使用 <a href="https://docs.julialang.org/en/v1/base/base/#Base.gensym">gensym</a> 函数，生成新的符号），全局变量则在宏定义环境中解决。因此，上述两个问题都得到了处理；宏的局部变量不会与任何用户变量冲突，<code>time</code> 和 <code>println</code> 将引用 Julia Base 定义。</p>
+<p>然而，仍然存在一个问题。考虑下面这个宏的使用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">module</span> <span class="n">MyModule</span>
+<span class="k">import</span> <span class="n">Base</span><span class="o">.</span><span class="nd">@time</span>
+
+<span class="n">time</span><span class="p">()</span> <span class="o">=</span> <span class="o">...</span> <span class="c"># compute something</span>
+
+<span class="nd">@time</span> <span class="n">time</span><span class="p">()</span>
+<span class="k">end</span>
+</code></pre></div><p>这里的用户表达式 <code>ex</code> 是对 <code>time</code> 的调用，但不是宏使用的那个 <code>time</code> 函数。它显然是指 <code>MyModule.time</code>。因此我们必须安排 <code>ex</code> 中的代码在宏调用环境中进行解析。这可以通过用 <a href="https://docs.julialang.org/en/v1/base/base/#Base.esc">esc</a> 对表达式进行&quot;转义&quot;来实现。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">macro</span> <span class="n">time</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="kd">local</span> <span class="n">val</span> <span class="o">=</span> <span class="o">$</span><span class="p">(</span><span class="n">esc</span><span class="p">(</span><span class="n">ex</span><span class="p">))</span>
+    <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div><p>以这种方式包装的表达式，宏扩展器不会管它，只需逐字粘贴到输出中即可。因此它将在宏调用环境中被解析。</p>
+<p>在必要的时候，可以利用这种转义机制来&quot;违反&quot;卫生，以便引入或操作用户变量。例如，下面的宏在调用环境中将 <code>x</code> 设为零。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">zerox</span><span class="p">()</span>
+           <span class="k">return</span> <span class="n">esc</span><span class="p">(</span><span class="o">:</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">))</span>
+       <span class="k">end</span>
+<span class="nd">@zerox</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span> <span class="n">foo</span><span class="p">()</span>
+           <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
+           <span class="nd">@zerox</span>
+           <span class="k">return</span> <span class="n">x</span> <span class="c"># is zero</span>
+       <span class="k">end</span>
+<span class="n">foo</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">foo</span><span class="p">()</span>
+<span class="mi">0</span>
+</code></pre></div><p>这种对变量的操作应谨慎使用，但偶尔也很方便。</p>
+<p>掌握正确的卫生规则可能是一个艰巨的挑战。在使用宏之前，你可能需要考虑一个函数闭包是否足够。另一个有用的策略是将尽可能多的工作推迟到运行时。例如，许多宏简单地将其参数包裹在 QuoteNode 或其他类似的 <a href="https://docs.julialang.org/en/v1/base/base/#Core.Expr">Expr</a> 中。一些例子包括 <code>@task body</code>，它简单地返回 <code>schedule(Task(()-&gt; $body))</code>，以及 <code>@eval expr</code>，它简单地返回 <code>eval(QuoteNode(expr))</code>。</p>
+<p>为了演示，我们可以将上面的 <code>@time</code> 例子重写为。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">macro</span> <span class="n">time</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">timeit</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="o">$</span><span class="p">(</span><span class="n">esc</span><span class="p">(</span><span class="n">expr</span><span class="p">))))</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="n">timeit</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time_ns</span><span class="p">()</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">f</span><span class="p">()</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">time_ns</span><span class="p">()</span>
+    <span class="n">println</span><span class="p">(</span><span class="s">&#34;elapsed time: &#34;</span><span class="p">,</span> <span class="p">(</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span><span class="o">/</span><span class="mf">1e9</span><span class="p">,</span> <span class="s">&#34; seconds&#34;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">val</span>
+<span class="k">end</span>
+</code></pre></div><p>然而，我们不这样做是有充分的理由的：将 <code>expr</code> 包装在一个新的作用域块中（匿名函数）也会稍微改变表达式的含义（其中任何变量的作用域），同时我们希望 <code>@time</code> 可以使用，而对被包装的代码影响最小。</p>
+<h3 id="宏和调度">宏和调度</h3>
+<p>宏，就像 Julia 函数一样，是通用的。这意味着它们也可以有多个方法定义，这要归功于多重分派。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">m</span> <span class="k">end</span>
+<span class="nd">@m</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">0</span> <span class="n">methods</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">m</span><span class="p">(</span><span class="n">args</span><span class="o">...</span><span class="p">)</span>
+           <span class="n">println</span><span class="p">(</span><span class="s">&#34;</span><span class="si">$</span><span class="p">(</span><span class="n">length</span><span class="p">(</span><span class="n">args</span><span class="p">))</span><span class="s"> arguments&#34;</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@m</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">m</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+           <span class="n">println</span><span class="p">(</span><span class="s">&#34;Two arguments&#34;</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@m</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">2</span> <span class="n">methods</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@m</span> <span class="s">&#34;asd&#34;</span>
+<span class="mi">1</span> <span class="n">arguments</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@m</span> <span class="mi">1</span> <span class="mi">2</span>
+<span class="n">Two</span> <span class="n">arguments</span>
+</code></pre></div><p>然而我们应该记住，宏调度是基于交给宏的 AST 类型，而不是 AST 在运行时评估的类型。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">macro</span> <span class="n">m</span><span class="p">(</span><span class="o">::</span><span class="kt">Int</span><span class="p">)</span>
+           <span class="n">println</span><span class="p">(</span><span class="s">&#34;An Integer&#34;</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="nd">@m</span> <span class="p">(</span><span class="k">macro</span> <span class="n">with</span> <span class="mi">3</span> <span class="n">methods</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@m</span> <span class="mi">2</span>
+<span class="n">An</span> <span class="kt">Integer</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="mi">2</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@m</span> <span class="n">x</span>
+<span class="mi">1</span> <span class="n">arguments</span>
+</code></pre></div><h2 id="代码生成">代码生成</h2>
+<p>当需要大量重复的模板代码时，通常会以编程方式生成，以避免冗余。在大多数语言中，这需要一个额外的构建步骤，以及一个单独的程序来生成重复的代码。在 Julia 中，表达式插值和 <a href="https://docs.julialang.org/en/v1/base/base/#Base.MainInclude.eval">eval</a> 允许这样的代码生成在程序执行的正常过程中进行。例如，考虑以下自定义类型</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">struct</span> <span class="n">MyNumber</span>
+    <span class="n">x</span><span class="o">::</span><span class="kt">Float64</span>
+<span class="k">end</span>
+<span class="c"># output</span>
+</code></pre></div><p>我们想为其添加一些方法。我们可以在下面的循环中以编程的方式进行。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">for</span> <span class="n">op</span> <span class="o">=</span> <span class="p">(</span><span class="o">:</span><span class="n">sin</span><span class="p">,</span> <span class="o">:</span><span class="n">cos</span><span class="p">,</span> <span class="o">:</span><span class="n">tan</span><span class="p">,</span> <span class="o">:</span><span class="n">log</span><span class="p">,</span> <span class="o">:</span><span class="n">exp</span><span class="p">)</span>
+    <span class="n">eval</span><span class="p">(</span><span class="k">quote</span>
+        <span class="n">Base</span><span class="o">.$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">::</span><span class="n">MyNumber</span><span class="p">)</span> <span class="o">=</span> <span class="n">MyNumber</span><span class="p">(</span><span class="o">$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+    <span class="k">end</span><span class="p">)</span>
+<span class="k">end</span>
+<span class="c"># output</span>
+</code></pre></div><p>现在我们可以用我们的自定义类型来使用这些函数。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="n">MyNumber</span><span class="p">(</span><span class="nb">π</span><span class="p">)</span>
+<span class="n">MyNumber</span><span class="p">(</span><span class="mf">3.141592653589793</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">MyNumber</span><span class="p">(</span><span class="mf">1.2246467991473532e-16</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">MyNumber</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre></div><p>这样一来，Julia 就像自己的<a href="https://en.wikipedia.org/wiki/Preprocessor">预处理器</a>一样，可以从语言内部生成代码。上面的代码可以使用 <code>:</code> 前缀引号的形式，写得稍显生硬。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">for</span> <span class="n">op</span> <span class="o">=</span> <span class="p">(</span><span class="o">:</span><span class="n">sin</span><span class="p">,</span> <span class="o">:</span><span class="n">cos</span><span class="p">,</span> <span class="o">:</span><span class="n">tan</span><span class="p">,</span> <span class="o">:</span><span class="n">log</span><span class="p">,</span> <span class="o">:</span><span class="n">exp</span><span class="p">)</span>
+    <span class="n">eval</span><span class="p">(</span><span class="o">:</span><span class="p">(</span><span class="n">Base</span><span class="o">.$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">::</span><span class="n">MyNumber</span><span class="p">)</span> <span class="o">=</span> <span class="n">MyNumber</span><span class="p">(</span><span class="o">$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">))))</span>
+<span class="k">end</span>
+</code></pre></div><p>不过，这种使用 <code>eval(quote(...))</code> 模式生成的语言内代码很常见，所以 Julia 自带了一个宏来缩写这种模式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">for</span> <span class="n">op</span> <span class="o">=</span> <span class="p">(</span><span class="o">:</span><span class="n">sin</span><span class="p">,</span> <span class="o">:</span><span class="n">cos</span><span class="p">,</span> <span class="o">:</span><span class="n">tan</span><span class="p">,</span> <span class="o">:</span><span class="n">log</span><span class="p">,</span> <span class="o">:</span><span class="n">exp</span><span class="p">)</span>
+    <span class="nd">@eval</span> <span class="n">Base</span><span class="o">.$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">::</span><span class="n">MyNumber</span><span class="p">)</span> <span class="o">=</span> <span class="n">MyNumber</span><span class="p">(</span><span class="o">$</span><span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+<span class="k">end</span>
+</code></pre></div><p><a href="https://docs.julialang.org/en/v1/base/base/#Base.@eval">@eval</a> 宏重写了这个调用，使之与上述较长版本的调用完全等同。对于较长的生成代码块，给 <a href="https://docs.julialang.org/en/v1/base/base/#Base.@eval">@eval</a> 的表达式参数可以是一个块。</p>
+<pre><code class="language-juliaa" data-lang="juliaa">@eval begin
+    # multiple lines
+end
+</code></pre><h2 id="非标准字符串字面值">非标准字符串字面值</h2>
+<p>从 <a href="https://docs.julialang.org/en/v1/manual/strings/#non-standard-string-literals">Strings</a> 中回想一下，以标识符为前缀的字符串字元称为非标准字符串字元，其语义可能与未加前缀的字符串字面值不同。例如</p>
+<p>r&rdquo;^\s*(?:#|$) &ldquo;产生一个正则表达式对象，而不是一个字符串。
+b &ldquo;DATA\xff\u2200 &ldquo;是一个[68,65,84,65,255,226,136,128]的字节数组文字。
+也许令人惊讶的是，这些行为并没有被硬编码到Julia解析器或编译器中。相反，它们是由一个通用机制提供的自定义行为，任何人都可以使用：前缀的字符串字元被解析为对特别命名的宏的调用。例如，正则表达式宏就如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">macro</span> <span class="n">r_str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="kt">Regex</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div><p>就是这样。这个宏表示应该将字符串字词r&rdquo;^\s*(?:#|$) &ldquo;的字面内容传递给@r_str宏，并将扩展的结果放入字符串字词出现的语法树中。换句话说，表达式r&rdquo;^\s*(?:#|$) &ldquo;相当于将下面的对象直接放入语法树中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="kt">Regex</span><span class="p">(</span><span class="s">&#34;^</span><span class="se">\\</span><span class="s">s*(?:#|</span><span class="se">\$</span><span class="s">)&#34;</span><span class="p">)</span>
+</code></pre></div><p>字符串形式不仅更短、更方便，而且效率更高：由于正则表达式是编译的，而Regex对象实际上是在代码编译时创建的，所以编译只发生一次，而不是每次执行代码时。考虑一下如果正则表达式发生在循环中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">for</span> <span class="n">line</span> <span class="o">=</span> <span class="n">lines</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">match</span><span class="p">(</span><span class="sr">r&#34;^\s*(?:#|$)&#34;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span> <span class="o">===</span> <span class="nb">nothing</span>
+        <span class="c"># non-comment</span>
+    <span class="k">else</span>
+        <span class="c"># comment</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div><p>由于正则表达式r&rdquo;^/ds*(?:#|$) &ldquo;在解析这段代码时被编译并插入语法树中，所以该表达式只被编译一次，而不是每次循环执行时都被编译。为了在不使用宏的情况下实现这个目标，必须这样写这个循环。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">re</span> <span class="o">=</span> <span class="kt">Regex</span><span class="p">(</span><span class="s">&#34;^</span><span class="se">\\</span><span class="s">s*(?:#|</span><span class="se">\$</span><span class="s">)&#34;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">line</span> <span class="o">=</span> <span class="n">lines</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span> <span class="o">===</span> <span class="nb">nothing</span>
+        <span class="c"># non-comment</span>
+    <span class="k">else</span>
+        <span class="c"># comment</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div><p>此外，如果编译器不能确定regex对象在所有循环中都是恒定的，某些优化可能就无法实现，这就使得这个版本的效率仍然不如上面更方便的文字形式。当然，在有些情况下，非字面形式还是比较方便的：如果需要在正则表达式中插入一个变量，就必须采取这种比较啰嗦的方式；在正则表达式模式本身是动态的，有可能在每次循环迭代时发生变化的情况下，必须在每次迭代时构造一个新的正则表达式对象。然而，在绝大多数用例中，正则表达式并不是基于运行时数据来构造的。在这大多数情况下，将正则表达式写成编译时值的能力是非常宝贵的。</p>
+<p>与非标准字符串字元一样，非标准命令字元也是使用命令字元语法的前缀变体存在的。命令字元custom<code>literal</code>被解析为@custom_cmd &ldquo;literal&rdquo;。Julia本身不包含任何非标准的命令字元，但包可以利用这种语法。除了语法不同和用_cmd后缀代替_str后缀外，非标准命令字元的行为与非标准字符串字元完全相同。</p>
+<p>如果两个模块提供了名称相同的非标准字符串或命令字元，可以用模块名称来限定字符串或命令字元。例如，如果Foo和Bar都提供了非标准的字符串字元@x_str，那么可以写成Foo.x &ldquo;字元 &ldquo;或Bar.x &ldquo;字元 &ldquo;来区分两者。</p>
+<p>用户定义字符串字元的机制是深刻的、强大的。不仅Julia的非标准字元用它来实现，而且命令字元语法（<code>echo &quot;Hello, $person&quot;</code>）也用下面这个看似无害的宏来实现。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">macro</span> <span class="n">cmd</span><span class="p">(</span><span class="n">str</span><span class="p">)</span>
+    <span class="o">:</span><span class="p">(</span><span class="n">cmd_gen</span><span class="p">(</span><span class="o">$</span><span class="p">(</span><span class="n">shell_parse</span><span class="p">(</span><span class="n">str</span><span class="p">)[</span><span class="mi">1</span><span class="p">])))</span>
+<span class="k">end</span>
+</code></pre></div><p>当然，这个宏定义中使用的函数中隐藏着大量的复杂性，但它们只是函数，完全是用Julia编写的。你可以阅读它们的源码，并精确地看到它们的作用&ndash;它们所做的只是构造表达式对象，以便插入到你的程序的语法树中。</p>
+<p>生成的函数</p>
+<p>一个非常特殊的宏是@generated，它允许你定义所谓的生成函数。这些函数能够根据其参数的类型生成专门的代码，其灵活性和/或代码量比使用多重调度时更少。宏在解析时与表达式一起工作，不能访问其输入的类型，而生成函数在参数类型已知时得到扩展，但函数尚未编译。</p>
+<p>生成函数声明不是执行一些计算或动作，而是返回一个引号的表达式，然后形成与参数类型相对应的方法的主体。当一个生成函数被调用时，它返回的表达式会被编译，然后运行。为了提高效率，通常会对结果进行缓存。而为了使之可推断，只有有限的语言子集可以使用。因此，生成函数提供了一种灵活的方式，将工作从运行时转移到编译时，但代价是对允许的构造有更大的限制。</p>
+<p>在定义生成函数时，与普通函数有五个主要区别。</p>
+<p>你用 @generated 宏来注释函数声明。这在AST中添加了一些信息，让编译器知道这是一个生成函数。
+在生成函数的主体中，你只能访问参数的类型，而不能访问它们的值。
+你不是计算一些东西或执行一些操作，而是返回一个引号的表达式，当它被评估时，就会执行你想要的东西。
+生成函数只允许调用在生成函数定义之前定义的函数。(如果不遵守这一点，可能会得到引用未来世界时代函数的MethodErrors。)
+生成的函数不得突变或观察任何非常态的全局状态（包括，例如，IO、锁、非本地字典或使用hasmethod）。这意味着它们只能读取全局常量，不能有任何副作用。换句话说，它们必须是完全纯粹的。由于实现上的限制，这也意味着它们目前不能定义闭包或生成器。
+用一个例子来说明这一点是最简单的。我们可以将一个生成函数foo声明为</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="k">function</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="n">Core</span><span class="o">.</span><span class="n">println</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="n">foo</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>请注意，函数体返回的是一个引号表达式，即:(x * x)，而不仅仅是x * x的值。</p>
+<p>从调用者的角度来看，这和正则函数是一样的；事实上，你不必知道你调用的是正则函数还是生成函数。让我们来看看foo是如何表现的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="n">foo</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span> <span class="c"># note: output is from println() statement in the body</span>
+<span class="kt">Int64</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span>           <span class="c"># now we print x</span>
+<span class="mi">4</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">y</span> <span class="o">=</span> <span class="n">foo</span><span class="p">(</span><span class="s">&#34;bar&#34;</span><span class="p">);</span>
+<span class="n">String</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">y</span>
+<span class="s">&#34;barbar&#34;</span>
+</code></pre></div><p>所以，我们看到，在生成函数的主体中，x是传递的参数的类型，而生成函数返回的值，是我们从定义中返回的引用表达式的评估结果，现在的值是x。</p>
+<p>如果我们用已经使用过的类型再次评估foo，会发生什么？</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">foo</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="mi">16</span>
+</code></pre></div><p>注意，没有打印出Int64的结果。我们可以看到，这里只针对特定的参数类型集执行了一次生成函数的主体，结果被缓存。之后，对于本例来说，第一次调用时生成函数返回的表达式被重新用作方法体。但是，实际的缓存行为是一种实现定义的性能优化，所以过于依赖这种行为是无效的。</p>
+<p>生成函数的次数可能只有一次，但也可能更频繁，或者看起来根本没有发生。因此，你永远不应该写一个有副作用的生成函数&ndash;副作用何时发生，多久发生一次，都是没有定义的。(这对宏来说也是如此&ndash;就像对宏一样，在生成函数中使用eval是一个标志，表明你做了一些错误的事情。) 然而，与宏不同的是，运行时系统无法正确处理对eval的调用，所以不允许使用它。</p>
+<p>同样重要的是看@生成函数如何与方法重新定义交互。按照正确的@生成函数不能观察任何可突变的状态或引起任何全局状态的突变的原则，我们看到以下行为。观察生成函数不能调用任何在生成函数本身定义之前没有定义的方法。</p>
+<p>最初f(x)有一个定义</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="s">&#34;original definition&#34;</span><span class="p">;</span>
+</code></pre></div><p>定义其他使用f(x)的操作。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="n">gen1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="n">gen2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
+</code></pre></div><p>现在我们为f(x)添加一些新的定义。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="o">::</span><span class="kt">Int</span><span class="p">)</span> <span class="o">=</span> <span class="s">&#34;definition for Int&#34;</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="o">::</span><span class="kt">Type</span><span class="p">{</span><span class="kt">Int</span><span class="p">})</span> <span class="o">=</span> <span class="s">&#34;definition for Type{Int}&#34;</span><span class="p">;</span>
+</code></pre></div><p>并比较这些结果有何不同。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">f</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="s">&#34;definition for Int&#34;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">g</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="s">&#34;definition for Int&#34;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">gen1</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="s">&#34;original definition&#34;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">gen2</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="s">&#34;definition for Int&#34;</span>
+</code></pre></div><p>生成函数的每个方法都有自己的定义函数视图。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="n">gen1</span><span class="p">(</span><span class="n">x</span><span class="o">::</span><span class="kt">Real</span><span class="p">)</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">gen1</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="s">&#34;definition for Type{Int}&#34;</span>
+</code></pre></div><p>上面的生成函数foo例子并没有做任何普通函数foo(x) = x * x不能做的事情（除了在第一次调用时打印类型，并产生较高的开销）。然而，生成函数的强大之处在于它能够根据传递给它的类型计算不同的引号表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="k">function</span> <span class="n">bar</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;:</span> <span class="kt">Integer</span>
+               <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">x</span> <span class="o">^</span> <span class="mi">2</span><span class="p">)</span>
+           <span class="k">else</span>
+               <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="k">end</span>
+       <span class="k">end</span>
+<span class="n">bar</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">bar</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="mi">16</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">bar</span><span class="p">(</span><span class="s">&#34;baz&#34;</span><span class="p">)</span>
+<span class="s">&#34;baz&#34;</span>
+</code></pre></div><p>(当然，这个人为的例子可以更容易地使用多个调度来实现&hellip;)</p>
+<p>滥用这一点将破坏运行时系统并导致未定义的行为。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="k">function</span> <span class="n">baz</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="k">if</span> <span class="n">rand</span><span class="p">()</span> <span class="o">&lt;</span> <span class="o">.</span><span class="mi">9</span>
+               <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
+           <span class="k">else</span>
+               <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="s">&#34;boo!&#34;</span><span class="p">)</span>
+           <span class="k">end</span>
+       <span class="k">end</span>
+<span class="n">baz</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>由于生成的函数主体是非确定的，所以它的行为以及所有后续代码的行为都是未定义的。</p>
+<p>不要抄袭这些例子!</p>
+<p>这些例子希望对说明生成函数的工作方式有所帮助，包括在定义端和调用端；但是，不要复制它们，原因如下。</p>
+<p>foo函数有副作用 (对Core.println的调用), 而这些副作用究竟何时发生, 多久发生一次, 或发生多少次, 都是没有定义的
+bar函数解决了一个问题，而这个问题最好用多重调度来解决&ndash;定义bar(x) = x和bar(x::Integer) = x ^ 2会做同样的事情，但它既简单又快速。
+baz函数是病态的
+请注意，在生成的函数中不应该尝试的操作集是没有限制的，运行时系统目前只能检测到无效操作的一个子集。还有许多其他的操作会在不通知的情况下简单地破坏运行时系统，通常以微妙的方式与坏定义没有明显的联系。因为函数生成器是在推理过程中运行的，它必须尊重该代码的所有限制。</p>
+<p>一些不应该尝试的操作包括。</p>
+<p>缓存本地指针
+以任何方式与Core.Compiler的内容或方法进行交互。
+观察任何可变状态。</p>
+<p>对生成的函数的推理可以在任何时候运行，包括在您的代码试图观察或突变此状态时。
+占用任何锁。你调用的C代码可以在内部使用锁，（例如，调用malloc是没有问题的，即使大多数实现在内部需要锁），但不要试图在执行Julia代码时持有或获取任何锁。
+调用在生成函数主体之后定义的任何函数。对于增量加载的预编译模块，这个条件是放宽的，允许调用模块中的任何函数。
+好了，现在我们对生成函数的工作原理有了更好的理解，让我们用它们来构建一些更高级的（有效的）功能&hellip;</p>
+<p>一个高级的例子</p>
+<p>茱莉亚的基础库有一个内部的sub2ind函数，用来计算一个线性索引到n维数组中，基于n个多线性索引的集合，换句话说，就是计算可以用A[i]来索引到数组A中的索引i，而不是A[x,y,z,&hellip;]。一种可能的实现方式如下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span> <span class="n">sub2ind_loop</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">},</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="n">where</span> <span class="n">N</span>
+           <span class="n">ind</span> <span class="o">=</span> <span class="nb">I</span><span class="p">[</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="n">👎1</span>
+               <span class="n">ind</span> <span class="o">=</span> <span class="nb">I</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">ind</span>
+           <span class="k">end</span>
+           <span class="k">return</span> <span class="n">ind</span> <span class="o">+</span> <span class="mi">1</span>
+       <span class="k">end</span>
+<span class="n">sub2ind_loop</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_loop</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="mi">4</span>
+</code></pre></div><p>同样的事情也可以用递归来完成。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">Tuple</span><span class="p">{})</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">Tuple</span><span class="p">{},</span> <span class="n">i1</span><span class="o">::</span><span class="kt">Integer</span><span class="p">,</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="o">=</span>
+           <span class="n">i1</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">?</span> <span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="nb">I</span><span class="o">...</span><span class="p">)</span> <span class="o">:</span> <span class="n">throw</span><span class="p">(</span><span class="kt">BoundsError</span><span class="p">());</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">Tuple</span><span class="p">{</span><span class="kt">Integer</span><span class="p">,</span> <span class="kt">Vararg</span><span class="p">{</span><span class="kt">Integer</span><span class="p">}},</span> <span class="n">i1</span><span class="o">::</span><span class="kt">Integer</span><span class="p">)</span> <span class="o">=</span> <span class="n">i1</span><span class="p">;</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">Tuple</span><span class="p">{</span><span class="kt">Integer</span><span class="p">,</span> <span class="kt">Vararg</span><span class="p">{</span><span class="kt">Integer</span><span class="p">}},</span> <span class="n">i1</span><span class="o">::</span><span class="kt">Integer</span><span class="p">,</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="o">=</span>
+           <span class="n">i1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">sub2ind_rec</span><span class="p">(</span><span class="n">Base</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span> <span class="nb">I</span><span class="o">...</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_rec</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="mi">4</span>
+</code></pre></div><p>这两种实现虽然不同，但本质上都是一样的：在数组的维度上进行运行时循环，将每个维度的偏移量收集到最后的索引中。</p>
+<p>然而，我们在循环中所需要的所有信息都嵌入在参数的类型信息中。因此，我们可以利用生成函数将迭代移动到编译时；用编译器的说法，我们使用生成函数手动展开循环。身体变得几乎相同，但我们不是计算线性指数，而是建立一个计算指数的表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="k">function</span> <span class="n">sub2ind_gen</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">},</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="n">where</span> <span class="n">N</span>
+           <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="n">👎1</span>
+               <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="o">$</span><span class="n">ex</span><span class="p">)</span>
+           <span class="k">end</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="n">ex</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="n">sub2ind_gen</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_gen</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="mi">4</span>
+</code></pre></div><p>这将产生什么代码呢？</p>
+<p>一个简单的方法是将主体提取到另一个（常规）函数中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="nd">@generated</span> <span class="k">function</span> <span class="n">sub2ind_gen</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">},</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="n">where</span> <span class="n">N</span>
+           <span class="k">return</span> <span class="n">sub2ind_gen_impl</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="nb">I</span><span class="o">...</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="n">sub2ind_gen</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span> <span class="n">sub2ind_gen_impl</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">Type</span><span class="p">{</span><span class="n">T</span><span class="p">},</span> <span class="nb">I</span><span class="o">...</span><span class="p">)</span> <span class="n">where</span> <span class="n">T</span> <span class="o">&lt;:</span> <span class="kt">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="kt">Any</span><span class="p">}</span> <span class="n">where</span> <span class="n">N</span>
+           <span class="n">length</span><span class="p">(</span><span class="nb">I</span><span class="p">)</span> <span class="o">==</span> <span class="n">N</span> <span class="o">||</span> <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="n">error</span><span class="p">(</span><span class="s">&#34;partial indexing is unsupported&#34;</span><span class="p">))</span>
+           <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="n">👎1</span>
+               <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="o">$</span><span class="n">ex</span><span class="p">)</span>
+           <span class="k">end</span>
+           <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="n">ex</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+       <span class="k">end</span>
+<span class="n">sub2ind_gen_impl</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span> <span class="n">with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+</code></pre></div><p>现在我们可以执行sub2ind_gen_impl并检查它返回的表达式。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="n">julia</span><span class="o">&gt;</span> <span class="n">sub2ind_gen_impl</span><span class="p">(</span><span class="kt">Tuple</span><span class="p">{</span><span class="kt">Int</span><span class="p">,</span><span class="kt">Int</span><span class="p">},</span> <span class="kt">Int</span><span class="p">,</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="o">:</span><span class="p">(((</span><span class="nb">I</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre></div><p>所以，这里要用到的方法体根本不包含循环&ndash;只是索引到两个元组，乘法和加/减法。所有的循环都是在编译时进行的，我们完全避免了执行过程中的循环。因此，我们对每个类型只进行一次循环，在本例中，每N个类型只循环一次（除非在函数生成一次以上的边缘情况下&ndash;见上面的免责声明）。</p>
+<p>可选生成的函数</p>
+<p>生成函数可以在运行时实现高效率，但也有编译时间成本：每一个具体参数类型的组合都必须生成一个新的函数体。通常情况下，Julia能够编译 &ldquo;通用 &ldquo;版本的函数，这些函数将适用于任何参数，但对于生成函数，这是不可能的。这意味着大量使用生成函数的程序可能无法静态编译。</p>
+<p>为了解决这个问题，语言提供了编写正常的、非生成函数的替代实现的语法。应用到上面的sub2ind例子中，会是这样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-julia" data-lang="julia"><span class="k">function</span> <span class="n">sub2ind_gen</span><span class="p">(</span><span class="n">dims</span><span class="o">::</span><span class="kt">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">},</span> <span class="nb">I</span><span class="o">::</span><span class="kt">Integer</span><span class="o">...</span><span class="p">)</span> <span class="n">where</span> <span class="n">N</span>
+    <span class="k">if</span> <span class="n">N</span> <span class="o">!=</span> <span class="n">length</span><span class="p">(</span><span class="nb">I</span><span class="p">)</span>
+        <span class="n">throw</span><span class="p">(</span><span class="kt">ArgumentError</span><span class="p">(</span><span class="s">&#34;Number of dimensions must match number of indices.&#34;</span><span class="p">))</span>
+    <span class="k">end</span>
+    <span class="k">if</span> <span class="nd">@generated</span>
+        <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="n">👎1</span>
+            <span class="n">ex</span> <span class="o">=</span> <span class="o">:</span><span class="p">(</span><span class="nb">I</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="o">$</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="o">$</span><span class="n">ex</span><span class="p">)</span>
+        <span class="k">end</span>
+        <span class="k">return</span> <span class="o">:</span><span class="p">(</span><span class="o">$</span><span class="n">ex</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="nb">I</span><span class="p">[</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="n">👎1</span>
+            <span class="n">ind</span> <span class="o">=</span> <span class="nb">I</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">ind</span>
+        <span class="k">end</span>
+        <span class="k">return</span> <span class="n">ind</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div><p>在内部，这段代码创建了函数的两个实现：一个是生成的，其中使用了if @generated中的第一个块，另一个是正常的，其中使用了 else块。在if @generated块的then部分内部，代码的语义与其他生成函数相同：参数名指的是类型，代码应该返回一个表达式。可能会出现多个if @生成块，在这种情况下，生成的实现使用所有的then块，而备用的实现使用所有的else块。</p>
+<p>注意，我们在函数的顶部添加了一个错误检查。这段代码在两个版本中都是通用的，并且在两个版本中都是运行时代码（它将被引用并作为生成版本的表达式返回）。这意味着局部变量的值和类型在代码生成时是不可用的&ndash;代码生成代码只能看到参数的类型。</p>
+<p>在这种风格的定义中，代码生成功能本质上是一种可选的优化。编译器在方便的情况下会使用它，但其他情况下可能会选择使用正常的实现来代替。这种风格是首选，因为它允许编译器做出更多的决定，并以更多的方式编译程序，而且正常代码比代码生成代码更易读。但是，使用哪种实现取决于编译器的实现细节，所以两种实现的行为必须完全相同。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/julia" term="julia" label="Julia" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/julia-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="julia-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Julia 官方文档" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>
