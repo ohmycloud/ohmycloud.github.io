@@ -10,10 +10,117 @@
         <description>Recent content  in Flink
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Sat, 23 Jan 2021 22:00:20 +0800</lastBuildDate>
+        <lastBuildDate>Mon, 08 Feb 2021 15:20:01 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/categories/flink/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>如果集合如我所想</title>
+                <link>https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/</link>
+                
+                
+                <description>&lt;blockquote&gt;If Sets Would DWIM&lt;/blockquote&gt;&lt;h1 id=&#34;if-sets-would-dwimhttpsdonaldhwtf202101if-sets-would-dwim&#34;&gt;&lt;a href=&#34;https://donaldh.wtf/2021/01/if-sets-would-dwim/&#34;&gt;If Sets Would DWIM&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;每当我在 Raku 中使用集合的时候，它们经常无法 &lt;a href=&#34;https://docs.raku.org/language/glossary#DWIM&#34;&gt;DWIM&lt;/a&gt;。这是一个简短的探索，看看是否可以改进 DWIMminess。&lt;/p&gt;
+&lt;p&gt;我最近重新审视了我前段时间写的一个利用 &lt;code&gt;(-)&lt;/code&gt; 集差运算符的脚本。这段代码有一个 bug 潜伏在那里，显而易见，因为下面的代码并没有按照我的直觉去做。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;  my @allowed = &amp;lt;m c i p l o t&amp;gt;;
+  my @chars = &#39;impolitic&#39;.comb;
+
+  my @remainder = @allowed (-) @chars;
+
+  if +@remainder == 0 {
+     say &#39;pangram&#39;;
+  } else {
+     say &amp;quot;unused: [{@remainder.join(&#39; &#39;)}]&amp;quot;;
+  }
+unused: []
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;错误的原因是 &lt;code&gt;(-)&lt;/code&gt; 产生了一个 Set，而赋值给 &lt;code&gt;@remainder&lt;/code&gt; 会产生1项的 Array。总是这样。但不方便的是，当它是一个空集合时，它就会字符串化为一个空字符串，这只是帮助掩盖了这个潜伏的错误。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my @items = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b c d e&amp;gt;;
+say @items.raku;
+say +@items;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;[Set.new()]
+1
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;解决方法比较简单。只要不赋值给数组就可以了。使用一个标量容器来代替。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my $items = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt;;
+say $items.raku;
+say +$items;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;Set.new(&amp;quot;e&amp;quot;,&amp;quot;c&amp;quot;)
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;甚至是关联容器也可以。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my %items = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt;;
+say %items.raku;
+say +%items;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;{:c(Bool::True), :e(Bool::True)}
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;或在赋值前明确地取出键的列表。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my @items = (&amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt;).keys;
+say @items.raku;
+say +@items;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;[&amp;quot;e&amp;quot;, &amp;quot;c&amp;quot;]
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;很好，起作用了。只是不要用数组容器来处理 &lt;code&gt;Setty&lt;/code&gt; 这样的东西。只是这并不能阻止我的直觉时不时地碰上这个错误。同一类的 bug 在我的代码中出现过好几次，因为它实在是太容易犯错了。Raku 不会告诉我，我做错了什么，因为也许是故意的。但重要的是， Raku 没有设法 DWIM。&lt;/p&gt;
+&lt;p&gt;我可以采取的另一个方法是养成添加类型信息的习惯。这样确实可以让 Raku 在我掉进这个陷阱的时候告诉我。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my Str @a = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt;;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;Type check failed in assignment to @a; expected Str but got Set (Set.new(&amp;quot;e&amp;quot;,&amp;quot;c&amp;quot;))
+  in sub  at EVAL_0 line 3
+  in block &amp;lt;unit&amp;gt; at EVAL_0 line 5
+  in block &amp;lt;unit&amp;gt; at -e line 1
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这是一个明显的例子，添加类型信息有助于 Raku 编译器帮助我避免引入这种 bug。&lt;/p&gt;
+&lt;h2 id=&#34;实验---为-set-自定义数组存储&#34;&gt;实验 - 为 Set 自定义数组存储&lt;/h2&gt;
+&lt;p&gt;我开始研究核心设置(core setting)，看看可以做什么。我惊喜地发现，我可以在 &lt;code&gt;Array.STORE&lt;/code&gt; 的多重分派中添加我正在寻找的语义。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;use MONKEY;
+
+augment class Array {
+   multi method STORE(Array:D: Set \item --&amp;gt; Array:D) {
+       self.STORE(item.keys)
+   }
+}
+
+my @a = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt;;
+say @a.raku;
+say +@a;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;[&amp;quot;c&amp;quot;, &amp;quot;e&amp;quot;]
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;分享这个似乎是谨慎的，看看我的小 DWIM 是否有任何我没有考虑到的问题或缺点。一个可能的缺点是，如果你需要这样做的话，你需要使用 &lt;code&gt;,&lt;/code&gt; 来强制将一个集合变成一个数组。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my @a = &amp;lt;a b c d e&amp;gt; (-) &amp;lt;a b d&amp;gt; , ;
+say @a.raku;
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;[Set.new(&amp;quot;e&amp;quot;,&amp;quot;c&amp;quot;)]
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;下一步是什么&#34;&gt;下一步是什么&lt;/h2&gt;
+&lt;p&gt;我希望这能引发关于这个问题以及其他我们的直觉和 Raku 的行为不太一致的情况的讨论。也许还有其他相关的语言边缘可以被磨平，以消除这种危害。&lt;/p&gt;
+&lt;h2 id=&#34;后续&#34;&gt;后续&lt;/h2&gt;
+&lt;p&gt;在 &lt;a href=&#34;https://t.co/0QSoMxrSXf?amp=1&#34;&gt;Reddit&lt;/a&gt; 上有一些非常有启发性的讨论，涵盖了语言语义和各种替代方法。公平地说，我建议的方法引入了更多的不一致性，而不是价值，但讨论可能会导致一个语言一致的解决方案。&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rakulang">Rakulang</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/</guid>
+                <pubDate>Sun, 07 Feb 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -3379,310 +3486,6 @@ Flink SQL&amp;gt; &lt;span class=&#34;nb&#34;&gt;set&lt;/span&gt; table.sql-dial
                     
                 
                 <guid>https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/</guid>
-                <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>HiveCatalog</title>
-                <link>https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/</link>
-                
-                
-                <description>&lt;blockquote&gt;HiveCatalog&lt;/blockquote&gt;&lt;h1 id=&#34;hivecatalog&#34;&gt;HiveCatalog&lt;/h1&gt;
-&lt;p&gt;Hive Metastore 经过多年的发展，已经成为 Hadoop 生态系统中事实上的元数据中心。很多公司在生产中都有一个 Hive Metastore 服务实例来管理他们所有的元数据，无论是 Hive 元数据还是非 Hive 元数据，都是真理的来源。&lt;/p&gt;
-&lt;p&gt;对于同时部署了 Hive 和 Flink 的用户，HiveCatalog 可以让他们使用 Hive Metastore 来管理 Flink 的元数据。&lt;/p&gt;
-&lt;p&gt;对于只有 Flink 部署的用户来说，HiveCatalog 是 Flink 开箱即用的唯一持久化目录。如果没有持久化目录，用户使用 &lt;a href=&#34;https://ohmyweekly.github.io/notes/2020-08-22-create-statements&#34;&gt;Flink SQL CREATE DDL&lt;/a&gt; 必须在每个会话中反复创建元对象，比如 Kafka 表，这就浪费了很多时间。HiveCatalog 填补了这一空白，使用户只需创建一次表和其他元对象，以后就可以跨会话方便地引用和管理它们。&lt;/p&gt;
-&lt;h2 id=&#34;设置-hivecatalog&#34;&gt;设置 HiveCatalog&lt;/h2&gt;
-&lt;h3 id=&#34;依赖性&#34;&gt;依赖性&lt;/h3&gt;
-&lt;p&gt;在 Flink 中设置 HiveCatalog 需要与 Flink-Hive 集成相同的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#dependencies&#34;&gt;依赖关系&lt;/a&gt;。&lt;/p&gt;
-&lt;h3 id=&#34;配置&#34;&gt;配置&lt;/h3&gt;
-&lt;p&gt;在 Flink 中设置 HiveCatalog 需要与 Flink-Hive 集成相同的&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/#connecting-to-hive&#34;&gt;配置&lt;/a&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;如何使用-hivecatalog&#34;&gt;如何使用 HiveCatalog&lt;/h2&gt;
-&lt;p&gt;一旦配置得当，HiveCatalog 应该可以直接使用。用户可以用 DDL 创建 Flink 元对象，并在创建后立即看到它们。&lt;/p&gt;
-&lt;p&gt;HiveCatalog 可以用来处理两种表。Hive 兼容表和通用表。Hive-compatible 表是指那些以 Hive 兼容的方式存储的表，在存储层的元数据和数据方面都是如此。因此，通过 Flink 创建的 Hive 兼容表可以从 Hive 端进行查询。&lt;/p&gt;
-&lt;p&gt;而通用表则是针对 Flink 的。当使用 HiveCatalog 创建通用表时，我们只是使用 HMS 来持久化元数据。虽然这些表对 Hive 是可见的，但 Hive 不太可能理解这些元数据。因此在 Hive 中使用这样的表会导致未定义的行为。&lt;/p&gt;
-&lt;p&gt;Flink 使用属性 &amp;ldquo;is_generic&amp;rdquo; 来判断一个表是与 Hive 兼容还是通用。当用 HiveCatalog 创建一个表时，它默认被认为是通用的。如果你想创建一个 Hive 兼容的表，请确保在你的表属性中把 is_generic 设置为 false。&lt;/p&gt;
-&lt;p&gt;如上所述，通用表不应该从 Hive 使用。在 Hive CLI 中，你可以调用 describe FORMATTED 对一个表进行检查，通过检查 is_generic 属性来决定它是否是通用的。通用表会有 is_generic=true。&lt;/p&gt;
-&lt;h3 id=&#34;例子&#34;&gt;例子&lt;/h3&gt;
-&lt;p&gt;我们在这里将通过一个简单的例子进行讲解。&lt;/p&gt;
-&lt;p&gt;第 1 步：设置 Hive Metastore。&lt;/p&gt;
-&lt;p&gt;有一个 Hive Metastore 在运行。&lt;/p&gt;
-&lt;p&gt;在这里，我们在本地路径 &lt;code&gt;/opt/hive-conf/hive-site.xml&lt;/code&gt; 中设置一个本地 Hive Metastore 和我们的 hive-site.xml 文件。我们有如下的一些配置。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;&lt;span class=&#34;nt&#34;&gt;&amp;lt;configuration&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;javax.jdo.option.ConnectionURL&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;jdbc:mysql://localhost/metastore?createDatabaseIfNotExist=true&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;metadata is stored in a MySQL server&lt;span class=&#34;nt&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;javax.jdo.option.ConnectionDriverName&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;com.mysql.jdbc.Driver&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;MySQL JDBC driver class&lt;span class=&#34;nt&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;javax.jdo.option.ConnectionUserName&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;...&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;user name for connecting to mysql server&lt;span class=&#34;nt&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;javax.jdo.option.ConnectionPassword&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;...&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-      &lt;span class=&#34;nt&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;password for connecting to mysql server&lt;span class=&#34;nt&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-       &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;hive.metastore.uris&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-       &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;thrift://localhost:9083&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-       &lt;span class=&#34;nt&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;IP address (or fully-qualified domain name) and port of the metastore host&lt;span class=&#34;nt&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
-       &lt;span class=&#34;nt&#34;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;hive.metastore.schema.verification&lt;span class=&#34;nt&#34;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
-       &lt;span class=&#34;nt&#34;&gt;&amp;lt;value&amp;gt;&lt;/span&gt;true&lt;span class=&#34;nt&#34;&gt;&amp;lt;/value&amp;gt;&lt;/span&gt;
-   &lt;span class=&#34;nt&#34;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
-
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;用 Hive Cli 测试连接到 HMS。运行一些命令，我们可以看到我们有一个名为 default 的数据库，里面没有表。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;hive&amp;gt; show databases&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-OK
-default
-Time taken: 0.032 seconds, Fetched: &lt;span class=&#34;m&#34;&gt;1&lt;/span&gt; row&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;s&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-
-hive&amp;gt; show tables&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-OK
-Time taken: 0.028 seconds, Fetched: &lt;span class=&#34;m&#34;&gt;0&lt;/span&gt; row&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;s&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;步骤 2：配置 Flink 集群和 SQL CLI&lt;/p&gt;
-&lt;p&gt;将所有 Hive 的依赖关系添加到 Flink 发行版的 &lt;code&gt;/lib&lt;/code&gt; 目录下，并修改 SQL CLI 的 yaml 配置文件 sql-cli-defaults.yaml 如下。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span class=&#34;nt&#34;&gt;execution&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;planner&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;blink&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;type&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;streaming&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;current-catalog&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;myhive &lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c&#34;&gt;# set the HiveCatalog as the current catalog of the session&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;current-database&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;mydatabase&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;catalogs&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;- &lt;span class=&#34;nt&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;myhive&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;     &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;type&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;hive&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;     &lt;/span&gt;&lt;span class=&#34;nt&#34;&gt;hive-conf-dir&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;l&#34;&gt;/opt/hive-conf &lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c&#34;&gt;# contains hive-site.xml&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;第三步：建立 Kafka 集群&lt;/p&gt;
-&lt;p&gt;Bootstrap 一个本地的 Kafka 2.3.0 集群，主题命名为 &amp;ldquo;test&amp;rdquo;，并以 name 和 age 的元组形式向主题产生一些简单的数据。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;localhost$ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic &lt;span class=&#34;nb&#34;&gt;test&lt;/span&gt;
-&amp;gt;tom,15
-&amp;gt;john,21
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这些消息可以通过启动 Kafka 控制台消费者看到。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;localhost$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic &lt;span class=&#34;nb&#34;&gt;test&lt;/span&gt; --from-beginning
-
-tom,15
-john,21
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;第四步：启动 SQL Client，用 Flink SQL DDL 创建一个 Kafka 表。&lt;/p&gt;
-&lt;p&gt;启动 Flink SQL Client，通过 DDL 创建一个简单的 Kafka 2.3.0 表，并验证其模式。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;n&#34;&gt;Flink&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;SQL&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;CREATE&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;TABLE&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;mykafka&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;age&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;WITH&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;connector.type&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;kafka&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;connector.version&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;universal&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;connector.topic&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;test&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;connector.properties.bootstrap.servers&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;localhost:9092&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;format.type&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;csv&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
-   &lt;span class=&#34;s1&#34;&gt;&amp;#39;update-mode&amp;#39;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;append&amp;#39;&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;INFO&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;Table&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;has&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;been&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;created&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;
-
-&lt;span class=&#34;n&#34;&gt;Flink&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;SQL&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;DESCRIBE&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;mykafka&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;root&lt;/span&gt;
- &lt;span class=&#34;o&#34;&gt;|&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;-- name: STRING
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;|&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;-- age: INT
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;验证该表也是通过 Hive Cli 对 Hive 可见的，注意该表有属性 is_generic=true。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;hive&amp;gt; show tables&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-OK
-mykafka
-Time taken: 0.038 seconds, Fetched: &lt;span class=&#34;m&#34;&gt;1&lt;/span&gt; row&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;s&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-
-hive&amp;gt; describe formatted mykafka&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-OK
-&lt;span class=&#34;c1&#34;&gt;# col_name            	data_type           	comment&lt;/span&gt;
-
-
-&lt;span class=&#34;c1&#34;&gt;# Detailed Table Information&lt;/span&gt;
-Database:           	default
-Owner:              	null
-CreateTime:         	......
-LastAccessTime:     	UNKNOWN
-Retention:          	&lt;span class=&#34;m&#34;&gt;0&lt;/span&gt;
-Location:           	......
-Table Type:         	MANAGED_TABLE
-Table Parameters:
-	flink.connector.properties.bootstrap.servers	localhost:9092
-	flink.connector.topic	&lt;span class=&#34;nb&#34;&gt;test&lt;/span&gt;
-	flink.connector.type	kafka
-	flink.connector.version	universal
-	flink.format.type   	csv
-	flink.generic.table.schema.0.data-type	VARCHAR&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;2147483647&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-	flink.generic.table.schema.0.name	name
-	flink.generic.table.schema.1.data-type	INT
-	flink.generic.table.schema.1.name	age
-	flink.update-mode   	append
-	is_generic          	&lt;span class=&#34;nb&#34;&gt;true&lt;/span&gt;
-	transient_lastDdlTime	......
-
-&lt;span class=&#34;c1&#34;&gt;# Storage Information&lt;/span&gt;
-SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-InputFormat:        	org.apache.hadoop.mapred.TextInputFormat
-OutputFormat:       	org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat
-Compressed:         	No
-Num Buckets:        	-1
-Bucket Columns:     	&lt;span class=&#34;o&#34;&gt;[]&lt;/span&gt;
-Sort Columns:       	&lt;span class=&#34;o&#34;&gt;[]&lt;/span&gt;
-Storage Desc Params:
-	serialization.format	&lt;span class=&#34;m&#34;&gt;1&lt;/span&gt;
-Time taken: 0.158 seconds, Fetched: &lt;span class=&#34;m&#34;&gt;36&lt;/span&gt; row&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;s&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;第五步：运行 Flink SQL 查询 Kakfa 表。&lt;/p&gt;
-&lt;p&gt;在 Flink 集群中，无论是单机还是 yarn-session，从 Flink SQL Client 中运行一个简单的选择查询。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;Flink SQL&amp;gt; &lt;span class=&#34;k&#34;&gt;select&lt;/span&gt; * from mykafka&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 Kafka 主题中多产生一些信息。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;localhost$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic &lt;span class=&#34;nb&#34;&gt;test&lt;/span&gt; --from-beginning
-
-tom,15
-john,21
-kitty,30
-amy,24
-kaiky,18
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你现在应该可以在 SQL Client 中看到 Flink 产生的结果，如。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;             SQL Query Result (Table)
- Refresh: 1 s    Page: Last of 1     
-
-        name                       age
-         tom                        15
-        john                        21
-       kitty                        30
-         amy                        24
-       kaiky                        18
-&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;支持的类型&#34;&gt;支持的类型&lt;/h2&gt;
-&lt;p&gt;HiveCatalog 支持通用表的所有 Flink 类型。&lt;/p&gt;
-&lt;p&gt;对于 Hive 兼容的表，HiveCatalog 需要将 Flink 数据类型映射到相应的 Hive 类型，如下表所述。&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th style=&#34;text-align:left&#34;&gt;Flink Data Type&lt;/th&gt;
-&lt;th style=&#34;text-align:left&#34;&gt;Hive Data Type&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;CHAR(p)&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;CHAR(p)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;VARCHAR(p)&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;VARCHAR(p)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;STRING&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;STRING&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;BOOLEAN&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;BOOLEAN&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;TINYINT&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;TINYINT&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;SMALLINT&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;SMALLINT&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;INT&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;INT&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;BIGINT&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;LONG&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;FLOAT&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;FLOAT&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DOUBLE&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DOUBLE&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DECIMAL(p, s)&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DECIMAL(p, s)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DATE&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;DATE&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;TIMESTAMP(9)&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;TIMESTAMP&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;BYTES&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;BINARY&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;ARRAY&lt;!-- raw HTML omitted --&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;LIST&lt;!-- raw HTML omitted --&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;MAP&amp;lt;K, V&amp;gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;MAP&amp;lt;K, V&amp;gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;ROW&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;STRUCT&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;关于类型映射需要注意的地方。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Hive 的 CHAR(p) 最大长度为 255。&lt;/li&gt;
-&lt;li&gt;Hive 的 VARCHAR(p) 最大长度为 65535。&lt;/li&gt;
-&lt;li&gt;Hive 的 MAP 只支持基元键类型，而 Flink 的 MAP 可以是任何数据类型。&lt;/li&gt;
-&lt;li&gt;不支持 Hive 的 UNION 类型。&lt;/li&gt;
-&lt;li&gt;Hive 的 TIMESTAMP 的精度总是 9，不支持其他精度。而 Hive 的 UDF 则可以处理精度&amp;lt;=9 的 TIMESTAMP 值。&lt;/li&gt;
-&lt;li&gt;Hive 不支持 Flink 的 TIMESTAMP_WITH_TIME_ZONE、TIMESTAMP_WITH_LOCAL_TIME_ZONE 和 MULTISET。&lt;/li&gt;
-&lt;li&gt;Flink 的 INTERVAL 类型还不能映射到 Hive 的 INTERVAL 类型。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id=&#34;scala-shell&#34;&gt;Scala Shell&lt;/h2&gt;
-&lt;p&gt;注意：由于目前 Scala Shell 并不支持 blink planner，所以不建议在 Scala Shell 中使用 Hive 连接器。&lt;/p&gt;
-&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_catalog.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/hive_catalog.html&lt;/a&gt;&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/table-api-sql">Table API &amp; SQL</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/</guid>
                 <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
             </item>
         

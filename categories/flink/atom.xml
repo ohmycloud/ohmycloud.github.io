@@ -10,12 +10,128 @@
             <link href="https://ohmyweekly.github.io/categories/flink/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/flink/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/flink/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-01-23T22:00:20+08:00</updated>
+    <updated>2021-02-08T15:20:01+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/flink/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[如果集合如我所想]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/?utm_source=atom_feed" rel="related" type="text/html" title="Caesarean Substrings With Raku and Perl" />
+                <link href="https://ohmyweekly.github.io/notes/2020-10-04-the-strange-case-of-the-greedy-junction/?utm_source=atom_feed" rel="related" type="text/html" title="贪婪 Junction 的奇闻异事" />
+                <link href="https://ohmyweekly.github.io/notes/2020-10-04-reconstructing-raku-junctions/?utm_source=atom_feed" rel="related" type="text/html" title="重构 Raku 的 Junction" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-02-07T00:00:00+08:00</published>
+            <updated>2021-02-07T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>If Sets Would DWIM</blockquote><h1 id="if-sets-would-dwimhttpsdonaldhwtf202101if-sets-would-dwim"><a href="https://donaldh.wtf/2021/01/if-sets-would-dwim/">If Sets Would DWIM</a></h1>
+<p>每当我在 Raku 中使用集合的时候，它们经常无法 <a href="https://docs.raku.org/language/glossary#DWIM">DWIM</a>。这是一个简短的探索，看看是否可以改进 DWIMminess。</p>
+<p>我最近重新审视了我前段时间写的一个利用 <code>(-)</code> 集差运算符的脚本。这段代码有一个 bug 潜伏在那里，显而易见，因为下面的代码并没有按照我的直觉去做。</p>
+<pre><code class="language-raku" data-lang="raku">  my @allowed = &lt;m c i p l o t&gt;;
+  my @chars = 'impolitic'.comb;
+
+  my @remainder = @allowed (-) @chars;
+
+  if +@remainder == 0 {
+     say 'pangram';
+  } else {
+     say &quot;unused: [{@remainder.join(' ')}]&quot;;
+  }
+unused: []
+</code></pre><p>错误的原因是 <code>(-)</code> 产生了一个 Set，而赋值给 <code>@remainder</code> 会产生1项的 Array。总是这样。但不方便的是，当它是一个空集合时，它就会字符串化为一个空字符串，这只是帮助掩盖了这个潜伏的错误。</p>
+<pre><code class="language-raku" data-lang="raku">my @items = &lt;a b c d e&gt; (-) &lt;a b c d e&gt;;
+say @items.raku;
+say +@items;
+</code></pre><pre><code>[Set.new()]
+1
+</code></pre><p>解决方法比较简单。只要不赋值给数组就可以了。使用一个标量容器来代替。</p>
+<pre><code class="language-raku" data-lang="raku">my $items = &lt;a b c d e&gt; (-) &lt;a b d&gt;;
+say $items.raku;
+say +$items;
+</code></pre><pre><code>Set.new(&quot;e&quot;,&quot;c&quot;)
+2
+</code></pre><p>甚至是关联容器也可以。</p>
+<pre><code class="language-raku" data-lang="raku">my %items = &lt;a b c d e&gt; (-) &lt;a b d&gt;;
+say %items.raku;
+say +%items;
+</code></pre><pre><code>{:c(Bool::True), :e(Bool::True)}
+2
+</code></pre><p>或在赋值前明确地取出键的列表。</p>
+<pre><code class="language-raku" data-lang="raku">my @items = (&lt;a b c d e&gt; (-) &lt;a b d&gt;).keys;
+say @items.raku;
+say +@items;
+</code></pre><pre><code>[&quot;e&quot;, &quot;c&quot;]
+2
+</code></pre><p>很好，起作用了。只是不要用数组容器来处理 <code>Setty</code> 这样的东西。只是这并不能阻止我的直觉时不时地碰上这个错误。同一类的 bug 在我的代码中出现过好几次，因为它实在是太容易犯错了。Raku 不会告诉我，我做错了什么，因为也许是故意的。但重要的是， Raku 没有设法 DWIM。</p>
+<p>我可以采取的另一个方法是养成添加类型信息的习惯。这样确实可以让 Raku 在我掉进这个陷阱的时候告诉我。</p>
+<pre><code class="language-raku" data-lang="raku">my Str @a = &lt;a b c d e&gt; (-) &lt;a b d&gt;;
+</code></pre><pre><code>Type check failed in assignment to @a; expected Str but got Set (Set.new(&quot;e&quot;,&quot;c&quot;))
+  in sub  at EVAL_0 line 3
+  in block &lt;unit&gt; at EVAL_0 line 5
+  in block &lt;unit&gt; at -e line 1
+</code></pre><p>这是一个明显的例子，添加类型信息有助于 Raku 编译器帮助我避免引入这种 bug。</p>
+<h2 id="实验---为-set-自定义数组存储">实验 - 为 Set 自定义数组存储</h2>
+<p>我开始研究核心设置(core setting)，看看可以做什么。我惊喜地发现，我可以在 <code>Array.STORE</code> 的多重分派中添加我正在寻找的语义。</p>
+<pre><code class="language-raku" data-lang="raku">use MONKEY;
+
+augment class Array {
+   multi method STORE(Array:D: Set \item --&gt; Array:D) {
+       self.STORE(item.keys)
+   }
+}
+
+my @a = &lt;a b c d e&gt; (-) &lt;a b d&gt;;
+say @a.raku;
+say +@a;
+</code></pre><pre><code>[&quot;c&quot;, &quot;e&quot;]
+2
+</code></pre><p>分享这个似乎是谨慎的，看看我的小 DWIM 是否有任何我没有考虑到的问题或缺点。一个可能的缺点是，如果你需要这样做的话，你需要使用 <code>,</code> 来强制将一个集合变成一个数组。</p>
+<pre><code class="language-raku" data-lang="raku">my @a = &lt;a b c d e&gt; (-) &lt;a b d&gt; , ;
+say @a.raku;
+</code></pre><pre><code>[Set.new(&quot;e&quot;,&quot;c&quot;)]
+</code></pre><h2 id="下一步是什么">下一步是什么</h2>
+<p>我希望这能引发关于这个问题以及其他我们的直觉和 Raku 的行为不太一致的情况的讨论。也许还有其他相关的语言边缘可以被磨平，以消除这种危害。</p>
+<h2 id="后续">后续</h2>
+<p>在 <a href="https://t.co/0QSoMxrSXf?amp=1">Reddit</a> 上有一些非常有启发性的讨论，涵盖了语言语义和各种替代方法。公平地说，我建议的方法引入了更多的不一致性，而不是价值，但讨论可能会导致一个语言一致的解决方案。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku" term="raku" label="Raku" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/rakulang" term="rakulang" label="Rakulang" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>

@@ -1,0 +1,367 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    Raku on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/categories/raku/</link>
+        <description>Recent content  in Raku
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Mon, 08 Feb 2021 15:20:01 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/categories/raku/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Caesarean Substrings With Raku and Perl</title>
+                <link>https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/</link>
+                
+                
+                <description>&lt;blockquote&gt;Caesarean Substrings With Raku and Perl&lt;/blockquote&gt;&lt;p&gt;[113] 发表于2021年1月30日。
+这是我对 &lt;a href=&#34;https://perlweeklychallenge.org/blog/perl-weekly-challenge-097/&#34;&gt;Perl 每周挑战#097&lt;/a&gt; 的回应。&lt;/p&gt;
+&lt;h2 id=&#34;挑战-0971-凯撒密码&#34;&gt;挑战 #097.1: 凯撒密码&lt;/h2&gt;
+&lt;p&gt;给你一个只包含字母 &lt;code&gt;A..Z&lt;/code&gt; 的字符串 &lt;code&gt;$S&lt;/code&gt; 和一个数字 &lt;code&gt;$N&lt;/code&gt;。
+写一个脚本，用&lt;a href=&#34;https://en.wikipedia.org/wiki/Caesar_cipher&#34;&gt;凯撒密码&lt;/a&gt;对给定的字符串 &lt;code&gt;$S&lt;/code&gt; 进行加密，左移大小为 &lt;code&gt;$N&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;例子:
+输入: $S = &amp;ldquo;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&amp;rdquo;, $N = 3
+输出: &amp;ldquo;QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD&amp;rdquo;&lt;/p&gt;
+&lt;p&gt;Plain:    ABCDEFGHIJKLMNOPQRSTUVWXYZ
+Cipher:   XYZABCDEFGHIJKLMNOPQRSTUVW&lt;/p&gt;
+&lt;p&gt;Plaintext:  THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG
+Ciphertext: QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD&lt;/p&gt;
+&lt;p&gt;&amp;ldquo;只用字母 &lt;code&gt;A...Z&lt;/code&gt;&amp;rdquo; 的表述是错误的，因为例子中也有几个空格。因此，应该允许这些空格。&lt;/p&gt;
+&lt;p&gt;文件: caesar-cipher&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;#! /usr/bin/env raku
+
+subset AZ-space of Str where /^ &amp;lt;[ A .. Z \s ]&amp;gt;+ $/;   # [1]
+subset PosInt of Int where -25 &amp;lt;= $_ &amp;lt;= 25;            # [2]
+
+unit sub MAIN (AZ-space $S = &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39;,
+               PosInt $N = 3);                         # [3]
+
+say $S.comb.map({ caesar($_, $N) }).join;              # [4]
+
+sub caesar ($char, $shift)
+{
+  return $char if $char eq &amp;quot; &amp;quot;;                        # [5]
+
+  my $code = $char.ord;                                # [6]
+
+  $code -= $shift;                                     # [7]
+
+  $code += 26 if $code &amp;lt; 65;  # &#39;A&#39;                    # [8]
+  $code -= 26 if $code &amp;gt; 90;  # &#39;Z&#39;                    # [8a]
+
+  return $code.chr;                                    # [9]
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;[1] 所允许的字符 (或 «特定领域字母»).&lt;/p&gt;
+&lt;p&gt;[2] 挑战说左移值是一个数字。允许除整数以外的任何东西是没有意义的，所以我把值限制在这个类型。负值应该是可以的，它们意味着右移值（而不是左移）。&lt;/p&gt;
+&lt;p&gt;[3] 参数，默认值为挑战中给出的值。&lt;/p&gt;
+&lt;p&gt;[4] 将字符串分割成单个字符（用梳子(comb)，在每个字符上应用 &amp;ldquo;caesar&amp;rdquo; 函数（用map），再次将字符连接成一个字符串（用join），然后打印出来。&lt;/p&gt;
+&lt;p&gt;[5] 不移动空格。&lt;/p&gt;
+&lt;p&gt;[6] 获取字符的代码点。&lt;/p&gt;
+&lt;p&gt;[7] 减去移位值（当我们向左移位时，或在字母表中降低移位值）。&lt;/p&gt;
+&lt;p&gt;[8] 绕回, 如果我们移出A-Z范围，这里为更低 - 或更高的 [8b]。&lt;/p&gt;
+&lt;p&gt;[9] 获取指定代码点的字符。&lt;/p&gt;
+&lt;p&gt;查看 docs.raku.org/routine/ord 获取更多关于 ord 的信息。&lt;/p&gt;
+&lt;p&gt;查看 docs.raku.org/routine/chr 获取更多关于 chr 的信息。&lt;/p&gt;
+&lt;p&gt;运行它:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ ./caesar-cipher &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 3
+QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD
+
+$ ./caesar-cipher &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -3
+WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ
+
+$ ./caesar-cipher &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+
+$ ./caesar-cipher &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Raku 有一个 ords 变体，它接收一整个字符串，而不是一个字符作为 ord。还有 chrs，它接收一个代码点数组，并将它们变成一个字符串，而不是像 chr 那样接收一个字符的代码点。让我们用它们来写一个更短的程序。&lt;/p&gt;
+&lt;p&gt;文件: caesar-cipher-map&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;#! /usr/bin/env raku
+
+subset AZ-space of Str where /^ &amp;lt;[ A .. Z \s ]&amp;gt;+ $/;
+subset PosInt of Int where -25 &amp;lt;= $_ &amp;lt;= 25;
+
+unit sub MAIN (AZ-space $S = &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39;,
+               PosInt $N = 3);
+
+say caesar($S, $N);
+
+sub caesar ($string, $shift)
+{
+  return $string.ords.map({$_ == 32 ?? 32 !! (($_ - $shift - 65) % 26 ) + 65}).chrs;
+    # #################### # 1a ############# ############ # 1b  # 1c ## 1d
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;[1] 我们使用map来改变各个代码点。我们让代码点为32的空间单独存在[1a]。每一个其他的值我们都还原成0到25之间的数字（通过减去第一个字母的代码点（A：65）和移位值[1b]）。模数运算符 (%) 为我们处理负值，做正确的事情。例如：-2 % 26 -&amp;gt; 24 [1c]。然后我们添加调整值到它们应该在的位置(从A到Z)[1d]，然后我们将整个数组的代码点变成一个字符串。&lt;/p&gt;
+&lt;p&gt;查看 docs.raku.org/routine/ords 获取更多关于 ords 的信息。&lt;/p&gt;
+&lt;p&gt;查看 docs.raku.org/routine/chrs 获取更多关于 chrs 的信息。&lt;/p&gt;
+&lt;p&gt;运行它的结果和之前一样。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ ./caesar-cipher-map &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 3
+QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD
+
+$ ./caesar-cipher-map &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -3
+WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ
+
+$ ./caesar-cipher-map &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+
+$ ./caesar-cipher-map &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;perl-版本&#34;&gt;Perl 版本&lt;/h2&gt;
+&lt;p&gt;这是对第一个 Raku 版的直接翻译。&lt;/p&gt;
+&lt;p&gt;File: caesar-cipher-perl&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-perl&#34; data-lang=&#34;perl&#34;&gt;&lt;span class=&#34;ch&#34;&gt;#! /usr/bin/env perl&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;strict&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;warnings&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;feature&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#39;say&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;feature&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#39;signatures&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;no&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;warnings&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;experimental::signatures&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;my&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$S&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;shift&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;@ARGV&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;sr&#34;&gt;//&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;nb&#34;&gt;die&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;Illegal characters&amp;#34;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;unless&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$S&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=~&lt;/span&gt;&lt;span class=&#34;sr&#34;&gt; /^[A-Z\s]+$/&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;my&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$N&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;shift&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;@ARGV&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;sr&#34;&gt;//&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;nb&#34;&gt;die&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;Illegal shift $N&amp;#34;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$N&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;!~&lt;/span&gt; &lt;span class=&#34;sr&#34;&gt;/^\-?\d+$/&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;||&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$N&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;25&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;||&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$N&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;25&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;say&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;map&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;caesar&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$_&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$N&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;split&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;sr&#34;&gt;//&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$S&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;));&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;sub&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;caesar&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;($char, $shift)
+&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$char&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$char&lt;/span&gt; &lt;span class=&#34;ow&#34;&gt;eq&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34; &amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;my&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;ord&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$char&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+
+  &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-=&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$shift&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+  &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;26&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;65&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;  &lt;span class=&#34;c1&#34;&gt;# &amp;#39;A&amp;#39;&lt;/span&gt;
+  &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;-=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;26&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;90&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;  &lt;span class=&#34;c1&#34;&gt;# &amp;#39;Z&amp;#39;&lt;/span&gt;
+
+  &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;chr&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$code&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;运行它的结果和 Raku 版一样。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ ./caesar-cipher-perl &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 3
+QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD
+
+$ ./caesar-cipher-perl &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -3
+WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ
+
+$ ./caesar-cipher-perl &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; 13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+
+$ ./caesar-cipher-perl &#39;THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG&#39; -13
+GUR DHVPX OEBJA SBK WHZCF BIRE GUR YNML QBT
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;挑战-0972二进制子字符串binary-substrings&#34;&gt;挑战 #097.2：二进制子字符串(Binary Substrings)&lt;/h2&gt;
+&lt;p&gt;给你一个二进制字符串 &lt;code&gt;$B&lt;/code&gt; 和一个整数 &lt;code&gt;$S&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;写一个脚本来拆分大小为 &lt;code&gt;$S&lt;/code&gt; 的二进制字符串 &lt;code&gt;$B&lt;/code&gt;，然后找出使其相同的最小翻转次数。&lt;/p&gt;
+&lt;p&gt;例 1:
+输入: $B = “101100101”, $S = 3
+输出: 1&lt;/p&gt;
+&lt;p&gt;二进制子字符串:
+&amp;ldquo;101&amp;rdquo;: 0 flip
+&amp;ldquo;100&amp;rdquo;: 1 flip to make it &amp;ldquo;101&amp;rdquo;
+&amp;ldquo;101&amp;rdquo;: 0 flip&lt;/p&gt;
+&lt;p&gt;例 2:
+输入 $B = “10110111”, $S = 4
+输出: 2&lt;/p&gt;
+&lt;p&gt;二进制子字符串:
+&amp;ldquo;1011&amp;rdquo;: 0 flip
+&amp;ldquo;0111&amp;rdquo;: 2 flips to make it &amp;ldquo;1011&amp;rdquo;&lt;/p&gt;
+&lt;p&gt;我们先从第一个例子中的二进制子字符串中砍掉3个字符块。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;gt; say &amp;quot;101100101&amp;quot;.comb(3);   # -&amp;gt; (101 100 101)
+&amp;gt; say &amp;quot;1011001010&amp;quot;.comb(3);  # -&amp;gt; (101 100 101 0)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;第二行显示了如果长度不匹配会发生什么。这就给了我们一个非法的值，因为我们不能将一位数翻转为三位数的值。所以我们必须添加一个检查。&lt;/p&gt;
+&lt;p&gt;然后我们将第一个子串与其余的子串进行比较，一次一个。在这里使用bitwise XOR（Exclusive OR）运算符是一个合理的选择。这给了我们一个二进制值，其中1的数量就是该子串的翻转次数。Raku确实有一个XOR运算符。+^. 但是它 &amp;ldquo;将两个参数都强制为Int，并进行位智XOR操作&amp;rdquo;(根据文档&amp;quot;；参见docs.raku.org/language/operators#infix_+^)。&lt;/p&gt;
+&lt;p&gt;我们可以在进行XOR操作之前，将二进制值转换为十进制值。让我们试试。&lt;/p&gt;
+&lt;p&gt;获取翻转的次数。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;gt; say (&amp;quot;10101&amp;quot;.parse-base(2) +^ &amp;quot;10111&amp;quot;.parse-base(2)).base(2).comb.sum;  # -&amp;gt; 1
+&amp;gt; say (&amp;quot;11101&amp;quot;.parse-base(2) +^ &amp;quot;10111&amp;quot;.parse-base(2)).base(2).comb.sum;  # -&amp;gt; 2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这当然可行，但需要大量的代码。所以我将使用一个更简单的方法 - 逐个比较每个数字。&lt;/p&gt;
+&lt;p&gt;File: binary-substring&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;#! /usr/bin/env raku
+
+subset BinaryString where /^ &amp;lt;[01]&amp;gt;+ $/;                    # [1]
+subset PosInt of Int where * &amp;gt; 0;                           # [2]
+
+unit sub MAIN (BinaryString $B = &#39;101100101&#39;,               # [1]
+               PosInt $S where $B.chars %% $S = 3,          # [2]
+	       :v(:$verbose));
+
+my @B     = $B.comb($S.Int);                                # [3]
+my $first = @B.shift;                                       # [4]
+my $total = 0;                                              # [5]
+
+for @B -&amp;gt; $current                                          # [6]
+{
+  my $flip = bit-diff($first, $current);                    # [7]
+  $total += $flip;                                          # [8]
+  say &amp;quot;: $first -&amp;gt; $current -&amp;gt; Flip: $flip&amp;quot; if $verbose;
+}
+
+say $total;                                                 # [9]
+
+sub bit-diff ($a, $b)                                       # [7]
+{
+  my $flip = 0;                                             # [10]
+
+  for ^$a.chars -&amp;gt; $index                                   # [11]
+  {
+    $flip++ if $a.substr($index,1) ne $b.substr($index,1);  # [12]
+  }
+
+  return $flip;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;[1] 确保二进制字符串是合法的（只包含 &amp;ldquo;0 &amp;ldquo;和 &amp;ldquo;1&amp;rdquo;）。&lt;/p&gt;
+&lt;p&gt;[2] 确保是一个正整数，同时确保字符串是被它偶数分割的。(例如，&amp;ldquo;4 &amp;ldquo;给我们提供了长度为4的子串，如果最后一个较短，程序将中止。)&lt;/p&gt;
+&lt;p&gt;[3] 梳子通常用于将一个字符串分割成单个字符，但我们可以通过指定长度来获得每个子字符串中的多个字符，比如这样。&lt;/p&gt;
+&lt;p&gt;[4] 例子首先将第一个子串与自己进行比较，给出零翻转。这是愚蠢的(ish)，所以我跳过这一点，把第一个子串移出。&lt;/p&gt;
+&lt;p&gt;[5] 结果会到这里。&lt;/p&gt;
+&lt;p&gt;[6] 对于每一个子串（除了第一个，见[4]）。&lt;/p&gt;
+&lt;p&gt;[7] 获取每个子串的翻转次数。&lt;/p&gt;
+&lt;p&gt;[8] 并将其添加到总数中。&lt;/p&gt;
+&lt;p&gt;[9] 打印它。&lt;/p&gt;
+&lt;p&gt;[10] 翻转的数量会在这里。&lt;/p&gt;
+&lt;p&gt;[11] 对于两个子串中的每个索引（具有相同的长度）。&lt;/p&gt;
+&lt;p&gt;[12] - 如果给定位置上的字符不同，则在总数的基础上加1，意味着移动。&lt;/p&gt;
+&lt;p&gt;See docs.raku.org/routine/comb for more information about comb.&lt;/p&gt;
+&lt;p&gt;运行它。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ ./binary-substring &amp;quot;101100101&amp;quot; 3
+ 1
+
+$ ./binary-substring -v &amp;quot;101100101&amp;quot; 3
+: 101 -&amp;gt; 100 -&amp;gt; Flip: 1
+: 101 -&amp;gt; 101 -&amp;gt; Flip: 0
+1
+
+$ ./binary-substring &amp;quot;10110111&amp;quot; 4
+2
+
+$ ./binary-substring -v &amp;quot;10110111&amp;quot; 4
+: 1011 -&amp;gt; 0111 -&amp;gt; Flip: 2
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;看起来不错。&lt;/p&gt;
+&lt;h2 id=&#34;perl&#34;&gt;Perl&lt;/h2&gt;
+&lt;p&gt;这是对 Raku 版本的直接翻译，只是我必须实现 &amp;ldquo;comb&amp;rdquo;。&lt;/p&gt;
+&lt;p&gt;文件： binary-substring-perl&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;#! /usr/bin/env perl
+
+use strict;
+use warnings;
+use feature &#39;say&#39;;
+use feature &#39;signatures&#39;;
+use Getopt::Long;
+
+no warnings &amp;quot;experimental::signatures&amp;quot;;
+
+my $verbose = 0;
+
+GetOptions(&amp;quot;verbose&amp;quot;  =&amp;gt; \$verbose);
+
+my $B = shift(@ARGV) // &#39;101100101&#39;;
+
+die &amp;quot;Not a binary number&amp;quot; unless $B =~ /^[01]+$/;
+
+my $S = shift(@ARGV) // 3;
+
+die &amp;quot;Not an integer&amp;quot; unless $S =~ /^[1-9][0-9]*$/;
+die &amp;quot;Not a legal length&amp;quot; if length($B) % $S;
+
+my @B     =  comb($B, $S);
+my $first = shift(@B);
+my $total = 0;
+
+for my $current (@B)
+{
+  my $flip = bit_diff($first, $current);
+  $total += $flip;
+  say &amp;quot;: $first -&amp;gt; $current -&amp;gt; Flip: $flip&amp;quot; if $verbose;
+}
+
+say $total;
+
+sub bit_diff ($a, $b)
+{
+  my $flip = 0;
+
+  for my $index (0 .. length($a))
+  {
+    $flip++ if substr($a, $index,1) ne substr($b, $index,1);
+  }
+
+  return $flip;
+}
+
+sub comb ($string, $length = 1)  # [1]
+{
+  my @result;
+
+  while ($string)
+  {
+    push(@result, substr($string, 0, $length));
+    $string = substr($string, $length);
+  }
+  return @result;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;[1] 缺失的 Raku 例程 &amp;ldquo;comb&amp;rdquo;。可选的第二个参数指定了它所返回的每个子串中所包含的（第一个参数的）子串长度。&lt;/p&gt;
+&lt;p&gt;运行它的结果与 Raku 版本相同。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ ./binary-substring-perl &amp;quot;101100101&amp;quot; 3
+1
+
+$ ./binary-substring-perl -v &amp;quot;101100101&amp;quot; 3
+: 101 -&amp;gt; 100 -&amp;gt; Flip: 1
+: 101 -&amp;gt; 101 -&amp;gt; Flip: 0
+1
+
+$ ./binary-substring-perl &amp;quot;101100111&amp;quot; 3
+2
+
+$ ./binary-substring-perl -v &amp;quot;101100111&amp;quot; 3
+: 101 -&amp;gt; 100 -&amp;gt; Flip: 1
+: 101 -&amp;gt; 111 -&amp;gt; Flip: 1
+2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;就是这样。&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/raku">Raku</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rakulang">Rakulang</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/</guid>
+                <pubDate>Sun, 07 Feb 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+
