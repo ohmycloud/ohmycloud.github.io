@@ -10,12 +10,432 @@
             <link href="https://ohmyweekly.github.io/categories/raku/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/raku/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/raku/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-02-08T15:20:01+08:00</updated>
+    <updated>2021-02-28T14:55:59+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/raku/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Method-ish]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-02-17-method-isd/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/?utm_source=atom_feed" rel="related" type="text/html" title="模式分派" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-28-custom-when/?utm_source=atom_feed" rel="related" type="text/html" title="自定义 when" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-16-contributing-to-raku/?utm_source=atom_feed" rel="related" type="text/html" title="为最年轻的 Raku 贡献力量" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/?utm_source=atom_feed" rel="related" type="text/html" title="Caesarean Substrings With Raku and Perl" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/?utm_source=atom_feed" rel="related" type="text/html" title="如果集合如我所想" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-02-17-method-isd/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-02-28T00:00:00+08:00</published>
+            <updated>2021-02-28T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Method-ish</blockquote><p>在我的上一篇文章中，我又一次为从 CORE 中增强类的方法而苦恼。这种挣扎完全没有必要，因为我并没有用增加的方法改变对象的状态。对于做更高级的东西，我可能不得不这样做。把手伸进 Raku 的内部这么深，我可能会把自己烫伤。既然我想做的是把我的代码绑在编译器的变化上，反正我可能会全身心地投入到 nqp-land 中去。</p>
+<pre><code class="language-raku" data-lang="raku">my \j = 1 | 2 | 3;
+dd j;
+use nqp;
+.say for nqp::getattr(j, Junction, '$!eigenstates');
+# OUTPUT: any(1, 2, 3)
+          1
+          2
+          3
+</code></pre><p>我们可以使用 nqp 来获取私有属性，而不需要添加任何方法。这就有点儿不伦不类了。所以，让我们用一个伪方法来做一些 deboilerplating。</p>
+<pre><code class="language-raku" data-lang="raku">sub pry(Mu $the-object is raw) {
+    use InterceptAllMethods;
+
+    class Interceptor {
+        has Mu $!the-object;
+        method ^find_method(Mu \type, Str $name) {
+            my method (Mu \SELF:) is raw {
+                use nqp;
+                my $the-object := nqp::getattr(SELF, Interceptor, '$!the-object');
+                nqp::getattr($the-object, $the-object.WHAT, '$!' ~ $name)
+            }
+        }
+    }
+
+    use nqp;
+    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object);
+}
+
+.say for j.&amp;pry.eigenstates;
+# OUTPUT: 1
+          2
+          3
+</code></pre><p>通过 InterceptAllMethods，lizmat 改变了类关键字的行为，允许我们提供一个 FALLBACK-method 来捕获任何方法，包括从 Mu 继承的方法。这反过来又允许 pry 返回的对象将任何方法调用转移到一个自定义的方法。在这个方法中，我们可以对 <code>.&amp;pry</code> 被调用的对象做任何我们想做的事情。</p>
+<p>由于我们的特殊对象会拦截任何调用，甚至是 Mu 的调用，我们需要找到另一种方法来调用 <code>.new</code>。由于 <code>.^</code> 不是 <code>.</code> 的特殊形式，我们可以用它来获得对类方法的访问。</p>
+<pre><code class="language-raku" data-lang="raku">sub interceptor(Method $the-method){
+    use InterceptAllMethods;
+    use nqp;
+
+    sub (Mu $the-object is raw) {
+        my class Interceptor {
+            has Mu $!the-object;
+            has Code $!the-method;
+
+            method ^find_method(Mu \type, Mu:D $name) {
+                my method (Mu \SELF: |c) is raw {
+                    $!the-method.($!the-object, $name, |c)
+                }
+            }
+            method ^introspect(Mu \type, Mu \obj) {
+                my method call-it() is raw {
+                    $!the-object
+                }
+                obj.&amp;call-it;
+            }
+            method ^new(Mu \type, $the-object!, $the-method) {
+                nqp::p6bindattrinvres(
+                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
+                        Interceptor, '$!the-method', $the-method)
+            }
+        }
+
+            # nqp::p6bindattrinvres(
+                #     nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
+                #   Interceptor, '$!the-method', $the-method);
+        Interceptor.^new($the-object, $the-method)
+    }
+}
+
+my &amp;first-defined = interceptor(
+    my method (Positional \SELF: $name) {
+        for SELF.flat -&gt; $e {
+            with $e.&quot;$name&quot;(|%_) {
+                .return
+            }
+        }
+        Nil
+    }
+);
+
+my $file = &lt;file1.txt file2.txt file3.txt nohup.out&gt;».IO.&amp;first-defined.open(:r);
+dd $file;
+# OUTPUT: Handle $file = IO::Handle.new(path =&gt; IO::Path.new(&quot;nohup.out&quot;, :SPEC(IO::Spec::Unix), :CWD(&quot;/home/dex/projects/raku/tmp&quot;)), chomp =&gt; Bool::True, nl-in =&gt; $[&quot;\n&quot;, &quot;\r\n&quot;], nl-out =&gt; &quot;\n&quot;, encoding =&gt; &quot;utf8&quot;)
+</code></pre><p>sub <code>interceptor</code> 接受一个方法并返回一个 sub。如果这个 sub 像方法一样被调用，它将把要被调用的方法的名称和调用者转发给一个自定义方法。当 <code>.&amp;first-defined</code> 被调用时，会返回一个特殊的对象。让我们来看看它是什么。</p>
+<pre><code class="language-raku" data-lang="raku">my \uhhh-special = &lt;a b c&gt;.&amp;first-defined;
+dd uhhh-special.^introspect(uhhh-special);
+# OUTPUT: ($(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;), method &lt;anon&gt; (Positional \SELF: $name, *%_) { #`(Method|93927752146784) ... })
+</code></pre><p>我们必须给 <code>.^introspect</code> 一个我们想看的对象，因为它的调用者是类 Interceptor 的类型对象。</p>
+<p>目前，我还不知道有什么办法（毕竟，我知道的只是足够多的东西，真的很危险。这是不幸的，因为 lizmat 决定重载关键字 <code>class</code>，而不是用不同的名字导出特殊的 <code>Metamodel::ClassHOW</code>。如果我们不想或不能有外部依赖，我们可以使用 MOP 来创建我们的类型对象。</p>
+<pre><code class="language-raku" data-lang="raku">class InterceptHOW is Metamodel::ClassHOW {
+    method publish_method_cache(|) { }
+}
+
+sub ipry(Mu $the-object is raw) {
+    my \Interceptor = InterceptHOW.new_type(:name&lt;Interceptor&gt;);
+    Interceptor.^add_attribute(Attribute.new(:name&lt;$!the-object&gt;, :type(Mu), :package(Interceptor)));
+    Interceptor.^add_meta_method('find_method',
+        my method find_method(Mu \type, Str $name) {
+            # say „looking for $name“;
+            my method (Mu \SELF:) is raw {
+                use nqp;
+                my $the-object := nqp::getattr(SELF, Interceptor, '$!the-object');
+                nqp::getattr($the-object, $the-object.WHAT, '$!' ~ $name)
+            }
+    });
+    Interceptor.^compose;
+
+    use nqp;
+    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object);
+}
+</code></pre><p>当我写这篇文章的时候，我发现 <code>.^add_meta_method</code> 只有在提供给它的方法的第一个参数的名字和 <code>Str</code> 相同的时候才会工作。起初，我尝试了一个匿名方法，它最终出现在 <code>.^meta_method_table</code> 中，但从未被调用。我想这个 bug 其实并不重要，因为这个元方法根本没有被记录下来。如果我玩火，我没有权利抱怨烧伤。你会在野外的 <code>Actions.nqp</code> 中发现这个方法。Class 关键字并没有什么神奇的作用。Rakudo 只是使用 MOP 来构造类型对象。</p>
+<p>我们不能在 Raku 中重载赋值操作符。这其实并不需要，因为赋值是通过调用一个名为 STORE 的方法来实现的。由于我们得到了对 dispatch 的完全控制，我们可以拦截任何方法调用，包括一连串的方法调用。</p>
+<pre><code class="language-raku" data-lang="raku">multi sub methodify(%h, :$deeply!) {
+    sub interceptor(%h, $parent = Nil){
+        use InterceptAllMethods;
+        use nqp;
+
+        class Interceptor is Callable {
+            has Mu $!the-object;
+            has Mu @!stack;
+
+            method ^find_method(Mu \type, Mu:D $name) {
+                my method (Mu \SELF: |c) is raw {
+                    my @new-stack = @!stack;
+                    my $the-object = $!the-object;
+
+                    if $name eq 'STORE' {
+                        # workaround for rakudobug#4203
+                        $the-object{||@new-stack.head(*-1)}:delete if $the-object{||@new-stack.head(*-1)}:exists;
+
+                        $the-object{||@new-stack} = c;
+                        return-rw c
+                    } else {
+                        @new-stack.push: $name;
+                        my \nextlevel = SELF.^new($!the-object, @new-stack, $name);
+                        nextlevel
+                    }
+                }
+            }
+            method ^introspect(Mu \type, Mu \obj) {
+                my method call-it() is raw {
+                    $!the-object, @!stack
+                }
+                obj.&amp;call-it;
+            }
+            method ^new(Mu \type, $the-object!, @new-stack?, $name?) {
+                $name
+                    ?? nqp::p6bindattrinvres(
+                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
+                        Interceptor, '@!stack', @new-stack)
+                    !! nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object)
+                }
+        }
+
+        Interceptor.^new(%h)
+    }
+
+    interceptor(%h)
+}
+
+my %h2;
+my $o2 = methodify(%h2, :deeply);
+$o2.a.b = 42;
+dd %h2;
+$o2.a.b.c = &lt;answer&gt;;
+dd %h2;
+say $o2.a.b.c;
+# OUTPUT: Hash %h2 = {:a(${:b(\(42))})}
+          Hash %h2 = {:a(${:b(${:c(\(&quot;answer&quot;))})})}
+          This type cannot unbox to a native string: P6opaque, Interceptor
+            in block &lt;unit&gt; at /home/dex/projects/raku/any-chain.raku line 310
+</code></pre><p>每当我们调用一个方法时，都会创建一个新的 Interceptor 实例，它存储了前一个方法的名称。这样我们就可以沿着方法调用链移动。由于赋值调用 STORE，我们可以将赋值转移到我们用作实际数据结构的 Hash 中。唉，检索值就不一样了，因为 Raku 不区分方法调用和 FETCH。在这里，龙比我强。我还是包含了这个一半失败的尝试，因为我对 slippy 半列表有很好的利用。这需要使用 <code>v6.e.preview</code>，让我踩到了一个 bug。可能还有更多这样的情况。所以请使用同样的，这样我们就可以在 <code>.e</code> 发布到野外之前，把所有的野兽都杀掉。</p>
+<p>能够完全控制方法调用链将是一件好事。也许我们可以用 RakuAST 来做到这一点。</p>
+<p>有了这些已经可以工作的东西，我们可以做一些有趣的事情。那些烦人的异常总是在拖我们的后腿。我们可以用 <code>try</code> 来化解它们，但那会破坏一个方法调用链。</p>
+<pre><code class="language-raku" data-lang="raku">constant no-argument-given = Mu.new;
+sub try(Mu $obj is raw, Mu $alternate-value = no-argument-given) {
+    interceptor(my method (Mu \SELF: $name, |c) {
+        my $o = SELF;
+        my \m = $o.^lookup($name) orelse {
+            my $bt = Backtrace.new;
+            my $idx = $bt.next-interesting-index($bt.next-interesting-index + 1);
+            (X::Method::NotFound.new(:method($name), :typename($o.^name)) but role :: { method vault-backtrace { False }}).throw(Backtrace.new($idx + 1));
+        }
+
+        try {
+            $o = $o.&quot;$name&quot;(|c);
+        }
+ 
+        $! ~~ Exception
+            ?? $alternate-value.WHICH eqv no-argument-given.WHICH
+                ?? $o
+                !! $alternate-value
+            !! $o
+    }).($obj)
+}
+
+class C {
+    has $.greeting;
+    method might-throw { die &quot;Not today love!&quot; }
+    method greet { say $.greeting }
+}
+
+C.new(greeting =&gt; ‚Let's make love!‘).&amp;try.might-throw.greet;
+# OUTPUT: Let's make love!
+</code></pre><p>伪方法 try 将会化解任何异常，并允许继续调用 C 语言的方法。我必须用一个特殊的值来标记没有可选的参数 <code>$alternate-value</code>，因为它实际上可能会把异常对象变成 <code>Nil</code>。</p>
+<p>我很肯定还有很多这样的小帮手在等着我们去发现。未来可能会有一个模块，希望能帮助 Raku 成为一个好的<a href="https://ftp.fau.de/fosdem/2021/D.perl/programming_lang_for_free_software.webm">编程语言</a>。</p>
+<p>原文链接: <a href="https://gfldex.wordpress.com/2021/02/17/method-ish/">https://gfldex.wordpress.com/2021/02/17/method-ish/</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/raku" term="raku" label="Raku" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku" term="raku" label="Raku" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku-%E5%8D%9A%E5%AE%A2" term="raku-%E5%8D%9A%E5%AE%A2" label="Raku 博客" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[模式分派]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-02-17-method-isd/?utm_source=atom_feed" rel="related" type="text/html" title="Method-ish" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-28-custom-when/?utm_source=atom_feed" rel="related" type="text/html" title="自定义 when" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-16-contributing-to-raku/?utm_source=atom_feed" rel="related" type="text/html" title="为最年轻的 Raku 贡献力量" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/?utm_source=atom_feed" rel="related" type="text/html" title="Caesarean Substrings With Raku and Perl" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/?utm_source=atom_feed" rel="related" type="text/html" title="如果集合如我所想" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-02-28T00:00:00+08:00</published>
+            <updated>2021-02-28T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Pattern Dispatch</blockquote><p>一直以来乐于助人的 <a href="https://stackoverflow.com/users/1077672/raiph">raiph</a> 在回答一个关于模式匹配的<a href="https://stackoverflow.com/questions/66233465/haskell-like-pattern-matching-in-raku">问题</a>时希望得到 RakuAST，就像在 Haskell 中一样。有人提出用 MMD 来解决这个问题。这样做，得到一个贯穿的默认路径是无解的。由于 dispatch 简单来说就是模式匹配，我们只需要做一些额外的工作。简而言之，dispatcher 得到一个函数列表和一个带参数的列表。第一个接受所有参数的函数获胜。</p>
+<pre><code class="language-raku" data-lang="raku">class Hold { has $.key; }
+class Press { has $.key; }
+class Err { has $.msg; }
+
+sub else(&amp;code) { &amp;code }
+
+sub match($needle, *@tests) {
+    for @tests.head(*-1) -&gt; &amp;f {
+        if &amp;f.cando(\($needle)) {
+            return f($needle);
+        }
+    }
+    @tests.tail.();
+}
+
+match Hold.new(:key&lt;a&gt;),
+    -&gt; Hold (:$key) { put „holding $key“; },
+    -&gt; Press (:$key) { put „pressing $key“; },
+    -&gt; Err (:$msg) { warn „ERR: $msg“ },
+    else { fail ‚unsopported‘ };
+</code></pre><p>方法 <code>.cando</code> 需要一个 <a href="https://docs.raku.org/type/Capture">Capture</a> 来告诉我们一个 Routine 是否可以用一个给定的参数列表来调用。为了创建这样一个捕获，我们使用字面的 <code>\($arguments, $go, $here)</code>。我们不在最后测试默认值。相反，当没有其他函数匹配时，我们会调用该函数。声明 sub <code>else</code> 只是为了美化。</p>
+<p>由于我们是在函数式的土地上，我们可以使用 Raku 提供给我们的所有方便的功能。</p>
+<pre><code class="language-raku" data-lang="raku">my &amp;key-matcher = &amp;match.assuming(*,[
+        -&gt; Hold (:$key) { put „holding $key“; },
+        -&gt; Press (:$key) { put „pressing $key“; },
+        -&gt; Err (:$msg) { warn „ERR: $msg“ },
+        else { fail ‚unsopported‘ };
+]);
+
+sub key-source {
+    gather loop {
+        sleep 1;
+        take (Hold.new(:key&lt;a&gt;), Press.new(:key&lt;b&gt;), Err.new(:msg&lt;WELP!&gt;), 'unsupported').pick;
+    }
+}
+
+.&amp;key-matcher for key-source;
+</code></pre><p>我们要帮助 <code>.assuming</code> 有点理解 slurpies，把函数列表放在一个显式 Array 中。</p>
+<p>总有一种函数式的方法来解决一个问题。有时我们甚至可以从中得到一个整齐的语法。</p>
+<p>原文链接: <a href="https://gfldex.wordpress.com/2021/02/24/pattern-dispatch/">https://gfldex.wordpress.com/2021/02/24/pattern-dispatch/</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/raku" term="raku" label="Raku" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku" term="raku" label="Raku" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku-%E5%8D%9A%E5%AE%A2" term="raku-%E5%8D%9A%E5%AE%A2" label="Raku 博客" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[自定义 when]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-02-28-custom-when/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-02-16-contributing-to-raku/?utm_source=atom_feed" rel="related" type="text/html" title="为最年轻的 Raku 贡献力量" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-30-caesarean-substrings-with-raku-and-perl/?utm_source=atom_feed" rel="related" type="text/html" title="Caesarean Substrings With Raku and Perl" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-07-if-sets-would-dwim/?utm_source=atom_feed" rel="related" type="text/html" title="如果集合如我所想" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-17-method-isd/?utm_source=atom_feed" rel="related" type="text/html" title="Method-ish" />
+                <link href="https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/?utm_source=atom_feed" rel="related" type="text/html" title="模式分派" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-02-28-custom-when/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-02-28T00:00:00+08:00</published>
+            <updated>2021-02-28T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Custom When</blockquote><p>我不太喜欢上一篇文章中使用匹配的语法。它的参数列表中的逗号看起来很奇怪，不合适。也许是因为我的眼睛习惯了给定的块。睡一觉就好了。</p>
+<pre><code class="language-raku" data-lang="raku">sub accord(&amp;c) { (c(CALLER::&lt;$_&gt;); succeed) if &amp;c.cando(\(CALLER::&lt;$_&gt;)) }
+
+given Err.new(:msg&lt;a&gt;) {
+    accord -&gt; Hold (:$key) { put „holding $key“; }
+    accord -&gt; Err (:$msg) { warn „ERR: $msg“ }
+    default { fail ‚unsupported‘ }
+}
+</code></pre><p>这是因为 <code>accord</code> 模仿了 <code>when</code> 的工作。它做了一些匹配，当 True 时调用一个块，并在每个块的结尾添加一个 success（通过抛出一个控制异常）。given 所做的只是设置主题。它还充当了 caller 的角色，所以我们可以通过一个伪包来访问它的 <code>$_</code>。利用 pointy 的签名来做<a href="https://docs.raku.org/type/Signature#Destructuring_arguments">解构</a>是相当强大的。把这个添加到 CORE 中可能是个好主意。</p>
+<p>我们可能要把 Raku 的定义改成: &ldquo;Raku 是一种高度可组合的编程语言&rdquo;, 在这里，所有的东西都会落到实处。&quot;</p>
+<p>更新一下。</p>
+<p>有些情况下，<code>$_</code> 不是动态的。另外，success 正在抛出一个控制异常，而这些的处理程序是由 when 或默认添加的。这种情况是在编译时发生的，目前不能用宏来解决。第一个问题可以用黑魔法解决。后一个问题需要用默认块。我没有找到一种方法来提供一个合理的错误信息，如果缺少这个块。</p>
+<pre><code class="language-raku" data-lang="raku">multi sub accord(&amp;c) {
+    use nqp;
+    $_ := nqp::getlexcaller('$_');
+    (c($_); succeed) if &amp;c.cando(\($_))
+}
+
+for @possibilities.roll(1) -&gt; $needle {
+    given $needle {
+        accord -&gt; Hold (:$key) { put „holding $key“; }
+        accord -&gt; Err (:$msg) { warn „ERR: $msg“ }
+        default { warn ‚unsopported‘ }
+    }
+}
+</code></pre><p>原文链接: <a href="https://gfldex.wordpress.com/2021/02/25/custom-when/">https://gfldex.wordpress.com/2021/02/25/custom-when/</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/raku" term="raku" label="Raku" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku" term="raku" label="Raku" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/rakulang" term="rakulang" label="Rakulang" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>

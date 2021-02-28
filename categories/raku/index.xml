@@ -10,10 +10,397 @@
         <description>Recent content  in Raku
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Mon, 08 Feb 2021 15:20:01 +0800</lastBuildDate>
+        <lastBuildDate>Sun, 28 Feb 2021 14:55:59 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/categories/raku/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Method-ish</title>
+                <link>https://ohmyweekly.github.io/notes/2021-02-17-method-isd/</link>
+                
+                
+                <description>&lt;blockquote&gt;Method-ish&lt;/blockquote&gt;&lt;p&gt;在我的上一篇文章中，我又一次为从 CORE 中增强类的方法而苦恼。这种挣扎完全没有必要，因为我并没有用增加的方法改变对象的状态。对于做更高级的东西，我可能不得不这样做。把手伸进 Raku 的内部这么深，我可能会把自己烫伤。既然我想做的是把我的代码绑在编译器的变化上，反正我可能会全身心地投入到 nqp-land 中去。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my \j = 1 | 2 | 3;
+dd j;
+use nqp;
+.say for nqp::getattr(j, Junction, &#39;$!eigenstates&#39;);
+# OUTPUT: any(1, 2, 3)
+          1
+          2
+          3
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们可以使用 nqp 来获取私有属性，而不需要添加任何方法。这就有点儿不伦不类了。所以，让我们用一个伪方法来做一些 deboilerplating。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub pry(Mu $the-object is raw) {
+    use InterceptAllMethods;
+
+    class Interceptor {
+        has Mu $!the-object;
+        method ^find_method(Mu \type, Str $name) {
+            my method (Mu \SELF:) is raw {
+                use nqp;
+                my $the-object := nqp::getattr(SELF, Interceptor, &#39;$!the-object&#39;);
+                nqp::getattr($the-object, $the-object.WHAT, &#39;$!&#39; ~ $name)
+            }
+        }
+    }
+
+    use nqp;
+    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object);
+}
+
+.say for j.&amp;amp;pry.eigenstates;
+# OUTPUT: 1
+          2
+          3
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过 InterceptAllMethods，lizmat 改变了类关键字的行为，允许我们提供一个 FALLBACK-method 来捕获任何方法，包括从 Mu 继承的方法。这反过来又允许 pry 返回的对象将任何方法调用转移到一个自定义的方法。在这个方法中，我们可以对 &lt;code&gt;.&amp;amp;pry&lt;/code&gt; 被调用的对象做任何我们想做的事情。&lt;/p&gt;
+&lt;p&gt;由于我们的特殊对象会拦截任何调用，甚至是 Mu 的调用，我们需要找到另一种方法来调用 &lt;code&gt;.new&lt;/code&gt;。由于 &lt;code&gt;.^&lt;/code&gt; 不是 &lt;code&gt;.&lt;/code&gt; 的特殊形式，我们可以用它来获得对类方法的访问。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub interceptor(Method $the-method){
+    use InterceptAllMethods;
+    use nqp;
+
+    sub (Mu $the-object is raw) {
+        my class Interceptor {
+            has Mu $!the-object;
+            has Code $!the-method;
+
+            method ^find_method(Mu \type, Mu:D $name) {
+                my method (Mu \SELF: |c) is raw {
+                    $!the-method.($!the-object, $name, |c)
+                }
+            }
+            method ^introspect(Mu \type, Mu \obj) {
+                my method call-it() is raw {
+                    $!the-object
+                }
+                obj.&amp;amp;call-it;
+            }
+            method ^new(Mu \type, $the-object!, $the-method) {
+                nqp::p6bindattrinvres(
+                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object),
+                        Interceptor, &#39;$!the-method&#39;, $the-method)
+            }
+        }
+
+            # nqp::p6bindattrinvres(
+                #     nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object),
+                #   Interceptor, &#39;$!the-method&#39;, $the-method);
+        Interceptor.^new($the-object, $the-method)
+    }
+}
+
+my &amp;amp;first-defined = interceptor(
+    my method (Positional \SELF: $name) {
+        for SELF.flat -&amp;gt; $e {
+            with $e.&amp;quot;$name&amp;quot;(|%_) {
+                .return
+            }
+        }
+        Nil
+    }
+);
+
+my $file = &amp;lt;file1.txt file2.txt file3.txt nohup.out&amp;gt;».IO.&amp;amp;first-defined.open(:r);
+dd $file;
+# OUTPUT: Handle $file = IO::Handle.new(path =&amp;gt; IO::Path.new(&amp;quot;nohup.out&amp;quot;, :SPEC(IO::Spec::Unix), :CWD(&amp;quot;/home/dex/projects/raku/tmp&amp;quot;)), chomp =&amp;gt; Bool::True, nl-in =&amp;gt; $[&amp;quot;\n&amp;quot;, &amp;quot;\r\n&amp;quot;], nl-out =&amp;gt; &amp;quot;\n&amp;quot;, encoding =&amp;gt; &amp;quot;utf8&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;sub &lt;code&gt;interceptor&lt;/code&gt; 接受一个方法并返回一个 sub。如果这个 sub 像方法一样被调用，它将把要被调用的方法的名称和调用者转发给一个自定义方法。当 &lt;code&gt;.&amp;amp;first-defined&lt;/code&gt; 被调用时，会返回一个特殊的对象。让我们来看看它是什么。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my \uhhh-special = &amp;lt;a b c&amp;gt;.&amp;amp;first-defined;
+dd uhhh-special.^introspect(uhhh-special);
+# OUTPUT: ($(&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;c&amp;quot;), method &amp;lt;anon&amp;gt; (Positional \SELF: $name, *%_) { #`(Method|93927752146784) ... })
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们必须给 &lt;code&gt;.^introspect&lt;/code&gt; 一个我们想看的对象，因为它的调用者是类 Interceptor 的类型对象。&lt;/p&gt;
+&lt;p&gt;目前，我还不知道有什么办法（毕竟，我知道的只是足够多的东西，真的很危险。这是不幸的，因为 lizmat 决定重载关键字 &lt;code&gt;class&lt;/code&gt;，而不是用不同的名字导出特殊的 &lt;code&gt;Metamodel::ClassHOW&lt;/code&gt;。如果我们不想或不能有外部依赖，我们可以使用 MOP 来创建我们的类型对象。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;class InterceptHOW is Metamodel::ClassHOW {
+    method publish_method_cache(|) { }
+}
+
+sub ipry(Mu $the-object is raw) {
+    my \Interceptor = InterceptHOW.new_type(:name&amp;lt;Interceptor&amp;gt;);
+    Interceptor.^add_attribute(Attribute.new(:name&amp;lt;$!the-object&amp;gt;, :type(Mu), :package(Interceptor)));
+    Interceptor.^add_meta_method(&#39;find_method&#39;,
+        my method find_method(Mu \type, Str $name) {
+            # say „looking for $name“;
+            my method (Mu \SELF:) is raw {
+                use nqp;
+                my $the-object := nqp::getattr(SELF, Interceptor, &#39;$!the-object&#39;);
+                nqp::getattr($the-object, $the-object.WHAT, &#39;$!&#39; ~ $name)
+            }
+    });
+    Interceptor.^compose;
+
+    use nqp;
+    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;当我写这篇文章的时候，我发现 &lt;code&gt;.^add_meta_method&lt;/code&gt; 只有在提供给它的方法的第一个参数的名字和 &lt;code&gt;Str&lt;/code&gt; 相同的时候才会工作。起初，我尝试了一个匿名方法，它最终出现在 &lt;code&gt;.^meta_method_table&lt;/code&gt; 中，但从未被调用。我想这个 bug 其实并不重要，因为这个元方法根本没有被记录下来。如果我玩火，我没有权利抱怨烧伤。你会在野外的 &lt;code&gt;Actions.nqp&lt;/code&gt; 中发现这个方法。Class 关键字并没有什么神奇的作用。Rakudo 只是使用 MOP 来构造类型对象。&lt;/p&gt;
+&lt;p&gt;我们不能在 Raku 中重载赋值操作符。这其实并不需要，因为赋值是通过调用一个名为 STORE 的方法来实现的。由于我们得到了对 dispatch 的完全控制，我们可以拦截任何方法调用，包括一连串的方法调用。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;multi sub methodify(%h, :$deeply!) {
+    sub interceptor(%h, $parent = Nil){
+        use InterceptAllMethods;
+        use nqp;
+
+        class Interceptor is Callable {
+            has Mu $!the-object;
+            has Mu @!stack;
+
+            method ^find_method(Mu \type, Mu:D $name) {
+                my method (Mu \SELF: |c) is raw {
+                    my @new-stack = @!stack;
+                    my $the-object = $!the-object;
+
+                    if $name eq &#39;STORE&#39; {
+                        # workaround for rakudobug#4203
+                        $the-object{||@new-stack.head(*-1)}:delete if $the-object{||@new-stack.head(*-1)}:exists;
+
+                        $the-object{||@new-stack} = c;
+                        return-rw c
+                    } else {
+                        @new-stack.push: $name;
+                        my \nextlevel = SELF.^new($!the-object, @new-stack, $name);
+                        nextlevel
+                    }
+                }
+            }
+            method ^introspect(Mu \type, Mu \obj) {
+                my method call-it() is raw {
+                    $!the-object, @!stack
+                }
+                obj.&amp;amp;call-it;
+            }
+            method ^new(Mu \type, $the-object!, @new-stack?, $name?) {
+                $name
+                    ?? nqp::p6bindattrinvres(
+                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object),
+                        Interceptor, &#39;@!stack&#39;, @new-stack)
+                    !! nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object)
+                }
+        }
+
+        Interceptor.^new(%h)
+    }
+
+    interceptor(%h)
+}
+
+my %h2;
+my $o2 = methodify(%h2, :deeply);
+$o2.a.b = 42;
+dd %h2;
+$o2.a.b.c = &amp;lt;answer&amp;gt;;
+dd %h2;
+say $o2.a.b.c;
+# OUTPUT: Hash %h2 = {:a(${:b(\(42))})}
+          Hash %h2 = {:a(${:b(${:c(\(&amp;quot;answer&amp;quot;))})})}
+          This type cannot unbox to a native string: P6opaque, Interceptor
+            in block &amp;lt;unit&amp;gt; at /home/dex/projects/raku/any-chain.raku line 310
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;每当我们调用一个方法时，都会创建一个新的 Interceptor 实例，它存储了前一个方法的名称。这样我们就可以沿着方法调用链移动。由于赋值调用 STORE，我们可以将赋值转移到我们用作实际数据结构的 Hash 中。唉，检索值就不一样了，因为 Raku 不区分方法调用和 FETCH。在这里，龙比我强。我还是包含了这个一半失败的尝试，因为我对 slippy 半列表有很好的利用。这需要使用 &lt;code&gt;v6.e.preview&lt;/code&gt;，让我踩到了一个 bug。可能还有更多这样的情况。所以请使用同样的，这样我们就可以在 &lt;code&gt;.e&lt;/code&gt; 发布到野外之前，把所有的野兽都杀掉。&lt;/p&gt;
+&lt;p&gt;能够完全控制方法调用链将是一件好事。也许我们可以用 RakuAST 来做到这一点。&lt;/p&gt;
+&lt;p&gt;有了这些已经可以工作的东西，我们可以做一些有趣的事情。那些烦人的异常总是在拖我们的后腿。我们可以用 &lt;code&gt;try&lt;/code&gt; 来化解它们，但那会破坏一个方法调用链。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;constant no-argument-given = Mu.new;
+sub try(Mu $obj is raw, Mu $alternate-value = no-argument-given) {
+    interceptor(my method (Mu \SELF: $name, |c) {
+        my $o = SELF;
+        my \m = $o.^lookup($name) orelse {
+            my $bt = Backtrace.new;
+            my $idx = $bt.next-interesting-index($bt.next-interesting-index + 1);
+            (X::Method::NotFound.new(:method($name), :typename($o.^name)) but role :: { method vault-backtrace { False }}).throw(Backtrace.new($idx + 1));
+        }
+
+        try {
+            $o = $o.&amp;quot;$name&amp;quot;(|c);
+        }
+ 
+        $! ~~ Exception
+            ?? $alternate-value.WHICH eqv no-argument-given.WHICH
+                ?? $o
+                !! $alternate-value
+            !! $o
+    }).($obj)
+}
+
+class C {
+    has $.greeting;
+    method might-throw { die &amp;quot;Not today love!&amp;quot; }
+    method greet { say $.greeting }
+}
+
+C.new(greeting =&amp;gt; ‚Let&#39;s make love!‘).&amp;amp;try.might-throw.greet;
+# OUTPUT: Let&#39;s make love!
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;伪方法 try 将会化解任何异常，并允许继续调用 C 语言的方法。我必须用一个特殊的值来标记没有可选的参数 &lt;code&gt;$alternate-value&lt;/code&gt;，因为它实际上可能会把异常对象变成 &lt;code&gt;Nil&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;我很肯定还有很多这样的小帮手在等着我们去发现。未来可能会有一个模块，希望能帮助 Raku 成为一个好的&lt;a href=&#34;https://ftp.fau.de/fosdem/2021/D.perl/programming_lang_for_free_software.webm&#34;&gt;编程语言&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/02/17/method-ish/&#34;&gt;https://gfldex.wordpress.com/2021/02/17/method-ish/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/raku">Raku</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku-%E5%8D%9A%E5%AE%A2">Raku 博客</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-02-17-method-isd/</guid>
+                <pubDate>Sun, 28 Feb 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+            
+            <item>
+                <title>模式分派</title>
+                <link>https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/</link>
+                
+                
+                <description>&lt;blockquote&gt;Pattern Dispatch&lt;/blockquote&gt;&lt;p&gt;一直以来乐于助人的 &lt;a href=&#34;https://stackoverflow.com/users/1077672/raiph&#34;&gt;raiph&lt;/a&gt; 在回答一个关于模式匹配的&lt;a href=&#34;https://stackoverflow.com/questions/66233465/haskell-like-pattern-matching-in-raku&#34;&gt;问题&lt;/a&gt;时希望得到 RakuAST，就像在 Haskell 中一样。有人提出用 MMD 来解决这个问题。这样做，得到一个贯穿的默认路径是无解的。由于 dispatch 简单来说就是模式匹配，我们只需要做一些额外的工作。简而言之，dispatcher 得到一个函数列表和一个带参数的列表。第一个接受所有参数的函数获胜。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;class Hold { has $.key; }
+class Press { has $.key; }
+class Err { has $.msg; }
+
+sub else(&amp;amp;code) { &amp;amp;code }
+
+sub match($needle, *@tests) {
+    for @tests.head(*-1) -&amp;gt; &amp;amp;f {
+        if &amp;amp;f.cando(\($needle)) {
+            return f($needle);
+        }
+    }
+    @tests.tail.();
+}
+
+match Hold.new(:key&amp;lt;a&amp;gt;),
+    -&amp;gt; Hold (:$key) { put „holding $key“; },
+    -&amp;gt; Press (:$key) { put „pressing $key“; },
+    -&amp;gt; Err (:$msg) { warn „ERR: $msg“ },
+    else { fail ‚unsopported‘ };
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;方法 &lt;code&gt;.cando&lt;/code&gt; 需要一个 &lt;a href=&#34;https://docs.raku.org/type/Capture&#34;&gt;Capture&lt;/a&gt; 来告诉我们一个 Routine 是否可以用一个给定的参数列表来调用。为了创建这样一个捕获，我们使用字面的 &lt;code&gt;\($arguments, $go, $here)&lt;/code&gt;。我们不在最后测试默认值。相反，当没有其他函数匹配时，我们会调用该函数。声明 sub &lt;code&gt;else&lt;/code&gt; 只是为了美化。&lt;/p&gt;
+&lt;p&gt;由于我们是在函数式的土地上，我们可以使用 Raku 提供给我们的所有方便的功能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my &amp;amp;key-matcher = &amp;amp;match.assuming(*,[
+        -&amp;gt; Hold (:$key) { put „holding $key“; },
+        -&amp;gt; Press (:$key) { put „pressing $key“; },
+        -&amp;gt; Err (:$msg) { warn „ERR: $msg“ },
+        else { fail ‚unsopported‘ };
+]);
+
+sub key-source {
+    gather loop {
+        sleep 1;
+        take (Hold.new(:key&amp;lt;a&amp;gt;), Press.new(:key&amp;lt;b&amp;gt;), Err.new(:msg&amp;lt;WELP!&amp;gt;), &#39;unsupported&#39;).pick;
+    }
+}
+
+.&amp;amp;key-matcher for key-source;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们要帮助 &lt;code&gt;.assuming&lt;/code&gt; 有点理解 slurpies，把函数列表放在一个显式 Array 中。&lt;/p&gt;
+&lt;p&gt;总有一种函数式的方法来解决一个问题。有时我们甚至可以从中得到一个整齐的语法。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/02/24/pattern-dispatch/&#34;&gt;https://gfldex.wordpress.com/2021/02/24/pattern-dispatch/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/raku">Raku</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku-%E5%8D%9A%E5%AE%A2">Raku 博客</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/</guid>
+                <pubDate>Sun, 28 Feb 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+            
+            <item>
+                <title>自定义 when</title>
+                <link>https://ohmyweekly.github.io/notes/2021-02-28-custom-when/</link>
+                
+                
+                <description>&lt;blockquote&gt;Custom When&lt;/blockquote&gt;&lt;p&gt;我不太喜欢上一篇文章中使用匹配的语法。它的参数列表中的逗号看起来很奇怪，不合适。也许是因为我的眼睛习惯了给定的块。睡一觉就好了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub accord(&amp;amp;c) { (c(CALLER::&amp;lt;$_&amp;gt;); succeed) if &amp;amp;c.cando(\(CALLER::&amp;lt;$_&amp;gt;)) }
+
+given Err.new(:msg&amp;lt;a&amp;gt;) {
+    accord -&amp;gt; Hold (:$key) { put „holding $key“; }
+    accord -&amp;gt; Err (:$msg) { warn „ERR: $msg“ }
+    default { fail ‚unsupported‘ }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这是因为 &lt;code&gt;accord&lt;/code&gt; 模仿了 &lt;code&gt;when&lt;/code&gt; 的工作。它做了一些匹配，当 True 时调用一个块，并在每个块的结尾添加一个 success（通过抛出一个控制异常）。given 所做的只是设置主题。它还充当了 caller 的角色，所以我们可以通过一个伪包来访问它的 &lt;code&gt;$_&lt;/code&gt;。利用 pointy 的签名来做&lt;a href=&#34;https://docs.raku.org/type/Signature#Destructuring_arguments&#34;&gt;解构&lt;/a&gt;是相当强大的。把这个添加到 CORE 中可能是个好主意。&lt;/p&gt;
+&lt;p&gt;我们可能要把 Raku 的定义改成: &amp;ldquo;Raku 是一种高度可组合的编程语言&amp;rdquo;, 在这里，所有的东西都会落到实处。&amp;quot;&lt;/p&gt;
+&lt;p&gt;更新一下。&lt;/p&gt;
+&lt;p&gt;有些情况下，&lt;code&gt;$_&lt;/code&gt; 不是动态的。另外，success 正在抛出一个控制异常，而这些的处理程序是由 when 或默认添加的。这种情况是在编译时发生的，目前不能用宏来解决。第一个问题可以用黑魔法解决。后一个问题需要用默认块。我没有找到一种方法来提供一个合理的错误信息，如果缺少这个块。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;multi sub accord(&amp;amp;c) {
+    use nqp;
+    $_ := nqp::getlexcaller(&#39;$_&#39;);
+    (c($_); succeed) if &amp;amp;c.cando(\($_))
+}
+
+for @possibilities.roll(1) -&amp;gt; $needle {
+    given $needle {
+        accord -&amp;gt; Hold (:$key) { put „holding $key“; }
+        accord -&amp;gt; Err (:$msg) { warn „ERR: $msg“ }
+        default { warn ‚unsopported‘ }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/02/25/custom-when/&#34;&gt;https://gfldex.wordpress.com/2021/02/25/custom-when/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/raku">Raku</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rakulang">Rakulang</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-02-28-custom-when/</guid>
+                <pubDate>Sun, 28 Feb 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
