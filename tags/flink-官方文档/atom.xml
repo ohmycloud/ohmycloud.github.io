@@ -10,12 +10,123 @@
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-02-28T14:55:59+08:00</updated>
+    <updated>2021-04-05T19:55:25+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku is a match for *]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-12-20-flink-cep-complex-event-processing-for-flink/?utm_source=atom_feed" rel="related" type="text/html" title="FlinkCEP - Flink 的复杂事件处理" />
+                <link href="https://ohmyweekly.github.io/notes/2020-12-10-execution-mode/?utm_source=atom_feed" rel="related" type="text/html" title="执行模式(批/流)" />
+                <link href="https://ohmyweekly.github.io/notes/2020-12-02-application-building-block/?utm_source=atom_feed" rel="related" type="text/html" title="Application Building Blocks" />
+                <link href="https://ohmyweekly.github.io/notes/2020-12-02-logical-functions/?utm_source=atom_feed" rel="related" type="text/html" title="Logical Functions" />
+                <link href="https://ohmyweekly.github.io/notes/2020-12-02-python-walkthrough/?utm_source=atom_feed" rel="related" type="text/html" title="Python 演练" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-03-12T00:00:00+08:00</published>
+            <updated>2021-03-12T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Raku Is a Match for *</blockquote><p>PimDaniel <a href="https://gist.github.com/gfldex/ffa8d0e60cbd3845b4d91bd2029fcd5b">提出</a>了一个有趣的问题。</p>
+<p>我如何在匹配时测试 match is True : 这不起作用。</p>
+<pre><code class="language-raku" data-lang="raku">if my ($type,$a,$b,$c) = ($v ~~ /^ ('horiz'|'vertic') '_' (\d+) '_' (\d+) '_' (\d+) $/)&gt;&gt;.Str { ... }
+</code></pre><p>好吧，我分2次做了1/捕捉并测试匹配，2/将匹配转换为Str。</p>
+<p>没有得到及时的回答，完全没有改进。我也找不到一个好的方法来快速完成这个任务。事实上我花了一个小时才破解这个螺母。这里的主要问题是，一个失败的匹配会产生 <code>.Str</code> 会抱怨的 Nil。所以让我们把 if 的布尔检查和转换为 Str 的过程分开。</p>
+<pre><code class="language-raku" data-lang="raku">my $a = '1 B';
+
+if $a ~~ /(&lt;digit&gt;) \s (&lt;alpha&gt;)/ -&gt; $_ {
+    my ($one, $B) = .deepmap: *.Str;
+    say &quot;$one $B&quot;;
+}
+# OUTPUT: 1 B
+</code></pre><p>通过将条件表达式的结果强行放入主题中，我们可以在匹配的结果上运行任何方法，但前提是 <code>Match.bool</code> 返回 true。我没有 <code>CS*</code> 学位，但如果 Raku-signatures 不会变成 turing complete，我会非常惊讶。</p>
+<pre><code class="language-raku" data-lang="raku">if $a ~~ /(&lt;digit&gt;) \s (&lt;alpha&gt;)/ -&gt; Match (Str() $one, Str() $B) {
+    dd $one;
+    dd $B;
+}
+# OUTPUT: &quot;1&quot;
+          &quot;B&quot;
+</code></pre><p><code>if</code> 块的签名将 <code>Match</code> 胁迫为一个列表。我们选择其中的两个元素，并将这些元素胁迫为 <code>Str</code>。当然，我们可以根据捕获的位置来强制到任何我们喜欢的东西。</p>
+<p>Raku 中的 Regexes 被编译成相同的字节码，然后程序的其余部分。事实上，语法只是一个具有有趣语法的类。这就是为什么我们可以轻松地在 regex  里面运行Raku 代码。这意味着我们可以把整个程序从内部翻出来。</p>
+<pre><code class="language-raku" data-lang="raku">my @a = &lt;1 B 3 D 4&gt;;
+my @b;
+
+my $hit;
+
+for @a -&gt; $e {
+    @b.push: ($e ~~ /(&lt;alpha&gt;) || { next } /).Str;
+}
+
+say @b;
+# OUTPUT: [B D]
+</code></pre><p>在这里，如果匹配不成功，我们就跳过 <code>.push</code>，用 <code>next</code> 跳过循环体的其余部分。我们可以在 <code>regex</code> 内部发出任何控制异常。这意味着我们可以将整个过程粘在一个 <code>sub</code> 中，然后从 <code>regex</code> 中返回我们正在寻找的值。</p>
+<pre><code class="language-raku" data-lang="raku">sub cherry-pick-numeric(Str $matchee) {
+    $matchee ~~ m/(&lt;digit&gt;) &amp;&amp; { return .Numeric }/;
+    Empty
+}
+
+@b = do .&amp;cherry-pick-numeric for @a;
+
+dd @b;
+# OUTPUT: Array @b = [1, 3, 4]
+</code></pre><p>Raku 已经酝酿了10年。这是一个巨大的任务。现在，困难的部分来了。我们必须从那庞大的语言中找到所有好的惯用法。好东西会降临到那些等待的人身上（IRC上）。</p>
+<p>*) 阅读。不要相信我写的任何东西。你已经被警告了。</p>
+<p>更新一下。</p>
+<p>我以真正的懒惰方式，想出了一个办法，在本该完成的工作之后，把匹配变成一个惰性列表。</p>
+<pre><code class="language-raku" data-lang="raku">$a = '1B3D4';
+
+my \ll := gather $a ~~ m:g/
+      [ &lt;alpha&gt; &amp;&amp; { take $/&lt;alpha&gt;.Str } ]
+    | [ &lt;digit&gt; &amp;&amp; { take $/.&lt;digit&gt;.Numeric } ]
+    | [ { say 'step' } ]
+/;
+say ll[0];
+say ll[3];
+# OUTPUT: 1
+          step
+          step
+          step
+          D
+</code></pre><p>技巧是用 <code>:g</code> 副词强制匹配一直运行到字符串的末尾。这个运行将被 <code>take</code> 打断（通过抛出 <code>CX::Take</code>），当从 <code>gather</code> 返回的 <code>Seq</code> 中询问下一个值时再继续。我不知道这是否是有效的内存思想。可能会有一个 <code>Match</code> 实例为每个 <code>take</code> 保留在身边。</p>
+<p>原文链接: <a href="https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/">https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/flink" term="flink" label="Flink" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink" term="flink" label="Flink" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" term="flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3" label="Flink 官方文档" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>

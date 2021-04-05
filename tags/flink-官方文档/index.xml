@@ -10,10 +10,110 @@
         <description>Recent content  in Flink 官方文档
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Sun, 28 Feb 2021 14:55:59 +0800</lastBuildDate>
+        <lastBuildDate>Mon, 05 Apr 2021 19:55:26 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Raku is a match for *</title>
+                <link>https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/</link>
+                
+                
+                <description>&lt;blockquote&gt;Raku Is a Match for *&lt;/blockquote&gt;&lt;p&gt;PimDaniel &lt;a href=&#34;https://gist.github.com/gfldex/ffa8d0e60cbd3845b4d91bd2029fcd5b&#34;&gt;提出&lt;/a&gt;了一个有趣的问题。&lt;/p&gt;
+&lt;p&gt;我如何在匹配时测试 match is True : 这不起作用。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if my ($type,$a,$b,$c) = ($v ~~ /^ (&#39;horiz&#39;|&#39;vertic&#39;) &#39;_&#39; (\d+) &#39;_&#39; (\d+) &#39;_&#39; (\d+) $/)&amp;gt;&amp;gt;.Str { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;好吧，我分2次做了1/捕捉并测试匹配，2/将匹配转换为Str。&lt;/p&gt;
+&lt;p&gt;没有得到及时的回答，完全没有改进。我也找不到一个好的方法来快速完成这个任务。事实上我花了一个小时才破解这个螺母。这里的主要问题是，一个失败的匹配会产生 &lt;code&gt;.Str&lt;/code&gt; 会抱怨的 Nil。所以让我们把 if 的布尔检查和转换为 Str 的过程分开。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my $a = &#39;1 B&#39;;
+
+if $a ~~ /(&amp;lt;digit&amp;gt;) \s (&amp;lt;alpha&amp;gt;)/ -&amp;gt; $_ {
+    my ($one, $B) = .deepmap: *.Str;
+    say &amp;quot;$one $B&amp;quot;;
+}
+# OUTPUT: 1 B
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过将条件表达式的结果强行放入主题中，我们可以在匹配的结果上运行任何方法，但前提是 &lt;code&gt;Match.bool&lt;/code&gt; 返回 true。我没有 &lt;code&gt;CS*&lt;/code&gt; 学位，但如果 Raku-signatures 不会变成 turing complete，我会非常惊讶。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if $a ~~ /(&amp;lt;digit&amp;gt;) \s (&amp;lt;alpha&amp;gt;)/ -&amp;gt; Match (Str() $one, Str() $B) {
+    dd $one;
+    dd $B;
+}
+# OUTPUT: &amp;quot;1&amp;quot;
+          &amp;quot;B&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;if&lt;/code&gt; 块的签名将 &lt;code&gt;Match&lt;/code&gt; 胁迫为一个列表。我们选择其中的两个元素，并将这些元素胁迫为 &lt;code&gt;Str&lt;/code&gt;。当然，我们可以根据捕获的位置来强制到任何我们喜欢的东西。&lt;/p&gt;
+&lt;p&gt;Raku 中的 Regexes 被编译成相同的字节码，然后程序的其余部分。事实上，语法只是一个具有有趣语法的类。这就是为什么我们可以轻松地在 regex  里面运行Raku 代码。这意味着我们可以把整个程序从内部翻出来。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my @a = &amp;lt;1 B 3 D 4&amp;gt;;
+my @b;
+
+my $hit;
+
+for @a -&amp;gt; $e {
+    @b.push: ($e ~~ /(&amp;lt;alpha&amp;gt;) || { next } /).Str;
+}
+
+say @b;
+# OUTPUT: [B D]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在这里，如果匹配不成功，我们就跳过 &lt;code&gt;.push&lt;/code&gt;，用 &lt;code&gt;next&lt;/code&gt; 跳过循环体的其余部分。我们可以在 &lt;code&gt;regex&lt;/code&gt; 内部发出任何控制异常。这意味着我们可以将整个过程粘在一个 &lt;code&gt;sub&lt;/code&gt; 中，然后从 &lt;code&gt;regex&lt;/code&gt; 中返回我们正在寻找的值。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub cherry-pick-numeric(Str $matchee) {
+    $matchee ~~ m/(&amp;lt;digit&amp;gt;) &amp;amp;&amp;amp; { return .Numeric }/;
+    Empty
+}
+
+@b = do .&amp;amp;cherry-pick-numeric for @a;
+
+dd @b;
+# OUTPUT: Array @b = [1, 3, 4]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Raku 已经酝酿了10年。这是一个巨大的任务。现在，困难的部分来了。我们必须从那庞大的语言中找到所有好的惯用法。好东西会降临到那些等待的人身上（IRC上）。&lt;/p&gt;
+&lt;p&gt;*) 阅读。不要相信我写的任何东西。你已经被警告了。&lt;/p&gt;
+&lt;p&gt;更新一下。&lt;/p&gt;
+&lt;p&gt;我以真正的懒惰方式，想出了一个办法，在本该完成的工作之后，把匹配变成一个惰性列表。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;$a = &#39;1B3D4&#39;;
+
+my \ll := gather $a ~~ m:g/
+      [ &amp;lt;alpha&amp;gt; &amp;amp;&amp;amp; { take $/&amp;lt;alpha&amp;gt;.Str } ]
+    | [ &amp;lt;digit&amp;gt; &amp;amp;&amp;amp; { take $/.&amp;lt;digit&amp;gt;.Numeric } ]
+    | [ { say &#39;step&#39; } ]
+/;
+say ll[0];
+say ll[3];
+# OUTPUT: 1
+          step
+          step
+          step
+          D
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;技巧是用 &lt;code&gt;:g&lt;/code&gt; 副词强制匹配一直运行到字符串的末尾。这个运行将被 &lt;code&gt;take&lt;/code&gt; 打断（通过抛出 &lt;code&gt;CX::Take&lt;/code&gt;），当从 &lt;code&gt;gather&lt;/code&gt; 返回的 &lt;code&gt;Seq&lt;/code&gt; 中询问下一个值时再继续。我不知道这是否是有效的内存思想。可能会有一个 &lt;code&gt;Match&lt;/code&gt; 实例为每个 &lt;code&gt;take&lt;/code&gt; 保留在身边。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/&#34;&gt;https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/</guid>
+                <pubDate>Fri, 12 Mar 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -2898,132 +2998,6 @@ kaiky,18
                     
                 
                 <guid>https://ohmyweekly.github.io/notes/2020-08-25-hivecatalog/</guid>
-                <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>Streaming Aggregation</title>
-                <link>https://ohmyweekly.github.io/notes/2020-08-25-streaming-aggregation/</link>
-                
-                
-                <description>&lt;blockquote&gt;Streaming Aggregation&lt;/blockquote&gt;&lt;h1 id=&#34;流式聚合&#34;&gt;流式聚合&lt;/h1&gt;
-&lt;p&gt;SQL 是数据分析中使用最广泛的语言。Flink 的 Table API 和 SQL 可以让用户用更少的时间和精力定义高效的流分析应用。此外，Flink Table API 和 SQL 还进行了有效的优化，它集成了大量的查询优化和调整后的运算符实现。但并不是所有的优化都是默认启用的，所以对于一些工作负载，可以通过开启一些选项来提高性能。&lt;/p&gt;
-&lt;p&gt;在本页面中，我们将介绍一些有用的优化选项和流式聚合的内部结构，在某些情况下会带来很大的改善。&lt;/p&gt;
-&lt;p&gt;注意: 目前，本页面中提到的优化选项仅在 Blink 计划器中支持。&lt;/p&gt;
-&lt;p&gt;注意: 目前，流式聚合的优化只支持&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sql/queries.html#aggregations&#34;&gt;无边界聚合&lt;/a&gt;。未来将支持&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/sql/queries.html#group-windows&#34;&gt;窗口聚合&lt;/a&gt;的优化。&lt;/p&gt;
-&lt;p&gt;默认情况下，无界聚合运算符对输入记录进行逐一处理，即：（1）从状态中读取累加器，（2）累加/缩减记录到累加器，（3）将累加器写回状态，（4）下一条记录将从（1）开始重新做处理。这种处理模式可能会增加 StateBackend 的开销（尤其是对于 RocksDB StateBackend）。此外，在生产中很常见的数据偏斜也会使问题更加严重，容易出现作业背压的情况。&lt;/p&gt;
-&lt;h2 id=&#34;迷你批处理minibatch聚合&#34;&gt;迷你批处理(MiniBatch)聚合&lt;/h2&gt;
-&lt;p&gt;迷你批处理(mini-batch)聚合的核心思想是将一捆输入缓存在聚合运算器内部的缓冲区中。当触发处理该捆输入时，每个键只需要一个操作来访问状态。这样可以大大降低状态开销，获得更好的吞吐量。但是，这可能会增加一些延迟，因为它缓冲了一些记录，而不是在瞬间处理它们。这就是吞吐量和延迟之间的权衡。&lt;/p&gt;
-&lt;p&gt;下图解释了迷你批处理聚合如何减少状态操作。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/minibatch_agg.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;MiniBatch 优化默认为禁用。为了启用此优化，您应该设置选项 table.exec.mini-batch.enabled、table.exec.mini-batch.allow-latency 和 table.exec.mini-batch.size。请参阅&lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/config.html#execution-options&#34;&gt;配置&lt;/a&gt;页面了解更多详情。&lt;/p&gt;
-&lt;p&gt;下面的示例展示了如何启用这些选项。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// instantiate table environment
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TableEnvironment&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;...&lt;/span&gt;
-
-&lt;span class=&#34;c1&#34;&gt;// access flink configuration
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfiguration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;()&lt;/span&gt;
-&lt;span class=&#34;c1&#34;&gt;// set low-level key-value options
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.enabled&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;true&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// enable mini-batch optimization
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.allow-latency&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;5 s&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// use 5 seconds to buffer input records
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.size&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;5000&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// the maximum number of records can be buffered by each aggregate operator task
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;local-global-聚合&#34;&gt;Local-Global 聚合&lt;/h2&gt;
-&lt;p&gt;Local-Global 是为了解决数据偏斜问题而提出的，将一个分组聚合分为两个阶段，即先在上游做局部聚合，然后在下游做全局聚合，这类似于 MapReduce 中的 Combine+Reduce 模式。例如，考虑以下 SQL。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;color&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;sum&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;color&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;有可能数据流中的记录是倾斜的，因此一些聚合运算符实例要处理的记录比其他实例多得多，从而导致热点。本地聚合可以帮助将一定数量的具有相同键的输入累积到一个累积器中。全局聚合将只接收减少的累加器，而不是大量的原始输入。这可以显著降低网络洗牌和状态访问的成本。本地聚合每次积累的输入数量是基于小批量间隔的。这意味着本地-全局聚合取决于迷你批量优化的启用。&lt;/p&gt;
-&lt;p&gt;下图显示了本地-全局聚合如何提高性能。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/local_agg.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;下面的例子展示了如何启用本地-全局聚合。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// instantiate table environment
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TableEnvironment&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;...&lt;/span&gt;
-
-&lt;span class=&#34;c1&#34;&gt;// access flink configuration
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfiguration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;()&lt;/span&gt;
-&lt;span class=&#34;c1&#34;&gt;// set low-level key-value options
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.enabled&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;true&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// local-global aggregation depends on mini-batch is enabled
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.allow-latency&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;5 s&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.exec.mini-batch.size&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;5000&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;configuration&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.optimizer.agg-phase-strategy&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;TWO_PHASE&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// enable two-phase, i.e. local-global aggregation
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;split-distinct-聚合&#34;&gt;Split Distinct 聚合&lt;/h2&gt;
-&lt;p&gt;Local-Global 优化对于一般的聚合，如 SUM、COUNT、MAX、MIN、AVG，可以有效地消除数据偏斜。但在处理不同的聚合时，其性能并不理想。&lt;/p&gt;
-&lt;p&gt;例如，如果我们想分析今天有多少独特的用户登录。我们可以有如下查询:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果 distinct key（即 user_id）的值很稀疏，&lt;code&gt;count distinct&lt;/code&gt; 不好减少记录。即使启用了局部-全局优化，也没有什么帮助。因为累加器仍然包含了几乎所有的原始记录，而全局聚合将是瓶颈（大部分重度累加器是由一个任务处理的，即在同一天）。&lt;/p&gt;
-&lt;p&gt;这个优化的思路是将不同的聚合（如 COUNT(DISTINCT col)）分成两个层次。第一层聚合由组键和一个额外的桶键进行洗牌。桶键使用 HASH_CODE(distinct_key) % BUCKET_NUM 计算。BUCKET_NUM 默认为 1024，可以通过 &lt;code&gt;table.optimizer.distinct-agg.split.bucket-num&lt;/code&gt; 选项进行配置。第二次聚合是按原组键进行洗牌，用 SUM 聚合不同桶的 COUNT DISTINCT 值。因为相同的 distinct key 只会在同一个 bucket 中计算，所以转换是等价的。桶键起到了额外的组键的作用，分担组键中热点的负担。桶键使得工作具有可扩展性，可以解决 distinct aggregations 中的数据偏斜/热点问题。&lt;/p&gt;
-&lt;p&gt;拆分不同的聚合后，上面的查询会自动改写成下面的查询:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;SUM&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;cnt&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;as&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;cnt&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;
-    &lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;MOD&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;HASH_CODE&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1024&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;下图显示了拆分不同的聚合如何提高性能（假设颜色代表天数，字母代表 user_id）。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/table-streaming/distinct_split.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;p&gt;注：以上是最简单的例子，可以从这个优化中受益。除此之外，Flink 还支持拆分更复杂的聚合查询，例如，多个不同键的不同聚合（如 COUNT(DISTINCT a)，SUM(DISTINCT b)），以及与其他非不同聚合（如 SUM, MAX, MIN, COUNT）一起工作。&lt;/p&gt;
-&lt;p&gt;注意，目前，分割优化不支持包含用户定义的 AggregateFunction 的聚合。&lt;/p&gt;
-&lt;p&gt;下面的例子展示了如何启用拆分不同的聚合优化。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// instantiate table environment
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;TableEnvironment&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;...&lt;/span&gt;
-
-&lt;span class=&#34;n&#34;&gt;tEnv&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfig&lt;/span&gt;         &lt;span class=&#34;c1&#34;&gt;// access high-level configuration
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;getConfiguration&lt;/span&gt;    &lt;span class=&#34;c1&#34;&gt;// set low-level key-value options
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;  &lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;setString&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;table.optimizer.distinct-agg.split.enabled&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;true&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;  &lt;span class=&#34;c1&#34;&gt;// enable distinct agg split
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;在-distinct-聚合上使用-filter-修饰符&#34;&gt;在 Distinct 聚合上使用 FILTER 修饰符&lt;/h2&gt;
-&lt;p&gt;在某些情况下，用户可能需要从不同的维度来计算 UV(唯一访客)的数量，例如：Android 的 UV、iPhone 的 UV、Web 的 UV 以及总的 UV。很多用户会选择 CASE WHEN 来支持，比如。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;total_uv&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;CASE&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;WHEN&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;flag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;IN&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;android&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;iphone&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;THEN&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;ELSE&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;NULL&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;END&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;app_uv&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;CASE&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;WHEN&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;flag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;IN&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;wap&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;other&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;THEN&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;ELSE&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;NULL&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;END&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;web_uv&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;但是，在这种情况下，建议使用 FILTER 语法，而不是 CASE WHEN。因为 FILTER 更符合 SQL 标准，会得到更多的性能提升。FILTER 是用于聚合函数上的修饰符，用于限制聚合中使用的值。用 FILTER 修饰符替换上面的例子，如下所示。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span class=&#34;k&#34;&gt;SELECT&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;total_uv&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;FILTER&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;WHERE&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;flag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;IN&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;android&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;iphone&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;app_uv&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
- &lt;span class=&#34;k&#34;&gt;COUNT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;DISTINCT&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user_id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;FILTER&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;WHERE&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;flag&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;IN&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;#39;wap&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s1&#34;&gt;&amp;#39;other&amp;#39;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;AS&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;web_uv&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;FROM&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;T&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;GROUP&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;BY&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;day&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Flink SQL 优化器可以识别同一个独立键上的不同过滤参数。例如，在上面的例子中，三个 COUNT DISTINCT 都在 user_id 列上。那么 Flink 就可以只使用一个共享状态实例而不是三个状态实例来减少状态访问和状态大小。在一些工作负载中，这可以得到显著的性能提升。&lt;/p&gt;
-&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/tuning/streaming_aggregation_optimization.html&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/tuning/streaming_aggregation_optimization.html&lt;/a&gt;&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/table-api-sql">Table API &amp; SQL</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2020-08-25-streaming-aggregation/</guid>
                 <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
             </item>
         

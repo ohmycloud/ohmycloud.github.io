@@ -10,10 +10,110 @@
         <description>Recent content  in Flink
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Sun, 28 Feb 2021 14:55:59 +0800</lastBuildDate>
+        <lastBuildDate>Mon, 05 Apr 2021 19:55:25 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/categories/flink/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Raku is a match for *</title>
+                <link>https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/</link>
+                
+                
+                <description>&lt;blockquote&gt;Raku Is a Match for *&lt;/blockquote&gt;&lt;p&gt;PimDaniel &lt;a href=&#34;https://gist.github.com/gfldex/ffa8d0e60cbd3845b4d91bd2029fcd5b&#34;&gt;提出&lt;/a&gt;了一个有趣的问题。&lt;/p&gt;
+&lt;p&gt;我如何在匹配时测试 match is True : 这不起作用。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if my ($type,$a,$b,$c) = ($v ~~ /^ (&#39;horiz&#39;|&#39;vertic&#39;) &#39;_&#39; (\d+) &#39;_&#39; (\d+) &#39;_&#39; (\d+) $/)&amp;gt;&amp;gt;.Str { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;好吧，我分2次做了1/捕捉并测试匹配，2/将匹配转换为Str。&lt;/p&gt;
+&lt;p&gt;没有得到及时的回答，完全没有改进。我也找不到一个好的方法来快速完成这个任务。事实上我花了一个小时才破解这个螺母。这里的主要问题是，一个失败的匹配会产生 &lt;code&gt;.Str&lt;/code&gt; 会抱怨的 Nil。所以让我们把 if 的布尔检查和转换为 Str 的过程分开。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my $a = &#39;1 B&#39;;
+
+if $a ~~ /(&amp;lt;digit&amp;gt;) \s (&amp;lt;alpha&amp;gt;)/ -&amp;gt; $_ {
+    my ($one, $B) = .deepmap: *.Str;
+    say &amp;quot;$one $B&amp;quot;;
+}
+# OUTPUT: 1 B
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过将条件表达式的结果强行放入主题中，我们可以在匹配的结果上运行任何方法，但前提是 &lt;code&gt;Match.bool&lt;/code&gt; 返回 true。我没有 &lt;code&gt;CS*&lt;/code&gt; 学位，但如果 Raku-signatures 不会变成 turing complete，我会非常惊讶。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if $a ~~ /(&amp;lt;digit&amp;gt;) \s (&amp;lt;alpha&amp;gt;)/ -&amp;gt; Match (Str() $one, Str() $B) {
+    dd $one;
+    dd $B;
+}
+# OUTPUT: &amp;quot;1&amp;quot;
+          &amp;quot;B&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;if&lt;/code&gt; 块的签名将 &lt;code&gt;Match&lt;/code&gt; 胁迫为一个列表。我们选择其中的两个元素，并将这些元素胁迫为 &lt;code&gt;Str&lt;/code&gt;。当然，我们可以根据捕获的位置来强制到任何我们喜欢的东西。&lt;/p&gt;
+&lt;p&gt;Raku 中的 Regexes 被编译成相同的字节码，然后程序的其余部分。事实上，语法只是一个具有有趣语法的类。这就是为什么我们可以轻松地在 regex  里面运行Raku 代码。这意味着我们可以把整个程序从内部翻出来。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my @a = &amp;lt;1 B 3 D 4&amp;gt;;
+my @b;
+
+my $hit;
+
+for @a -&amp;gt; $e {
+    @b.push: ($e ~~ /(&amp;lt;alpha&amp;gt;) || { next } /).Str;
+}
+
+say @b;
+# OUTPUT: [B D]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在这里，如果匹配不成功，我们就跳过 &lt;code&gt;.push&lt;/code&gt;，用 &lt;code&gt;next&lt;/code&gt; 跳过循环体的其余部分。我们可以在 &lt;code&gt;regex&lt;/code&gt; 内部发出任何控制异常。这意味着我们可以将整个过程粘在一个 &lt;code&gt;sub&lt;/code&gt; 中，然后从 &lt;code&gt;regex&lt;/code&gt; 中返回我们正在寻找的值。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub cherry-pick-numeric(Str $matchee) {
+    $matchee ~~ m/(&amp;lt;digit&amp;gt;) &amp;amp;&amp;amp; { return .Numeric }/;
+    Empty
+}
+
+@b = do .&amp;amp;cherry-pick-numeric for @a;
+
+dd @b;
+# OUTPUT: Array @b = [1, 3, 4]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Raku 已经酝酿了10年。这是一个巨大的任务。现在，困难的部分来了。我们必须从那庞大的语言中找到所有好的惯用法。好东西会降临到那些等待的人身上（IRC上）。&lt;/p&gt;
+&lt;p&gt;*) 阅读。不要相信我写的任何东西。你已经被警告了。&lt;/p&gt;
+&lt;p&gt;更新一下。&lt;/p&gt;
+&lt;p&gt;我以真正的懒惰方式，想出了一个办法，在本该完成的工作之后，把匹配变成一个惰性列表。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;$a = &#39;1B3D4&#39;;
+
+my \ll := gather $a ~~ m:g/
+      [ &amp;lt;alpha&amp;gt; &amp;amp;&amp;amp; { take $/&amp;lt;alpha&amp;gt;.Str } ]
+    | [ &amp;lt;digit&amp;gt; &amp;amp;&amp;amp; { take $/.&amp;lt;digit&amp;gt;.Numeric } ]
+    | [ { say &#39;step&#39; } ]
+/;
+say ll[0];
+say ll[3];
+# OUTPUT: 1
+          step
+          step
+          step
+          D
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;技巧是用 &lt;code&gt;:g&lt;/code&gt; 副词强制匹配一直运行到字符串的末尾。这个运行将被 &lt;code&gt;take&lt;/code&gt; 打断（通过抛出 &lt;code&gt;CX::Take&lt;/code&gt;），当从 &lt;code&gt;gather&lt;/code&gt; 返回的 &lt;code&gt;Seq&lt;/code&gt; 中询问下一个值时再继续。我不知道这是否是有效的内存思想。可能会有一个 &lt;code&gt;Match&lt;/code&gt; 实例为每个 &lt;code&gt;take&lt;/code&gt; 保留在身边。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/&#34;&gt;https://gfldex.wordpress.com/2021/03/11/raku-is-a-match-for/&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-03-12-raku-is-a-match-for-star/</guid>
+                <pubDate>Fri, 12 Mar 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -3175,317 +3275,6 @@ Flink SQL&amp;gt; &lt;span class=&#34;nb&#34;&gt;set&lt;/span&gt; table.sql-dial
                     
                 
                 <guid>https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect/</guid>
-                <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>Hive 集成 - 概览</title>
-                <link>https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/</link>
-                
-                
-                <description>&lt;blockquote&gt;Overview&lt;/blockquote&gt;&lt;h1 id=&#34;hive-集成&#34;&gt;Hive 集成&lt;/h1&gt;
-&lt;p&gt;Apache Hive 已经确立了自己作为数据仓库生态系统的焦点。它不仅是大数据分析和 ETL 的 SQL 引擎，也是一个数据管理平台，在这里，数据被发现、定义和发展。&lt;/p&gt;
-&lt;p&gt;Flink 与 Hive 提供了两方面的整合。&lt;/p&gt;
-&lt;p&gt;第一是利用 Hive 的 Metastore 作为一个持久性目录，与 Flink 的 HiveCatalog 进行跨会话存储 Flink 特定的元数据。例如，用户可以通过使用 HiveCatalog 将 Kafka 或 ElasticSearch 表存储在 Hive Metastore 中，并在以后的 SQL 查询中重复使用。&lt;/p&gt;
-&lt;p&gt;二是提供 Flink 作为读写 Hive 表的替代引擎。&lt;/p&gt;
-&lt;p&gt;HiveCatalog 的设计是 &amp;ldquo;开箱即用&amp;rdquo;，与现有的 Hive 安装兼容。您不需要修改现有的 Hive Metastore，也不需要改变数据位置或表的分区。&lt;/p&gt;
-&lt;h2 id=&#34;支持的-hive-版本&#34;&gt;支持的 Hive 版本&lt;/h2&gt;
-&lt;p&gt;Flink 支持以下 Hive 版本。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;1.0
-&lt;ul&gt;
-&lt;li&gt;1.0.0&lt;/li&gt;
-&lt;li&gt;1.0.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;1.1
-&lt;ul&gt;
-&lt;li&gt;1.1.0&lt;/li&gt;
-&lt;li&gt;1.1.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;1.2
-&lt;ul&gt;
-&lt;li&gt;1.2.0&lt;/li&gt;
-&lt;li&gt;1.2.1&lt;/li&gt;
-&lt;li&gt;1.2.2&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;2.0
-&lt;ul&gt;
-&lt;li&gt;2.0.0&lt;/li&gt;
-&lt;li&gt;2.0.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;2.1
-&lt;ul&gt;
-&lt;li&gt;2.1.0&lt;/li&gt;
-&lt;li&gt;2.1.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;2.2
-&lt;ul&gt;
-&lt;li&gt;2.2.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;2.3
-&lt;ul&gt;
-&lt;li&gt;2.3.0&lt;/li&gt;
-&lt;li&gt;2.3.1&lt;/li&gt;
-&lt;li&gt;2.3.2&lt;/li&gt;
-&lt;li&gt;2.3.3&lt;/li&gt;
-&lt;li&gt;2.3.4&lt;/li&gt;
-&lt;li&gt;2.3.5&lt;/li&gt;
-&lt;li&gt;2.3.6&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;3.1
-&lt;ul&gt;
-&lt;li&gt;3.1.0&lt;/li&gt;
-&lt;li&gt;3.1.1&lt;/li&gt;
-&lt;li&gt;3.1.2&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;请注意 Hive 本身在不同的版本有不同的功能，这些问题不是 Flink 造成的。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;1.2.0 及以后版本支持 Hive 内置函数。&lt;/li&gt;
-&lt;li&gt;3.1.0 及以后版本支持列约束，即 PRIMARY KEY 和 NOT NULL。&lt;/li&gt;
-&lt;li&gt;在 1.2.0 及以后的版本中，支持修改表的统计数据。&lt;/li&gt;
-&lt;li&gt;在 1.2.0 及以后的版本中支持 DATE 列统计。&lt;/li&gt;
-&lt;li&gt;在 2.0.x 中不支持写入 ORC 表。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;依赖性&#34;&gt;依赖性&lt;/h3&gt;
-&lt;p&gt;为了与 Hive 集成，你需要在 Flink 发行版的 &lt;code&gt;/lib/&lt;/code&gt; 目录下添加一些额外的依赖关系，以使集成工作在 Table API 程序或 SQL 客户端中。另外，你也可以将这些依赖项放在一个专门的文件夹中，并分别用 &lt;code&gt;-C&lt;/code&gt; 或 &lt;code&gt;-l&lt;/code&gt; 选项将它们添加到 &lt;code&gt;classpath&lt;/code&gt; 中，用于 Table API 程序或 SQL Client。&lt;/p&gt;
-&lt;p&gt;Apache Hive 是建立在 Hadoop 上的，所以首先需要 Hadoop 依赖，请参考提供 Hadoop 类。&lt;/p&gt;
-&lt;p&gt;有两种方法可以添加 Hive 依赖。首先是使用 Flink 的捆绑式 Hive jars。你可以根据你使用的 metastore 的版本来选择捆绑的 Hive jar。第二种是分别添加每个所需的 jar。如果你使用的 Hive 版本没有在这里列出，第二种方式就会很有用。&lt;/p&gt;
-&lt;h4 id=&#34;使用捆绑的-hive-jar&#34;&gt;使用捆绑的 Hive jar&lt;/h4&gt;
-&lt;p&gt;下表列出了所有可用的捆绑的 hive jar，你可以选择一个到 Flink 发行版的 &lt;code&gt;/lib/&lt;/code&gt; 目录下。&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th style=&#34;text-align:left&#34;&gt;Metastore version&lt;/th&gt;
-&lt;th style=&#34;text-align:left&#34;&gt;Maven dependency&lt;/th&gt;
-&lt;th style=&#34;text-align:left&#34;&gt;SQL Client JAR&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;1.0.0 - 1.2.2&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;flink-sql-connector-hive-1.2.2&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-1.2.2_2.11/1.11.0/flink-sql-connector-hive-1.2.2_2.11-1.11.0.jar&#34;&gt;Download&lt;/a&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;2.0.0 - 2.2.0&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;flink-sql-connector-hive-2.2.0&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.2.0_2.11/1.11.0/flink-sql-connector-hive-2.2.0_2.11-1.11.0.jar&#34;&gt;Download&lt;/a&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;2.3.0 - 2.3.6&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;flink-sql-connector-hive-2.3.6&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.3.6_2.11/1.11.0/flink-sql-connector-hive-2.3.6_2.11-1.11.0.jar&#34;&gt;Download&lt;/a&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;3.0.0 - 3.1.2&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;flink-sql-connector-hive-3.1.2&lt;/td&gt;
-&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.11/1.11.0/flink-sql-connector-hive-3.1.2_2.11-1.11.0.jar&#34;&gt;Download&lt;/a&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;h4 id=&#34;用户定义的依赖性&#34;&gt;用户定义的依赖性&lt;/h4&gt;
-&lt;p&gt;请在下面找到不同 Hive 主要版本所需的依赖关系。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Hive 2.3.4&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector.Contains flink-hadoop-compatibility and flink-orc jars
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-exec-2.3.4.jar
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 1.0.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-metastore-1.0.0.jar
-       hive-exec-1.0.0.jar
-       libfb303-0.9.0.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
-       
-       // Orc dependencies -- required by the ORC vectorized optimizations
-       orc-core-1.4.3-nohive.jar
-       aircompressor-0.8.jar // transitive dependency of orc-core
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 1.1.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-metastore-1.1.0.jar
-       hive-exec-1.1.0.jar
-       libfb303-0.9.2.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
-
-       // Orc dependencies -- required by the ORC vectorized optimizations
-       orc-core-1.4.3-nohive.jar
-       aircompressor-0.8.jar // transitive dependency of orc-core
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 1.2.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-metastore-1.2.1.jar
-       hive-exec-1.2.1.jar
-       libfb303-0.9.2.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
-
-       // Orc dependencies -- required by the ORC vectorized optimizations
-       orc-core-1.4.3-nohive.jar
-       aircompressor-0.8.jar // transitive dependency of orc-core
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 2.0.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-exec-2.0.0.jar
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 2.1.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-exec-2.1.0.jar
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 2.2.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-exec-2.2.0.jar
-
-       // Orc dependencies -- required by the ORC vectorized optimizations
-       orc-core-1.4.3.jar
-       aircompressor-0.8.jar // transitive dependency of orc-core
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
-&lt;li&gt;Hive 3.1.0&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;/flink-1.11.0
-   /lib
-
-       // Flink&#39;s Hive connector
-       flink-connector-hive_2.11-1.11.0.jar
-
-       // Hive dependencies
-       hive-exec-3.1.0.jar
-       libfb303-0.9.3.jar // libfb303 is not packed into hive-exec in some versions, need to add it separately
-&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;program-maven&#34;&gt;Program maven&lt;/h3&gt;
-&lt;p&gt;如果你正在构建你自己的程序，你需要在你的 mvn 文件中加入以下依赖关系。建议不要在生成的 jar 文件中包含这些依赖关系。你应该在运行时添加上面所说的依赖关系。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-xml&#34; data-lang=&#34;xml&#34;&gt;&lt;span class=&#34;c&#34;&gt;&amp;lt;!-- Flink Dependency --&amp;gt;&lt;/span&gt;
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;org.apache.flink&lt;span class=&#34;nt&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;flink-connector-hive_2.11&lt;span class=&#34;nt&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;1.11.0&lt;span class=&#34;nt&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;scope&amp;gt;&lt;/span&gt;provided&lt;span class=&#34;nt&#34;&gt;&amp;lt;/scope&amp;gt;&lt;/span&gt;
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
-
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;org.apache.flink&lt;span class=&#34;nt&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;flink-table-api-java-bridge_2.11&lt;span class=&#34;nt&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;1.11.0&lt;span class=&#34;nt&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
-  &lt;span class=&#34;nt&#34;&gt;&amp;lt;scope&amp;gt;&lt;/span&gt;provided&lt;span class=&#34;nt&#34;&gt;&amp;lt;/scope&amp;gt;&lt;/span&gt;
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
-
-&lt;span class=&#34;c&#34;&gt;&amp;lt;!-- Hive Dependency --&amp;gt;&lt;/span&gt;
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
-    &lt;span class=&#34;nt&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;org.apache.hive&lt;span class=&#34;nt&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
-    &lt;span class=&#34;nt&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;hive-exec&lt;span class=&#34;nt&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
-    &lt;span class=&#34;nt&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;${hive.version}&lt;span class=&#34;nt&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
-    &lt;span class=&#34;nt&#34;&gt;&amp;lt;scope&amp;gt;&lt;/span&gt;provided&lt;span class=&#34;nt&#34;&gt;&amp;lt;/scope&amp;gt;&lt;/span&gt;
-&lt;span class=&#34;nt&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;连接到-hive&#34;&gt;连接到 Hive&lt;/h2&gt;
-&lt;p&gt;通过表环境或 YAML 配置，使用目录接口和 HiveCatalog 连接到现有的 Hive 安装。&lt;/p&gt;
-&lt;p&gt;如果 &lt;code&gt;hive-conf/hive-site.xml&lt;/code&gt; 文件存储在远程存储系统中，用户应先将 hive 配置文件下载到本地环境中。&lt;/p&gt;
-&lt;p&gt;请注意，虽然 HiveCatalog 不需要特定的规划师，但读/写 Hive 表只适用于 blink 规划师。因此强烈建议您在连接 Hive 仓库时使用 blink planner。&lt;/p&gt;
-&lt;p&gt;HiveCatalog 能够自动检测使用中的 Hive 版本。建议不要指定 Hive 版本，除非自动检测失败。&lt;/p&gt;
-&lt;p&gt;以 Hive 2.3.4 版本为例。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-scala&#34; data-lang=&#34;scala&#34;&gt;&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;settings&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;EnvironmentSettings&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;newInstance&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;inBatchMode&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;build&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;()&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;tableEnv&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;TableEnvironment&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;create&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;settings&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;            &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;myhive&amp;#34;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;defaultDatabase&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;mydatabase&amp;#34;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;hiveConfDir&lt;/span&gt;     &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;/opt/hive-conf&amp;#34;&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// a local path
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;
-&lt;span class=&#34;k&#34;&gt;val&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;hive&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;HiveCatalog&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;defaultDatabase&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;hiveConfDir&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;span class=&#34;n&#34;&gt;tableEnv&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;registerCatalog&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;myhive&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;hive&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-
-&lt;span class=&#34;c1&#34;&gt;// set the HiveCatalog as the current catalog of the session
-&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;tableEnv&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;useCatalog&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;myhive&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;ddl&#34;&gt;DDL&lt;/h2&gt;
-&lt;p&gt;建议使用 &lt;a href=&#34;https://ohmyweekly.github.io/notes/2020-08-25-hive-dialect&#34;&gt;Hive 方言&lt;/a&gt;在 Flink 中执行 DDL 来创建 Hive 表、视图、分区、函数。&lt;/p&gt;
-&lt;h2 id=&#34;dml&#34;&gt;DML&lt;/h2&gt;
-&lt;p&gt;Flink 支持 DML 写入 Hive 表。请参考&lt;a href=&#34;https://ohmyweekly.github.io/notes/2020-08-25-hive-read-and-write&#34;&gt;读写 Hive 表&lt;/a&gt;的细节。&lt;/p&gt;
-&lt;p&gt;原文链接: &lt;a href=&#34;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/&#34;&gt;https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/hive/&lt;/a&gt;&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/flink">Flink</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink">Flink</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/flink-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3">Flink 官方文档</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/table-api-sql">Table API &amp; SQL</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/hive">Hive</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2020-08-25-hive-integration-overview/</guid>
                 <pubDate>Tue, 25 Aug 2020 00:00:00 +0800</pubDate>
             </item>
         

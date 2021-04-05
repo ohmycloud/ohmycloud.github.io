@@ -1,0 +1,524 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.79.0">Hugo</generator><title type="html"><![CDATA[rustlang on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/categories/rustlang/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/categories/rustlang/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/categories/rustlang/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/categories/rustlang/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-04-05T19:55:25+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/categories/rustlang/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[For the Love of Macros]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-04-05-for-the-love-of-macros/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-call-site-dependency-injection/?utm_source=atom_feed" rel="related" type="text/html" title="Call Site Dependency Injection" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-std-error-in-rust/?utm_source=atom_feed" rel="related" type="text/html" title="Std Error in Rust" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-two-beautiful-rust-programs/?utm_source=atom_feed" rel="related" type="text/html" title="Two Beautiful Rust Programs" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-20-pest-grammars/?utm_source=atom_feed" rel="related" type="text/html" title="Pest Grammars" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-19-parser-api-example-ini/?utm_source=atom_feed" rel="related" type="text/html" title="Parser API - 解析 INI" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-04-05-for-the-love-of-macros/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-04-05T00:00:00+08:00</published>
+            <updated>2021-04-05T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>For the Love of Macros</blockquote><p>我一直在重读 Ted Kaminski 关于软件设计的博客。我强烈推荐所有的文章，尤其是早期的文章（这是<a href="https://www.tedinski.com/2018/01/16/how-humans-write-programs.html">第一篇</a>）。他设法提供了既不平凡又合理的设计建议（当然是主观判断），这是一个难得的标本!</p>
+<p>无论如何，这一系列的见解之一是，当设计一个抽象的概念时，我们总是要面对权力和属性之间的内在权衡。我们使用一个特定的抽象能表达的越多，我们对使用它的代码能说的就越少。然而，我们人类对更多表达能力的偏爱并非与生俱来。这一点在编程语言社区中很明显，用户不停地要求提供新功能，而语言设计者却说不。</p>
+<p>宏是一个在 &ldquo;更强大&quot;方面走得很远的语言功能。宏给了你一种在源代码上抽象的能力。作为交换，你放弃了（自动）推理表面语法的能力。作为一个具体的<a href="https://rust-analyzer.github.io/blog/2020/03/30/macros-vs-rename.html">例子</a>，重命名重构在具有强大宏系统的语言中并不能 100% 可靠地工作。</p>
+<p>我确实认为，在理想的世界里，对于一个想要扩展到巨大项目的语言来说，这是一个错误的交易。当你增加了更多的程序员、更多的年限和更多的数百万行代码时，自动推理和转换源代码的能力就会变得越来越重要。但是，请谨慎对待这一点 - 我显然是有偏见的，因为我花了几年时间开发 Rust IDE。</p>
+<p>也就是说，宏有巨大的吸引力 - 它们是语言设计师的胶带。宏很少是最好的工具，但它们几乎可以完成任何工作。语言设计是渐进式的。宏系统通过为许多功能提供一个现成的穷人的替代品来缓解设计压力。</p>
+<p>在这篇文章中，我想探讨一下 Rust 中宏的用途。目的是为了找到不放弃&quot;推理源代码&quot;属性的解决方案。</p>
+<h2 id="字符串插值">字符串插值</h2>
+<p>到目前为止，最常见的使用情况是 <code>format!</code> 系列的宏。这里的无宏解决方案很直接 - 字符串插值语法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="kd">let</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#34;number&#34;</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="kd">let</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="mi">92</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="kd">let</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="s">&#34;$key: ${values()}&#34;</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="n">assert_eq</span><span class="o">!</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="s">&#34;number: 92&#34;</span><span class="p">);</span><span class="w">
+</span></code></pre></div><p>在 Rust 中，插值可能不应该直接构造一个字符串，而是可以产生一个实现 Display 的值（就像 <code>format_args!</code> 一样），这样可以避免分配。一个有趣的扩展是允许在格式字符串片段上迭代。这样一来，插值语法就可以用于 SQL 语句或命令行参数之类的东西，而不用担心引入注入漏洞。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="kd">let</span><span class="w"> </span><span class="n">arg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#34;my dir&#34;</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="kd">let</span><span class="w"> </span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="s">&#34;ls $arg&#34;</span><span class="p">.</span><span class="n">to_cmd</span><span class="p">();</span><span class="w">
+</span><span class="w"></span><span class="n">assert_eq</span><span class="o">!</span><span class="p">(</span><span class="n">cmd</span><span class="p">.</span><span class="n">to_string</span><span class="p">(),</span><span class="w"> </span><span class="s">&#34;ls &#39;my dir&#39;&#34;</span><span class="p">);</span><span class="w">
+</span></code></pre></div><p><a href="https://julialang.org/blog/2012/03/shelling-out-sucks/">这篇</a>关于 Julia 编程语言的文章解释了这个问题。 <a href="https://github.com/matklad/xshell">xshell</a> crate 为 Rust 实现了这个想法。</p>
+<h2 id="derives">Derives</h2>
+<p>我认为在 Rust 中，宏的第二个最常见，也可能是最重要的用法是派生。Rust 是为数不多的能正确实现平等的语言之一（禁止比较苹果和橘子），但这关键取决于 <code>derive(Eq)</code> 的能力。这个领域常见的解决方案是编译器中的特殊 casing（Haskell 的派生）或运行时反射。</p>
+<p>但我最感兴趣的解决方案是 <code>C#</code> <a href="https://devblogs.microsoft.com/dotnet/introducing-c-source-generators/">源码生成器</a>。这并不是什么新鲜事 - 这只是老式的（源码）代码生成器，只是具有很好的实现质量。你可以提供自定义的代码，这些代码在构建过程中被运行，它可以读取现有的源码并生成额外的文件，然后再添加到编译中。</p>
+<p>这个解决方案的优点在于它将所有的复杂性从语言中移出，移到了编译系统中。这意味着你可以免费获得基线工具支持。生成代码的 Goto 定义？就能用了。调试时想介入一些序列化代码？磁盘上有实际的源码，所以可以放心的去做! 你是比较喜欢用 <code>printf</code> 的人？好吧，你需要说服构建系统不要踩过你的改动，但是，否则，为什么不呢？</p>
+<p>此外，源码生成器的表现力明显更强。它们可以调用到 Roslyn 编译器来分析源代码，所以它们能够生成类型导向的代码。</p>
+<p>为了有用，源码生成器需要一些语言级别的支持，以便将一个实体分割到多个文件中。在 <code>C#</code> 中，部分类就扮演了这个角色。</p>
+<h2 id="特定领域语言">特定领域语言</h2>
+<p>宏的存在理由是嵌入式 DSL 的实现。我们希望在语言中引入自定义语法，以简洁地对程序的领域进行建模。例如，可以用宏来嵌入 Rust 代码中的 HTML 片段。</p>
+<p>对我个人来说，eDSL 不是要解决的问题，只是一个问题。引入一个新的子语言（即使是小的）会花费大量的认知复杂性预算。如果你偶尔需要它，最好坚持只把有点啰嗦的函数调用链在一起。如果你经常需要它，引入外部的 DSL 是有意义的，它有一个编译器，一个语言服务器，以及所有使编程富有成效的工具。对我来说，基于宏的 DSL 只是在成本效益曲线上不落像一个有趣的点。</p>
+<p>也就是说，Kotlin 编程语言很好地解决了强类型化、工具友好型 DSL 的问题（例子）。令人气愤的是，很难指出具体的解决方案是什么。就是&hellip;&hellip;主要是具体的语法。下面是一些成分。</p>
+<ul>
+<li>闭包的语法是 <code>{ arg -&gt; body }</code>，或者直接是 <code>{ body }</code>，所以闭包在语法上类似于块。</li>
+<li>扩展方法（这只是静态方法的语法糖）。</li>
+<li>Java 风格的隐式 this，它将名称引入到作用域中，而不需要显式声明。</li>
+<li><a href="https://boats.gitlab.io/blog/post/the-problem-of-effects/">TCP-preserving</a> inline closures (这是唯一一个非语法特征)</li>
+</ul>
+<p>尽管如此，这还不足以实现 Jetpack Compose UI DSL，它还需要一个编译器插件。</p>
+<h2 id="sqlx">sqlx</h2>
+<p>我想调用的一个有趣的 DSL 案例是 <a href="https://docs.rs/sqlx/0.5.1/sqlx/macro.query.html">sqlx::query</a>。它允许我们写这样的代码。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="kd">let</span><span class="w"> </span><span class="n">account</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span><span class="w">  </span><span class="n">sqlx</span>::<span class="n">query</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;select (1) as id, &#39;Herp Derpinson&#39; as name&#34;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">.</span><span class="n">fetch_one</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">conn</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="c1">// anonymous struct has `#[derive(Debug)]` for convenience
+</span><span class="c1"></span><span class="n">println</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;{:?}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">account</span><span class="p">);</span><span class="w">
+</span><span class="w"></span><span class="n">println</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;{}: {}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">name</span><span class="p">);</span><span class="w">
+</span></code></pre></div><p>这一点我想是eDSL确实很拉风的几个案例之一。没有宏的情况下，我不知道该怎么做。使用字符串插值（高级版本，以保护不被注入），可以指定查询。使用源码生成器，可以检查查询的语法和类型，例如，在这种情况下，会出现类型错误。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">)</span>: <span class="p">(</span><span class="kt">i32</span><span class="p">,</span><span class="w"> </span><span class="kt">f32</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w">
+</span><span class="w">  </span><span class="n">query</span><span class="p">(</span><span class="s">&#34;select (1) as id, &#39;Herp Derpinson&#39; as name&#34;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">.</span><span class="n">fetch_one</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="n">conn</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span><span class="w">
+</span></code></pre></div><p>但这还不足以生成一个匿名结构体，也不足以摆脱动态 casts。</p>
+<h2 id="有条件编译">有条件编译</h2>
+<p>Rust 还使用宏进行条件编译。这个用例令人信服地展示了&quot;缺乏属性&quot;方面的能力。处理特征组合是 Cargo 永远头痛的问题。当特征标志改变时，用户不得不反复重新编译大块的装箱图。在 CI 上用 <code>Cargo test --no-default-features</code> 捕捉类型错误是非常恼人的，尤其是当你在提交 PR 之前确实运行了 <code>Cargo test</code>。&ldquo;添加特性&quot;是一个无法选中的一厢情愿。</p>
+<p>在这种情况下，我不知道有什么好的无宏选择。但是，原则上，这似乎是可行的，如果将条件编译进一步推到编译器流水线的下游，推到代码生成和链接阶段。编译器可以在为一个函数生成机器代码之前，选择特定平台的版本，而不是在解析过程中提前丢弃一些代码。在此之前，它会检查该函数的所有条件编译版本是否具有相同的接口。这样一来，平台特定的类型错误就不可能出现了。</p>
+<h2 id="占位符语法">占位符语法</h2>
+<p>最后一个我想介绍的用例是占位符语法。Rust 的 <code>macro_call!(...)</code> 语法开辟了一个很好的隔离区域，只要小括号是平衡的，任何东西都可以用。理论上，这允许语言设计者在确定某些东西之前先试验临时语法。在实践中，这看起来好像并没有什么好处？有人反对稳定 <code>postfix .await</code>，而不通过中间期与 <code>await!</code> 宏来稳定。而且，稳定之后，所有的语法讨论都立即被遗忘了？另一方面，我们确实有 <code>try! -&gt; ?</code> 转变，但我不认为它有助于发现任何设计上的缺陷？至少，我们成功地稳定了那个<a href="https://internals.rust-lang.org/t/can-try-and-use-the-into-trait-instead-of-from/6714">不必要的限制性</a>去语法糖。</p>
+<p>对于结论，我想绕回源码生成器。究竟是什么让它们比宏更容易被工具化？我认为有以下三个特性。第一，无论是输入还是输出，从根本上说，都是文本。没有中间的表示方式（比如 token 树），而这个元程序设施使用的是中间的表示方式。这意味着，它不需要与编译器深度集成。当然，在内部，该工具可以自由地对代码进行任意解析、类型检查和转换。其次，有一个阶段性的区分。源码生成器是一次执行，无序的。在元编程和名称解析之间没有来回，这又可以将&quot;元&quot;的部分保留在外面。第三，源码生成器只能添加代码，不能改变现有代码的含义。这意味着，在代码生成器的存在下，语义上合理的源码转换依然如此。</p>
+<p>就这样吧! 在 <a href="https://old.reddit.com/r/rust/comments/ljnkwg/blog_post_for_the_love_of_macros/">/r/rust</a> 上讨论。</p>
+<p>原文链接: <a href="https://matklad.github.io/2021/02/14/for-the-love-of-macros.html">https://matklad.github.io/2021/02/14/for-the-love-of-macros.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rustlang" term="rustlang" label="rustlang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/rust" term="rust" label="Rust" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Std Error in Rust]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-04-05-std-error-in-rust/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-call-site-dependency-injection/?utm_source=atom_feed" rel="related" type="text/html" title="Call Site Dependency Injection" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-for-the-love-of-macros/?utm_source=atom_feed" rel="related" type="text/html" title="For the Love of Macros" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-two-beautiful-rust-programs/?utm_source=atom_feed" rel="related" type="text/html" title="Two Beautiful Rust Programs" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-20-pest-grammars/?utm_source=atom_feed" rel="related" type="text/html" title="Pest Grammars" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-19-parser-api-example-ini/?utm_source=atom_feed" rel="related" type="text/html" title="Parser API - 解析 INI" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-04-05-std-error-in-rust/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-04-05T00:00:00+08:00</published>
+            <updated>2021-04-05T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Std Error in Rust</blockquote><h1 id="学习-stdioerror">学习 std::io::Error</h1>
+<p>在这篇文章中，我们将剖析 Rust 标准库中 std::io::Error 类型的实现。相关代码在这里：<code>library/std/src/io/error.rs</code>。</p>
+<p>你可以把这篇文章看成是其中之一。</p>
+<ul>
+<li>一个标准库的特定位的研究</li>
+<li>一个高级错误管理指南</li>
+<li>一个漂亮的 API 设计案例</li>
+</ul>
+<p>文章要求基本熟悉 Rust 错误处理。</p>
+<p>在设计一个用于 <code>Result&lt;T，E&gt;</code> 的 Error 类型时，主要的问题是&quot;如何使用这个错误？&quot;。通常，以下情况之一为真。</p>
+<ul>
+<li>错误被程序化处理。消费者检查错误，所以它的内部结构需要在合理的程度上暴露出来。</li>
+<li>错误被传播并显示给用户。消费者不检查 <code>fmt::Display</code> 之外的错误；所以它的内部结构可以被封装。</li>
+</ul>
+<p>请注意，暴露实现细节和封装细节之间存在紧张关系。实现第一种情况的常见反模式是定义一个厨房水槽枚举。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">pub</span><span class="w"> </span><span class="k">enum</span> <span class="nc">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="n">Tokio</span><span class="p">(</span><span class="n">tokio</span>::<span class="n">io</span>::<span class="n">Error</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="n">ConnectionDiscovery</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">path</span>: <span class="nc">PathBuf</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="n">reason</span>: <span class="nb">String</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="n">stderr</span>: <span class="nb">String</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">},</span><span class="w">
+</span><span class="w">  </span><span class="n">Deserialize</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">source</span>: <span class="nc">serde_json</span>::<span class="n">Error</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="n">data</span>: <span class="nb">String</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">},</span><span class="w">
+</span><span class="w">  </span><span class="p">...,</span><span class="w">
+</span><span class="w">  </span><span class="n">Generic</span><span class="p">(</span><span class="nb">String</span><span class="p">),</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>这种方法有很多问题。</p>
+<p>首先，从底层库中暴露错误会使它们成为你的公共 API 的一部分。在你的依赖关系中的主要 semver bump 会要求你也做一个新的主要版本。</p>
+<p>其次，它将所有的实现细节都固定下来。例如，如果你注意到 ConnectionDiscovery 的大小是巨大的，那么将这个变体装箱将是一个突破性的变化。</p>
+<p>第三，它通常表明了一个更大的设计问题。厨房水槽错误将不同的故障模式打包成一种类型。但是，如果故障模式差异很大，处理起来可能就不合理了! 这说明情况看起来更像案例二。</p>
+<p>错误厨房水槽病的一个经常有效的治疗方法是将错误推送给调用者的模式。</p>
+<p>考虑这个例子:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">my_function</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nb">Result</span><span class="o">&lt;</span><span class="kt">i32</span><span class="p">,</span><span class="w"> </span><span class="n">MyError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="n">thing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dep_function</span><span class="p">()</span><span class="o">?</span><span class="p">;</span><span class="w">
+</span><span class="w">  </span><span class="p">...</span><span class="w">
+</span><span class="w">  </span><span class="nb">Ok</span><span class="p">(</span><span class="mi">92</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p><code>my_function</code> 调用 <code>dep_function</code>，所以 <code>MyError</code> 应该可以从 <code>DepError</code> 转换过来。更好的写法可能是这样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">my_function</span><span class="p">(</span><span class="n">thing</span>: <span class="nc">DepThing</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Result</span><span class="o">&lt;</span><span class="kt">i32</span><span class="p">,</span><span class="w"> </span><span class="n">MyError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="p">...</span><span class="w">
+</span><span class="w">  </span><span class="nb">Ok</span><span class="p">(</span><span class="mi">92</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>在这个版本中，调用者被迫调用 <code>dep_function</code> 并处理其错误。这就用更多的类型交换了更多的类型安全。<code>MyError</code> 和 <code>DepError</code> 现在是不同的类型，调用者可以分别处理它们。如果 <code>DepError</code> 是 <code>MyError</code> 的变体，那么就需要进行运行时匹配。</p>
+<p>这个想法的一个极端版本是 <code>sans-io</code> 编程。大多数错误来自于 IO；如果你把所有的 IO 推给调用者，你就可以跳过大部分的错误处理。</p>
+<p>无论枚举方法多么糟糕，它确实实现了第一种情况的最大可检查性。</p>
+<p>以传播为中心的第二种情况下的错误管理，通常是通过使用盒状特质对象来处理。像 <code>Box&lt;dyn std::error::Error&gt;</code> 这样的类型可以从任何具体的错误中构造出来，可以通过 <code>Display</code> 打印出来，并且仍然可以选择通过动态下传来暴露底层错误。<code>Anyhow</code> crate 就是这种风格的一个很好的例子。</p>
+<p><code>std::io::Error</code> 的例子很有趣，因为它想同时具备上述两种风格。</p>
+<ul>
+<li>这是 std，所以封装和面向未来是最重要的。</li>
+<li>来自操作系统的 IO 错误往往可以被处理（比如 EWOULDBLOCK）。</li>
+<li>对于系统编程语言来说，准确地暴露底层 OS 错误是很重要的。</li>
+<li>未来潜在的操作系统错误集是没有限制的。</li>
+<li><code>io::Error</code> 也是一种词汇类型，应该可以表示一些不完全的 os 错误。例如，Rust Paths 可以包含内部的0字节，打开这样的路径应该在进行 <code>syscall</code> 之前返回一个 <code>io::Error</code>。</li>
+</ul>
+<p>下面是 <code>std::io::Error</code> 的样子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">pub</span><span class="w"> </span><span class="k">struct</span> <span class="nc">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="n">repr</span>: <span class="nc">Repr</span><span class="p">,</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">enum</span> <span class="nc">Repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="n">Os</span><span class="p">(</span><span class="kt">i32</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="n">Simple</span><span class="p">(</span><span class="n">ErrorKind</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="n">Custom</span><span class="p">(</span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">Custom</span><span class="o">&gt;</span><span class="p">),</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">struct</span> <span class="nc">Custom</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="n">kind</span>: <span class="nc">ErrorKind</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">error</span>: <span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;</span><span class="p">,</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>首先要注意的是，它内部是一个枚举，但这是一个隐藏得很好的实现细节。为了允许检查和处理各种错误条件，有一个单独的公共无字段种类枚举。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="cp">#[derive(Clone, Copy)]</span><span class="w">
+</span><span class="w"></span><span class="cp">#[non_exhaustive]</span><span class="w">
+</span><span class="w"></span><span class="k">pub</span><span class="w"> </span><span class="k">enum</span> <span class="nc">ErrorKind</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="n">NotFound</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">PermissionDenied</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">Interrupted</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">...</span><span class="w">
+</span><span class="w">  </span><span class="n">Other</span><span class="p">,</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">impl</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">kind</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">ErrorKind</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">sys</span>::<span class="n">decode_error_kind</span><span class="p">(</span><span class="o">*</span><span class="n">code</span><span class="p">),</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="n">kind</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="o">*</span><span class="n">kind</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>虽然 ErrorKind 和 Repr 都是枚举，但公开暴露 ErrorKind 就没那么可怕了。一个 <code>#[non_exhaustive]Copy</code> 无字段枚举的设计空间是一个点 - 没有合理的替代方案或兼容性隐患。</p>
+<p>有些 <code>io::Errors</code> 只是原始的操作系统错误代码。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">impl</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">from_raw_os_error</span><span class="p">(</span><span class="n">code</span>: <span class="kt">i32</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">repr</span>: <span class="nc">Repr</span>::<span class="n">Os</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">raw_os_error</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Option</span><span class="o">&lt;</span><span class="kt">i32</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>特定平台的 <code>sys::decode_error_kind</code> 函数负责将错误代码映射到 <code>ErrorKind</code> 枚举。所有这些都意味着代码可以通过检查 <code>.kind()</code> 来跨平台处理错误类别。然而，如果需要以一种依赖于操作系统的方式处理一个非常特殊的错误代码，这也是可能的。API 小心翼翼地提供了一个方便的抽象，而没有抽象掉重要的低级细节。</p>
+<p>一个 <code>std::io::Error</code> 也可以从一个 <code>ErrorKind</code> 中构造出来。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">impl</span><span class="w"> </span><span class="nb">From</span><span class="o">&lt;</span><span class="n">ErrorKind</span><span class="o">&gt;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">fn</span> <span class="nf">from</span><span class="p">(</span><span class="n">kind</span>: <span class="nc">ErrorKind</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">repr</span>: <span class="nc">Repr</span>::<span class="n">Simple</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>这提供了跨平台访问错误代码风格的错误处理。如果你需要尽可能快的错误，这很方便。</p>
+<p>最后，还有第三种完全自定义的变体表示。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">impl</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">new</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span><span class="p">(</span><span class="n">kind</span>: <span class="nc">ErrorKind</span><span class="p">,</span><span class="w"> </span><span class="n">error</span>: <span class="nc">E</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Error</span><span class="w">
+</span><span class="w">  </span><span class="k">where</span><span class="w">
+</span><span class="w">    </span><span class="n">E</span>: <span class="nb">Into</span><span class="o">&lt;</span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">Self</span>::<span class="n">_new</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="p">.</span><span class="n">into</span><span class="p">())</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w">  </span><span class="k">fn</span> <span class="nf">_new</span><span class="p">(</span><span class="w">
+</span><span class="w">    </span><span class="n">kind</span>: <span class="nc">ErrorKind</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="n">error</span>: <span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">repr</span>: <span class="nc">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="nb">Box</span>::<span class="n">new</span><span class="p">(</span><span class="n">Custom</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">kind</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="p">})),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">get_ref</span><span class="p">(</span><span class="w">
+</span><span class="w">    </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Option</span><span class="o">&lt;&amp;</span><span class="p">(</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">&#39;static</span><span class="p">)</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;*</span><span class="n">c</span><span class="p">.</span><span class="n">error</span><span class="p">),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w">  </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">into_inner</span><span class="p">(</span><span class="w">
+</span><span class="w">    </span><span class="bp">self</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(..)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">error</span><span class="p">),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>需要注意的地方。</p>
+<ul>
+<li>
+<p>通用的 <code>new</code> 函数委托给单态的 <code>_new</code> 函数。这改善了编译时间，因为在单态化过程中需要重复的代码更少。我认为这也改善了一些运行时：<code>_new</code> 函数没有被标记为内联，所以会在调用处产生一个函数调用。这是好的，因为错误构造是冷路径，节省指令缓存是受欢迎的。</p>
+</li>
+<li>
+<p>自定义变体被框住了 - 这是为了让整体 <code>size_of</code> 更小。错误的 <code>on-the-stack</code> 大小是很重要的：即使没有错误，你也要为此付出代价!</p>
+</li>
+</ul>
+<p>这两种类型都是指&quot;静态错误&quot;。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">type</span> <span class="nc">A</span><span class="w"> </span><span class="o">=</span><span class="w">   </span><span class="o">&amp;</span><span class="p">(</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">&#39;static</span><span class="p">);</span><span class="w">
+</span><span class="w"></span><span class="k">type</span> <span class="nc">B</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;</span><span class="w">
+</span></code></pre></div><p>在 <code>dyn Trait + '_</code> 中，<code>'_</code> 被省略为 <code>'static</code>，除非 trait 对象是在引用后面，在这种情况下，它被省略为 <code>&amp;'a dyn Trait + 'a</code>。</p>
+<p><code>get_ref</code>, <code>get_mut</code> 和 <code>into_inner</code> 提供了对底层错误的完全访问。类似于 <code>os_error</code> 的情况，抽象模糊了细节，但也提供了钩子来获取底层数据的原样。</p>
+<p>同样，Display 的实现揭示了内部表示的最重要细节。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">impl</span><span class="w"> </span><span class="n">fmt</span>::<span class="n">Display</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">fn</span> <span class="nf">fmt</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">fmt</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">fmt</span>::<span class="n">Formatter</span><span class="o">&lt;</span><span class="na">&#39;_</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">fmt</span>::<span class="nb">Result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">detail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sys</span>::<span class="n">os</span>::<span class="n">error_string</span><span class="p">(</span><span class="o">*</span><span class="n">code</span><span class="p">);</span><span class="w">
+</span><span class="w">        </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;{} (os error {})&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">,</span><span class="w"> </span><span class="n">code</span><span class="p">)</span><span class="w">
+</span><span class="w">      </span><span class="p">}</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;{}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">kind</span><span class="p">.</span><span class="n">as_str</span><span class="p">()),</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="n">error</span><span class="p">.</span><span class="n">fmt</span><span class="p">(</span><span class="n">fmt</span><span class="p">),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>综上所述，std::io::Error:</p>
+<ul>
+<li>封装了它的内部表现形式，并通过框定大的枚举变体来优化它。</li>
+<li>通过 <code>ErrorKind</code> 模式提供了一种方便的方法来处理基于类别的错误。</li>
+<li>完全暴露底层操作系统的错误（如果有的话）。</li>
+</ul>
+<p>可以透明地包裹任何其他错误类型。</p>
+<p>最后一点意味着 <code>io::Error</code> 可以用于临时错误，因为 <code>&amp;str</code> 和 String 可以转换为 <code>Box&lt;dyn std::error::Error&gt;</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="n">io</span>::<span class="n">Error</span>::<span class="n">new</span><span class="p">(</span><span class="n">io</span>::<span class="n">ErrorKind</span>::<span class="n">Other</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;something went wrong&#34;</span><span class="p">)</span><span class="w">
+</span></code></pre></div><p>它也可以作为 anyhow 的简单替换。我想一些库可能会用这个来简化他们的错误处理。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="n">io</span>::<span class="n">Error</span>::<span class="n">new</span><span class="p">(</span><span class="n">io</span>::<span class="n">ErrorKind</span>::<span class="n">InvalidData</span><span class="p">,</span><span class="w"> </span><span class="n">my_specific_error</span><span class="p">)</span><span class="w">
+</span></code></pre></div><p>例如，<code>serde_json</code> 提供了以下方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">from_reader</span><span class="o">&lt;</span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">rdr</span>: <span class="nc">R</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Result</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">serde_json</span>::<span class="n">Error</span><span class="o">&gt;</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w">
+</span><span class="w">  </span><span class="n">R</span>: <span class="nc">Read</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">T</span>: <span class="nc">DeserializeOwned</span><span class="p">,</span><span class="w">
+</span></code></pre></div><p>读取会因为 <code>io::Error</code> 而失败，所以 <code>serde_json::Error</code> 需要能够在内部表示 <code>io::Error</code>。我认为这是倒退的 (但我不知道整个上下文，如果被证明是错的我会很高兴！)，签名应该是这样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">from_reader</span><span class="o">&lt;</span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">rdr</span>: <span class="nc">R</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Result</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">io</span>::<span class="n">Error</span><span class="o">&gt;</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w">
+</span><span class="w">  </span><span class="n">R</span>: <span class="nc">Read</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">T</span>: <span class="nc">DeserializeOwned</span><span class="p">,</span><span class="w">
+</span></code></pre></div><p>那么，<code>serde_json::Error</code> 就不会有 <code>Io</code> 的变体，而会以 <code>InvalidData</code> 的形式被藏到 <code>io::Error</code> 中。
+补遗, 2021-01-25</p>
+<p>重新阅读这篇文章，我现在认为正确的返回类型应该是：</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">from_reader</span><span class="o">&lt;</span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="w">
+</span><span class="w">  </span><span class="n">rdr</span>: <span class="nc">R</span><span class="p">,</span><span class="w">
+</span><span class="w"></span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">serde_json</span>::<span class="n">Error</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">io</span>::<span class="n">Error</span><span class="o">&gt;</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w">
+</span><span class="w">  </span><span class="n">R</span>: <span class="nc">Read</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">T</span>: <span class="nc">DeserializeOwned</span><span class="p">,</span><span class="w">
+</span></code></pre></div><p>这迫使 IO 和反序列化错误分开处理，这在这种情况下是有意义的。IO 错误可能是程序领域之外的硬件/环境问题，而序列化错误很可能是系统中的某个错误。</p>
+<p>我认为 <code>std::io::Error</code> 是一个非常了不起的类型，它能够在没有太多妥协的情况下为许多不同的用例服务。但我们是否可以做得更好呢？</p>
+<p><code>std::io::Error</code> 的首要问题是，当一个文件系统操作失败时，你不知道它是为哪个路径失败的。这是可以理解的 - Rust 是一种系统语言，所以它不应该比 OS 原生提供的东西增加多少脂肪。OS 返回的是一个整数返回代码，而将其与一个堆分配的 <code>PathBuf</code> 耦合在一起，可能是一个不可接受的开销!</p>
+<p>我很惊讶地得知，事实上，<code>std</code> 对每一个与路径相关的系统调用都会进行分配。</p>
+<p>它需要以某种形式存在。<code>OS API</code> 需要在字符串的结尾有一个不幸的零字节. 但我想知道对短路径使用堆栈分配的缓冲区是否有意义。可能不会 - 路径通常不会那么短，而且现代分配器能有效地处理瞬时分配。</p>
+<p>我不知道这里有什么明显的好办法。一个选择是在编译时（一旦我们得到 <code>std-aware cargo</code>）或运行时（<code>a-la RUST_BACKTRACE</code>）添加开关，以堆分配所有与路径相关的 IO 错误。一个类似形的问题是 <code>io::Error</code> 不携带 backtrace。</p>
+<p>另一个问题是，<code>std::io::Error</code> 的效率不高。</p>
+<p>它的体积是相当大的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="n">assert_eq</span><span class="o">!</span><span class="p">(</span><span class="n">size_of</span>::<span class="o">&lt;</span><span class="n">io</span>::<span class="n">Error</span><span class="o">&gt;</span><span class="p">(),</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">size_of</span>::<span class="o">&lt;</span><span class="kt">usize</span><span class="o">&gt;</span><span class="p">());</span><span class="w">
+</span></code></pre></div><p>对于自定义的情况，会产生双重的间接和分配。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="w">    </span><span class="k">enum</span> <span class="nc">Repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Os</span><span class="p">(</span><span class="kt">i32</span><span class="p">),</span><span class="w">
+</span><span class="w">      </span><span class="n">Simple</span><span class="p">(</span><span class="n">ErrorKind</span><span class="p">),</span><span class="w">
+</span><span class="w">      </span><span class="c1">// First Box :|
+</span><span class="c1"></span><span class="w">      </span><span class="n">Custom</span><span class="p">(</span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">Custom</span><span class="o">&gt;</span><span class="p">),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w">    </span><span class="k">struct</span> <span class="nc">Custom</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">kind</span>: <span class="nc">ErrorKind</span><span class="p">,</span><span class="w">
+</span><span class="w">      </span><span class="c1">// Second Box :(
+</span><span class="c1"></span><span class="w">      </span><span class="n">error</span>: <span class="nb">Box</span><span class="o">&lt;</span><span class="n">dyn</span><span class="w"> </span><span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Sync</span><span class="o">&gt;</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>我想我们现在可以解决这个问题了</p>
+<p>首先，我们可以通过使用一个瘦的特质对象来摆脱双重内向性，比如失败或 anyhow。现在 GlobalAlloc 已经存在，这是一个比较直接的实现。</p>
+<p>其次，我们可以利用指针是对齐的这一事实，将 Os 和 Simple 变体都用最小的有效位集储藏到 usize 中。我认为我们甚至可以发挥创意，使用第二个最小有意义的位，把第一个位留作小众。这样一来，即使是像 <code>io::Result&lt;i32&gt;</code> 这样的东西，也可以是指针大小的!</p>
+<p>本篇文章到此结束。下一次你要为你的库设计一个错误类型的时候，花点时间去看看 <code>std::io::Error</code> 的源头，你可能会发现一些值得偷的东西。</p>
+<p>讨论在 /r/rust.Net 上进行。</p>
+<h2 id="额外的谜题">额外的谜题</h2>
+<p>看看实现中的这一行。</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">impl</span><span class="w"> </span><span class="n">fmt</span>::<span class="n">Display</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="k">fn</span> <span class="nf">fmt</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">fmt</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">fmt</span>::<span class="n">Formatter</span><span class="o">&lt;</span><span class="na">&#39;_</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">fmt</span>::<span class="nb">Result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="o">&amp;</span><span class="bp">self</span><span class="p">.</span><span class="n">repr</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Os</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">detail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sys</span>::<span class="n">os</span>::<span class="n">error_string</span><span class="p">(</span><span class="o">*</span><span class="n">code</span><span class="p">);</span><span class="w">
+</span><span class="w">        </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;{} (os error {})&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">,</span><span class="w"> </span><span class="n">code</span><span class="p">)</span><span class="w">
+</span><span class="w">      </span><span class="p">}</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Simple</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;{}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">kind</span><span class="p">.</span><span class="n">as_str</span><span class="p">()),</span><span class="w">
+</span><span class="w">      </span><span class="n">Repr</span>::<span class="n">Custom</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="n">error</span><span class="p">.</span><span class="n">fmt</span><span class="p">(</span><span class="n">fmt</span><span class="p">),</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>原文链接: <a href="https://matklad.github.io/2020/10/15/study-of-std-io-error.html">https://matklad.github.io/2020/10/15/study-of-std-io-error.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rustlang" term="rustlang" label="rustlang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/rust" term="rust" label="Rust" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Two Beautiful Rust Programs]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-04-05-two-beautiful-rust-programs/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-call-site-dependency-injection/?utm_source=atom_feed" rel="related" type="text/html" title="Call Site Dependency Injection" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-for-the-love-of-macros/?utm_source=atom_feed" rel="related" type="text/html" title="For the Love of Macros" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-std-error-in-rust/?utm_source=atom_feed" rel="related" type="text/html" title="Std Error in Rust" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-20-pest-grammars/?utm_source=atom_feed" rel="related" type="text/html" title="Pest Grammars" />
+                <link href="https://ohmyweekly.github.io/notes/2021-01-19-parser-api-example-ini/?utm_source=atom_feed" rel="related" type="text/html" title="Parser API - 解析 INI" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-04-05-two-beautiful-rust-programs/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-04-05T00:00:00+08:00</published>
+            <updated>2021-04-05T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Two Beautiful Rust Programs</blockquote><h1 id="two-beautiful-rust-programs">Two Beautiful Rust Programs</h1>
+<p>这是一则 Rust 编程语言的短广告，目标是有经验的 <code>C++</code> 开发者。作为一则广告，它只能吊起你的胃口，具体内容请参考其他资源。</p>
+<p>第一个程序:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">xs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vec</span><span class="o">!</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">];</span><span class="w">
+</span><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="n">x</span>: <span class="kp">&amp;</span><span class="kt">i32</span> <span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">xs</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span><span class="w">
+</span><span class="w">  </span><span class="n">xs</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="mi">92</span><span class="p">);</span><span class="w">
+</span><span class="w">  </span><span class="n">println</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;{}&#34;</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">x</span><span class="p">);</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>这个程序创建了一个 32 位整数的向量(<code>std::vector&lt;int32_t&gt;</code>)，接收第一个元素 <code>x</code> 的引用，再向向量推送一个数字，然后使用 <code>x</code>。这个程序是错误的：扩展向量可能会使对元素的引用无效，而且 <code>*x</code> 可能会取消引用一个 danging 指针。</p>
+<p>这个程序的好处是它不会被编译。</p>
+<pre><code>error[E0502]: cannot borrow xs as mutable
+    because it is also borrowed as immutable
+ --&gt; src/main.rs:4:5
+
+     let x: &amp;i32 = &amp;xs[0];
+                    -- immutable borrow occurs here
+     xs.push(92);
+     ^^^^^^^^^^^ mutable borrow occurs here
+     println!(x);
+              - immutable borrow later used here
+</code></pre><p>Rust 编译器跟踪每块数据的别名状态，并禁止潜在的别名数据的突变。在这个例子中，<code>x</code> 和 <code>xs</code> 别名了向量在堆中存储的第一个整数。</p>
+<p>Rust 不允许做傻事。</p>
+<p>第二个程序:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">use</span><span class="w"> </span><span class="n">crossbeam</span>::<span class="n">scope</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">use</span><span class="w"> </span><span class="n">parking_lot</span>::<span class="p">{</span><span class="n">Mutex</span><span class="p">,</span><span class="w"> </span><span class="n">MutexGuard</span><span class="p">};</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Mutex</span>::<span class="n">new</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span><span class="w">
+</span><span class="w">
+</span><span class="w">  </span><span class="n">scope</span><span class="p">(</span><span class="o">|</span><span class="n">s</span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">0</span><span class="p">..</span><span class="mi">10</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">      </span><span class="n">s</span><span class="p">.</span><span class="n">spawn</span><span class="p">(</span><span class="o">|</span><span class="n">_</span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">0</span><span class="p">..</span><span class="mi">10</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">          </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">guard</span>: <span class="nc">MutexGuard</span><span class="o">&lt;</span><span class="kt">i32</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span><span class="w">
+</span><span class="w">          </span><span class="o">*</span><span class="n">guard</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span><span class="w">        </span><span class="p">}</span><span class="w">
+</span><span class="w">      </span><span class="p">});</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">  </span><span class="p">}).</span><span class="n">unwrap</span><span class="p">();</span><span class="w">
+</span><span class="w">
+</span><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="n">total</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">get_mut</span><span class="p">();</span><span class="w">
+</span><span class="w">  </span><span class="n">println</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;total = {}&#34;</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">total</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span></code></pre></div><p>这个程序创建一个由 mutex 保护的整数计数器，生成10个线程，从每个线程开始将计数器递增10次，并打印出总数。</p>
+<p>计数器变量位于堆栈中，这些堆栈数据的指针与其他线程共享。线程必须锁定 mutex 才能进行增量。打印总数时，绕过 mutex 读取计数器，没有任何同步。</p>
+<p>这个程序的妙处在于，它的正确性依赖于几位精妙的推理，每一个推理都会被编译器检查。</p>
+<p>子线程不会逃离主函数 所以可以从它的堆栈中读取计数器</p>
+<p>子线程只通过 mutex 访问 counter。</p>
+<p>子线程将在我们从计数器中读出总数而不使用 mutex 时终止。</p>
+<p>如果这些约束中的任何一个被破坏，编译器就会拒绝该代码。没有必要使用 <code>std::shared_ptr</code> 只是为了防御性地确保内存不会在你的脚下被释放。</p>
+<p>Rust 允许做危险的、聪明的、快速的事情，而不用担心引入未定义的行为。</p>
+<p>如果你喜欢你所看到的，这里有两本我推荐的书，可以让你更深入地了解 Rust。</p>
+<p>原文链接: <a href="https://matklad.github.io/2020/07/15/two-beautiful-programs.html">https://matklad.github.io/2020/07/15/two-beautiful-programs.html</a></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rustlang" term="rustlang" label="rustlang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/rust" term="rust" label="Rust" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>
