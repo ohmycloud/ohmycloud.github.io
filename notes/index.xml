@@ -10,10 +10,528 @@
         <description>Recent content  in Notes
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Tue, 13 Apr 2021 22:37:31 +0800</lastBuildDate>
+        <lastBuildDate>Wed, 14 Apr 2021 23:11:23 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/notes/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Kafka 和 Rust入门 - 第一部分</title>
+                <link>https://ohmyweekly.github.io/notes/2021-04-14-getting-started-with-kafka-and-rust-part1/</link>
+                
+                
+                <description>&lt;blockquote&gt;Getting Started With Kafka and Rust&lt;/blockquote&gt;&lt;p&gt;这是一个两部分的系列，帮助你开始使用 Rust 和 Kafka。我们将使用 &lt;a href=&#34;https://github.com/fede1024/rust-rdkafka/&#34;&gt;rust-rdkafka&lt;/a&gt; crate，它本身就是基于 &lt;a href=&#34;https://github.com/edenhill/librdkafka&#34;&gt;librdkafka&lt;/a&gt;（C库）的。&lt;/p&gt;
+&lt;p&gt;在这篇文章中，我们将介绍 Kafka Producer API。&lt;/p&gt;
+&lt;h2 id=&#34;初始设置&#34;&gt;初始设置&lt;/h2&gt;
+&lt;p&gt;确保你&lt;a href=&#34;https://kafka.apache.org/downloads&#34;&gt;安装了一个 Kafka broker&lt;/a&gt; - 本地设置应该足够了。当然，你也需要&lt;a href=&#34;https://www.rust-lang.org/tools/install&#34;&gt;安装Rust&lt;/a&gt; - 你需要&lt;a href=&#34;https://github.com/fede1024/rust-rdkafka#minimum-supported-rust-version-msrv&#34;&gt;1.45或以上版本&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;在你开始之前，先克隆 GitHub repo。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;git clone https://github.com/abhirockzz/rust-kafka-101
+&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; part1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;检查 Cargo.toml 文件:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;...
+[dependencies]
+rdkafka = { version = &amp;quot;0.25&amp;quot;, features = [&amp;quot;cmake-build&amp;quot;,&amp;quot;ssl&amp;quot;] }
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;关于-cmake-build-功能的说明&#34;&gt;关于 cmake-build 功能的说明&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;rust-rdkafka&lt;/code&gt; 提供了几种解决 &lt;code&gt;librdkafka&lt;/code&gt; 依赖关系的方法。我选择了 &lt;code&gt;static&lt;/code&gt; 链接，其中 &lt;code&gt;librdkafka&lt;/code&gt; 被编译。不过你也可以选择 &lt;code&gt;dynamic&lt;/code&gt; 链接来引用本地安装的版本。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;更多内容，请&lt;a href=&#34;https://github.com/fede1024/rust-rdkafka/blob/master/rdkafka-sys/README.md#features&#34;&gt;参考以下链接&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;好吧，我们先从基本的开始说起。&lt;/p&gt;
+&lt;h2 id=&#34;简单的生产者&#34;&gt;简单的生产者&lt;/h2&gt;
+&lt;p&gt;这里是一个基于 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseProducer.html&#34;&gt;BaseProducer&lt;/a&gt; 的简单生产者。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;BaseProducer&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ClientConfig&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;bootstrap.servers&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;localhost:9092&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;security.protocol&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;SASL_SSL&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;sasl.mechanisms&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;PLAIN&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;sasl.username&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;lt;update&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;sasl.password&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;&amp;lt;update&amp;gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;create&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;invalid producer config&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;send&lt;/code&gt; 方法开始产生消息 - 它是在紧缩 &lt;code&gt;loop&lt;/code&gt; 中完成的，中间有一个 &lt;code&gt;thread::sleep&lt;/code&gt;(不是在生产中会做的事情)，以使其更容易追踪/跟踪结果。键、值（有效载荷）和目标 Kafka 主题以 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseRecord.html&#34;&gt;BaseRecord&lt;/a&gt; 的形式表示。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;in&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;..&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;100&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;sending message&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;send&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;BaseRecord&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;to&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;rust&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;format&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;key-{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;payload&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;format&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;value-{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;failed to send message&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;thread&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;sleep&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Duration&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;from_secs&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;));&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;你可以在文件 &lt;code&gt;src/1_producer_simple.rs&lt;/code&gt; 中查看整个代码。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;要测试生产者是否在工作-&#34;&gt;要测试生产者是否在工作 &amp;hellip;&lt;/h2&gt;
+&lt;p&gt;运行这段代码:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;只需将文件 &lt;code&gt;src/1_producer_simple.rs&lt;/code&gt; 重命名为 &lt;code&gt;main.rs&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;你应该看到这个输出:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sending message
+sending message
+sending message
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;到底发生了什么？要弄清楚 - 使用 Kafka CLI 消费者（或其他消费者客户端，如 kafkacat）连接到你的 Kafka 主题（我在上面的例子中使用 rust 作为 Kafka 主题的名称）。你应该看到消息流进来了。&lt;/p&gt;
+&lt;p&gt;例如&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span class=&#34;p&#34;&gt;&amp;amp;&lt;/span&gt;KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic rust --from-beginning
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;生产者回调&#34;&gt;生产者回调&lt;/h2&gt;
+&lt;p&gt;我们现在是在瞎飞! 除非我们明确地创建一个消费者来查看我们的消息，否则我们不知道它们是否被发送到 Kafka。让我们通过实现 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/trait.ProducerContext.html&#34;&gt;ProducerContext&lt;/a&gt;(trait)来解决这个问题，以挂接到 produce 事件 - 它就像一个回调。&lt;/p&gt;
+&lt;p&gt;首先为 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/client/trait.ClientContext.html&#34;&gt;ClientContext&lt;/a&gt; trait 创建一个结构体和一个空的实现（这是必须的）。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;ProducerCallbackLogger&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ClientContext&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProducerCallbackLogger&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;现在到了主要部分，我们在 &lt;code&gt;ProducerContext&lt;/code&gt; trait 中实现 &lt;code&gt;delivery&lt;/code&gt; 函数。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProducerContext&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProduceCallbackLogger&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;type&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;DeliveryOpaque&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;delivery&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;delivery_result&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;rdkafka&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;DeliveryResult&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;&amp;#39;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_delivery_opaque&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;DeliveryOpaque&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dr&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;delivery_result&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_ref&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dr&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Ok&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;msg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;msg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key_view&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;produced message with key {} in offset {} of partition {}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;msg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;offset&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;msg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;partition&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer_err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer_err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;mf&#34;&gt;1.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key_view&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;unwrap&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;failed to produce message with key {} - {}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer_err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我们根据 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/type.DeliveryResult.html&#34;&gt;DeliveryResult&lt;/a&gt;(毕竟它是一个 &lt;code&gt;Result&lt;/code&gt;)来匹配成功(&lt;code&gt;Ok&lt;/code&gt;)和失败(&lt;code&gt;Err&lt;/code&gt;)的情况。我们所做的只是简单地记录这两种情况下的消息，因为这只是一个例子。你可以在这里做任何你想做的事情（虽然不要太疯狂！）。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;我们忽略了 &lt;code&gt;ProducerContext&lt;/code&gt; trait 的关联类型 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/trait.ProducerContext.html#associatedtype.DeliveryOpaque&#34;&gt;DeliveryOpaque&lt;/a&gt;。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;我们需要确保我们插入了 &lt;code&gt;ProducerContext&lt;/code&gt; 的实现。我们通过使用 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/config/struct.ClientConfig.html#method.create_with_context&#34;&gt;create_with_context&lt;/a&gt; 方法（而不是 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/config/struct.ClientConfig.html#method.create&#34;&gt;create&lt;/a&gt;）来实现，并确保为 &lt;code&gt;BaseProducer&lt;/code&gt; 提供正确的类型。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;BaseProducer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProduceCallbackLogger&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ClientConfig&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;().&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;set&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(....)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;create_with_context&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProduceCallbackLogger&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{})&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;如何调用-回调&#34;&gt;如何调用 &amp;ldquo;回调&amp;rdquo;？&lt;/h2&gt;
+&lt;p&gt;好了，我们有了实现，但我们需要一种方法来触发它! 其中一个方法就是在生产者上调用 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseProducer.html#method.flush&#34;&gt;flush&lt;/a&gt;。所以，我们可以把我们的 producer 写成这样。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;添加 &lt;code&gt;producer.flush(Duration::from_secs(3));&lt;/code&gt;, 并&lt;/li&gt;
+&lt;li&gt;注释掉 &lt;code&gt;sleep&lt;/code&gt; (just for now)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;send&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;BaseRecord&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;to&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;rust&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;format&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;key-{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;payload&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;format&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;value-{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;failed to send message&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;flush&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Duration&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;from_secs&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;));&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;flushed message&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//thread::sleep(Duration::from_secs(3));
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;等等我们可以做得更好&#34;&gt;等等，我们可以做得更好&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;send&lt;/code&gt; 方法是非阻塞的（默认），但通过在每次 &lt;code&gt;send&lt;/code&gt; 后调用 &lt;code&gt;flush&lt;/code&gt;，我们现在已经将其转换为同步调用 - 从性能角度来看，不推荐使用。&lt;/p&gt;
+&lt;p&gt;我们可以通过使用 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.ThreadedProducer.html&#34;&gt;ThreadedProducer&lt;/a&gt; 来改善这种情况。它负责在后台线程中调用 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/producer/base_producer/struct.BaseProducer.html#method.poll&#34;&gt;poll&lt;/a&gt; 方法，以确保发送回调通知的传递。这样做非常简单 - 只需将类型从 &lt;code&gt;BaseProducer&lt;/code&gt; 改为 &lt;code&gt;ThreadedProducer&lt;/code&gt; 即可!&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;err&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;before&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;BaseProducer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProduceCallbackLogger&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;err&#34;&gt;#&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;after&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;ThreadedProducer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProduceCallbackLogger&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;而且，我们也不需要再调用 &lt;code&gt;flush&lt;/code&gt; 了。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//producer.flush(Duration::from_secs(3));
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;//println!(&amp;#34;flushed message&amp;#34;);
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;thread&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;sleep&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Duration&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;from_secs&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;));&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;代码在 &lt;code&gt;src/2_threaded_producer.rs&lt;/code&gt; 中可以找到。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;再次运行该程序&#34;&gt;再次运行该程序&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;将文件 &lt;code&gt;src/2_threaded_producer.rs&lt;/code&gt; 重命名为 &lt;code&gt;main.rs&lt;/code&gt;，并且&lt;/li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;输出:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sending message
+sending message
+produced message with key key-1 in offset 6 of partition 2
+produced message with key key-2 in offset 3 of partition 0
+sending message
+produced message with key key-3 in offset 7 of partition 2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;正如预期的那样，你应该能够看到生产者事件回调，表示消息确实被发送到了 Kafka 主题。当然，你可以直接连接到主题，并再次检查，就像之前一样。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span class=&#34;p&#34;&gt;&amp;amp;&lt;/span&gt;KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic rust --from-beginning
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;要尝试失败的情况，请尝试使用一个不正确的主题名称，并注意 &lt;code&gt;delivery&lt;/code&gt; 实现的 &lt;code&gt;Err&lt;/code&gt; 变体是如何被调用的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;发送-json-消息&#34;&gt;发送 JSON 消息&lt;/h2&gt;
+&lt;p&gt;到目前为止，我们只是发送 &lt;code&gt;String&lt;/code&gt; 作为 key 和 value。JSON 是一种常用的消息格式，让我们看看如何使用它。&lt;/p&gt;
+&lt;p&gt;假设我们要发送 &lt;code&gt;User&lt;/code&gt; 信息，将使用这个结构体来表示。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;User&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;id&lt;/span&gt;: &lt;span class=&#34;kt&#34;&gt;i32&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;email&lt;/span&gt;: &lt;span class=&#34;nb&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;然后我们可以使用 &lt;a href=&#34;https://docs.serde.rs/serde_json/&#34;&gt;serde_json&lt;/a&gt; 库将其序列化为 JSON。我们所需要的就是使用 &lt;a href=&#34;https://serde.rs/derive.html&#34;&gt;serde 中的自定义派生函数&lt;/a&gt; - &lt;code&gt;Deserialize&lt;/code&gt; 和 &lt;code&gt;Serialize&lt;/code&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;serde&lt;/span&gt;::&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Deserialize&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Serialize&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Serialize, Deserialize, Debug)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;struct&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;User&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;id&lt;/span&gt;: &lt;span class=&#34;kt&#34;&gt;i32&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;email&lt;/span&gt;: &lt;span class=&#34;nb&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;修改生产者循环&#34;&gt;修改生产者循环。&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;创建一个 &lt;code&gt;User&lt;/code&gt; 实例&lt;/li&gt;
+&lt;li&gt;使用 &lt;a href=&#34;https://docs.serde.rs/serde_json/fn.to_string_pretty.html&#34;&gt;to_string_pretty&lt;/a&gt; 将其序列化为 JSON 字符串。&lt;/li&gt;
+&lt;li&gt;在有效载荷中加入这一点&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;user_json&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;serde_json&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;to_string_pretty&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;).&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;json serialization failed&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;send&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;BaseRecord&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;to&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;rust&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;format&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;user-{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;                    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;payload&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;user_json&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;failed to send message&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;...&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;你也可以使用 &lt;a href=&#34;https://docs.serde.rs/serde_json/fn.to_vec.html&#34;&gt;to_vec&lt;/a&gt;(而不是 &lt;code&gt;to_string()&lt;/code&gt;)将其转换为一个字节的&lt;code&gt;Vec&lt;/code&gt;(&lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;/code&gt;)。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;要运行该程序&#34;&gt;要运行该程序&amp;hellip;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;将文件 &lt;code&gt;src/3_JSON_payload.rs&lt;/code&gt; 重命名为 &lt;code&gt;main.rs&lt;/code&gt;，然后&lt;/li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;从主题中消费:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span class=&#34;p&#34;&gt;&amp;amp;&lt;/span&gt;KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic rust --from-beginning
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你应该看到带有 &lt;code&gt;String&lt;/code&gt; 的键（如 &lt;code&gt;user-34&lt;/code&gt;）和 JSON 值的消息。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;34&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;nt&#34;&gt;&amp;#34;email&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;user-34@foobar.com&amp;#34;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;有更好的方法吗&#34;&gt;有更好的方法吗？&lt;/h2&gt;
+&lt;p&gt;是的！如果你习惯了 Kafka Java 客户端中的声明式序列化/去序列化方法（可能其他客户端也一样），你可能不喜欢这种 &amp;ldquo;显式&amp;rdquo; 方法。只是为了让大家明白，这是你在 Java 中的做法。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span class=&#34;n&#34;&gt;Properties&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;props&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Properties&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;();&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;props&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;put&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProducerConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;BOOTSTRAP_SERVERS_CONFIG&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;s&#34;&gt;&amp;#34;localhost:9092&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;props&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;put&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProducerConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;KEY_SERIALIZER_CLASS_CONFIG&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;s&#34;&gt;&amp;#34;org.apache.kafka.common.serialization.StringSerializer&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;props&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;put&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ProducerConfig&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;VALUE_SERIALIZER_CLASS_CONFIG&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt;
+  &lt;span class=&#34;s&#34;&gt;&amp;#34;io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer&amp;#34;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+
+&lt;span class=&#34;o&#34;&gt;....&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;ProducerRecord&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;User&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;record&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;new&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;ProducerRecord&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;String&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;User&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;topic&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;key&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;user&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;producer&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;send&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;record&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;请注意，您只需将 &lt;code&gt;Producer&lt;/code&gt; 配置为使用 &lt;code&gt;KafkaJsonSchemaSerializer&lt;/code&gt;，&lt;code&gt;User&lt;/code&gt; 类就会被序列化为 JSON。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;code&gt;rust-rdkafka&lt;/code&gt; 用 &lt;a href=&#34;https://docs.rs/rdkafka/0.26.0/rdkafka/message/trait.ToBytes.html&#34;&gt;ToBytes&lt;/a&gt; trait 提供了类似的东西。下面是它的样子。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;trait&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ToBytes&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;sd&#34;&gt;/// Converts the provided data to bytes.
+&lt;/span&gt;&lt;span class=&#34;sd&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;to_bytes&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;u8&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;];&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;不言而喻吧？&lt;code&gt;String&lt;/code&gt;、&lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;/code&gt; 等都有现有的实现。所以你可以使用这些类型作为键或值，而不需要任何额外的工作 - 这正是我们刚刚做的。但问题是我们的方法是 &amp;ldquo;显式&amp;rdquo; 的，即我们将 &lt;code&gt;User&lt;/code&gt; 结构转换为 JSON 字符串，并将其传递出去。&lt;/p&gt;
+&lt;h2 id=&#34;如果我们可以为-user-实现-tobytes-呢&#34;&gt;如果我们可以为 &lt;code&gt;User&lt;/code&gt; 实现 &lt;code&gt;ToBytes&lt;/code&gt; 呢？&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ToBytes&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;User&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;to_bytes&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;u8&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;serde_json&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;to_vec_pretty&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;).&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;expect&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;json serialization failed&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;b&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;as_slice&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你会看到一个编译器错误。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cannot return value referencing local variable `b`
+returns a value referencing data owned by the current function
+&lt;/code&gt;&lt;/pre&gt;&lt;blockquote&gt;
+&lt;p&gt;更多的背景资料，请参考 &lt;a href=&#34;https://github.com/fede1024/rust-rdkafka/issues/128&#34;&gt;GitHub&lt;/a&gt; 的问题。我很乐意看到其他可以与 &lt;code&gt;ToBytes&lt;/code&gt; 一起工作的例子 - 如果你有这方面的意见，请在留言中留下。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;TL;DR是，最好坚持用 &amp;ldquo;显式&amp;rdquo; 的方式做事，除非你有一个 &lt;code&gt;ToBytes&lt;/code&gt; 的实现，&amp;ldquo;不涉及分配，不能失败&amp;rdquo;。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结&lt;/h2&gt;
+&lt;p&gt;第一部分就到这里。第二部分将涉及围绕 Kafka 消费者的话题。&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://dev.to/abhirockzz/getting-started-with-kafka-and-rust-part-1-4hkb&#34;&gt;https://dev.to/abhirockzz/getting-started-with-kafka-and-rust-part-1-4hkb&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rustlang">rustlang</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/kafka">kafka</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rust">Rust</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-04-14-getting-started-with-kafka-and-rust-part1/</guid>
+                <pubDate>Wed, 14 Apr 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+            
+            <item>
+                <title>Rust 中处理错误的初级指南</title>
+                <link>https://ohmyweekly.github.io/notes/2021-04-14-a-beginner-guide-to-handling-errors-in-rust/</link>
+                
+                
+                <description>&lt;blockquote&gt;A Beginner&amp;rsquo;s Guide to Handling Errors in Rust&lt;/blockquote&gt;&lt;p&gt;《Rust 编程语言》中的示例项目对于向新的潜在 Rustaceans 介绍 Rust 的不同方面和特性是非常好的。在这篇文章中，我们将通过扩展《Rust 编程语言》中的 &lt;code&gt;minigrep&lt;/code&gt; 项目，看看实现更强大的错误处理基础架构的一些不同方法。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;minigrep&lt;/code&gt; 项目在&lt;a href=&#34;https://doc.rust-lang.org/book/ch12-00-an-io-project.html&#34;&gt;第12章&lt;/a&gt;中介绍，它引导读者构建一个简单版本的 &lt;code&gt;grep&lt;/code&gt; 命令行工具，这是一个用于搜索文本的工具。例如，你会传入一个查询，你要搜索的文本，以及文本所在的文件名，然后得到包含查询文本的所有行。&lt;/p&gt;
+&lt;p&gt;这篇文章的目标是用更强大的错误处理模式来扩展本书的 &lt;code&gt;minigrep&lt;/code&gt; 实现，这样你就能更好地了解 Rust 项目中处理错误的不同方法。&lt;/p&gt;
+&lt;p&gt;作为参考，你可以在&lt;a href=&#34;https://github.com/seanchen1991/error-handling-examples/tree/minigrep-control/examples/minigrep&#34;&gt;这里&lt;/a&gt;找到本书的 &lt;code&gt;minigrep&lt;/code&gt; 版本的最终代码。&lt;/p&gt;
+&lt;h2 id=&#34;错误处理用例&#34;&gt;错误处理用例&lt;/h2&gt;
+&lt;p&gt;当涉及到 Rust 项目的结构时，一个常见的模式是有一个 &amp;ldquo;库&amp;rdquo; 的部分和一个 &amp;ldquo;应用&amp;rdquo; 的部分，前者是主要的数据结构、函数和逻辑，后者是将库函数联系在一起。&lt;/p&gt;
+&lt;p&gt;你可以在原始 &lt;code&gt;minigrep&lt;/code&gt; 代码的文件结构中看到这一点：应用逻辑存在于 &lt;code&gt;src/bin/main.rs&lt;/code&gt; 文件中，它只是一个薄薄的包裹，包裹着在 &lt;code&gt;src/lib.rs&lt;/code&gt; 文件中定义的数据结构和函数；主函数所做的就是调用 &lt;code&gt;minigrep::run&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这一点很重要，因为取决于我们是在构建一个应用程序还是一个库，会改变我们处理错误的方式。&lt;/p&gt;
+&lt;p&gt;当涉及到一个应用程序时，最终用户很可能不想知道是什么原因导致了一个错误的琐碎细节。事实上，应用程序的最终用户可能只应该在错误无法恢复的情况下被通知错误。在这种情况下，提供关于为什么发生不可恢复的错误的细节也是有用的，特别是当它与用户输入有关时。如果某种可恢复的错误发生在后台，应用程序的消费者可能不需要知道它。&lt;/p&gt;
+&lt;p&gt;相反，当涉及到一个库时，最终用户是其他开发人员，他们正在使用该库并在其之上构建一些东西。在这种情况下，我们希望尽可能多地提供关于我们的库中发生的任何错误的相关细节。然后，库的消费者将决定他们想要如何处理这些错误。&lt;/p&gt;
+&lt;p&gt;那么，当我们的项目中既有库部分又有应用部分时，这两种方法是如何一起发挥作用的呢？&lt;code&gt;main&lt;/code&gt; 函数执行 &lt;code&gt;minigrep::run&lt;/code&gt; 函数，并输出结果中出现的任何错误。所以我们大部分的错误处理工作将集中在库部分。&lt;/p&gt;
+&lt;h2 id=&#34;浮现库错误&#34;&gt;浮现库错误&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;src/lib.rs&lt;/code&gt; 中，我们有两个函数，&lt;code&gt;Config::new&lt;/code&gt; 和 &lt;code&gt;run&lt;/code&gt;，它们可能会返回错误。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;env&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;&amp;#39;static&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;case_sensitive&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;env&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;var&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;CASE_INSENSITIVE&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;).&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;is_err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;();&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Ok&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;case_sensitive&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;})&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;run&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Box&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dyn&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;contents&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fs&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;read_to_string&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;?&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;results&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;if&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;case_sensitive&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;search&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;contents&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;else&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;search_case_insensitive&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;contents&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;in&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;results&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;println&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;{}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;line&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Ok&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(())&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;确切有三个地方在返回错误：两个错误发生在 &lt;code&gt;Config::new&lt;/code&gt; 函数中，该函数返回一个 &lt;code&gt;Result&amp;lt;Config，&amp;amp;&#39;static str&amp;gt;&lt;/code&gt;。在这种情况下，&lt;code&gt;Result&lt;/code&gt; 的错误变体是一个静态字符串切片。&lt;/p&gt;
+&lt;p&gt;在这里，当用户没有提供查询时，我们会返回一个错误。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里，当用户没有提供文件名时，我们会返回一个错误。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;以这种方式将错误结构化为静态字符串的主要问题是，错误信息并没有被放置在一个中心位置，如果需要的话，我们可以轻松地重构它们。这也使得我们更难在相同类型的错误之间保持错误信息的一致性。&lt;/p&gt;
+&lt;p&gt;第三种错误发生在 &lt;code&gt;run&lt;/code&gt; 函数的顶部，它返回一个 &lt;code&gt;Result&amp;lt;(), Box&amp;lt;dyn Error&amp;gt;&amp;gt;&lt;/code&gt;。在这种情况下，错误变体是一个实现  &lt;code&gt;Error&lt;/code&gt; &lt;a href=&#34;https://doc.rust-lang.org/std/error/trait.Error.html&#34;&gt;trait&lt;/a&gt; 的 trait 对象。换句话说，这个函数的错误变体是实现 &lt;code&gt;Error&lt;/code&gt; trait 的类型的任何实例。&lt;/p&gt;
+&lt;p&gt;在这里，我们将调用 &lt;code&gt;fs::read_to_string&lt;/code&gt; 时可能发生的任何错误冒出来。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;contents&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fs&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;read_to_string&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;?&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这适用于调用 &lt;code&gt;fs::read_to_string&lt;/code&gt; 时可能出现的错误，因为这个函数能够返回多种类型的错误。因此，我们需要一种方法来表示这些不同的可能的错误类型；它们之间的共同点是它们都实现了 &lt;code&gt;Error&lt;/code&gt; trait！最终，我们要做的是定义所有这些错误类型。&lt;/p&gt;
+&lt;p&gt;最终，我们要做的是在一个中心位置定义所有这些不同类型的错误，并让它们都成为单一类型的变体。&lt;/p&gt;
+&lt;h2 id=&#34;在一个中心类型中定义错误变种&#34;&gt;在一个中心类型中定义错误变种&lt;/h2&gt;
+&lt;p&gt;我们将创建一个新的 &lt;code&gt;src/error.rs&lt;/code&gt; 文件，并定义一个枚举 &lt;code&gt;AppError&lt;/code&gt;，并在此过程中派生出 &lt;code&gt;Debug&lt;/code&gt; trait，以便我们在需要时可以得到一个调试表示。我们将为这个枚举的每一个变体命名，使它们恰当地代表三种类型的错误。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Debug)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;enum&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingQuery&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingFilename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;第三个变体，&lt;code&gt;ConfigLoad&lt;/code&gt;，映射到 &lt;code&gt;Config::run&lt;/code&gt; 函数中调用 &lt;code&gt;fs::read_to_string&lt;/code&gt; 时可能出现的错误。乍一看，这似乎有点不妥，因为如果该函数出现错误，那就是在读取提供的配置文件时出现了某种I/O问题。那么我们为什么不把它命名为 &lt;code&gt;IOError&lt;/code&gt; 或者类似的东西呢？&lt;/p&gt;
+&lt;p&gt;在这种情况下，由于我们是将一个标准库函数的错误浮出水面，所以描述浮出水面的错误是如何影响它的，而不是简单地重申它，这与我们的应用更相关。当 &lt;code&gt;fs::read_to_string&lt;/code&gt; 发生错误时，会阻止我们的 &lt;code&gt;Config&lt;/code&gt; 加载，所以这就是为什么我们把它命名为 &lt;code&gt;ConfigLoad&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;现在我们有了这个类型，我们需要更新代码中所有返回错误的地方以利用这个 &lt;code&gt;AppError&lt;/code&gt; 枚举。&lt;/p&gt;
+&lt;h2 id=&#34;返回-apperror-的变体&#34;&gt;返回 &lt;code&gt;AppError&lt;/code&gt; 的变体&lt;/h2&gt;
+&lt;p&gt;在我们的 &lt;code&gt;src/lib.rs&lt;/code&gt; 文件的顶部，我们需要声明我们的错误模块，并将 &lt;code&gt;error::AppError&lt;/code&gt; 带入作用域。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;mod&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;error&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在我们的 &lt;code&gt;Config::new&lt;/code&gt; 函数中，我们需要更新我们作为错误返回静态字符串切片的地方，以及函数本身的返回类型。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;env&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;&amp;#39;static&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;str&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;env&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// --snip--
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;MissingQuery&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;let&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;filename&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;next&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Err&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;MissingFilename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;};&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;// --snip--
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;运行函数中的第三个错误，只需要我们更新它的返回类型，因为 &lt;code&gt;?&lt;/code&gt; 操作符已经负责将错误冒出来，并在发生时返回。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;run&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Box&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dyn&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;run&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;config&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;Config&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;好了，现在我们正在使用我们的错误变体，一旦发生，这些错误变体将被浮现到我们的 &lt;code&gt;main&lt;/code&gt; 函数中并打印出来。但是我们不再有之前定义的实际错误信息了！我们可以用 &lt;code&gt;thiserror&lt;/code&gt; 注释错误变体。&lt;/p&gt;
+&lt;h2 id=&#34;用-thiserror-注释错误变体&#34;&gt;用 &lt;code&gt;thiserror&lt;/code&gt; 注释错误变体&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;thiserror&lt;/code&gt; &lt;a href=&#34;https://docs.rs/thiserror/1.0.24/thiserror/&#34;&gt;crate&lt;/a&gt; 是一个常用的工具，它提供了一种符合人体工程学的方式来格式化 Rust 库中的错误信息。&lt;/p&gt;
+&lt;p&gt;它允许我们在 &lt;code&gt;AppError&lt;/code&gt; 枚举中用我们希望显示给最终用户的实际错误信息来注解每个变体。&lt;/p&gt;
+&lt;p&gt;让我们在 Cargo.toml 中添加它作为依赖。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-toml&#34; data-lang=&#34;toml&#34;&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;dependencies&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;span class=&#34;nx&#34;&gt;thiserror&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 &lt;code&gt;src/error.rs&lt;/code&gt; 中，我们将把 &lt;code&gt;thiserror::Error&lt;/code&gt; trait 带入作用域，并让我们的 &lt;code&gt;AppError&lt;/code&gt; 类型派生它。我们需要派生这个 trait，以便用 &lt;code&gt;#[error]&lt;/code&gt; 块来注解每个枚举变量。现在我们指定我们希望为每个特定变量显示的错误信息。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;io&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;thiserror&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Debug)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Debug, Error)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;enum&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingQuery&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingFilename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Could not load config&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[from]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; 
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;io&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;ConfigLoad&lt;/code&gt; 变体中增加了什么额外的东西？由于 &lt;code&gt;ConfigLoad&lt;/code&gt; 错误只有在调用 &lt;code&gt;fs::read_to_string&lt;/code&gt; 出现底层错误时才会发生，所以 &lt;code&gt;ConfigLoad&lt;/code&gt; 变体实际上做的是围绕底层I/O错误提供额外的上下文。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;thiserror&lt;/code&gt; 允许我们通过用 &lt;code&gt;#[from]&lt;/code&gt; 来注解一个低级错误，以将源码转换为我们自制的错误类型，从而将其包裹在额外的上下文中。这样一来，当一个I/O错误发生时（比如我们指定了一个要搜索的文件，但实际上并不存在），我们就会得到这样一个错误。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Could not load config: Os { code: 2, kind: NotFound, message: &amp;quot;No such file or directory&amp;quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果没有它，产生的错误信息看起来像这样。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Os { code: 2, kind: NotFound, message: &amp;quot;No such file or directory&amp;quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;对于我们库的消费者来说，要想找出这个错误的来源是比较困难的，额外的上下文帮助很大。&lt;/p&gt;
+&lt;p&gt;你可以在&lt;a href=&#34;https://github.com/seanchen1991/error-handling-examples/tree/minigrep-thiserror/examples/minigrep&#34;&gt;这里&lt;/a&gt;找到使用这个错误的 &lt;code&gt;minigrep&lt;/code&gt; 版本。&lt;/p&gt;
+&lt;h2 id=&#34;更加手动的方法&#34;&gt;更加手动的方法&lt;/h2&gt;
+&lt;p&gt;现在，我们将换个角度，看看如何在不将其作为依赖的情况下，实现与 &lt;code&gt;thiserror&lt;/code&gt; 相同的结果。&lt;/p&gt;
+&lt;p&gt;在引擎盖下，&lt;code&gt;thiserror&lt;/code&gt; 用程序宏执行了一些魔法，这对编译速度有明显的影响。在 &lt;code&gt;minigrep&lt;/code&gt; 的情况下，我们的错误变体很少，而且项目也很小，所以依赖 &lt;code&gt;thiserror&lt;/code&gt; 并不会增加多少编译时间，但是在一个更大更复杂的项目中，这可能是一个考虑因素。&lt;/p&gt;
+&lt;p&gt;所以在这一点上，我们将把这篇文章撕掉，换成我们自己的手动实现来结束这篇文章。走这条路的好处是，我们只需要修改 &lt;code&gt;src/error.rs&lt;/code&gt; 文件就可以实现所有必要的改变（当然，除了从我们的 Cargo.toml 中删除 thiserror 之外）。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-toml&#34; data-lang=&#34;toml&#34;&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;dependencies&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;span class=&#34;err&#34;&gt;-&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;thiserror&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;让我们删除所有 &lt;code&gt;thiserror&lt;/code&gt; 提供给我们的注释。我们还将用 &lt;code&gt;std::error::Error&lt;/code&gt; trait 替换 &lt;code&gt;thiserror::Error&lt;/code&gt; trait。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;thiserror&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;error&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Debug, Error)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[derive(Error)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;pub&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;enum&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingQuery&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;MissingFilename&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;   &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[error(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Could not load config&amp;#34;&lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;)]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;      &lt;/span&gt;&lt;span class=&#34;cp&#34;&gt;#[from]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;       &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;io&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;为了恢复我们刚刚擦除的所有功能，我们需要做三件事。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;/code&gt; 实现 &lt;code&gt;Display&lt;/code&gt; trait，这样我们的错误变体就可以显示给用户了。&lt;/li&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;/code&gt; 实现 &lt;code&gt;Error&lt;/code&gt; trait。这个 trait 代表了对错误类型的基本期望，即它们实现了 &lt;code&gt;Display&lt;/code&gt; 和 &lt;code&gt;Debug&lt;/code&gt;，再加上获取错误底层源或原因的能力。&lt;/li&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;/code&gt; 实现 &lt;code&gt;From&amp;lt;io::Error&amp;gt;&lt;/code&gt;。这是必要的，这样我们就可以将从 &lt;code&gt;fs::read_to_string&lt;/code&gt; 返回的I/O错误转换为 &lt;code&gt;AppError&lt;/code&gt; 的实例。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这里是我们对 &lt;code&gt;AppError&lt;/code&gt; 的 &lt;code&gt;Display&lt;/code&gt; trait 的实现。它将每个错误变量映射为一个字符串，并将其写入到 &lt;code&gt;Display&lt;/code&gt;  formatter 中。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;fmt&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fmt&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Display&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;fmt&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;f&lt;/span&gt;: &lt;span class=&#34;kp&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;nc&#34;&gt;mut&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;fmt&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Formatter&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;na&#34;&gt;&amp;#39;_&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nc&#34;&gt;fmt&lt;/span&gt;::&lt;span class=&#34;nb&#34;&gt;Result&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;MissingQuery&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;f&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write_str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a query string&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;MissingFilename&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;f&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write_str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Didn&amp;#39;t get a file name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;write&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;f&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&amp;#34;Could not load config: {}&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;而这就是我们对 &lt;code&gt;Error&lt;/code&gt; trait 的实现。要实现的主要方法是 &lt;code&gt;Error::source&lt;/code&gt; 方法，它的目的是提供错误源的信息。对于我们的 &lt;code&gt;AppError&lt;/code&gt; 类型，只有 &lt;code&gt;ConfigLoad&lt;/code&gt; 会暴露任何底层源信息，即调用 &lt;code&gt;fs::read_to_string&lt;/code&gt; 可能发生的I/O错误。在其他错误变体的情况下，没有底层的源信息需要暴露。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;std&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;error&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nb&#34;&gt;Option&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&amp;amp;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;dyn&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;&amp;#39;static&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;match&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;bp&#34;&gt;self&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Some&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;            &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;None&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;返回类型的 &lt;code&gt;&amp;amp;(dyn Error + &#39;static&#39;)&lt;/code&gt; 部分类似于我们之前看到的 &lt;code&gt;Box&amp;lt;dyn Error&amp;gt;&lt;/code&gt; trait 对象。这里的主要区别是，trait 对象是在一个不可变的引用后面，而不是 &lt;code&gt;Box&lt;/code&gt; 指针。这里的 &lt;code&gt;&#39;static&lt;/code&gt; lifetime 意味着 trait 对象本身只包含拥有的值，也就是说，它内部不存储任何引用。这是必要的，以便让编译器确信这里没有悬空指针的机会。&lt;/p&gt;
+&lt;p&gt;最后，我们需要一种将 &lt;code&gt;io::Error&lt;/code&gt; 转换为 &lt;code&gt;AppError&lt;/code&gt; 的方法。我们将通过为 &lt;code&gt;AppError for From&amp;lt;io::error&amp;gt;&lt;/code&gt; 来实现。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span class=&#34;k&#34;&gt;impl&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;From&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;io&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;AppError&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;k&#34;&gt;fn&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;from&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;: &lt;span class=&#34;nc&#34;&gt;io&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;Error&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;-&amp;gt; &lt;span class=&#34;nc&#34;&gt;Self&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Self&lt;/span&gt;::&lt;span class=&#34;n&#34;&gt;ConfigLoad&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;source&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;w&#34;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个没什么好说的。如果我们得到一个 &lt;code&gt;io::Error&lt;/code&gt;，我们要做的就是将其转换为 &lt;code&gt;AppError&lt;/code&gt;，并将其封装在 &lt;code&gt;ConfigLoad&lt;/code&gt; 变体中。&lt;/p&gt;
+&lt;p&gt;这就是全部了，伙计们 你可以在&lt;a href=&#34;https://github.com/seanchen1991/error-handling-examples/tree/main/examples/minigrep&#34;&gt;这里&lt;/a&gt;找到这个版本的 &lt;code&gt;minigrep&lt;/code&gt; 实现。&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结&lt;/h2&gt;
+&lt;p&gt;最后，我们讨论了《Rust编程语言》一书中介绍的原始 &lt;code&gt;minigrep&lt;/code&gt; 实现在错误处理方面是如何有点欠缺的，以及如何考虑不同的错误处理用例。&lt;/p&gt;
+&lt;p&gt;从那里，我们展示了如何使用 &lt;code&gt;thiserror&lt;/code&gt; crate 将所有可能的错误变体集中到一个类型中。&lt;/p&gt;
+&lt;p&gt;最后，我们剥开了 &lt;code&gt;thiserror&lt;/code&gt; 提供的外衣，展示了如何手动复制同样的功能。&lt;/p&gt;
+&lt;p&gt;希望大家能从这篇文章中学到一些东西!&lt;/p&gt;
+&lt;p&gt;原文链接: &lt;a href=&#34;https://dev.to/seanchen1991/a-beginner-s-guide-to-handling-errors-in-rust-40k2&#34;&gt;https://dev.to/seanchen1991/a-beginner-s-guide-to-handling-errors-in-rust-40k2&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rustlang">rustlang</category>
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/error">error</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/rust">Rust</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-04-14-a-beginner-guide-to-handling-errors-in-rust/</guid>
+                <pubDate>Wed, 14 Apr 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>
@@ -3965,485 +4483,6 @@ sub key-source {
                 
                 <guid>https://ohmyweekly.github.io/notes/2021-02-28-pattern-dispatch/</guid>
                 <pubDate>Sun, 28 Feb 2021 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>自定义 when</title>
-                <link>https://ohmyweekly.github.io/notes/2021-02-28-custom-when/</link>
-                
-                
-                <description>&lt;blockquote&gt;Custom When&lt;/blockquote&gt;&lt;p&gt;我不太喜欢上一篇文章中使用匹配的语法。它的参数列表中的逗号看起来很奇怪，不合适。也许是因为我的眼睛习惯了给定的块。睡一觉就好了。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub accord(&amp;amp;c) { (c(CALLER::&amp;lt;$_&amp;gt;); succeed) if &amp;amp;c.cando(\(CALLER::&amp;lt;$_&amp;gt;)) }
-
-given Err.new(:msg&amp;lt;a&amp;gt;) {
-    accord -&amp;gt; Hold (:$key) { put „holding $key“; }
-    accord -&amp;gt; Err (:$msg) { warn „ERR: $msg“ }
-    default { fail ‚unsupported‘ }
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这是因为 &lt;code&gt;accord&lt;/code&gt; 模仿了 &lt;code&gt;when&lt;/code&gt; 的工作。它做了一些匹配，当 True 时调用一个块，并在每个块的结尾添加一个 success（通过抛出一个控制异常）。given 所做的只是设置主题。它还充当了 caller 的角色，所以我们可以通过一个伪包来访问它的 &lt;code&gt;$_&lt;/code&gt;。利用 pointy 的签名来做&lt;a href=&#34;https://docs.raku.org/type/Signature#Destructuring_arguments&#34;&gt;解构&lt;/a&gt;是相当强大的。把这个添加到 CORE 中可能是个好主意。&lt;/p&gt;
-&lt;p&gt;我们可能要把 Raku 的定义改成: &amp;ldquo;Raku 是一种高度可组合的编程语言&amp;rdquo;, 在这里，所有的东西都会落到实处。&amp;quot;&lt;/p&gt;
-&lt;p&gt;更新一下。&lt;/p&gt;
-&lt;p&gt;有些情况下，&lt;code&gt;$_&lt;/code&gt; 不是动态的。另外，success 正在抛出一个控制异常，而这些的处理程序是由 when 或默认添加的。这种情况是在编译时发生的，目前不能用宏来解决。第一个问题可以用黑魔法解决。后一个问题需要用默认块。我没有找到一种方法来提供一个合理的错误信息，如果缺少这个块。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;multi sub accord(&amp;amp;c) {
-    use nqp;
-    $_ := nqp::getlexcaller(&#39;$_&#39;);
-    (c($_); succeed) if &amp;amp;c.cando(\($_))
-}
-
-for @possibilities.roll(1) -&amp;gt; $needle {
-    given $needle {
-        accord -&amp;gt; Hold (:$key) { put „holding $key“; }
-        accord -&amp;gt; Err (:$msg) { warn „ERR: $msg“ }
-        default { warn ‚unsopported‘ }
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;原文链接: &lt;a href=&#34;https://gfldex.wordpress.com/2021/02/25/custom-when/&#34;&gt;https://gfldex.wordpress.com/2021/02/25/custom-when/&lt;/a&gt;&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/raku">Raku</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/rakulang">Rakulang</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2021-02-28-custom-when/</guid>
-                <pubDate>Sun, 28 Feb 2021 00:00:00 +0800</pubDate>
-            </item>
-        
-            
-            <item>
-                <title>为最年轻的 Raku 贡献力量</title>
-                <link>https://ohmyweekly.github.io/notes/2021-02-16-contributing-to-raku/</link>
-                
-                
-                <description>&lt;blockquote&gt;Contributing to Raku&lt;/blockquote&gt;&lt;p&gt;在过去的几周里，我看到了一些&lt;a href=&#34;https://mydeveloperplanet.com/2021/01/20/how-to-start-contributing-to-open-source/&#34;&gt;文章&lt;/a&gt;和&lt;a href=&#34;https://youtu.be/GAqfMNB-YBU&#34;&gt;视频&lt;/a&gt;，讲述了在开源软件中构思是多么的伟大。这次我又想起了另一篇旧文&lt;a href=&#34;http://strangelyconsistent.org/blog/perl-6-is-my-mmorpg&#34;&gt;Raku 是我的 MMORPG&lt;/a&gt;。它说，你可以从以下几个方面受益于开源软件。比如说，可以做一个大侠，基于一些开源软件来写软件。作为写手，可以写博客、微博等，对所选软件产生兴趣。或者你可以成为一个法师 - 实现新的功能和修复 bug。今天小编就带着弓箭手来告诉大家如何成为 &lt;a href=&#34;https://raku.org/&#34;&gt;Raku&lt;/a&gt; 编程语言的法师。&lt;/p&gt;
-&lt;h2 id=&#34;选择一个任务&#34;&gt;选择一个任务&lt;/h2&gt;
-&lt;p&gt;让我们挑选一些编译器的 bug，并修复它。让我们去 &lt;a href=&#34;https://rakudo.org/&#34;&gt;Rakudo&lt;/a&gt; 编译器 &lt;a href=&#34;https://github.com/rakudo/rakudo/issues&#34;&gt;issues&lt;/a&gt;中选择我们想要修复的 bug。我滚动了一下 bug 列表，遇到了解析 - 运气不错，我前段时间一直在研究&lt;a href=&#34;https://www.apress.com/gp/book/9781484232279&#34;&gt;编译器语法&lt;/a&gt;，看了一本这方面的好书。找到了四个问题。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;https://rakurs.atroxaper.net/assets/img/posts/2021-02-13-contributing-raku-1.png&#34; alt=&#34;img&#34;&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;标签为 LTA （Less Than Awesome - 当真实行为与直觉预期不同时）- 我们暂时把它划掉。&lt;/li&gt;
-&lt;li&gt;标签 &amp;ldquo;需要共识&amp;rdquo; - 我们只想修复一个不复杂的 bug - 肯定要划掉。&lt;/li&gt;
-&lt;li&gt;标签为 &amp;ldquo;grammar and actions&amp;rdquo; 的关于一个可能死的代码是一个很好的候选人的第一个任务。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;任务确定后，现在我们需要配置工作环境。在 Windows、Linux 和 macOS 中，一切应该都差不多。我将通过 macOS 的例子来告诉你。&lt;/p&gt;
-&lt;h2 id=&#34;建立工作环境&#34;&gt;建立工作环境&lt;/h2&gt;
-&lt;p&gt;为源码和我们建立的编译器建立文件夹。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;mkdir ~/dev-rakudo &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; mkdir ~/dev-rakudo-install
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Rakudo 编译器由三部分组成。&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;虚拟机。现在有三种 - JVM、JS 和 MoarVM。我们以 MoarVM 为最稳定的一个。&lt;/li&gt;
-&lt;li&gt;NQP（Not Quite Perl），是一种低级（中级）语言的实现，它是 Raku 的一个 &amp;ldquo;子集&amp;rdquo;。虚拟机可以执行用 NQP 编写的代码。&lt;/li&gt;
-&lt;li&gt;Rakudo 编译器本身，用 NQP 和 Raku 编写。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;下载并编译这三个组件。我分别花了一分半钟、半分钟和两分半钟才编好。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; ~/dev-rakudo &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; git clone git@github.com:MoarVM/MoarVM.git &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; MoarVM
-perl Configure.pl --prefix ~/dev-rakudo-install &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make -j &lt;span class=&#34;m&#34;&gt;4&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make install
-
-&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; ~/dev-rakudo &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; git clone git@github.com:Raku/nqp.git &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; nqp
-perl Configure.pl --backend&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;moar --prefix ~/dev-rakudo-install &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make -j &lt;span class=&#34;m&#34;&gt;4&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make install
-
-&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; ~/dev-rakudo &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; git clone git@github.com:rakudo/rakudo.git &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; rakudo
-perl Configure.pl --backend&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;moar --prefix ~/dev-rakudo-install &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make -j &lt;span class=&#34;m&#34;&gt;4&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make install
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;注意参数。&lt;code&gt;--prefix&lt;/code&gt; 显示了 &lt;code&gt;make install&lt;/code&gt; 命令后可执行文件的复制位置，&lt;code&gt;--backend=moar&lt;/code&gt; 表示正在使用的虚拟机，而 &lt;code&gt;-j 4&lt;/code&gt; 则要求跨多线程并行化（以防加快进度）。现在我们已经建立了 Rakudo 编译器 &lt;code&gt;~/dev-rakudo-install/bin/raku&lt;/code&gt;。我们还需要官方的编译器测试套件。你应该把它和它的代码一起放在文件夹里。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span class=&#34;nb&#34;&gt;cd&lt;/span&gt; ~/dev-rakudo/rakudo &lt;span class=&#34;o&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; git clone https://github.com/Raku/roast.git t/spec
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我们先进行测试。这种情况很常见，有些测试甚至在新的变化之前就失败了。我们需要辨别出来，这样以后就不会害怕这些变化破坏了一些不必要的东西。&lt;/p&gt;
-&lt;p&gt;这里和下面我将在 &lt;code&gt;~/dev-rakudo/rakudo&lt;/code&gt; 文件夹中工作，除非另有说明。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; make spectest
-[...]
-Test Summary Report
--------------------
-t/spec/S32-str/utf8-c8.t    (Wstat: 65280 Tests: 54 Failed: 0)
-  Non-zero exit status: 255
-  Parse errors: Bad plan.  You planned 66 tests but ran 54.
-Files=1346, Tests=117144, 829 wallclock secs (27.70 usr  6.04 sys + 2638.79 cusr 210.98 csys = 2883.51 CPU)
-Result: FAIL
-make: *** [m-spectest5] Error 1
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;14分钟内共运行了1,346个文件中的117,144次测试。一些与utf8相关的测试由于某种原因失败了，其他的都能正常工作。我们已经准备好去工作了!&lt;/p&gt;
-&lt;h2 id=&#34;让我们来看看问题的陈述&#34;&gt;让我们来看看问题的陈述&lt;/h2&gt;
-&lt;p&gt;问题陈述说，某个元运算符 &lt;code&gt;R&lt;/code&gt; 在 colonpair 上出了问题。我打开文档，搜索 R 这个词，但下拉列表中没有这个名字的元运算符。我试着输入 metaop，看到的是反向元操作符(R)。原来，如果你想把二元运算的操作数按相反的顺序写出来，你可以在其符号前使用前缀 R。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;say 3 R- 2 == -1 # Output: True
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Colonpair 是命名对的语法。它看起来就像名字前面有一个冒号，前面有一个括号，有一个值。例如 &lt;code&gt;:foo(42)&lt;/code&gt; 是一个名称为 &lt;code&gt;foo&lt;/code&gt;、值为 &lt;code&gt;42&lt;/code&gt; 的对儿。这个语法通常用于在调用函数时，向函数传递一个命名参数中的值。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub sub-with-named-parameter(:$foo) {
-    say $foo;
-}
-
-sub-with-named-parameter(:foo(42)); # Output: 42
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果一个函数参数不是命名的，而是位置的，那么在用命名对调用时，就会出现编译错误。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub sub-without-named-parameter($foo) { # &amp;lt;- 没有冒号
-  say $foo;
-}
-
-sub-without-named-parameter(:foo(42)); # Unexpected named argument &#39;foo&#39; passed
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果你在调用这样的函数时用括号包围一个参数，整个参数对将被传递到位置参数。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub sub-without-named-parameter($foo) {
-  say $foo;
-}
-
-sub-without-named-parameter((:foo(42))); # Output: foo =&amp;gt; 42
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在 Raku 中，你可以写一个函数来捕获所有传递给它的参数并分析它们。这是在单个参数 - 捕获前用竖线完成的。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub sub-with-capture(|foo) { # &amp;lt;- 参数捕获
-  say foo;
-}
-
-sub-with-capture(:foo(42));     # Output: \(:foo(42))
-sub-with-capture(42);           # Output: \(42)
-sub-with-capture(:foo(3 Z- 2)); # Output: \(:foo((1,).Seq))
-sub-with-capture(:foo(3 R- 2)); # Output: \(-1)
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;倒数第二行使用了 Z 元操作符 - zip 操作符。它将左右两部分作为一个列表，按顺序每次从它们中抽取一个元素，并进行操作，从而形成一个序列。&lt;/p&gt;
-&lt;p&gt;在最后一行，只用了我们需要的 R 元操作符。在这种情况下，它不是一个对，而是一个常量，它被传递到函数中。我们可以假设这是元运算符工作方式的一些特殊性，但用 Z 的例子表明并非如此。其实这是一个 bug - 当一个对被传递到一个使用 R 元运算符的函数中时，它的值会被转换。&lt;/p&gt;
-&lt;h2 id=&#34;我们需要一个新的测试&#34;&gt;我们需要一个新的测试&lt;/h2&gt;
-&lt;p&gt;为了确保未来的变化能够修复错误的行为，我们需要写一个新的测试。在测试文件中不难找到 R 元操作符的测试（&lt;a href=&#34;https://github.com/Raku/roast/blob/fea1d16d993eb851d2935155e0b0d074fa3593bf/S03-metaops/reverse.t&#34;&gt;S03-metops/reverse.t&lt;/a&gt;）。下面我将补充以下测试。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;# https://github.com/rakudo/rakudo/issues/1632
-{
-  sub subroutine($expected, |actual) {
-    is actual.gist, $expected, &amp;quot;Сolonpair exists&amp;quot;
-  }
-
-  subroutine(&#39;\(:foo(-1))&#39;, :foo(3 R- 2));
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;该测试有一个功能，有两个参数 - 正常和捕获。在函数体中，第一个参数和传递的 Capture 的字符串表示进行比较。你可以使用 &lt;code&gt;make&lt;/code&gt; 对新构建的编译器进行单独测试。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; make t/spec/S03-metaops/reverse.t
-[...]
-ok 69 - [R~]=
-not ok 70 - Colonpair exists
-# Failed test &#39;Colonpair exists&#39;
-# at t/spec/S03-metaops/reverse.t line 191
-# expected: &#39;\(:foo(-1))&#39;
-#      got: &#39;\(-1)&#39;
-# You planned 69 tests, but ran 70
-# You failed 1 test of 70
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;你可以看到，测试失败了（如预期）。还有一个单独的说明，系统预计69次测试，但收到70次。这是基于 TAP 的测试系统的特点 - 必须在文件的顶部修正传递给 &lt;code&gt;plan&lt;/code&gt; 函数的数字。现在测试崩溃了，但编号没有受到影响。你可以开始修复它。&lt;/p&gt;
-&lt;h2 id=&#34;凝视法&#34;&gt;凝视法&lt;/h2&gt;
-&lt;p&gt;一开始我很相信任务上的标签 - 如果是解析的话，一定是源码解析阶段的某个地方出现了问题。目前我的认识如下：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;基础解析器代码在文件 &lt;code&gt;rakudo/src/Perl6/Grammar.nqp&lt;/code&gt; 中。&lt;/li&gt;
-&lt;li&gt;这个解析器是从 &lt;code&gt;nqp/src/HLL/Grammar.nqp&lt;/code&gt; 文件中的基础解析器继承的。&lt;/li&gt;
-&lt;li&gt;元操作符的解析和工作方式都差不多，你可以通过仔细观察来发现不同之处。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;我在基础解析器代码中找到了对元操作符的引用。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;token infix_prefix_meta_operator:sym&amp;lt;R&amp;gt; {
-  &amp;lt;sym&amp;gt; &amp;lt;infixish(&#39;R&#39;)&amp;gt; {}
-  &amp;lt;.can_meta($&amp;lt;infixish&amp;gt;, &amp;quot;reverse the args of&amp;quot;)&amp;gt;
-  &amp;lt;O=.revO($&amp;lt;infixish&amp;gt;)&amp;gt;
-}
-
-token infix_prefix_meta_operator:sym&amp;lt;Z&amp;gt; {
-  &amp;lt;sym&amp;gt; &amp;lt;infixish(&#39;Z&#39;)&amp;gt; {}
-  &amp;lt;.can_meta($&amp;lt;infixish&amp;gt;, &amp;quot;zip with&amp;quot;)&amp;gt;
-  &amp;lt;O(|%list_infix)&amp;gt;
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这需要对 Raku grammar 有一定的了解。据我所知，原来这两个元运算符在解析上并没有根本的区别。一段时间后，在解析器的源代码中挖得够多了，我开始怀疑解析工作是否正确。认为代码 &lt;code&gt;my $r = :foo(3 R- 2); say $r; # Output: foo =&amp;gt; -1&lt;/code&gt; 正确工作的建议 - 问题恰恰发生在调用函数时。显然，我白白相信了任务栏上的标签。&lt;/p&gt;
-&lt;h2 id=&#34;编译器将帮助我们&#34;&gt;编译器将帮助我们&lt;/h2&gt;
-&lt;p&gt;颇为迟钝的我想起了我从一开始就应该做的事情。Rakudo 编译器有 &lt;code&gt;--target&lt;/code&gt; 调试开关。它取编译器阶段的名称，你想将其结果输出到控制台并退出。我想看看 &lt;code&gt;--target=parse&lt;/code&gt;（因为我只知道这一个）。&lt;/p&gt;
-&lt;p&gt;我从 &lt;code&gt;~/dev-rakudo/rakudo&lt;/code&gt; 文件夹中使用 &lt;code&gt;rakumo-m&lt;/code&gt;，这样我就不必等待通过 &lt;code&gt;make install&lt;/code&gt; 命令将所需文件复制到 &lt;code&gt;~/dev-rakudo-install&lt;/code&gt;。简单的脚本可以这样运行。更复杂的脚本必须在 &lt;code&gt;make install&lt;/code&gt; 之后从 &lt;code&gt;-install&lt;/code&gt; 中运行。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; cat ~/test.raku
-sub s(|c) { say c }
-s(:foo(3 R- 2));
-s(:foo(3 Z- 2));
-
-&amp;gt; ./rakudo-m --target=parse ~/test.raku
-[...]
-- args: (:foo(3 R- 2))
-  - semiarglist: :foo(3 R- 2)
-    - arglist: 1 matches
-      - EXPR: :foo(3 R- 2)
-        - colonpair: :foo(3 R- 2)
-          - identifier: foo
-          - coloncircumfix: (3 R- 2)
-            - circumfix: (3 R- 2)
-              - semilist: 3 R- 2
-                - statement: 1 matches
-                  - EXPR: R- 2
-[...]
-- args: (:foo(3 Z- 2))
-  - semiarglist: :foo(3 Z- 2)
-    - arglist: 1 matches
-      - EXPR: :foo(3 Z- 2)
-        - colonpair: :foo(3 Z- 2)
-          - identifier: foo
-          - coloncircumfix: (3 Z- 2)
-            - circumfix: (3 Z- 2)
-              - semilist: 3 Z- 2
-                - statement: 1 matches
-                  - EXPR: Z- 2
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;结论：R 和 Z 的解析是一样的。&lt;/p&gt;
-&lt;h2 id=&#34;这不是解析&#34;&gt;这不是解析&lt;/h2&gt;
-&lt;p&gt;所有被解析的东西都会被传递给所谓的 Action，把字词变成一棵语法树。在我们的例子中，Actions 位于文件 &lt;code&gt;rakudo/src/Perl6/Actions.nqp&lt;/code&gt; 和 &lt;code&gt;nqp/src/HLL/Actions.nqp&lt;/code&gt; 中。这里就比较容易搞清楚了，毕竟是代码，是 grammar。&lt;/p&gt;
-&lt;p&gt;我在主 Actions 中找到了以下代码。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-elsif $&amp;lt;infix_prefix_meta_operator&amp;gt; {
-[...]
-  if    $metasym eq &#39;R&#39; { $helper := &#39;&amp;amp;METAOP_REVERSE&#39;; $t := nqp::flip($t) if $t; }
-  elsif $metasym eq &#39;X&#39; { $helper := &#39;&amp;amp;METAOP_CROSS&#39;; $t := nqp::uc($t); }
-  elsif $metasym eq &#39;Z&#39; { $helper := &#39;&amp;amp;METAOP_ZIP&#39;; $t := nqp::uc($t); }
-  
-  my $metapast := QAST::Op.new( :op&amp;lt;call&amp;gt;, :name($helper), WANTED($basepast,&#39;infixish&#39;) );
-  $metapast.push(QAST::Var.new(:name(baseop_reduce($base&amp;lt;OPER&amp;gt;&amp;lt;O&amp;gt;.made)), :scope&amp;lt;lexical&amp;gt;))
-    if $metasym eq &#39;X&#39; || $metasym eq &#39;Z&#39;;
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;它说，如果在代码中解析了元操作符 &lt;code&gt;R&lt;/code&gt;、&lt;code&gt;Z&lt;/code&gt; 或 &lt;code&gt;X&lt;/code&gt;，就应该在语法树中添加一些 &lt;code&gt;METAOP_&lt;/code&gt; 函数调用。在 &lt;code&gt;Z&lt;/code&gt; 和 &lt;code&gt;X&lt;/code&gt; 的情况下，它会多一个参数，即某种还原函数。所有这些功能都可以在 &lt;code&gt;rakudo/src/core.c/metaops.pm6&lt;/code&gt; 中找到。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub METAOP_REVERSE(\op) is implementation-detail {
-  -&amp;gt; |args { op.(|args.reverse) }
-}
-
-sub METAOP_ZIP(\op, &amp;amp;reduce) is implementation-detail {
- nqp::if(op.prec(&#39;thunky&#39;).starts-with(&#39;.&#39;),
-  -&amp;gt; +lol {
-    my $arity = lol.elems;
-    [...]
-  },
-  -&amp;gt; +lol {
-    Seq.new(Rakudo::Iterator.ZipIterablesOp(lol,op))
-  }
-  )
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;给你：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;code&gt;\op&lt;/code&gt; 是由我们的元操作符，即-，在前面的操作。&lt;/li&gt;
-&lt;li&gt;Trait &lt;code&gt;implementation-detail&lt;/code&gt; 只是表明这不是公共代码，是编译器实现的一部分。&lt;/li&gt;
-&lt;li&gt;由于-操作没有笨重的特性，所以 &lt;code&gt;&amp;amp;reduce&lt;/code&gt; 函数不会参与计算，&lt;code&gt;Z&lt;/code&gt; 的结果是 &lt;code&gt;Seq.new(...)&lt;/code&gt;。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;R&lt;/code&gt; 的结果是一个操作调用 - 参数顺序相反。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;这时我想起还有一个 - 目标，即星。它将显示行动的结果。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; ./rakudo-m --target=ast ~/test.raku
-[...]
-- QAST::Op(call &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Op+{QAST::SpecialArg}(call :named&amp;lt;foo&amp;gt;) &amp;lt;wanted&amp;gt; :statement_id&amp;lt;5&amp;gt; :before_promotion&amp;lt;?&amp;gt; R-
-    - QAST::Op(call &amp;amp;METAOP_REVERSE) &amp;lt;wanted&amp;gt; :is_pure&amp;lt;?&amp;gt;
-      - QAST::Var(lexical &amp;amp;infix:&amp;lt;-&amp;gt;) &amp;lt;wanted&amp;gt;
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(3)  3
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(2)  2
-[...]
-- QAST::Op(call &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;7&amp;gt; s(:foo(3 Z- 2))
-  - QAST::Op+{QAST::SpecialArg}(:named&amp;lt;foo&amp;gt;) &amp;lt;wanted&amp;gt; :statement_id&amp;lt;8&amp;gt; :before_promotion&amp;lt;?&amp;gt; Z-
-    - QAST::Op(call &amp;amp;METAOP_ZIP) &amp;lt;wanted&amp;gt; :is_pure&amp;lt;?&amp;gt;
-      - QAST::Var(lexical &amp;amp;infix:&amp;lt;-&amp;gt;) &amp;lt;wanted&amp;gt;
-      - QAST::Var(lexical &amp;amp;METAOP_REDUCE_LEFT)
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(3)  3
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(2)  2
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;一如所料。除了调用不同的 &lt;code&gt;METAOP_&lt;/code&gt; 函数外，所有的东西几乎都是一样的。从它们的代码中我们可以知道，原则上这些函数的不同之处在于返回值的类型 - 分别是 &lt;code&gt;Int&lt;/code&gt; 和 &lt;code&gt;Seq&lt;/code&gt;。众所周知，Raku 对不同类型的对象的上下文相当敏感&amp;hellip;&amp;hellip;我想，它关注的可能是返回值。我试着用下面的方式修改代码。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub METAOP_REVERSE(\op) is implementation-detail {
-  -&amp;gt; |args { Seq.new(op.(|args.reverse)) }
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译、运行。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; make
-[...]
-Stage start      :   0.000
-Stage parse      :  61.026
-Stage syntaxcheck:   0.000
-Stage ast        :   0.000
-Stage optimize   :   7.076
-Stage mast       :  14.120
-Stage mbc        :   3.941
-[...]
-&amp;gt; ./rakudo-m ~/test.raku
-\(-1)
-\(:foo((1,).Seq))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;一切都没有改变。所以，不是返回值&amp;hellip;&amp;hellip;想了想，不知道为什么结果又是 &lt;code&gt;-1&lt;/code&gt; 而不是 &lt;code&gt;(-1,).Seq&lt;/code&gt;。而且，从代码来看，&lt;code&gt;Seq&lt;/code&gt; 根本就没有一个合适的构造函数。下一次，作为一些疯狂的事情，我尝试调用 &lt;code&gt;METAOP_REVERSE&lt;/code&gt; 结果只是为了崩溃。&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sub METAOP_REVERSE(\op) is implementation-detail {
-  -&amp;gt; |args { die }
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译、运行。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; make
-[...]
-&amp;gt; ./rakudo-m ~/test.raku
-\(-1)
-\(:foo((1,).Seq))
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;怎么会呢？语法树中包含了对 &lt;code&gt;METAOP_REVERSE&lt;/code&gt; 的调用，它的代码应该是折叠的，但计算仍然进行，我们得到 &lt;code&gt;-1&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;这些都不是《行动》。&lt;/p&gt;
-&lt;p&gt;这里我的目光落在编译器的构建日志上。它是一些阶段被列在那里。我随机试了 &lt;code&gt;--target=mast&lt;/code&gt;。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; ./rakudo-m --target=mast ~/test.raku
-[...]
-MAST::Frame name&amp;lt;s&amp;gt;, cuuid&amp;lt;1&amp;gt;
-  Local types: 0&amp;lt;obj&amp;gt;, 1&amp;lt;obj&amp;gt;, 2&amp;lt;obj&amp;gt;, 3&amp;lt;obj&amp;gt;, 4&amp;lt;int&amp;gt;, 5&amp;lt;str&amp;gt;, 6&amp;lt;obj&amp;gt;, 7&amp;lt;obj&amp;gt;, 8&amp;lt;obj&amp;gt;,
-  Lexical types: 0&amp;lt;obj&amp;gt;, 1&amp;lt;obj&amp;gt;, 2&amp;lt;obj&amp;gt;, 3&amp;lt;obj&amp;gt;, 4&amp;lt;obj&amp;gt;,
-  Lexical names: 0&amp;lt;c&amp;gt;, 1&amp;lt;$¢&amp;gt;, 2&amp;lt;$!&amp;gt;, 3&amp;lt;$/&amp;gt;, 4&amp;lt;$*DISPATCHER&amp;gt;,
-  Lexical map: $!&amp;lt;2&amp;gt;, c&amp;lt;0&amp;gt;, $*DISPATCHER&amp;lt;4&amp;gt;, $¢&amp;lt;1&amp;gt;, $/&amp;lt;3&amp;gt;,
-  Outer: name&amp;lt;&amp;lt;unit&amp;gt;&amp;gt;, cuuid&amp;lt;2&amp;gt;
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;某种不可读的矩阵。星号和桅杆之间有一个阶段性的优化。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; ./rakudo-m --target=optimize ~/test.raku
-[...]
-- QAST::Op(callstatic &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Op(call &amp;amp;infix:&amp;lt;-&amp;gt;)  :METAOP_opt_result&amp;lt;?&amp;gt;
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(2)  2
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(3)  3
-[...]
-- QAST::Op(callstatic &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;7&amp;gt; s(:foo(3 Z- 2))
-  - QAST::Op+{QAST::SpecialArg}(call :named&amp;lt;foo&amp;gt;) &amp;lt;wanted&amp;gt; :statement_id&amp;lt;8&amp;gt; :before_promotion&amp;lt;?&amp;gt; Z-
-    - QAST::Op(callstatic &amp;amp;METAOP_ZIP) &amp;lt;wanted&amp;gt; :is_pure&amp;lt;?&amp;gt;
-      - QAST::Var(lexical &amp;amp;infix:&amp;lt;-&amp;gt;) &amp;lt;wanted&amp;gt;
-      - QAST::Var(lexical &amp;amp;METAOP_REDUCE_LEFT)
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(3)  3
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-      - QAST::WVal(Int)
-      - Ii
-      - QAST::IVal(2)  2
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;哈，就是这样。在优化阶段后，行将失踪。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;QAST::Op+{QAST::SpecialArg}(call :named&amp;lt;foo&amp;gt;) &amp;lt;wanted&amp;gt; :statement_id&amp;lt;5&amp;gt; :before_promotion&amp;lt;?&amp;gt; R-.&lt;/code&gt;
-并将整个 &lt;code&gt;METAOP_REVERSE&lt;/code&gt; 调用替换为通常的操作 &lt;code&gt;(&amp;amp;infix:&amp;lt;-&amp;gt;)&lt;/code&gt;。所以问题一定在优化器的某个地方。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;只有在 &lt;code&gt;optim_nameless_call&lt;/code&gt; 方法中才会提到 &lt;code&gt;&amp;amp;METAOP_ASSIGN&lt;/code&gt;，其中 &lt;code&gt;QAST::Op+{QAST::SpecialArg}(call :named&amp;lt;foo&amp;gt;)&lt;/code&gt;。显然，这个操作负责生成一个命名对 - 它已经有了一个名字（命名参数），它需要计算值。从优化 &lt;code&gt;_&lt;/code&gt; 无名方法的执行路径来看，我们可以得出结论，我们对最后一个块感兴趣。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-  elsif self.op_eq_core($metaop, &#39;&amp;amp;METAOP_REVERSE&#39;) {
-    return NQPMu unless nqp::istype($metaop[0], QAST::Var)
-      &amp;amp;&amp;amp; nqp::elems($op) == 3;
-    return QAST::Op.new(:op&amp;lt;call&amp;gt;, :name($metaop[0].name),
-      $op[2], $op[1]).annotate_self: &#39;METAOP_opt_result&#39;, 1;
-  }
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;让我提醒你，优化前的树是这样的。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-- QAST::Op(call &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Op+{QAST::SpecialArg}(call :named&amp;lt;foo&amp;gt;) &amp;lt;wanted&amp;gt; :statement_id&amp;lt;5&amp;gt; :before_promotion&amp;lt;?&amp;gt; R-
-    - QAST::Op(call &amp;amp;METAOP_REVERSE) &amp;lt;wanted&amp;gt; :is_pure&amp;lt;?&amp;gt;
-      - QAST::Var(lexical &amp;amp;infix:&amp;lt;-&amp;gt;) &amp;lt;wanted&amp;gt;
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;而精简之后，是这样的。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-- QAST::Op(callstatic &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Op(call &amp;amp;infix:&amp;lt;-&amp;gt;)  :METAOP_opt_result&amp;lt;?&amp;gt;
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;也就是说，优化 &lt;code&gt;_nameless_call&lt;/code&gt; 做了以下工作。&lt;/p&gt;
-&lt;p&gt;如果我们的 &lt;code&gt;QAST::Op+{QAST::SpecialArg}&lt;/code&gt; 操作没有三个参数，如果 &lt;code&gt;METAOP_REVERSE&lt;/code&gt; 调用没有一个正确的类型，我们就返回空。这不是我们的情况。
-否则，我们将返回一个新的操作，代替我们的 &lt;code&gt;QAST::Op+{QAST::SpecialArg}&lt;/code&gt; 操作，以相反的顺序调用 &lt;code&gt;&amp;amp;infix:&amp;lt;-&amp;gt;&lt;/code&gt; 参数。就是说，把结果打包成一对就没了。&lt;/p&gt;
-&lt;p&gt;在摸索了一下如何解决这个问题，并阅读了 &lt;code&gt;QAST::SpecialArg&lt;/code&gt; 和 &lt;code&gt;QAST::Node&lt;/code&gt; 的实现后，我想到了下面的代码。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-  elsif self.op_eq_core($metaop, &#39;&amp;amp;METAOP_REVERSE&#39;) {
-    return NQPMu unless nqp::istype($metaop[0], QAST::Var)
-      &amp;amp;&amp;amp; nqp::elems($op) == 3;
-    my $opt_result := QAST::Op.new(:op&amp;lt;call&amp;gt;, :name($metaop[0].name),
-      $op[2], $op[1]).annotate_self: &#39;METAOP_opt_result&#39;, 1;
-    if $op.named { $opt_result.named($op.named) } # 添加选项 named 
-    if $op.flat { $opt_result.flat($op.flat) }    # 添加选项 flat
-    return $opt_result;
-  }
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;还有木头。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-- QAST::Op(callstatic &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Op+{QAST::SpecialArg}(call &amp;amp;infix:&amp;lt;-&amp;gt; :named&amp;lt;foo&amp;gt;)  :METAOP_opt_result&amp;lt;?&amp;gt;
-    - QAST::Want &amp;lt;wanted&amp;gt; 2
-    - QAST::Want &amp;lt;wanted&amp;gt; 3
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;命名的参数返回到它的位置。测试也开始通过。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&amp;gt; make t/spec/S03-metaops/reverse.t
-[...]
-All tests successful.
-Files=1, Tests=70,  3 wallclock secs ( 0.03 usr  0.01 sys +  3.61 cusr  0.17 csys =  3.82 CPU)
-Result: PASS
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们本可以就此打住，但这是编译器优化器的代码，它的结果是一个有两个整数参数的方法调用。我认为这在某种程度上是次优的。如果我们将返回表达式改为返回 &lt;code&gt;self.visit_op: $opt_result;&lt;/code&gt;，对产生的非优化操作调用优化器，那么产生的树就会像这样。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[...]
-- QAST::Op(callstatic &amp;amp;s) &amp;lt;sunk&amp;gt; :statement_id&amp;lt;4&amp;gt; s(:foo(3 R- 2))
-  - QAST::Want+{QAST::SpecialArg}(:named&amp;lt;foo&amp;gt;)
-    - QAST::WVal+{QAST::SpecialArg}(Int :named&amp;lt;foo&amp;gt;)
-    - QAST::IVal(-1)
-[...]
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;现在一切都很理想。&lt;/p&gt;
-&lt;h2 id=&#34;分享成果&#34;&gt;分享成果&lt;/h2&gt;
-&lt;p&gt;我们已经到了终点线。现在我们只需要分享我们的经验。&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;重要的是：运行所有的 &lt;code&gt;make spectest&lt;/code&gt; 测试，确保没有新的东西被破坏。&lt;/li&gt;
-&lt;li&gt;在 GitHub 上使用 Rakudo 编译器和测试制作 fork 仓库。&lt;/li&gt;
-&lt;li&gt;将 fork 仓库添加为新的 git 远程仓库。&lt;/li&gt;
-&lt;li&gt;cd ~/dev-rakudo/rakudo &amp;amp;&amp;amp; git remote add fork &lt;!-- raw HTML omitted --&gt;。&lt;/li&gt;
-&lt;li&gt;cd ~/dev-rakudo/t/spec &amp;amp;&amp;amp; git remote add fork &lt;!-- raw HTML omitted --&gt;。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;重要：确保两个仓库在 git 中都有正确的用户名和用户邮箱。&lt;/p&gt;
-&lt;p&gt;提交到两个版本库，详细说明你为什么做了哪些改动，并添加对原始问题跟踪器的引用。&lt;/p&gt;
-&lt;p&gt;运行提交。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd ~/dev-rakudo/rakudo &amp;amp;&amp;amp; git push fork
-cd ~/dev-rakudo/t/spec &amp;amp;&amp;amp; git push fork
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;向两个仓库提出拉取请求。在他们的描述中，最好是相互参照和原任务。&lt;/p&gt;
-&lt;h2 id=&#34;结论&#34;&gt;结论&lt;/h2&gt;
-&lt;p&gt;对开源软件的贡献是：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;趣味性和趣味性。&lt;/li&gt;
-&lt;li&gt;给你的感觉是，你正在做一些有用的事情，你真的是。&lt;/li&gt;
-&lt;li&gt;让你认识新的有趣和专业的人（任何关于 Raku 的问题都会在 &lt;code&gt;#raku IRC&lt;/code&gt; 频道中得到回答）。&lt;/li&gt;
-&lt;li&gt;解决非标准任务，没有截止日期的压力，是一种很好的体验。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;选择你觉得最舒服的角色等级，去做新的任务吧!&lt;/p&gt;
-</description>
-                
-                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
-                
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/categories/rakulang">rakulang</category>
-                                
-                            
-                        
-                     
-                        
-                             
-                            
-                                
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
-                                 
-                                    <category domain="https://ohmyweekly.github.io/tags/rakulang">Rakulang</category>
-                                
-                            
-                        
-                    
-                
-                <guid>https://ohmyweekly.github.io/notes/2021-02-16-contributing-to-raku/</guid>
-                <pubDate>Tue, 16 Feb 2021 00:00:00 +0800</pubDate>
             </item>
         
     </channel>
