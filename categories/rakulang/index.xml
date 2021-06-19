@@ -10,10 +10,268 @@
         <description>Recent content  in rakulang
             on 焉知非鱼</description>
         <language>en-us</language>
-        <lastBuildDate>Tue, 18 May 2021 22:45:55 +0800</lastBuildDate>
+        <lastBuildDate>Sat, 19 Jun 2021 21:58:43 +0800</lastBuildDate>
         <generator>Hugo -- gohugo.io</generator>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
             <atom:link href="https://ohmyweekly.github.io/categories/rakulang/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Raku Syntax I Miss in Other Languages</title>
+                <link>https://ohmyweekly.github.io/notes/2021-06-17-raku-syntax-i-miss-in-other-languages/</link>
+                
+                
+                <description>&lt;blockquote&gt;Raku Syntax I Miss in Other Languages&lt;/blockquote&gt;&lt;h1 id=&#34;self-describing-code&#34;&gt;Self-describing code&lt;/h1&gt;
+&lt;h2 id=&#34;junctions&#34;&gt;Junctions&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Distributive&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;%hash{any(@keys)}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;等价于:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;any(%hash{@keys})
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;Boolean&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;类型&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;操作符&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;True if &amp;hellip;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;any&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;|&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;至少一个值为真&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;all&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&amp;amp;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;所有值都为真&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;one&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;^&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;只有一个值为真&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;none&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;值都不为真&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Junctions 通常出现在布尔上下文中。例如, 在下面的例子中, &lt;code&gt;$value&lt;/code&gt; 和几个值进行相等性比较。很容易写出这样的代码:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if $value == 1 || $value == 2 || $value == 5
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;使用 &lt;code&gt;any&lt;/code&gt; Junction 会简洁不少:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if $value == any(1, 2, 5)
+if $value == (1,2,4).any
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;惯用法是使用 &lt;code&gt;|&lt;/code&gt; 操作符号来进行多值比较:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if $value == 1|2|5
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;找出数组中满足条件的第一个元素, 我们首先想到的可能是, 使用 &lt;code&gt;for&lt;/code&gt; 循环迭代数组, 找出满足条件的元素就立即退出循环:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my $result = False;
+
+for @values -&amp;gt; $value {
+    if $value &amp;gt; 42 {
+        $result = True;
+        last;
+    }
+}
+
+if $result { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;改用 Junction 后等价于:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if any(@values) &amp;gt; 42 { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;还可以在 Junction 上调用方法或运算符:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if one(@values).is-prime { ... }
+if all(@values) %% 3 { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;named-arguments命名参数&#34;&gt;Named arguments(命名参数)&lt;/h2&gt;
+&lt;p&gt;Colonpair(冒号对儿) 通常用于命名参数中:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;:foo(42)
+foo =&amp;gt; 42
+
+sub bar(:$foo) {
+    say $foo;
+}
+
+bar(:foo(42));
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;有几种特殊形式的冒号对儿:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;:foo
+:foo(True)
+
+:!foo
+:foo(False)
+
+:foo&amp;lt;bar&amp;gt;
+:foo(&amp;quot;bar&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;:foo&lt;/code&gt; 与 &lt;code&gt;foo =&amp;gt; True&lt;/code&gt; 相同, &lt;code&gt;:!foo&lt;/code&gt; 等价于 &lt;code&gt;foo =&amp;gt; False&lt;/code&gt;。&lt;code&gt;:foo&amp;lt;bar&amp;gt;&lt;/code&gt; 使用了一组尖括号引起了值, 值在尖括号中不进行插值。&lt;/p&gt;
+&lt;p&gt;来看一个命名参数例子, 下面的代码遍历 &lt;code&gt;@dirs&lt;/code&gt; 中的目录, 找出后缀名为 txt 且不为空的文件:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;for find(@dirs, :file, :ext&amp;lt;txt&amp;gt;, :!empty) -&amp;gt; $file {
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;冒号对儿的值可以是变量, 但是在圆括号中再写一遍变量名就显得啰嗦:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;foo(:bar($bar), :baz($baz), :quz($quz))
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;因此, 冒号对儿提供了一种简写形式, 如果冒号后面紧跟着 &lt;code&gt;$&lt;/code&gt;、&lt;code&gt;@&lt;/code&gt;、&lt;code&gt;%&lt;/code&gt; 和 &lt;code&gt;&amp;amp;&lt;/code&gt; 等符号, 那么冒号对儿的值就是 &lt;code&gt;$sth&lt;/code&gt;、&lt;code&gt;@sth&lt;/code&gt;、&lt;code&gt;%sth&lt;/code&gt; 和 &lt;code&gt;&amp;amp;sth&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;foo(:$bar, :$baz, :$quz)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这种简写形式消除了命名参数的重复。&lt;/p&gt;
+&lt;h2 id=&#34;pointy-blocks尖号块儿&#34;&gt;Pointy blocks(尖号块儿)&lt;/h2&gt;
+&lt;p&gt;All blocks are &lt;strong&gt;Callable&lt;/strong&gt;, 即所有的块儿都是可调用的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;for&lt;/code&gt; blocks&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;-&amp;gt; $elem { ...}&lt;/code&gt; 就是尖号块儿:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;for @array -&amp;gt; $elem {
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;for&lt;/code&gt; 循环依次把 &lt;code&gt;@array&lt;/code&gt; 中的每个元素赋值给尖号块儿中的 &lt;code&gt;$elem&lt;/code&gt; 变量, 然后执行尖号块儿的主体。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Ordering&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果 &lt;code&gt;foo&lt;/code&gt; 例程有返回值且不为假, 则赋值给 &lt;code&gt;$value&lt;/code&gt;, 然后执行块儿的主体:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if my $value = foo() { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;但是上面的语句在 Raku  中是不合法的, 要使用尖号块儿的方式:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if foo() -&amp;gt; $value { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;signatures签名&#34;&gt;Signatures(签名)&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;for&lt;/code&gt; 循环可以一次迭代两个(或多个)元素。尖号块儿相当于匿名函数, 其中的 &lt;code&gt;$first, $second&lt;/code&gt; 就是尖号块儿的签名。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;for @array -&amp;gt; $first, $second {
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面的智能匹配中, 变量 &lt;code&gt;$1&lt;/code&gt; 和 &lt;code&gt;$2&lt;/code&gt; 有些多余:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if / (\S+) \s+ (.*) / { 
+    my $name = $1;
+    my $value = $2;
+    ...
+ }
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过尖号块儿, 把匹配结果直接赋值给 &lt;code&gt;$name&lt;/code&gt; 和 &lt;code&gt;$value&lt;/code&gt;, 节省了两个变量名:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;if / (\S+) \s+ (.*) / -&amp;gt; ($name, $value) {
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;for&lt;/code&gt; 尖号块儿和 &lt;code&gt;if&lt;/code&gt; 尖号块儿的结构类似, 语法上非常整齐:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;for expression() -&amp;gt; $value { ... }
+if expression() -&amp;gt; $value { ... }
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;whatever-code&#34;&gt;Whatever code&lt;/h2&gt;
+&lt;p&gt;如果 grep 的过滤条件中有多个变量, 那么使用尖号块儿这种匿名函数比较合适:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@numbers.grep(-&amp;gt; $n { $n &amp;gt; 2 });
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果过滤条件中只有一个变量, 那么形式更短的 Whatever code 更符合惯用法:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@numbers.grep(* &amp;gt; 2);
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;meta-operators&#34;&gt;Meta-operators&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Reduction&lt;/li&gt;
+&lt;li&gt;Zip&lt;/li&gt;
+&lt;li&gt;Corss&lt;/li&gt;
+&lt;li&gt;Hyper&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Reduction meta operators&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;fold/reduce an infix operator&lt;/li&gt;
+&lt;li&gt;Respects associativity&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;reduce&lt;/code&gt; 运算符可以用于求和:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;my $sum = reduce { $^a + $^b }, @list;
+my $sum = [+] @list
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;[+]   # sum
+[*]   # product
+[~]   # join
+[===] # all equal
+[&amp;lt;&amp;gt;]  # ascending order
+[||]  # first true value, if any
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Zip 元运算符用于连接列表:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;(1, 2, 3) Z+ (30, 20 ,10)
+# (21, 22, 13)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;-&amp;gt; ($a, $b)&lt;/code&gt; 解构 Zip 后的元素:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;for @a Z @b -&amp;gt; ($a, $b) {
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;Z=&amp;gt;&lt;/code&gt; 运算符通常用于从两个列表中制作哈希:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;%hash = @keys Z=&amp;gt; @values
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Zip 元运算符可以写成链式的:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@a Z @b Z @c
+[Z] @list-of-lists
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Cross 是交叉运算符。使用两层 for 循环也可以实现交叉运算符的功能, 就是代码稍长:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;gather for 3, 9 -&amp;gt; $i {
+    for 2, 10 -&amp;gt; $j {
+        take $i + $j
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;而使用交叉运算符, 一行代码搞定:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;3, 9 X+ 2, 10
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;添加前缀也很简单:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&amp;quot;prefix-&amp;quot; X~ @list
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Hyper 运算符可以把任何运算符(中缀、前缀和后缀等)应用到列表上:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@list».abs
+@list.map(*.abs)
+
+!«@list
+@list.map(!*)
+
+@list»[1]
+@list.map(*[1])
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;欧几里得距离:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@a Z- @b
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Squared(平方)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;(@a Z- @b)»²
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Summed(求和)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;[+] (@a Z- @b)»²
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Square root(求平方根)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;sqrt [+] (@a Z- @b)»²
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;smartmatch智能匹配&#34;&gt;Smartmatch(智能匹配)&lt;/h2&gt;
+&lt;p&gt;“Is the value part of this set”&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@list.grep(* &amp;gt; 2)
+@list.grep({ $_ eq &amp;quot;foo&amp;quot; })
+@list.grep(Int)
+@list.grep({ .isa(Innt) })
+@list.grep(/foo .* bar/)
+@list.grep({ .match(/foo .* bar/) })
+@list.grep(2..4)
+@list.grep({ 2 &amp;lt;= $_ &amp;lt;= 4 })
+
+@list.grep(:is-prime)
+@list.grep({ .is-prime })
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;combine junctions(结合 Junctions):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;@list.grep(:is-prime &amp;amp; /22/)
+@list.grep({ .is-prime &amp;amp;&amp;amp; .matches(/22/) })
+
+@list.grep(none(/22/))
+@list.grep({ !.matches(/22/) })
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;最后, 还是查找文件的例子:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;find(@dirs,
+  :ext(&#39;rakumo&#39;|&#39;pm6&#39;),
+  :size(* &amp;gt; 1024),
+  :depth(3..5),
+  :contains(/raku/)
+);
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;原文链接: &lt;a href=&#34;https://www.youtube.com/watch?v=elalwvfmYgk&#34;&gt;https://www.youtube.com/watch?v=elalwvfmYgk&lt;/a&gt;&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rakulang">rakulang</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/raku">Raku</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2021-06-17-raku-syntax-i-miss-in-other-languages/</guid>
+                <pubDate>Thu, 17 Jun 2021 00:00:00 +0800</pubDate>
+            </item>
         
             
             <item>

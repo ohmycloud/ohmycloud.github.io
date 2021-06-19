@@ -10,12 +10,343 @@
             <link href="https://ohmyweekly.github.io/categories/raku/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/raku/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/raku/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-05-18T22:45:55+08:00</updated>
+    <updated>2021-06-19T21:58:43+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/raku/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Learn Raku From Roast]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2021-06-05-learn-raku-from-roast/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/?utm_source=atom_feed" rel="related" type="text/html" title="Raku Multiple Dispatch With the New MoarVM Dispatcher" />
+                <link href="https://ohmyweekly.github.io/notes/2021-05-19-a-tour-of-rust-standard-library-traits/?utm_source=atom_feed" rel="related" type="text/html" title="Rust 的标准库 Trait 之旅" />
+                <link href="https://ohmyweekly.github.io/notes/2021-04-05-psql/?utm_source=atom_feed" rel="related" type="text/html" title="Psql" />
+                <link href="https://ohmyweekly.github.io/notes/2021-03-15-towards-a-new-general-dispatch-mechanism-in-moarvm/?utm_source=atom_feed" rel="related" type="text/html" title="争取在 MoarVM 中建立一个新的总调度机制" />
+                <link href="https://ohmyweekly.github.io/notes/2021-03-07-difference-between-build-and-tweak-in-raku/?utm_source=atom_feed" rel="related" type="text/html" title="BUILD 和 TWEAK 的区别" />
+            
+                <id>https://ohmyweekly.github.io/notes/2021-06-05-learn-raku-from-roast/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-06-05T00:00:00+08:00</published>
+            <updated>2021-06-05T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Learn Raku From Roast</blockquote><p>Raku 的 <a href="https://github.com/Raku/roast">Roast</a> 仓库是一个测试套件, 我们可以从这个仓库中学习到很多 Raku 的知识。</p>
+<h2 id="元运算符">元运算符</h2>
+<ul>
+<li>cross</li>
+</ul>
+<pre><code class="language-raku" data-lang="raku">dd &lt;a b&gt; X &lt;c d&gt;
+# Output: ((&quot;a&quot;, &quot;c&quot;), (&quot;a&quot;, &quot;d&quot;), (&quot;b&quot;, &quot;c&quot;), (&quot;b&quot;, &quot;d&quot;)).Seq
+
+
+dd 1 X 1 X 1 X 1
+# Output: ((1, 1, 1, 1),).Seq
+
+
+dd 1, 2, 3 X** 2, 4
+# Output: 1, 1, 4, 16, 9, 81).Seq
+
+
+my @result = gather {
+    for 1..3 X 'a'..'b' -&gt; ($n, $a) {
+        take &quot;$n|$a&quot;
+    }
+}
+
+dd @result;
+# Output: Array @result = [&quot;1|a&quot;, &quot;1|b&quot;, &quot;2|a&quot;, &quot;2|b&quot;, &quot;3|a&quot;, &quot;3|b&quot;]
+
+
+my @result = gather for (1..3 X 'A'..'B') -&gt; $na {
+    take $na.join(':');
+}
+
+dd @result;
+# Output: Array @result = [&quot;1:A&quot;, &quot;1:B&quot;, &quot;2:A&quot;, &quot;2:B&quot;, &quot;3:A&quot;, &quot;3:B&quot;]
+
+
+dd &lt;a b&gt; X, &lt;c d&gt;;
+# Output: ((&quot;a&quot;, &quot;c&quot;), (&quot;a&quot;, &quot;d&quot;), (&quot;b&quot;, &quot;c&quot;), (&quot;b&quot;, &quot;d&quot;)).Seq
+
+
+dd &lt;a b&gt; X~ &lt;1 2&gt;;
+# Output: (&quot;a1&quot;, &quot;a2&quot;, &quot;b1&quot;, &quot;b2&quot;).Seq
+
+
+dd &lt;a b&gt; X, 1,2 X, &lt;x y&gt;;
+# Output: ((&quot;a&quot;, 1, &quot;x&quot;), (&quot;a&quot;, 1, &quot;y&quot;), (&quot;a&quot;, 2, &quot;x&quot;), (&quot;a&quot;, 2, &quot;y&quot;), (&quot;b&quot;, 1, &quot;x&quot;), (&quot;b&quot;, 1, &quot;y&quot;), (&quot;b&quot;, 2, &quot;x&quot;), (&quot;b&quot;, 2, &quot;y&quot;)).Seq
+
+
+dd 1,2 X* 3,4;
+# Output: (3, 4, 6, 8).Seq
+
+
+dd 1,2 Xcmp 3,2,0;
+# Output: (Order::Less, Order::Less, Order::More, Order::Less, Order::Same, Order::More).Seq
+
+
+dd 1 X* 3,4;
+# Output: (3, 4).Seq
+
+
+dd 1, 2 X* 3;
+# Output: (3, 6).Seq
+
+
+dd 1 X* 3;
+# Output: (3,).Seq
+
+
+# $[] does not flatten
+dd $[1,2] X~ &lt;a b&gt;
+# Output: (&quot;1 2a&quot;, &quot;1 2b&quot;).Seq
+</code></pre><ul>
+<li>zip</li>
+</ul>
+<pre><code class="language-raku" data-lang="raku">dd &lt;a b&gt; Z &lt;c d&gt;;
+# Output: ((&quot;a&quot;, &quot;c&quot;), (&quot;b&quot;, &quot;d&quot;)).Seq
+
+
+dd 1, 2, 3 Z** 2, 4;
+# Output: (1, 16).Seq
+
+
+dd &lt;a b&gt; Z~ &lt;1 2&gt;;
+# Output: (&quot;a1&quot;, &quot;b2&quot;).Seq
+
+
+dd 1,2 Z* 3,4;
+# Output: (3, 8).Seq
+
+
+dd 1,2 Zcmp 3,2,0;
+# Output: (Order::Less, Order::Same).Seq
+
+
+dd (1..* Z** 1..*).[^5];
+# Output: (1, 4, 27, 256, 3125)
+
+
+dd (1..* Z+ (3, 2 ... *)).[^5];
+# Output: (4, 4, 4, 4, 4)
+
+
+dd 1 Z* 3,4;
+# Output: (3,).Seq
+
+
+dd 1, 2 Z* 3;
+# Output: (3,).Seq
+
+
+dd 1 Z* 3;
+# Output: (3,).Seq
+
+
+dd &lt;a b c d&gt; Z 'x', 'z', *;
+# Output: ((&quot;a&quot;, &quot;x&quot;), (&quot;b&quot;, &quot;z&quot;), (&quot;c&quot;, &quot;z&quot;), (&quot;d&quot;, &quot;z&quot;)).Seq
+
+
+dd 1, 2, 3, * Z 10, 20, 30, 40, 50;
+# Output: ((1, 10), (2, 20), (3, 30), (3, 40), (3, 50)).Seq
+
+
+dd (2, 10, * Z 3, 4, 5, *).[^5];
+# Output: ((2, 3), (10, 4), (10, 5), (10, 5), (10, 5))
+
+
+dd &lt;a b c d&gt; Z~ 'x', 'z', *;
+# Output: (&quot;ax&quot;, &quot;bz&quot;, &quot;cz&quot;, &quot;dz&quot;).Seq
+
+
+dd 1, 2, 3, * Z+ 10, 20, 30, 40, 50;
+# Output: (11, 22, 33, 43, 53).Seq
+
+
+dd (2, 10, * Z* 3, 4, 5, *).[^5];
+# Output: (6, 40, 50, 50, 50)
+
+
+dd [Z](1,2,3;4,5,6;7,8,9);
+# Output: ((1, 4, 7), (2, 5, 8), (3, 6, 9)).Seq
+
+
+dd [Z&lt;](1,2,3;4,5,6;7,8,9);
+(Bool::True, Bool::True, Bool::True).Seq
+</code></pre><ul>
+<li>hyper</li>
+</ul>
+<pre><code class="language-raku" data-lang="raku">my $a      := (1,2,3);
+my $b      := (2,4,6);
+
+
+# 以下表达式都输出  (3, 6, 9)
+
+dd $a &gt;&gt;+&lt;&lt; $b;
+dd $a  »+«  $b;
+dd $a &gt;&gt;+&gt;&gt; $b;
+dd $a  »+»  $b;
+dd $a &lt;&lt;+&gt;&gt; $b;
+dd $a  «+»  $b;
+dd $a &lt;&lt;+&lt;&lt; $b;
+dd $a  «+«  $b;
+
+dd $a &gt;&gt;[&amp;infix:&lt;+&gt;]&lt;&lt; $b;
+dd $a  »[&amp;infix:&lt;+&gt;]«  $b;
+dd $a &gt;&gt;[&amp;infix:&lt;+&gt;]&gt;&gt; $b;
+dd $a  »[&amp;infix:&lt;+&gt;]»  $b;
+dd $a &lt;&lt;[&amp;infix:&lt;+&gt;]&gt;&gt; $b;
+dd $a  «[&amp;infix:&lt;+&gt;]»  $b;
+dd $a &lt;&lt;[&amp;infix:&lt;+&gt;]&lt;&lt; $b;
+dd $a  «[&amp;infix:&lt;+&gt;]«  $b;
+</code></pre><p><code>»*«</code> 运算符的优先级比 <code>»+«</code> 运算符的优先级高:</p>
+<pre><code class="language-raku" data-lang="raku">dd (1, 2, 3) »+« (10, 20, 30) »*« (2, 3, 4);
+# Output: (21, 62, 123)
+</code></pre><p>unary postfix(一元后缀运算符)</p>
+<pre><code class="language-raku" data-lang="raku">my @r = (1, 2, 3);
+@r»++;
+dd @r;
+# Output: Array @r = [2, 3, 4]
+</code></pre><p>unary prefix(一元前缀运算符)</p>
+<pre><code class="language-raku" data-lang="raku">my @r;
+@r = -« (3, 2, 1);
+dd @r;
+# Output: Array @r = [-3, -2, -1]
+</code></pre><p>dimension upgrade(升维), auto dimension upgrade on rhs/lhs ASCII notation</p>
+<pre><code class="language-raku" data-lang="raku">my @r = (1, 2, 3) &gt;&gt;+&gt;&gt; 1;
+dd @r;
+# Output: Array @r = [2, 3, 4]
+
+
+my @r = 2 &lt;&lt;*&lt;&lt; (10, 20, 30);
+dd @r;
+# Output: Array @r = [20, 40, 60]
+</code></pre><p>both-dwim and non-dwim sanity:</p>
+<pre><code class="language-raku" data-lang="raku">dd (1,2,3) &lt;&lt;~&gt;&gt; &lt;A B C D E&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3C&quot;, &quot;1D&quot;, &quot;2E&quot;)
+</code></pre><p>extension(扩展)</p>
+<pre><code class="language-raku" data-lang="raku">dd (1,2,3,4) &gt;&gt;~&gt;&gt; &lt;A B C D E&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3C&quot;, &quot;4D&quot;)
+
+
+dd (1,2,3,4,5) &lt;&lt;~&lt;&lt; &lt;A B C D&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3C&quot;, &quot;4D&quot;)
+
+
+dd (1,2,3,4) &gt;&gt;~&gt;&gt; &lt;A B C&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3C&quot;, &quot;4A&quot;)
+
+
+dd (1,2,3) &lt;&lt;~&lt;&lt; &lt;A B C D&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3C&quot;, &quot;1D&quot;)
+
+
+dd (1,2,3,4) &gt;&gt;~&gt;&gt; &lt;A B&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;3A&quot;, &quot;4B&quot;)
+
+
+dd (1,2) &lt;&lt;~&lt;&lt; &lt;A B C D&gt;;
+# Output: (&quot;1A&quot;, &quot;2B&quot;, &quot;1C&quot;, &quot;2D&quot;)
+
+
+dd (1,2,3,4) &gt;&gt;~&gt;&gt; &lt;A&gt;;
+# Output: (&quot;1A&quot;, &quot;2A&quot;, &quot;3A&quot;, &quot;4A&quot;)
+
+
+dd (1,) &lt;&lt;~&lt;&lt; &lt;A B C D&gt;;
+# Output: (&quot;1A&quot;, &quot;1B&quot;, &quot;1C&quot;, &quot;1D&quot;)
+
+
+dd (1,2,3,4) &gt;&gt;~&gt;&gt; 'A';
+# Output: (&quot;1A&quot;, &quot;2A&quot;, &quot;3A&quot;, &quot;4A&quot;)
+
+
+dd 1 &lt;&lt;~&lt;&lt; &lt;A B C D&gt;;
+# Output: (&quot;1A&quot;, &quot;1B&quot;, &quot;1C&quot;, &quot;1D&quot;)
+</code></pre><h2 id="枚举">枚举</h2>
+<ul>
+<li>匿名枚举</li>
+</ul>
+<p>匿名枚举返回一个 Map:</p>
+<pre><code class="language-raku" data-lang="raku">my $e = enum &lt; ook! ook. ook? &gt;; # Map.new((ook! =&gt; 0, ook. =&gt; 1, ook? =&gt; 2))
+say $e.keys.elems; #  3
+say $e&lt;ook!&gt;;      #  0
+say $e&lt;ook.&gt;;      #  1
+say $e&lt;ook?&gt;;      #  2 
+say so $e ~~ Map;  #  True
+say $e.keys;       #  (ook? ook! ook.)
+</code></pre><p><code>anon enum &lt;un&gt;</code> 等价于 <code>enum :: &lt;un&gt;</code>:</p>
+<pre><code class="language-raku" data-lang="raku">anon enum &lt;un&gt;; #  Map.new((un =&gt; 0))
+say +un;        #  0
+
+my %e = enum :: &lt; foo bar baz &gt;; #  {bar =&gt; 1, baz =&gt; 2, foo =&gt; 0}
+say %e&lt;bar&gt;; #  1
+say baz;     #  baz
+say +baz;    #  2
+</code></pre><ul>
+<li>枚举作为角色</li>
+</ul>
+<p>枚举可以用在 <code>but</code> 或 <code>does</code> 中, 用以命令一个想要的属性:</p>
+<pre><code class="language-raku" data-lang="raku">enum Maybe &lt;No Yes Dunno&gt;;
+class Bar { }
+
+class Foo does Maybe {}
+my $x = Foo.new(Maybe =&gt; No);
+
+say $x.No;    # True
+say $x.Yes;   # False
+say $x.Dunno; # False
+
+my $y = Bar.new() does Maybe(Yes);
+say $y.Yes;   # True
+say $y.No;    # False
+say $y.Dunno; # False
+
+
+my $z = Bar.new() but Maybe(Dunno);
+say $z.No;
+say $z.Yes;
+say $z.Dunno;
+</code></pre><h2 id="属性">属性</h2>
+<ul>
+<li>代理</li>
+</ul>
+<p>官方文档关于 <a href="https://docs.raku.org/routine/handles">handles</a> 的介绍很粗糙, 看完依然不知道怎么使用。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/raku" term="raku" label="Raku" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku" term="raku" label="Raku" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/raku-roast" term="raku-roast" label="Raku roast" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>
