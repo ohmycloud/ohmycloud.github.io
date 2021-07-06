@@ -61,9 +61,9 @@
     
     
     
-    <link rel="stylesheet" href="/css/refined.min.61b1de55623520dab99b70e9e2298001fb97241583a47396e2f10feb789e300d.css">
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
     
-    <link rel="preload" href="/css/refined.min.61b1de55623520dab99b70e9e2298001fb97241583a47396e2f10feb789e300d.css" as="style">
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
 
     
 
@@ -167,15 +167,15 @@
     
 
     
-    <script src="/js/responsive-nav-orig.min.355eebd835ac8071d56b337f68ffbbddc0f6487625599895e3e0b0461e791ebb.js"></script>
+    <script src="/js/responsive-nav-orig.min.bd7287557074084b7eba924cf5291f3c285cf8e8324c500f4389ff9fb1a92169.js"></script>
     
-    <link rel="preload" href="/js/responsive-nav-orig.min.355eebd835ac8071d56b337f68ffbbddc0f6487625599895e3e0b0461e791ebb.js" as="script">
+    <link rel="preload" href="/js/responsive-nav-orig.min.bd7287557074084b7eba924cf5291f3c285cf8e8324c500f4389ff9fb1a92169.js" as="script">
 
     
     
-    <script defer src="/js/libs/fa/fontawesome-all.min.78bd3583027f40ce4330d39e1f1df56bda5f4af819aac2d0214ba529918c9e95.js"></script>
+    <script defer src="/js/libs/fa/fontawesome-all.min.3ca622508ac5fb18aee4bc98a61b16f99348c918b1c684528246d1a95d82fd34.js"></script>
     
-    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.78bd3583027f40ce4330d39e1f1df56bda5f4af819aac2d0214ba529918c9e95.js" as="script">
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.3ca622508ac5fb18aee4bc98a61b16f99348c918b1c684528246d1a95d82fd34.js" as="script">
 
     
 
@@ -254,9 +254,9 @@
     
     
     
-    <meta name="hugo-build-date" content=""/>
-    <meta name="hugo-commit-hash" content=""/>
-    <meta name="generator" content="Hugo 0.79.0" />
+    <meta name="hugo-build-date" content="2021-07-05T10:46:28Z"/>
+    <meta name="hugo-commit-hash" content="724d5db5"/>
+    <meta name="generator" content="Hugo 0.85.0" />
 </head>
 
 
@@ -445,209 +445,209 @@
 
 
 <p>在我的上一篇文章中，我又一次为从 CORE 中增强类的方法而苦恼。这种挣扎完全没有必要，因为我并没有用增加的方法改变对象的状态。对于做更高级的东西，我可能不得不这样做。把手伸进 Raku 的内部这么深，我可能会把自己烫伤。既然我想做的是把我的代码绑在编译器的变化上，反正我可能会全身心地投入到 nqp-land 中去。</p>
-<pre><code class="language-raku" data-lang="raku">my \j = 1 | 2 | 3;
-dd j;
-use nqp;
-.say for nqp::getattr(j, Junction, '$!eigenstates');
-# OUTPUT: any(1, 2, 3)
-          1
-          2
-          3
-</code></pre><p>我们可以使用 nqp 来获取私有属性，而不需要添加任何方法。这就有点儿不伦不类了。所以，让我们用一个伪方法来做一些 deboilerplating。</p>
-<pre><code class="language-raku" data-lang="raku">sub pry(Mu $the-object is raw) {
-    use InterceptAllMethods;
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">\j</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">|</span> <span class="mi">2</span> <span class="o">|</span> <span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="n">j</span><span class="p">;</span>
+<span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+<span class="o">.</span><span class="nb">say</span> <span class="k">for</span> <span class="nf">nqp::getattr</span><span class="p">(</span><span class="n">j</span><span class="o">,</span> <span class="nb">Junction</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!eigenstates</span><span class="p">&#39;);</span>
+<span class="c1"># OUTPUT: any(1, 2, 3)</span>
+          <span class="mi">1</span>
+          <span class="mi">2</span>
+          <span class="mi">3</span>
+</code></pre></div><p>我们可以使用 nqp 来获取私有属性，而不需要添加任何方法。这就有点儿不伦不类了。所以，让我们用一个伪方法来做一些 deboilerplating。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">pry</span><span class="p">(</span><span class="nb">Mu</span> <span class="nv">$the-object</span> <span class="k">is</span> <span class="k">raw</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">use</span> <span class="nn">InterceptAllMethods</span><span class="p">;</span>
 
-    class Interceptor {
-        has Mu $!the-object;
-        method ^find_method(Mu \type, Str $name) {
-            my method (Mu \SELF:) is raw {
-                use nqp;
-                my $the-object := nqp::getattr(SELF, Interceptor, '$!the-object');
-                nqp::getattr($the-object, $the-object.WHAT, '$!' ~ $name)
-            }
-        }
-    }
+    <span class="k">class</span> <span class="nc">Interceptor</span> <span class="p">{</span>
+        <span class="k">has</span> <span class="nb">Mu</span> <span class="nv">$!the-object</span><span class="p">;</span>
+        <span class="k">method</span> <span class="o">^</span><span class="nb">find_method</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Mu</span> \<span class="n">SELF:</span><span class="p">)</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+                <span class="k">my</span> <span class="nv">$the-object</span> <span class="o">:=</span> <span class="nf">nqp::getattr</span><span class="p">(</span><span class="n">SELF</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;);</span>
+                <span class="nf">nqp::getattr</span><span class="p">(</span><span class="nv">$the-object</span><span class="o">,</span> <span class="nv">$the-object</span><span class="o">.</span><span class="nb">WHAT</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$name</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
 
-    use nqp;
-    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object);
-}
+    <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+    <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span><span class="nf">nqp::create</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-object</span><span class="p">);</span>
+<span class="p">}</span>
 
-.say for j.&amp;pry.eigenstates;
-# OUTPUT: 1
-          2
-          3
-</code></pre><p>通过 InterceptAllMethods，lizmat 改变了类关键字的行为，允许我们提供一个 FALLBACK-method 来捕获任何方法，包括从 Mu 继承的方法。这反过来又允许 pry 返回的对象将任何方法调用转移到一个自定义的方法。在这个方法中，我们可以对 <code>.&amp;pry</code> 被调用的对象做任何我们想做的事情。</p>
+<span class="o">.</span><span class="nb">say</span> <span class="k">for</span> <span class="n">j</span><span class="o">.&amp;</span><span class="nf">pry</span><span class="o">.</span><span class="nf">eigenstates</span><span class="p">;</span>
+<span class="c1"># OUTPUT: 1</span>
+          <span class="mi">2</span>
+          <span class="mi">3</span>
+</code></pre></div><p>通过 InterceptAllMethods，lizmat 改变了类关键字的行为，允许我们提供一个 FALLBACK-method 来捕获任何方法，包括从 Mu 继承的方法。这反过来又允许 pry 返回的对象将任何方法调用转移到一个自定义的方法。在这个方法中，我们可以对 <code>.&amp;pry</code> 被调用的对象做任何我们想做的事情。</p>
 <p>由于我们的特殊对象会拦截任何调用，甚至是 Mu 的调用，我们需要找到另一种方法来调用 <code>.new</code>。由于 <code>.^</code> 不是 <code>.</code> 的特殊形式，我们可以用它来获得对类方法的访问。</p>
-<pre><code class="language-raku" data-lang="raku">sub interceptor(Method $the-method){
-    use InterceptAllMethods;
-    use nqp;
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">interceptor</span><span class="p">(</span><span class="nb">Method</span> <span class="nv">$the-method</span><span class="p">){</span>
+    <span class="k">use</span> <span class="nn">InterceptAllMethods</span><span class="p">;</span>
+    <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
 
-    sub (Mu $the-object is raw) {
-        my class Interceptor {
-            has Mu $!the-object;
-            has Code $!the-method;
+    <span class="k">sub</span> <span class="p">(</span><span class="nb">Mu</span> <span class="nv">$the-object</span> <span class="k">is</span> <span class="k">raw</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="k">class</span> <span class="nc">Interceptor</span> <span class="p">{</span>
+            <span class="k">has</span> <span class="nb">Mu</span> <span class="nv">$!the-object</span><span class="p">;</span>
+            <span class="k">has</span> <span class="nb">Code</span> <span class="nv">$!the-method</span><span class="p">;</span>
 
-            method ^find_method(Mu \type, Mu:D $name) {
-                my method (Mu \SELF: |c) is raw {
-                    $!the-method.($!the-object, $name, |c)
-                }
-            }
-            method ^introspect(Mu \type, Mu \obj) {
-                my method call-it() is raw {
-                    $!the-object
-                }
-                obj.&amp;call-it;
-            }
-            method ^new(Mu \type, $the-object!, $the-method) {
-                nqp::p6bindattrinvres(
-                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
-                        Interceptor, '$!the-method', $the-method)
-            }
-        }
+            <span class="k">method</span> <span class="o">^</span><span class="nb">find_method</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Mu:D</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Mu</span> \<span class="n">SELF:</span> <span class="o">|</span><span class="n">c</span><span class="p">)</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                    <span class="nv">$!the-method</span><span class="o">.</span><span class="p">(</span><span class="nv">$!the-object</span><span class="o">,</span> <span class="nv">$name</span><span class="o">,</span> <span class="o">|</span><span class="n">c</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">method</span> <span class="o">^</span><span class="nf">introspect</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Mu</span> \<span class="n">obj</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">my</span> <span class="k">method</span> <span class="nf">call-it</span><span class="p">()</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                    <span class="nv">$!the-object</span>
+                <span class="p">}</span>
+                <span class="n">obj</span><span class="o">.&amp;</span><span class="nf">call-it</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">method</span> <span class="o">^</span><span class="nb">new</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nv">$the-object</span><span class="o">!,</span> <span class="nv">$the-method</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span>
+                        <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span><span class="nf">nqp::create</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-object</span><span class="p">)</span><span class="o">,</span>
+                        <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-method</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-method</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
 
-            # nqp::p6bindattrinvres(
-                #     nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
-                #   Interceptor, '$!the-method', $the-method);
-        Interceptor.^new($the-object, $the-method)
-    }
-}
+            <span class="c1"># nqp::p6bindattrinvres(</span>
+                <span class="c1">#     nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, &#39;$!the-object&#39;, $the-object),</span>
+                <span class="c1">#   Interceptor, &#39;$!the-method&#39;, $the-method);</span>
+        <span class="n">Interceptor</span><span class="o">.^</span><span class="nb">new</span><span class="p">(</span><span class="nv">$the-object</span><span class="o">,</span> <span class="nv">$the-method</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 
-my &amp;first-defined = interceptor(
-    my method (Positional \SELF: $name) {
-        for SELF.flat -&gt; $e {
-            with $e.&quot;$name&quot;(|%_) {
-                .return
-            }
-        }
-        Nil
-    }
-);
+<span class="k">my</span> <span class="nv">&amp;first-defined</span> <span class="o">=</span> <span class="nf">interceptor</span><span class="p">(</span>
+    <span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Positional</span> \<span class="n">SELF:</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="n">SELF</span><span class="o">.</span><span class="nb">flat</span> <span class="k">-&gt;</span> <span class="nv">$e</span> <span class="p">{</span>
+            <span class="k">with</span> <span class="nv">$e</span><span class="o">.</span><span class="p">&#34;</span><span class="nv">$name</span><span class="p">&#34;(</span><span class="o">|</span><span class="nv">%_</span><span class="p">)</span> <span class="p">{</span>
+                <span class="o">.</span><span class="k">return</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nb">Nil</span>
+    <span class="p">}</span>
+<span class="p">);</span>
 
-my $file = &lt;file1.txt file2.txt file3.txt nohup.out&gt;».IO.&amp;first-defined.open(:r);
-dd $file;
-# OUTPUT: Handle $file = IO::Handle.new(path =&gt; IO::Path.new(&quot;nohup.out&quot;, :SPEC(IO::Spec::Unix), :CWD(&quot;/home/dex/projects/raku/tmp&quot;)), chomp =&gt; Bool::True, nl-in =&gt; $[&quot;\n&quot;, &quot;\r\n&quot;], nl-out =&gt; &quot;\n&quot;, encoding =&gt; &quot;utf8&quot;)
-</code></pre><p>sub <code>interceptor</code> 接受一个方法并返回一个 sub。如果这个 sub 像方法一样被调用，它将把要被调用的方法的名称和调用者转发给一个自定义方法。当 <code>.&amp;first-defined</code> 被调用时，会返回一个特殊的对象。让我们来看看它是什么。</p>
-<pre><code class="language-raku" data-lang="raku">my \uhhh-special = &lt;a b c&gt;.&amp;first-defined;
-dd uhhh-special.^introspect(uhhh-special);
-# OUTPUT: ($(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;), method &lt;anon&gt; (Positional \SELF: $name, *%_) { #`(Method|93927752146784) ... })
-</code></pre><p>我们必须给 <code>.^introspect</code> 一个我们想看的对象，因为它的调用者是类 Interceptor 的类型对象。</p>
+<span class="k">my</span> <span class="nv">$file</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">file1.txt file2.txt file3.txt nohup.out</span><span class="p">&gt;</span><span class="o">».</span><span class="nb">IO</span><span class="o">.&amp;</span><span class="nf">first-defined</span><span class="o">.</span><span class="nb">open</span><span class="p">(:</span><span class="s">r</span><span class="p">);</span>
+<span class="n">dd</span> <span class="nv">$file</span><span class="p">;</span>
+<span class="c1"># OUTPUT: Handle $file = IO::Handle.new(path =&gt; IO::Path.new(&#34;nohup.out&#34;, :SPEC(IO::Spec::Unix), :CWD(&#34;/home/dex/projects/raku/tmp&#34;)), chomp =&gt; Bool::True, nl-in =&gt; $[&#34;\n&#34;, &#34;\r\n&#34;], nl-out =&gt; &#34;\n&#34;, encoding =&gt; &#34;utf8&#34;)</span>
+</code></pre></div><p>sub <code>interceptor</code> 接受一个方法并返回一个 sub。如果这个 sub 像方法一样被调用，它将把要被调用的方法的名称和调用者转发给一个自定义方法。当 <code>.&amp;first-defined</code> 被调用时，会返回一个特殊的对象。让我们来看看它是什么。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">\uhhh-special</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">a b c</span><span class="p">&gt;</span><span class="o">.&amp;</span><span class="nf">first-defined</span><span class="p">;</span>
+<span class="n">dd</span> <span class="n">uhhh-special</span><span class="o">.^</span><span class="nf">introspect</span><span class="p">(</span><span class="n">uhhh-special</span><span class="p">);</span>
+<span class="c1"># OUTPUT: ($(&#34;a&#34;, &#34;b&#34;, &#34;c&#34;), method &lt;anon&gt; (Positional \SELF: $name, *%_) { #`(Method|93927752146784) ... })</span>
+</code></pre></div><p>我们必须给 <code>.^introspect</code> 一个我们想看的对象，因为它的调用者是类 Interceptor 的类型对象。</p>
 <p>目前，我还不知道有什么办法（毕竟，我知道的只是足够多的东西，真的很危险。这是不幸的，因为 lizmat 决定重载关键字 <code>class</code>，而不是用不同的名字导出特殊的 <code>Metamodel::ClassHOW</code>。如果我们不想或不能有外部依赖，我们可以使用 MOP 来创建我们的类型对象。</p>
-<pre><code class="language-raku" data-lang="raku">class InterceptHOW is Metamodel::ClassHOW {
-    method publish_method_cache(|) { }
-}
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">InterceptHOW</span> <span class="k">is</span> <span class="nb">Metamodel::ClassHOW</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nb">publish_method_cache</span><span class="ow">(|)</span> <span class="p">{</span> <span class="p">}</span>
+<span class="p">}</span>
 
-sub ipry(Mu $the-object is raw) {
-    my \Interceptor = InterceptHOW.new_type(:name&lt;Interceptor&gt;);
-    Interceptor.^add_attribute(Attribute.new(:name&lt;$!the-object&gt;, :type(Mu), :package(Interceptor)));
-    Interceptor.^add_meta_method('find_method',
-        my method find_method(Mu \type, Str $name) {
-            # say „looking for $name“;
-            my method (Mu \SELF:) is raw {
-                use nqp;
-                my $the-object := nqp::getattr(SELF, Interceptor, '$!the-object');
-                nqp::getattr($the-object, $the-object.WHAT, '$!' ~ $name)
-            }
-    });
-    Interceptor.^compose;
+<span class="k">sub</span> <span class="nf">ipry</span><span class="p">(</span><span class="nb">Mu</span> <span class="nv">$the-object</span> <span class="k">is</span> <span class="k">raw</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">\Interceptor</span> <span class="o">=</span> <span class="n">InterceptHOW</span><span class="o">.</span><span class="nb">new_type</span><span class="p">(:</span><span class="s">name</span><span class="p">&lt;</span><span class="s">Interceptor</span><span class="p">&gt;);</span>
+    <span class="n">Interceptor</span><span class="o">.^</span><span class="nb">add_attribute</span><span class="p">(</span><span class="nb">Attribute</span><span class="o">.</span><span class="nb">new</span><span class="p">(:</span><span class="s">name</span><span class="p">&lt;</span><span class="s">$!the-object</span><span class="p">&gt;</span><span class="o">,</span> <span class="p">:</span><span class="s">type</span><span class="p">(</span><span class="nb">Mu</span><span class="p">)</span><span class="o">,</span> <span class="p">:</span><span class="s">package</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)));</span>
+    <span class="n">Interceptor</span><span class="o">.^</span><span class="nf">add_meta_method</span><span class="p">(&#39;</span><span class="s1">find_method</span><span class="p">&#39;</span><span class="o">,</span>
+        <span class="k">my</span> <span class="k">method</span> <span class="nb">find_method</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1"># say „looking for $name“;</span>
+            <span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Mu</span> \<span class="n">SELF:</span><span class="p">)</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+                <span class="k">my</span> <span class="nv">$the-object</span> <span class="o">:=</span> <span class="nf">nqp::getattr</span><span class="p">(</span><span class="n">SELF</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;);</span>
+                <span class="nf">nqp::getattr</span><span class="p">(</span><span class="nv">$the-object</span><span class="o">,</span> <span class="nv">$the-object</span><span class="o">.</span><span class="nb">WHAT</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$name</span><span class="p">)</span>
+            <span class="p">}</span>
+    <span class="p">});</span>
+    <span class="n">Interceptor</span><span class="o">.^</span><span class="nb">compose</span><span class="p">;</span>
 
-    use nqp;
-    nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object);
-}
-</code></pre><p>当我写这篇文章的时候，我发现 <code>.^add_meta_method</code> 只有在提供给它的方法的第一个参数的名字和 <code>Str</code> 相同的时候才会工作。起初，我尝试了一个匿名方法，它最终出现在 <code>.^meta_method_table</code> 中，但从未被调用。我想这个 bug 其实并不重要，因为这个元方法根本没有被记录下来。如果我玩火，我没有权利抱怨烧伤。你会在野外的 <code>Actions.nqp</code> 中发现这个方法。Class 关键字并没有什么神奇的作用。Rakudo 只是使用 MOP 来构造类型对象。</p>
+    <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+    <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span><span class="nf">nqp::create</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-object</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>当我写这篇文章的时候，我发现 <code>.^add_meta_method</code> 只有在提供给它的方法的第一个参数的名字和 <code>Str</code> 相同的时候才会工作。起初，我尝试了一个匿名方法，它最终出现在 <code>.^meta_method_table</code> 中，但从未被调用。我想这个 bug 其实并不重要，因为这个元方法根本没有被记录下来。如果我玩火，我没有权利抱怨烧伤。你会在野外的 <code>Actions.nqp</code> 中发现这个方法。Class 关键字并没有什么神奇的作用。Rakudo 只是使用 MOP 来构造类型对象。</p>
 <p>我们不能在 Raku 中重载赋值操作符。这其实并不需要，因为赋值是通过调用一个名为 STORE 的方法来实现的。由于我们得到了对 dispatch 的完全控制，我们可以拦截任何方法调用，包括一连串的方法调用。</p>
-<pre><code class="language-raku" data-lang="raku">multi sub methodify(%h, :$deeply!) {
-    sub interceptor(%h, $parent = Nil){
-        use InterceptAllMethods;
-        use nqp;
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">sub</span> <span class="nf">methodify</span><span class="p">(</span><span class="nv">%h</span><span class="o">,</span> <span class="o">:</span><span class="nv">$deeply</span><span class="o">!</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">sub</span> <span class="nf">interceptor</span><span class="p">(</span><span class="nv">%h</span><span class="o">,</span> <span class="nv">$parent</span> <span class="o">=</span> <span class="nb">Nil</span><span class="p">){</span>
+        <span class="k">use</span> <span class="nn">InterceptAllMethods</span><span class="p">;</span>
+        <span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
 
-        class Interceptor is Callable {
-            has Mu $!the-object;
-            has Mu @!stack;
+        <span class="k">class</span> <span class="nc">Interceptor</span> <span class="k">is</span> <span class="nb">Callable</span> <span class="p">{</span>
+            <span class="k">has</span> <span class="nb">Mu</span> <span class="nv">$!the-object</span><span class="p">;</span>
+            <span class="k">has</span> <span class="nb">Mu</span> <span class="nv">@!stack</span><span class="p">;</span>
 
-            method ^find_method(Mu \type, Mu:D $name) {
-                my method (Mu \SELF: |c) is raw {
-                    my @new-stack = @!stack;
-                    my $the-object = $!the-object;
+            <span class="k">method</span> <span class="o">^</span><span class="nb">find_method</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Mu:D</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Mu</span> \<span class="n">SELF:</span> <span class="o">|</span><span class="n">c</span><span class="p">)</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                    <span class="k">my</span> <span class="nv">@new-stack</span> <span class="o">=</span> <span class="nv">@!stack</span><span class="p">;</span>
+                    <span class="k">my</span> <span class="nv">$the-object</span> <span class="o">=</span> <span class="nv">$!the-object</span><span class="p">;</span>
 
-                    if $name eq 'STORE' {
-                        # workaround for rakudobug#4203
-                        $the-object{||@new-stack.head(*-1)}:delete if $the-object{||@new-stack.head(*-1)}:exists;
+                    <span class="k">if</span> <span class="nv">$name</span> <span class="ow">eq</span> <span class="p">&#39;</span><span class="s1">STORE</span><span class="p">&#39;</span> <span class="p">{</span>
+                        <span class="c1"># workaround for rakudobug#4203</span>
+                        <span class="nv">$the-object</span><span class="p">{</span><span class="o">||</span><span class="nv">@new-stack</span><span class="o">.</span><span class="nb">head</span><span class="p">(</span><span class="o">*-</span><span class="mi">1</span><span class="p">)}:</span><span class="s">delete</span> <span class="k">if</span> <span class="nv">$the-object</span><span class="p">{</span><span class="o">||</span><span class="nv">@new-stack</span><span class="o">.</span><span class="nb">head</span><span class="p">(</span><span class="o">*-</span><span class="mi">1</span><span class="p">)}:</span><span class="s">exists</span><span class="p">;</span>
 
-                        $the-object{||@new-stack} = c;
-                        return-rw c
-                    } else {
-                        @new-stack.push: $name;
-                        my \nextlevel = SELF.^new($!the-object, @new-stack, $name);
-                        nextlevel
-                    }
-                }
-            }
-            method ^introspect(Mu \type, Mu \obj) {
-                my method call-it() is raw {
-                    $!the-object, @!stack
-                }
-                obj.&amp;call-it;
-            }
-            method ^new(Mu \type, $the-object!, @new-stack?, $name?) {
-                $name
-                    ?? nqp::p6bindattrinvres(
-                        nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object),
-                        Interceptor, '@!stack', @new-stack)
-                    !! nqp::p6bindattrinvres(nqp::create(Interceptor), Interceptor, '$!the-object', $the-object)
-                }
-        }
+                        <span class="nv">$the-object</span><span class="p">{</span><span class="o">||</span><span class="nv">@new-stack</span><span class="p">}</span> <span class="o">=</span> <span class="n">c</span><span class="p">;</span>
+                        <span class="k">return-rw</span> <span class="n">c</span>
+                    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                        <span class="nv">@new-stack</span><span class="o">.</span><span class="nb">push</span><span class="o">:</span> <span class="nv">$name</span><span class="p">;</span>
+                        <span class="k">my</span> <span class="nv">\nextlevel</span> <span class="o">=</span> <span class="n">SELF</span><span class="o">.^</span><span class="nb">new</span><span class="p">(</span><span class="nv">$!the-object</span><span class="o">,</span> <span class="nv">@new-stack</span><span class="o">,</span> <span class="nv">$name</span><span class="p">);</span>
+                        <span class="n">nextlevel</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="k">method</span> <span class="o">^</span><span class="nf">introspect</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nb">Mu</span> \<span class="n">obj</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">my</span> <span class="k">method</span> <span class="nf">call-it</span><span class="p">()</span> <span class="k">is</span> <span class="k">raw</span> <span class="p">{</span>
+                    <span class="nv">$!the-object</span><span class="o">,</span> <span class="nv">@!stack</span>
+                <span class="p">}</span>
+                <span class="n">obj</span><span class="o">.&amp;</span><span class="nf">call-it</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">method</span> <span class="o">^</span><span class="nb">new</span><span class="p">(</span><span class="nb">Mu</span> \<span class="nb">type</span><span class="o">,</span> <span class="nv">$the-object</span><span class="o">!,</span> <span class="nv">@new-stack</span><span class="o">?,</span> <span class="nv">$name</span><span class="o">?</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nv">$name</span>
+                    <span class="o">??</span> <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span>
+                        <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span><span class="nf">nqp::create</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-object</span><span class="p">)</span><span class="o">,</span>
+                        <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">@!stack</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">@new-stack</span><span class="p">)</span>
+                    <span class="o">!!</span> <span class="nf">nqp::p6bindattrinvres</span><span class="p">(</span><span class="nf">nqp::create</span><span class="p">(</span><span class="n">Interceptor</span><span class="p">)</span><span class="o">,</span> <span class="n">Interceptor</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!the-object</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$the-object</span><span class="p">)</span>
+                <span class="p">}</span>
+        <span class="p">}</span>
 
-        Interceptor.^new(%h)
-    }
+        <span class="n">Interceptor</span><span class="o">.^</span><span class="nb">new</span><span class="p">(</span><span class="nv">%h</span><span class="p">)</span>
+    <span class="p">}</span>
 
-    interceptor(%h)
-}
+    <span class="nf">interceptor</span><span class="p">(</span><span class="nv">%h</span><span class="p">)</span>
+<span class="p">}</span>
 
-my %h2;
-my $o2 = methodify(%h2, :deeply);
-$o2.a.b = 42;
-dd %h2;
-$o2.a.b.c = &lt;answer&gt;;
-dd %h2;
-say $o2.a.b.c;
-# OUTPUT: Hash %h2 = {:a(${:b(\(42))})}
-          Hash %h2 = {:a(${:b(${:c(\(&quot;answer&quot;))})})}
-          This type cannot unbox to a native string: P6opaque, Interceptor
-            in block &lt;unit&gt; at /home/dex/projects/raku/any-chain.raku line 310
-</code></pre><p>每当我们调用一个方法时，都会创建一个新的 Interceptor 实例，它存储了前一个方法的名称。这样我们就可以沿着方法调用链移动。由于赋值调用 STORE，我们可以将赋值转移到我们用作实际数据结构的 Hash 中。唉，检索值就不一样了，因为 Raku 不区分方法调用和 FETCH。在这里，龙比我强。我还是包含了这个一半失败的尝试，因为我对 slippy 半列表有很好的利用。这需要使用 <code>v6.e.preview</code>，让我踩到了一个 bug。可能还有更多这样的情况。所以请使用同样的，这样我们就可以在 <code>.e</code> 发布到野外之前，把所有的野兽都杀掉。</p>
+<span class="k">my</span> <span class="nv">%h2</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$o2</span> <span class="o">=</span> <span class="nf">methodify</span><span class="p">(</span><span class="nv">%h2</span><span class="o">,</span> <span class="p">:</span><span class="s">deeply</span><span class="p">);</span>
+<span class="nv">$o2</span><span class="o">.</span><span class="nf">a</span><span class="o">.</span><span class="nf">b</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%h2</span><span class="p">;</span>
+<span class="nv">$o2</span><span class="o">.</span><span class="nf">a</span><span class="o">.</span><span class="nf">b</span><span class="o">.</span><span class="nf">c</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">answer</span><span class="p">&gt;;</span>
+<span class="n">dd</span> <span class="nv">%h2</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$o2</span><span class="o">.</span><span class="nf">a</span><span class="o">.</span><span class="nf">b</span><span class="o">.</span><span class="nf">c</span><span class="p">;</span>
+<span class="c1"># OUTPUT: Hash %h2 = {:a(${:b(\(42))})}</span>
+          <span class="nb">Hash</span> <span class="nv">%h2</span> <span class="o">=</span> <span class="p">{:</span><span class="s">a</span><span class="p">(</span><span class="nv">$</span><span class="p">{:</span><span class="s">b</span><span class="p">(</span><span class="nv">$</span><span class="p">{:</span><span class="s">c</span><span class="p">(</span>\<span class="p">(&#34;</span><span class="s2">answer</span><span class="p">&#34;))})})}</span>
+          <span class="n">This</span> <span class="nb">type</span> <span class="n">cannot</span> <span class="n">unbox</span> <span class="nb">to</span> <span class="n">a</span> <span class="k">native</span> <span class="n">string:</span> <span class="n">P6opaque</span><span class="o">,</span> <span class="n">Interceptor</span>
+            <span class="nb">in</span> <span class="nb">block</span> <span class="o">&lt;</span><span class="k">unit</span><span class="o">&gt;</span> <span class="nb">at</span> <span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">dex</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="nb">raku</span><span class="o">/</span><span class="n">any-chain</span><span class="o">.</span><span class="nb">raku</span> <span class="nb">line</span> <span class="mi">310</span>
+</code></pre></div><p>每当我们调用一个方法时，都会创建一个新的 Interceptor 实例，它存储了前一个方法的名称。这样我们就可以沿着方法调用链移动。由于赋值调用 STORE，我们可以将赋值转移到我们用作实际数据结构的 Hash 中。唉，检索值就不一样了，因为 Raku 不区分方法调用和 FETCH。在这里，龙比我强。我还是包含了这个一半失败的尝试，因为我对 slippy 半列表有很好的利用。这需要使用 <code>v6.e.preview</code>，让我踩到了一个 bug。可能还有更多这样的情况。所以请使用同样的，这样我们就可以在 <code>.e</code> 发布到野外之前，把所有的野兽都杀掉。</p>
 <p>能够完全控制方法调用链将是一件好事。也许我们可以用 RakuAST 来做到这一点。</p>
 <p>有了这些已经可以工作的东西，我们可以做一些有趣的事情。那些烦人的异常总是在拖我们的后腿。我们可以用 <code>try</code> 来化解它们，但那会破坏一个方法调用链。</p>
-<pre><code class="language-raku" data-lang="raku">constant no-argument-given = Mu.new;
-sub try(Mu $obj is raw, Mu $alternate-value = no-argument-given) {
-    interceptor(my method (Mu \SELF: $name, |c) {
-        my $o = SELF;
-        my \m = $o.^lookup($name) orelse {
-            my $bt = Backtrace.new;
-            my $idx = $bt.next-interesting-index($bt.next-interesting-index + 1);
-            (X::Method::NotFound.new(:method($name), :typename($o.^name)) but role :: { method vault-backtrace { False }}).throw(Backtrace.new($idx + 1));
-        }
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">constant</span> <span class="no">no-argument-given</span> <span class="o">=</span> <span class="nb">Mu</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+<span class="k">sub</span> <span class="k">try</span><span class="p">(</span><span class="nb">Mu</span> <span class="nv">$obj</span> <span class="k">is</span> <span class="k">raw</span><span class="o">,</span> <span class="nb">Mu</span> <span class="nv">$alternate-value</span> <span class="o">=</span> <span class="n">no-argument-given</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">interceptor</span><span class="p">(</span><span class="k">my</span> <span class="k">method</span> <span class="p">(</span><span class="nb">Mu</span> \<span class="n">SELF:</span> <span class="nv">$name</span><span class="o">,</span> <span class="o">|</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$o</span> <span class="o">=</span> <span class="n">SELF</span><span class="p">;</span>
+        <span class="k">my</span> <span class="nv">\m</span> <span class="o">=</span> <span class="nv">$o</span><span class="o">.^</span><span class="nb">lookup</span><span class="p">(</span><span class="nv">$name</span><span class="p">)</span> <span class="ow">orelse</span> <span class="p">{</span>
+            <span class="k">my</span> <span class="nv">$bt</span> <span class="o">=</span> <span class="nb">Backtrace</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+            <span class="k">my</span> <span class="nv">$idx</span> <span class="o">=</span> <span class="nv">$bt</span><span class="o">.</span><span class="nb">next-interesting-index</span><span class="p">(</span><span class="nv">$bt</span><span class="o">.</span><span class="nb">next-interesting-index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="p">(</span><span class="ne">X::Method::NotFound</span><span class="o">.</span><span class="nb">new</span><span class="p">(:</span><span class="s">method</span><span class="p">(</span><span class="nv">$name</span><span class="p">)</span><span class="o">,</span> <span class="p">:</span><span class="s">typename</span><span class="p">(</span><span class="nv">$o</span><span class="o">.^</span><span class="nb">name</span><span class="p">))</span> <span class="k">but</span> <span class="k">role</span> <span class="nc">::</span> <span class="p">{</span> <span class="k">method</span> <span class="nf">vault-backtrace</span> <span class="p">{</span> <span class="nb">False</span> <span class="p">}})</span><span class="o">.</span><span class="nb">throw</span><span class="p">(</span><span class="nb">Backtrace</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="nv">$idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">));</span>
+        <span class="p">}</span>
 
-        try {
-            $o = $o.&quot;$name&quot;(|c);
-        }
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="nv">$o</span> <span class="o">=</span> <span class="nv">$o</span><span class="o">.</span><span class="p">&#34;</span><span class="nv">$name</span><span class="p">&#34;(</span><span class="o">|</span><span class="n">c</span><span class="p">);</span>
+        <span class="p">}</span>
  
-        $! ~~ Exception
-            ?? $alternate-value.WHICH eqv no-argument-given.WHICH
-                ?? $o
-                !! $alternate-value
-            !! $o
-    }).($obj)
-}
+        <span class="nv">$!</span> <span class="o">~~</span> <span class="nb">Exception</span>
+            <span class="o">??</span> <span class="nv">$alternate-value</span><span class="o">.</span><span class="nb">WHICH</span> <span class="ow">eqv</span> <span class="n">no-argument-given</span><span class="o">.</span><span class="nb">WHICH</span>
+                <span class="o">??</span> <span class="nv">$o</span>
+                <span class="o">!!</span> <span class="nv">$alternate-value</span>
+            <span class="o">!!</span> <span class="nv">$o</span>
+    <span class="p">})</span><span class="o">.</span><span class="p">(</span><span class="nv">$obj</span><span class="p">)</span>
+<span class="p">}</span>
 
-class C {
-    has $.greeting;
-    method might-throw { die &quot;Not today love!&quot; }
-    method greet { say $.greeting }
-}
+<span class="k">class</span> <span class="nc">C</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.greeting</span><span class="p">;</span>
+    <span class="k">method</span> <span class="nf">might-throw</span> <span class="p">{</span> <span class="nb">die</span> <span class="p">&#34;</span><span class="s2">Not today love!</span><span class="p">&#34;</span> <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">greet</span> <span class="p">{</span> <span class="nb">say</span> <span class="nv">$.greeting</span> <span class="p">}</span>
+<span class="p">}</span>
 
-C.new(greeting =&gt; ‚Let's make love!‘).&amp;try.might-throw.greet;
-# OUTPUT: Let's make love!
-</code></pre><p>伪方法 try 将会化解任何异常，并允许继续调用 C 语言的方法。我必须用一个特殊的值来标记没有可选的参数 <code>$alternate-value</code>，因为它实际上可能会把异常对象变成 <code>Nil</code>。</p>
+<span class="n">C</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">greeting</span> <span class="o">=&gt;</span> ‚<span class="n">Let&#39;s</span> <span class="k">make</span> <span class="n">love</span><span class="o">!</span>‘<span class="p">)</span><span class="o">.&amp;</span><span class="k">try</span><span class="o">.</span><span class="nf">might-throw</span><span class="o">.</span><span class="nf">greet</span><span class="p">;</span>
+<span class="c1"># OUTPUT: Let&#39;s make love!</span>
+</code></pre></div><p>伪方法 try 将会化解任何异常，并允许继续调用 C 语言的方法。我必须用一个特殊的值来标记没有可选的参数 <code>$alternate-value</code>，因为它实际上可能会把异常对象变成 <code>Nil</code>。</p>
 <p>我很肯定还有很多这样的小帮手在等着我们去发现。未来可能会有一个模块，希望能帮助 Raku 成为一个好的<a href="https://ftp.fau.de/fosdem/2021/D.perl/programming_lang_for_free_software.webm">编程语言</a>。</p>
 <p>原文链接: <a href="https://gfldex.wordpress.com/2021/02/17/method-ish/">https://gfldex.wordpress.com/2021/02/17/method-ish/</a></p>
 
@@ -678,9 +678,9 @@ C.new(greeting =&gt; ‚Let's make love!‘).&amp;try.might-throw.greet;
         </div>
     
     
-<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.528a9ce56371729e50605653bf72b1e933574cdb97519529bf8fab01b63f9703.js"></script>
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.0ba8e190674d48a904a724830c26f36870743a24700151e5e415dbeb9bff8db3.js"></script>
 
-<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.528a9ce56371729e50605653bf72b1e933574cdb97519529bf8fab01b63f9703.js" as="script">
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.0ba8e190674d48a904a724830c26f36870743a24700151e5e415dbeb9bff8db3.js" as="script">
 
 <script type="application/javascript">(function() {
      var $window = $(window);
@@ -848,11 +848,14 @@ C.new(greeting =&gt; ‚Let's make love!‘).&amp;try.might-throw.greet;
 
 
 
+ 
+    
+    
 
 
 
 <p class="generated no-text-decoration">
-    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo 0.79.0</span>
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/724d5db5">0.85.0</a></span>
 </p>
 
 <p>
@@ -877,7 +880,7 @@ C.new(greeting =&gt; ‚Let's make love!‘).&amp;try.might-throw.greet;
 
 
 
-<script defer src="/js/libs/fragmentions/wrapper.min.4c511209cd3786314b251d891c8da528b47a972669aa4eea416b64d4be01eee2.js"></script>
+<script defer src="/js/libs/fragmentions/wrapper.min.bb9cba24742e67e37fba39db0232882a4017cc42418c890851b702c95d7b558c.js"></script>
 
 
 
