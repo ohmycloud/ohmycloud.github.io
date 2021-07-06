@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
+  <link rel="preload" href="/lib/font-awesome/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="preload" href="/lib/font-awesome/webfonts/fa-regular-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="preload" href="/lib/font-awesome/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="preload" href="/lib/JetBrainsMono/web/woff2/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title> 使用 Spark Structured Streaming 进行行程划分 </title>
+  <title> 使用 Spark Structured Streaming 进行行程划分 | Writing about past times</title>
+  <link rel = 'canonical' href = 'https://ohmycloud.github.io/posts/sub-trip-with-structured-spark-streaming/'>
   <meta name="description" content="墨写旧时光">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="all,follow">
@@ -13,9 +18,10 @@
    field description type unit     vin 车辆唯一标识 String 辆   createTime 信号发生时间 Long 毫秒   mileage 当前里程数 Int 千米    下面一段样本数据:
 {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667565,&#39;mileage&#39;:0} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667566,&#39;mileage&#39;:1} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667567,&#39;mileage&#39;:2} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667568,&#39;mileage&#39;:3} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667569,&#39;mileage&#39;:4} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667570,&#39;mileage&#39;:5} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667571,&#39;mileage&#39;:6} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667572,&#39;mileage&#39;:7} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667573,&#39;mileage&#39;:8} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667574,&#39;mileage&#39;:9} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667575,&#39;mileage&#39;:10} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667576,&#39;mileage&#39;:11} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667577,&#39;mileage&#39;:12} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667578,&#39;mileage&#39;:13} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667579,&#39;mileage&#39;:14} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667580,&#39;mileage&#39;:15} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667581,&#39;mileage&#39;:16} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667582,&#39;mileage&#39;:17} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667583,&#39;mileage&#39;:18} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667584,&#39;mileage&#39;:19} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667585,&#39;mileage&#39;:20} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667586,&#39;mileage&#39;:21} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667587,&#39;mileage&#39;:22} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667588,&#39;mileage&#39;:23} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667589,&#39;mileage&#39;:24} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667590,&#39;mileage&#39;:25} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667591,&#39;mileage&#39;:26} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667592,&#39;mileage&#39;:27} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667593,&#39;mileage&#39;:28} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667594,&#39;mileage&#39;:29} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667595,&#39;mileage&#39;:30} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667596,&#39;mileage&#39;:31} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667597,&#39;mileage&#39;:32} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667598,&#39;mileage&#39;:33} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667599,&#39;mileage&#39;:34} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667600,&#39;mileage&#39;:35} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667601,&#39;mileage&#39;:36} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667602,&#39;mileage&#39;:37} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667603,&#39;mileage&#39;:38} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667604,&#39;mileage&#39;:39} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667605,&#39;mileage&#39;:40} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667606,&#39;mileage&#39;:41} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667607,&#39;mileage&#39;:42} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667608,&#39;mileage&#39;:43} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667609,&#39;mileage&#39;:44} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667610,&#39;mileage&#39;:45} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667611,&#39;mileage&#39;:46} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667612,&#39;mileage&#39;:47} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667613,&#39;mileage&#39;:48} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667614,&#39;mileage&#39;:49} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667615,&#39;mileage&#39;:50} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667616,&#39;mileage&#39;:51} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667617,&#39;mileage&#39;:52} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667618,&#39;mileage&#39;:53} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667619,&#39;mileage&#39;:54} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667620,&#39;mileage&#39;:55} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667621,&#39;mileage&#39;:56} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667622,&#39;mileage&#39;:57} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667623,&#39;mileage&#39;:58} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667624,&#39;mileage&#39;:59} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667745,&#39;mileage&#39;:60} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667746,&#39;mileage&#39;:61} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667747,&#39;mileage&#39;:62} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667748,&#39;mileage&#39;:63} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667749,&#39;mileage&#39;:64} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667750,&#39;mileage&#39;:65} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667751,&#39;mileage&#39;:66} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667752,&#39;mileage&#39;:67} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667753,&#39;mileage&#39;:68} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667754,&#39;mileage&#39;:69} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667755,&#39;mileage&#39;:70} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667756,&#39;mileage&#39;:71} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667757,&#39;mileage&#39;:72} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667758,&#39;mileage&#39;:73} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667759,&#39;mileage&#39;:74} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667760,&#39;mileage&#39;:75} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667761,&#39;mileage&#39;:76} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667762,&#39;mileage&#39;:77} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667763,&#39;mileage&#39;:78} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667764,&#39;mileage&#39;:79} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667765,&#39;mileage&#39;:80} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667766,&#39;mileage&#39;:81} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667767,&#39;mileage&#39;:82} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667768,&#39;mileage&#39;:83} {&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667769,&#39;mileage&#39;:84} 开车的时候, 从一个地方到另一个地方, 会有很多行程。" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://ohmycloud.github.io/posts/sub-trip-with-structured-spark-streaming/" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/sub-trip-with-structured-spark-streaming/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2019-01-05T14:15:31+00:00" />
 <meta property="article:modified_time" content="2019-01-05T14:15:31+00:00" />
+
 
   <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="使用 Spark Structured Streaming 进行行程划分"/>
@@ -28,7 +34,10 @@
     
   
   
-  <link rel="stylesheet" href="https://ohmycloud.github.io/css/style-classic.css">
+  <link rel="stylesheet" href="https://ohmycloud.github.io/css/styles.94f653e9e151e28067a7c5dbbc4600cbd5a3c721e79faaf971e523c40f3b249b8e4f20bb57810dfffa8d559ca5c140fd56eb4cd9c0853113ad08e66afdb08bdd.css" integrity="sha512-lPZT6eFR4oBnp8XbvEYAy9WjxyHnn6r5ceUjxA87JJuOTyC7V4EN//qNVZylwUD9VutM2cCFMROtCOZq/bCL3Q=="> 
+
+  
+  
   
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
@@ -42,14 +51,16 @@
   
   
   
+  
 </head>
+
 <body class="max-width mx-auto px3 ltr">
   <div class="content index py4">
 
   <div id="header-post">
   <a id="menu-icon" href="#"><i class="fas fa-bars fa-lg"></i></a>
   <a id="menu-icon-tablet" href="#"><i class="fas fa-bars fa-lg"></i></a>
-  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;" aria-label="Top of Page"><i class="fas fa-chevron-up fa-lg"></i></a>
   <span id="menu">
     <span id="nav">
       <ul>
@@ -69,25 +80,25 @@
       <ul>
         
         <li>
-          <a class="icon" href=" https://ohmycloud.github.io/posts/leap-seconds/">
+          <a class="icon" href=" https://ohmycloud.github.io/posts/leap-seconds/" aria-label="Previous">
             <i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i>
           </a>
         </li>
         
         
         <li>
-          <a class="icon" href="https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/">
+          <a class="icon" href="https://ohmycloud.github.io/posts/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/" aria-label="Next">
             <i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i>
           </a>
         </li>
         
         <li>
-          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+          <a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" aria-label="Top of Page">
             <i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i>
           </a>
         </li>
         <li>
-          <a class="icon" href="#">
+          <a class="icon" href="#" aria-label="Share">
             <i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i>
           </a>
         </li>
@@ -107,57 +118,47 @@
   
   
   <li>
-    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f">
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f" aria-label="Facebook">
       <i class="fab fa-facebook " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Twitter">
       <i class="fab fa-twitter " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Linkedin">
       <i class="fab fa-linkedin " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Pinterest">
       <i class="fab fa-pinterest " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f">
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f" aria-label="Email">
       <i class="fas fa-envelope " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Pocket">
       <i class="fab fa-get-pocket " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="reddit">
       <i class="fab fa-reddit " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
-      <i class="fab fa-stumbleupon " aria-hidden="true"></i>
-    </a>
-  </li>
-  <li>
-    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
-      <i class="fab fa-digg " aria-hidden="true"></i>
-    </a>
-  </li>
-  <li>
-    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e4%bd%bf%e7%94%a8%20Structured%20Spark%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86%20%e6%88%91%e4%bb%ac%e6%9c%89%e4%b8%80%e8%be%86%e8%bd%a6%2c%20%e8%bd%a6%e4%b8%8a%e7%9a%84%e4%bc%a0%e6%84%9f%e5%99%a8%e6%af%8f%e9%9a%94%201%20%e7%a7%92%e5%8f%91%e5%87%ba%e4%b8%80%e6%9d%a1%20JSON%20%e6%a0%bc%e5%bc%8f%e7%9a%84%e6%95%b0%e6%8d%ae%e3%80%82%e6%af%8f%e6%9d%a1%e6%95%b0%e6%8d%ae%e5%8c%85%e5%90%ab%203%20%e4%b8%aa%e5%ad%97%e6%ae%b5%ef%bc%9a%0a%20%20%20field%20description%20type%20unit%20%20%20%20%20vin%20%e8%bd%a6%e8%be%86%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%20String%20%e8%be%86%20%20%20createTime%20%e4%bf%a1%e5%8f%b7%e5%8f%91%e7%94%9f%e6%97%b6%e9%97%b4%20Long%20%e6%af%ab%e7%a7%92%20%20%20mileage%20%e5%bd%93%e5%89%8d%e9%87%8c%e7%a8%8b%e6%95%b0%20Int%20%e5%8d%83%e7%b1%b3%20%20%20%20%e4%b8%8b%e9%9d%a2%e4%b8%80%e6%ae%b5%e6%a0%b7%e6%9c%ac%e6%95%b0%e6%8d%ae%3a%0a%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667565%2c%26%2339%3bmileage%26%2339%3b%3a0%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667566%2c%26%2339%3bmileage%26%2339%3b%3a1%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667567%2c%26%2339%3bmileage%26%2339%3b%3a2%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667568%2c%26%2339%3bmileage%26%2339%3b%3a3%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667569%2c%26%2339%3bmileage%26%2339%3b%3a4%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667570%2c%26%2339%3bmileage%26%2339%3b%3a5%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667571%2c%26%2339%3bmileage%26%2339%3b%3a6%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667572%2c%26%2339%3bmileage%26%2339%3b%3a7%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667573%2c%26%2339%3bmileage%26%2339%3b%3a8%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667574%2c%26%2339%3bmileage%26%2339%3b%3a9%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667575%2c%26%2339%3bmileage%26%2339%3b%3a10%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667576%2c%26%2339%3bmileage%26%2339%3b%3a11%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667577%2c%26%2339%3bmileage%26%2339%3b%3a12%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667578%2c%26%2339%3bmileage%26%2339%3b%3a13%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667579%2c%26%2339%3bmileage%26%2339%3b%3a14%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667580%2c%26%2339%3bmileage%26%2339%3b%3a15%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667581%2c%26%2339%3bmileage%26%2339%3b%3a16%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667582%2c%26%2339%3bmileage%26%2339%3b%3a17%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667583%2c%26%2339%3bmileage%26%2339%3b%3a18%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667584%2c%26%2339%3bmileage%26%2339%3b%3a19%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667585%2c%26%2339%3bmileage%26%2339%3b%3a20%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667586%2c%26%2339%3bmileage%26%2339%3b%3a21%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667587%2c%26%2339%3bmileage%26%2339%3b%3a22%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667588%2c%26%2339%3bmileage%26%2339%3b%3a23%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667589%2c%26%2339%3bmileage%26%2339%3b%3a24%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667590%2c%26%2339%3bmileage%26%2339%3b%3a25%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667591%2c%26%2339%3bmileage%26%2339%3b%3a26%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667592%2c%26%2339%3bmileage%26%2339%3b%3a27%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667593%2c%26%2339%3bmileage%26%2339%3b%3a28%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667594%2c%26%2339%3bmileage%26%2339%3b%3a29%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667595%2c%26%2339%3bmileage%26%2339%3b%3a30%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667596%2c%26%2339%3bmileage%26%2339%3b%3a31%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667597%2c%26%2339%3bmileage%26%2339%3b%3a32%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667598%2c%26%2339%3bmileage%26%2339%3b%3a33%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667599%2c%26%2339%3bmileage%26%2339%3b%3a34%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667600%2c%26%2339%3bmileage%26%2339%3b%3a35%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667601%2c%26%2339%3bmileage%26%2339%3b%3a36%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667602%2c%26%2339%3bmileage%26%2339%3b%3a37%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667603%2c%26%2339%3bmileage%26%2339%3b%3a38%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667604%2c%26%2339%3bmileage%26%2339%3b%3a39%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667605%2c%26%2339%3bmileage%26%2339%3b%3a40%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667606%2c%26%2339%3bmileage%26%2339%3b%3a41%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667607%2c%26%2339%3bmileage%26%2339%3b%3a42%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667608%2c%26%2339%3bmileage%26%2339%3b%3a43%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667609%2c%26%2339%3bmileage%26%2339%3b%3a44%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667610%2c%26%2339%3bmileage%26%2339%3b%3a45%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667611%2c%26%2339%3bmileage%26%2339%3b%3a46%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667612%2c%26%2339%3bmileage%26%2339%3b%3a47%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667613%2c%26%2339%3bmileage%26%2339%3b%3a48%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667614%2c%26%2339%3bmileage%26%2339%3b%3a49%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667615%2c%26%2339%3bmileage%26%2339%3b%3a50%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667616%2c%26%2339%3bmileage%26%2339%3b%3a51%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667617%2c%26%2339%3bmileage%26%2339%3b%3a52%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667618%2c%26%2339%3bmileage%26%2339%3b%3a53%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667619%2c%26%2339%3bmileage%26%2339%3b%3a54%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667620%2c%26%2339%3bmileage%26%2339%3b%3a55%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667621%2c%26%2339%3bmileage%26%2339%3b%3a56%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667622%2c%26%2339%3bmileage%26%2339%3b%3a57%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667623%2c%26%2339%3bmileage%26%2339%3b%3a58%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667624%2c%26%2339%3bmileage%26%2339%3b%3a59%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667745%2c%26%2339%3bmileage%26%2339%3b%3a60%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667746%2c%26%2339%3bmileage%26%2339%3b%3a61%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667747%2c%26%2339%3bmileage%26%2339%3b%3a62%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667748%2c%26%2339%3bmileage%26%2339%3b%3a63%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667749%2c%26%2339%3bmileage%26%2339%3b%3a64%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667750%2c%26%2339%3bmileage%26%2339%3b%3a65%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667751%2c%26%2339%3bmileage%26%2339%3b%3a66%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667752%2c%26%2339%3bmileage%26%2339%3b%3a67%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667753%2c%26%2339%3bmileage%26%2339%3b%3a68%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667754%2c%26%2339%3bmileage%26%2339%3b%3a69%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667755%2c%26%2339%3bmileage%26%2339%3b%3a70%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667756%2c%26%2339%3bmileage%26%2339%3b%3a71%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667757%2c%26%2339%3bmileage%26%2339%3b%3a72%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667758%2c%26%2339%3bmileage%26%2339%3b%3a73%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667759%2c%26%2339%3bmileage%26%2339%3b%3a74%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667760%2c%26%2339%3bmileage%26%2339%3b%3a75%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667761%2c%26%2339%3bmileage%26%2339%3b%3a76%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667762%2c%26%2339%3bmileage%26%2339%3b%3a77%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667763%2c%26%2339%3bmileage%26%2339%3b%3a78%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667764%2c%26%2339%3bmileage%26%2339%3b%3a79%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667765%2c%26%2339%3bmileage%26%2339%3b%3a80%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667766%2c%26%2339%3bmileage%26%2339%3b%3a81%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667767%2c%26%2339%3bmileage%26%2339%3b%3a82%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667768%2c%26%2339%3bmileage%26%2339%3b%3a83%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667769%2c%26%2339%3bmileage%26%2339%3b%3a84%7d%20%e5%bc%80%e8%bd%a6%e7%9a%84%e6%97%b6%e5%80%99%2c%20%e4%bb%8e%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%e5%88%b0%e5%8f%a6%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%2c%20%e4%bc%9a%e6%9c%89%e5%be%88%e5%a4%9a%e8%a1%8c%e7%a8%8b%e3%80%82">
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e4%bd%bf%e7%94%a8%20Structured%20Spark%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86%20%e6%88%91%e4%bb%ac%e6%9c%89%e4%b8%80%e8%be%86%e8%bd%a6%2c%20%e8%bd%a6%e4%b8%8a%e7%9a%84%e4%bc%a0%e6%84%9f%e5%99%a8%e6%af%8f%e9%9a%94%201%20%e7%a7%92%e5%8f%91%e5%87%ba%e4%b8%80%e6%9d%a1%20JSON%20%e6%a0%bc%e5%bc%8f%e7%9a%84%e6%95%b0%e6%8d%ae%e3%80%82%e6%af%8f%e6%9d%a1%e6%95%b0%e6%8d%ae%e5%8c%85%e5%90%ab%203%20%e4%b8%aa%e5%ad%97%e6%ae%b5%ef%bc%9a%0a%20%20%20field%20description%20type%20unit%20%20%20%20%20vin%20%e8%bd%a6%e8%be%86%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%20String%20%e8%be%86%20%20%20createTime%20%e4%bf%a1%e5%8f%b7%e5%8f%91%e7%94%9f%e6%97%b6%e9%97%b4%20Long%20%e6%af%ab%e7%a7%92%20%20%20mileage%20%e5%bd%93%e5%89%8d%e9%87%8c%e7%a8%8b%e6%95%b0%20Int%20%e5%8d%83%e7%b1%b3%20%20%20%20%e4%b8%8b%e9%9d%a2%e4%b8%80%e6%ae%b5%e6%a0%b7%e6%9c%ac%e6%95%b0%e6%8d%ae%3a%0a%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667565%2c%26%2339%3bmileage%26%2339%3b%3a0%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667566%2c%26%2339%3bmileage%26%2339%3b%3a1%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667567%2c%26%2339%3bmileage%26%2339%3b%3a2%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667568%2c%26%2339%3bmileage%26%2339%3b%3a3%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667569%2c%26%2339%3bmileage%26%2339%3b%3a4%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667570%2c%26%2339%3bmileage%26%2339%3b%3a5%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667571%2c%26%2339%3bmileage%26%2339%3b%3a6%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667572%2c%26%2339%3bmileage%26%2339%3b%3a7%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667573%2c%26%2339%3bmileage%26%2339%3b%3a8%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667574%2c%26%2339%3bmileage%26%2339%3b%3a9%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667575%2c%26%2339%3bmileage%26%2339%3b%3a10%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667576%2c%26%2339%3bmileage%26%2339%3b%3a11%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667577%2c%26%2339%3bmileage%26%2339%3b%3a12%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667578%2c%26%2339%3bmileage%26%2339%3b%3a13%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667579%2c%26%2339%3bmileage%26%2339%3b%3a14%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667580%2c%26%2339%3bmileage%26%2339%3b%3a15%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667581%2c%26%2339%3bmileage%26%2339%3b%3a16%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667582%2c%26%2339%3bmileage%26%2339%3b%3a17%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667583%2c%26%2339%3bmileage%26%2339%3b%3a18%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667584%2c%26%2339%3bmileage%26%2339%3b%3a19%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667585%2c%26%2339%3bmileage%26%2339%3b%3a20%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667586%2c%26%2339%3bmileage%26%2339%3b%3a21%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667587%2c%26%2339%3bmileage%26%2339%3b%3a22%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667588%2c%26%2339%3bmileage%26%2339%3b%3a23%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667589%2c%26%2339%3bmileage%26%2339%3b%3a24%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667590%2c%26%2339%3bmileage%26%2339%3b%3a25%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667591%2c%26%2339%3bmileage%26%2339%3b%3a26%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667592%2c%26%2339%3bmileage%26%2339%3b%3a27%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667593%2c%26%2339%3bmileage%26%2339%3b%3a28%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667594%2c%26%2339%3bmileage%26%2339%3b%3a29%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667595%2c%26%2339%3bmileage%26%2339%3b%3a30%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667596%2c%26%2339%3bmileage%26%2339%3b%3a31%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667597%2c%26%2339%3bmileage%26%2339%3b%3a32%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667598%2c%26%2339%3bmileage%26%2339%3b%3a33%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667599%2c%26%2339%3bmileage%26%2339%3b%3a34%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667600%2c%26%2339%3bmileage%26%2339%3b%3a35%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667601%2c%26%2339%3bmileage%26%2339%3b%3a36%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667602%2c%26%2339%3bmileage%26%2339%3b%3a37%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667603%2c%26%2339%3bmileage%26%2339%3b%3a38%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667604%2c%26%2339%3bmileage%26%2339%3b%3a39%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667605%2c%26%2339%3bmileage%26%2339%3b%3a40%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667606%2c%26%2339%3bmileage%26%2339%3b%3a41%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667607%2c%26%2339%3bmileage%26%2339%3b%3a42%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667608%2c%26%2339%3bmileage%26%2339%3b%3a43%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667609%2c%26%2339%3bmileage%26%2339%3b%3a44%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667610%2c%26%2339%3bmileage%26%2339%3b%3a45%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667611%2c%26%2339%3bmileage%26%2339%3b%3a46%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667612%2c%26%2339%3bmileage%26%2339%3b%3a47%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667613%2c%26%2339%3bmileage%26%2339%3b%3a48%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667614%2c%26%2339%3bmileage%26%2339%3b%3a49%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667615%2c%26%2339%3bmileage%26%2339%3b%3a50%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667616%2c%26%2339%3bmileage%26%2339%3b%3a51%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667617%2c%26%2339%3bmileage%26%2339%3b%3a52%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667618%2c%26%2339%3bmileage%26%2339%3b%3a53%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667619%2c%26%2339%3bmileage%26%2339%3b%3a54%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667620%2c%26%2339%3bmileage%26%2339%3b%3a55%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667621%2c%26%2339%3bmileage%26%2339%3b%3a56%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667622%2c%26%2339%3bmileage%26%2339%3b%3a57%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667623%2c%26%2339%3bmileage%26%2339%3b%3a58%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667624%2c%26%2339%3bmileage%26%2339%3b%3a59%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667745%2c%26%2339%3bmileage%26%2339%3b%3a60%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667746%2c%26%2339%3bmileage%26%2339%3b%3a61%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667747%2c%26%2339%3bmileage%26%2339%3b%3a62%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667748%2c%26%2339%3bmileage%26%2339%3b%3a63%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667749%2c%26%2339%3bmileage%26%2339%3b%3a64%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667750%2c%26%2339%3bmileage%26%2339%3b%3a65%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667751%2c%26%2339%3bmileage%26%2339%3b%3a66%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667752%2c%26%2339%3bmileage%26%2339%3b%3a67%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667753%2c%26%2339%3bmileage%26%2339%3b%3a68%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667754%2c%26%2339%3bmileage%26%2339%3b%3a69%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667755%2c%26%2339%3bmileage%26%2339%3b%3a70%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667756%2c%26%2339%3bmileage%26%2339%3b%3a71%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667757%2c%26%2339%3bmileage%26%2339%3b%3a72%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667758%2c%26%2339%3bmileage%26%2339%3b%3a73%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667759%2c%26%2339%3bmileage%26%2339%3b%3a74%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667760%2c%26%2339%3bmileage%26%2339%3b%3a75%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667761%2c%26%2339%3bmileage%26%2339%3b%3a76%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667762%2c%26%2339%3bmileage%26%2339%3b%3a77%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667763%2c%26%2339%3bmileage%26%2339%3b%3a78%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667764%2c%26%2339%3bmileage%26%2339%3b%3a79%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667765%2c%26%2339%3bmileage%26%2339%3b%3a80%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667766%2c%26%2339%3bmileage%26%2339%3b%3a81%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667767%2c%26%2339%3bmileage%26%2339%3b%3a82%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667768%2c%26%2339%3bmileage%26%2339%3b%3a83%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667769%2c%26%2339%3bmileage%26%2339%3b%3a84%7d%20%e5%bc%80%e8%bd%a6%e7%9a%84%e6%97%b6%e5%80%99%2c%20%e4%bb%8e%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%e5%88%b0%e5%8f%a6%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%2c%20%e4%bc%9a%e6%9c%89%e5%be%88%e5%a4%9a%e8%a1%8c%e7%a8%8b%e3%80%82" aria-label="Tumblr">
       <i class="fab fa-tumblr " aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Hacker News">
       <i class="fab fa-hacker-news " aria-hidden="true"></i>
     </a>
   </li>
@@ -187,6 +188,8 @@
           <time datetime="2019-01-05 14:15:31 &#43;0000 UTC" itemprop="datePublished">2019-01-05</time>
           
         </div>
+        
+        
         
         
       </div>
@@ -227,94 +230,94 @@
 </tbody>
 </table>
 <p>下面一段样本数据:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667565,&#39;mileage&#39;:0</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667566,&#39;mileage&#39;:1</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667567,&#39;mileage&#39;:2</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667568,&#39;mileage&#39;:3</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667569,&#39;mileage&#39;:4</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667570,&#39;mileage&#39;:5</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667571,&#39;mileage&#39;:6</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667572,&#39;mileage&#39;:7</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667573,&#39;mileage&#39;:8</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667574,&#39;mileage&#39;:9</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667575,&#39;mileage&#39;:10</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667576,&#39;mileage&#39;:11</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667577,&#39;mileage&#39;:12</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667578,&#39;mileage&#39;:13</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667579,&#39;mileage&#39;:14</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667580,&#39;mileage&#39;:15</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667581,&#39;mileage&#39;:16</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667582,&#39;mileage&#39;:17</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667583,&#39;mileage&#39;:18</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667584,&#39;mileage&#39;:19</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667585,&#39;mileage&#39;:20</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667586,&#39;mileage&#39;:21</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667587,&#39;mileage&#39;:22</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667588,&#39;mileage&#39;:23</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667589,&#39;mileage&#39;:24</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667590,&#39;mileage&#39;:25</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667591,&#39;mileage&#39;:26</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667592,&#39;mileage&#39;:27</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667593,&#39;mileage&#39;:28</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667594,&#39;mileage&#39;:29</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667595,&#39;mileage&#39;:30</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667596,&#39;mileage&#39;:31</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667597,&#39;mileage&#39;:32</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667598,&#39;mileage&#39;:33</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667599,&#39;mileage&#39;:34</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667600,&#39;mileage&#39;:35</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667601,&#39;mileage&#39;:36</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667602,&#39;mileage&#39;:37</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667603,&#39;mileage&#39;:38</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667604,&#39;mileage&#39;:39</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667605,&#39;mileage&#39;:40</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667606,&#39;mileage&#39;:41</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667607,&#39;mileage&#39;:42</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667608,&#39;mileage&#39;:43</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667609,&#39;mileage&#39;:44</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667610,&#39;mileage&#39;:45</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667611,&#39;mileage&#39;:46</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667612,&#39;mileage&#39;:47</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667613,&#39;mileage&#39;:48</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667614,&#39;mileage&#39;:49</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667615,&#39;mileage&#39;:50</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667616,&#39;mileage&#39;:51</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667617,&#39;mileage&#39;:52</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667618,&#39;mileage&#39;:53</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667619,&#39;mileage&#39;:54</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667620,&#39;mileage&#39;:55</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667621,&#39;mileage&#39;:56</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667622,&#39;mileage&#39;:57</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667623,&#39;mileage&#39;:58</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667624,&#39;mileage&#39;:59</span>}
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667565,&#39;mileage&#39;:0</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667566,&#39;mileage&#39;:1</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667567,&#39;mileage&#39;:2</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667568,&#39;mileage&#39;:3</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667569,&#39;mileage&#39;:4</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667570,&#39;mileage&#39;:5</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667571,&#39;mileage&#39;:6</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667572,&#39;mileage&#39;:7</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667573,&#39;mileage&#39;:8</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667574,&#39;mileage&#39;:9</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667575,&#39;mileage&#39;:10</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667576,&#39;mileage&#39;:11</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667577,&#39;mileage&#39;:12</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667578,&#39;mileage&#39;:13</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667579,&#39;mileage&#39;:14</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667580,&#39;mileage&#39;:15</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667581,&#39;mileage&#39;:16</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667582,&#39;mileage&#39;:17</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667583,&#39;mileage&#39;:18</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667584,&#39;mileage&#39;:19</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667585,&#39;mileage&#39;:20</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667586,&#39;mileage&#39;:21</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667587,&#39;mileage&#39;:22</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667588,&#39;mileage&#39;:23</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667589,&#39;mileage&#39;:24</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667590,&#39;mileage&#39;:25</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667591,&#39;mileage&#39;:26</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667592,&#39;mileage&#39;:27</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667593,&#39;mileage&#39;:28</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667594,&#39;mileage&#39;:29</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667595,&#39;mileage&#39;:30</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667596,&#39;mileage&#39;:31</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667597,&#39;mileage&#39;:32</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667598,&#39;mileage&#39;:33</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667599,&#39;mileage&#39;:34</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667600,&#39;mileage&#39;:35</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667601,&#39;mileage&#39;:36</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667602,&#39;mileage&#39;:37</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667603,&#39;mileage&#39;:38</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667604,&#39;mileage&#39;:39</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667605,&#39;mileage&#39;:40</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667606,&#39;mileage&#39;:41</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667607,&#39;mileage&#39;:42</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667608,&#39;mileage&#39;:43</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667609,&#39;mileage&#39;:44</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667610,&#39;mileage&#39;:45</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667611,&#39;mileage&#39;:46</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667612,&#39;mileage&#39;:47</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667613,&#39;mileage&#39;:48</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667614,&#39;mileage&#39;:49</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667615,&#39;mileage&#39;:50</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667616,&#39;mileage&#39;:51</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667617,&#39;mileage&#39;:52</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667618,&#39;mileage&#39;:53</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667619,&#39;mileage&#39;:54</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667620,&#39;mileage&#39;:55</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667621,&#39;mileage&#39;:56</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667622,&#39;mileage&#39;:57</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667623,&#39;mileage&#39;:58</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667624,&#39;mileage&#39;:59</span>}
 
 
 
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667745,&#39;mileage&#39;:60</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667746,&#39;mileage&#39;:61</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667747,&#39;mileage&#39;:62</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667748,&#39;mileage&#39;:63</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667749,&#39;mileage&#39;:64</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667750,&#39;mileage&#39;:65</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667751,&#39;mileage&#39;:66</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667752,&#39;mileage&#39;:67</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667753,&#39;mileage&#39;:68</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667754,&#39;mileage&#39;:69</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667755,&#39;mileage&#39;:70</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667756,&#39;mileage&#39;:71</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667757,&#39;mileage&#39;:72</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667758,&#39;mileage&#39;:73</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667759,&#39;mileage&#39;:74</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667760,&#39;mileage&#39;:75</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667761,&#39;mileage&#39;:76</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667762,&#39;mileage&#39;:77</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667763,&#39;mileage&#39;:78</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667764,&#39;mileage&#39;:79</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667765,&#39;mileage&#39;:80</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667766,&#39;mileage&#39;:81</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667767,&#39;mileage&#39;:82</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667768,&#39;mileage&#39;:83</span>}
-{<span style="color:#960050;background-color:#1e0010">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667769,&#39;mileage&#39;:84</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667745,&#39;mileage&#39;:60</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667746,&#39;mileage&#39;:61</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667747,&#39;mileage&#39;:62</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667748,&#39;mileage&#39;:63</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667749,&#39;mileage&#39;:64</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667750,&#39;mileage&#39;:65</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667751,&#39;mileage&#39;:66</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667752,&#39;mileage&#39;:67</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667753,&#39;mileage&#39;:68</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667754,&#39;mileage&#39;:69</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667755,&#39;mileage&#39;:70</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667756,&#39;mileage&#39;:71</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667757,&#39;mileage&#39;:72</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667758,&#39;mileage&#39;:73</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667759,&#39;mileage&#39;:74</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667760,&#39;mileage&#39;:75</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667761,&#39;mileage&#39;:76</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667762,&#39;mileage&#39;:77</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667763,&#39;mileage&#39;:78</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667764,&#39;mileage&#39;:79</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667765,&#39;mileage&#39;:80</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667766,&#39;mileage&#39;:81</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667767,&#39;mileage&#39;:82</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667768,&#39;mileage&#39;:83</span>}
+{<span style="color:#a61717;background-color:#e3d2d2">&#39;vin&#39;:&#39;LSJA0000000000091&#39;,&#39;createTime&#39;:1546667769,&#39;mileage&#39;:84</span>}
 </code></pre></div><p>开车的时候, 从一个地方到另一个地方, 会有很多<strong>行程</strong>。</p>
 <p>行程是一段一段的, 比如你开车送外卖, 每次停车后都要花 5 分钟把外卖送到客户手里, 你一上午送了 3 份外卖, 那么就产生了 3 个行程。每个行程之间的时间之差至少为 5 分钟,  如果 15 分钟你还没送到, 你就得主动打电话给客户说, 对不起, 我到你楼下了, 我先点”已送达“哈。</p>
 <p>我们今天的任务就是根据传感器发送的数据划分行程。其实就是对这些数据进行分组, 同一个行程的分为一组。划分行程只需要考虑如下 3 种情况：</p>
@@ -327,338 +330,338 @@
 第二个，行程正常结束，就是俩个信号的 <strong>createTime</strong> 之差大于 5 分钟, 也就是说，自上一条信号发送之后，已经有 5 分钟没有接收到新的数据了，那么就结束上一个行程，并开始下一个行程。<br>
 第三个，行程正在进行中，俩个信号的 <strong>createTime</strong> 之差小于 5 分钟，则认为行程还在继续，只需更新行程状态即可。</p>
 <p>上面是用 <a href="https://raku.org">Raku</a> 模拟的数据, 每隔 1 秒 发送一条数据, 每隔 1 分钟”睡眠“一次, 睡眠的时候不发送数据:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#75715e"># send-data-to-socket.pl6</span>
-<span style="color:#66d9ef">sub</span> <span style="color:#a6e22e">MAIN</span>(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) {
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-perl" data-lang="perl"><span style="color:#228b22"># send-data-to-socket.pl6</span>
+<span style="color:#8b008b;font-weight:bold">sub</span> <span style="color:#008b45">MAIN</span>(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) {
 
-    <span style="color:#66d9ef">my</span> $vin <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;LSJA0000000000091&#39;</span>;
-    <span style="color:#66d9ef">my</span> $last_meter <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#8b008b;font-weight:bold">my</span> <span style="color:#00688b">$vin</span> = <span style="color:#cd5555">&#39;LSJA0000000000091&#39;</span>;
+    <span style="color:#8b008b;font-weight:bold">my</span> <span style="color:#00688b">$last_meter</span> = <span style="color:#b452cd">0</span>;
 
     react {
-        whenever IO::Socket::Async<span style="color:#f92672">.</span>listen($host, $port) <span style="color:#f92672">-&gt;</span> $conn {
+        whenever <span style="color:#008b45;text-decoration:underline">IO::Socket::</span>Async.<span style="color:#658b00">listen</span>(<span style="color:#00688b">$host</span>, <span style="color:#00688b">$port</span>) -&gt; <span style="color:#00688b">$conn</span> {
             react {
-                <span style="color:#66d9ef">my</span> Bool:D $ignore <span style="color:#f92672">=</span> True;
+                <span style="color:#8b008b;font-weight:bold">my</span> Bool:D <span style="color:#00688b">$ignore</span> = True;
 
-                whenever Supply<span style="color:#f92672">.</span>interval(<span style="color:#ae81ff">60</span>)<span style="color:#f92672">.</span>rotor(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span> <span style="color:#f92672">=&gt;</span> <span style="color:#ae81ff">1</span>) {
-                    $ignore <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>$ignore;
+                whenever Supply.interval(<span style="color:#b452cd">60</span>).rotor(<span style="color:#b452cd">1</span>, <span style="color:#b452cd">1</span> =&gt; <span style="color:#b452cd">1</span>) {
+                    <span style="color:#00688b">$ignore</span> = !<span style="color:#00688b">$ignore</span>;
                 }
 
-                whenever Supply<span style="color:#f92672">.</span>interval(<span style="color:#ae81ff">1</span>) {
-                    <span style="color:#66d9ef">next</span> <span style="color:#66d9ef">if</span> $ignore;
-                    <span style="color:#66d9ef">print</span> sprintf(<span style="color:#e6db74">&#34;\{&#39;vin&#39;:&#39;%s&#39;,&#39;createTime&#39;:%s,&#39;mileage&#39;:%s}\n&#34;</span>, $vin, DateTime<span style="color:#f92672">.</span>now<span style="color:#f92672">.</span>posix, $last_meter);
-                    $conn<span style="color:#f92672">.</span><span style="color:#66d9ef">print</span>: sprintf(<span style="color:#e6db74">&#34;\{&#39;vin&#39;:&#39;%s&#39;,&#39;createTime&#39;:%s,&#39;mileage&#39;:%s}\n&#34;</span>, $vin, DateTime<span style="color:#f92672">.</span>now<span style="color:#f92672">.</span>posix, $last_meter<span style="color:#f92672">++</span>);
+                whenever Supply.interval(<span style="color:#b452cd">1</span>) {
+                    <span style="color:#8b008b;font-weight:bold">next</span> <span style="color:#8b008b;font-weight:bold">if</span> <span style="color:#00688b">$ignore</span>;
+                    <span style="color:#8b008b;font-weight:bold">print</span> <span style="color:#658b00">sprintf</span>(<span style="color:#cd5555">&#34;\{&#39;vin&#39;:&#39;%s&#39;,&#39;createTime&#39;:%s,&#39;mileage&#39;:%s}\n&#34;</span>, <span style="color:#00688b">$vin</span>, DateTime.now.posix, <span style="color:#00688b">$last_meter</span>);
+                    <span style="color:#00688b">$conn</span>.<span style="color:#8b008b;font-weight:bold">print</span>: <span style="color:#658b00">sprintf</span>(<span style="color:#cd5555">&#34;\{&#39;vin&#39;:&#39;%s&#39;,&#39;createTime&#39;:%s,&#39;mileage&#39;:%s}\n&#34;</span>, <span style="color:#00688b">$vin</span>, DateTime.now.posix, <span style="color:#00688b">$last_meter</span>++);
                 }
 
                 whenever signal(SIGINT) {
-                    say <span style="color:#e6db74">&#34;Done.&#34;</span>;
+                    say <span style="color:#cd5555">&#34;Done.&#34;</span>;
                     done;
                 }
             }
         }
         CATCH {
             default {
-                say <span style="color:#f92672">.^</span>name, <span style="color:#e6db74">&#39;: &#39;</span>, <span style="color:#f92672">.</span>Str;
-                say <span style="color:#e6db74">&#34;handled in $?LINE&#34;</span>;
+                say .^name, <span style="color:#cd5555">&#39;: &#39;</span>, .Str;
+                say <span style="color:#cd5555">&#34;handled in $?LINE&#34;</span>;
             }
         }
     }
 }
 </code></pre></div><p>以下是使用 Structured Spark Streaming 实现的行程划分:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">package</span> ohmysummer
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#8b008b;font-weight:bold">package</span> <span style="color:#008b45;text-decoration:underline">ohmysummer</span>
 
-<span style="color:#66d9ef">import</span> com.alibaba.fastjson.JSON
-<span style="color:#66d9ef">import</span> ohmysummer.conf.SocketConfiguration
-<span style="color:#66d9ef">import</span> ohmysummer.model.SourceData
-<span style="color:#66d9ef">import</span> org.apache.spark.sql._
-<span style="color:#66d9ef">import</span> org.apache.spark.sql.streaming.<span style="color:#f92672">{</span><span style="color:#a6e22e">GroupState</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">GroupStateTimeout</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">Trigger</span><span style="color:#f92672">}</span>
-<span style="color:#66d9ef">import</span> org.apache.spark.streaming.Duration
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">com.alibaba.fastjson.JSON</span>
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">ohmysummer.conf.SocketConfiguration</span>
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">ohmysummer.model.SourceData</span>
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">org.apache.spark.sql._</span>
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">org.apache.spark.sql.streaming.</span>{<span style="color:#008b45;font-weight:bold">GroupState</span>, <span style="color:#008b45;font-weight:bold">GroupStateTimeout</span>, <span style="color:#008b45;font-weight:bold">OutputMode</span>, <span style="color:#008b45;font-weight:bold">Trigger</span>}
+<span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">org.apache.spark.streaming.Duration</span>
 
 
-<span style="color:#75715e">/**
-</span><span style="color:#75715e">  * 使用 Structured Streaming 进行行程划分
-</span><span style="color:#75715e">  * 问题：一个 sourceData 里面, 某 vin 会有俩个或俩个以上的行程吗？
-</span><span style="color:#75715e">  * 超时时间为 15 分钟, 超时则返回 TripUpdate, 并将 status 置为 2
-</span><span style="color:#75715e">  * 俩条数据之间的 createTime 之差如果大于 5 分钟, 则结束上一个行程, 并开始下一个行程
-</span><span style="color:#75715e">  * 数据每 5 秒一个微批，可知一个微批里面, 某 vin 不会出现俩个以上的行程!
-</span><span style="color:#75715e">  *
-</span><span style="color:#75715e">  * 我们测试当然不用等那么久, ProcessingTime 即微批时间我们设置为 1s
-</span><span style="color:#75715e">  * 俩条数据之间的 createTime 之差如果大于 1 分钟, 则结束上一个行程, 并开始下一个新的行程
-</span><span style="color:#75715e">  * 超时时间设置为 3 分钟
-</span><span style="color:#75715e">  */</span>
-<span style="color:#66d9ef">object</span> <span style="color:#a6e22e">SubTrip</span> <span style="color:#f92672">{</span>
+<span style="color:#228b22">/**
+</span><span style="color:#228b22">  * 使用 Structured Streaming 进行行程划分
+</span><span style="color:#228b22">  * 问题：一个 sourceData 里面, 某 vin 会有俩个或俩个以上的行程吗？
+</span><span style="color:#228b22">  * 超时时间为 15 分钟, 超时则返回 TripUpdate, 并将 status 置为 2
+</span><span style="color:#228b22">  * 俩条数据之间的 createTime 之差如果大于 5 分钟, 则结束上一个行程, 并开始下一个行程
+</span><span style="color:#228b22">  * 数据每 5 秒一个微批，可知一个微批里面, 某 vin 不会出现俩个以上的行程!
+</span><span style="color:#228b22">  *
+</span><span style="color:#228b22">  * 我们测试当然不用等那么久, ProcessingTime 即微批时间我们设置为 1s
+</span><span style="color:#228b22">  * 俩条数据之间的 createTime 之差如果大于 1 分钟, 则结束上一个行程, 并开始下一个新的行程
+</span><span style="color:#228b22">  * 超时时间设置为 3 分钟
+</span><span style="color:#228b22">  */</span>
+<span style="color:#8b008b;font-weight:bold">object</span> <span style="color:#008b45;font-weight:bold">SubTrip</span> {
 
-  <span style="color:#66d9ef">def</span> main<span style="color:#f92672">(</span>args<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Array</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#8b008b;font-weight:bold">def</span> main(args<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Array</span>[<span style="color:#00688b;font-weight:bold">String</span>])<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Unit</span> = {
 
-    <span style="color:#66d9ef">val</span> socketConf <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">SocketConfiguration</span>
-    <span style="color:#66d9ef">val</span> host <span style="color:#66d9ef">=</span> socketConf<span style="color:#f92672">.</span>host
-    <span style="color:#66d9ef">val</span> port <span style="color:#66d9ef">=</span> socketConf<span style="color:#f92672">.</span>port
+    <span style="color:#8b008b;font-weight:bold">val</span> socketConf <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#8b008b;font-weight:bold">new</span> <span style="color:#008b45;font-weight:bold">SocketConfiguration</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> host <span style="color:#8b008b;font-weight:bold">=</span> socketConf.host
+    <span style="color:#8b008b;font-weight:bold">val</span> port <span style="color:#8b008b;font-weight:bold">=</span> socketConf.port
 
-    <span style="color:#66d9ef">val</span> spark<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">SparkSession</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">SparkSession</span><span style="color:#f92672">.</span>builder
-      <span style="color:#f92672">.</span>master<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;local[2]&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>appName<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Stateful Structured Streaming&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>getOrCreate<span style="color:#f92672">()</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> spark<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">SparkSession</span> = <span style="color:#008b45;font-weight:bold">SparkSession</span>.builder
+      .master(<span style="color:#cd5555">&#34;local[2]&#34;</span>)
+      .appName(<span style="color:#cd5555">&#34;Stateful Structured Streaming&#34;</span>)
+      .getOrCreate()
 
-    spark<span style="color:#f92672">.</span>sparkContext<span style="color:#f92672">.</span>setLogLevel<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;WARN&#34;</span><span style="color:#f92672">)</span>
+    spark.sparkContext.setLogLevel(<span style="color:#cd5555">&#34;WARN&#34;</span>)
 
-    <span style="color:#66d9ef">import</span> spark.implicits._
+    <span style="color:#8b008b;font-weight:bold">import</span> <span style="color:#008b45;text-decoration:underline">spark.implicits._</span>
 
-    <span style="color:#66d9ef">val</span> ds<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Dataset</span><span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> spark<span style="color:#f92672">.</span>readStream
-      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;socket&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;host&#34;</span><span style="color:#f92672">,</span> host<span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;port&#34;</span><span style="color:#f92672">,</span> port<span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>load<span style="color:#f92672">()</span>
-      <span style="color:#f92672">.</span>as<span style="color:#f92672">[</span><span style="color:#66d9ef">String</span><span style="color:#f92672">]</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> ds<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Dataset</span>[<span style="color:#00688b;font-weight:bold">String</span>] <span style="color:#8b008b;font-weight:bold">=</span> spark.readStream
+      .format(<span style="color:#cd5555">&#34;socket&#34;</span>)
+      .option(<span style="color:#cd5555">&#34;host&#34;</span>, host)
+      .option(<span style="color:#cd5555">&#34;port&#34;</span>, port)
+      .load()
+      .as[<span style="color:#00688b;font-weight:bold">String</span>]
 
-    <span style="color:#66d9ef">val</span> events <span style="color:#66d9ef">=</span> ds<span style="color:#f92672">.</span>map <span style="color:#f92672">{</span> <span style="color:#66d9ef">case</span> line <span style="color:#66d9ef">=&gt;</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> events <span style="color:#8b008b;font-weight:bold">=</span> ds.map { <span style="color:#8b008b;font-weight:bold">case</span> line <span style="color:#8b008b;font-weight:bold">=&gt;</span>
 
-      <span style="color:#66d9ef">val</span> data       <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">JSON</span><span style="color:#f92672">.</span>parseObject<span style="color:#f92672">(</span>line<span style="color:#f92672">)</span>
-      <span style="color:#66d9ef">val</span> vin        <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getString<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;vin&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#66d9ef">val</span> createTime <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getLong<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;createTime&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#66d9ef">val</span> mileage    <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>getLong<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;mileage&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#8b008b;font-weight:bold">val</span> data       <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#008b45;font-weight:bold">JSON</span>.parseObject(line)
+      <span style="color:#8b008b;font-weight:bold">val</span> vin        <span style="color:#8b008b;font-weight:bold">=</span> data.getString(<span style="color:#cd5555">&#34;vin&#34;</span>)
+      <span style="color:#8b008b;font-weight:bold">val</span> createTime <span style="color:#8b008b;font-weight:bold">=</span> data.getLong(<span style="color:#cd5555">&#34;createTime&#34;</span>)
+      <span style="color:#8b008b;font-weight:bold">val</span> mileage    <span style="color:#8b008b;font-weight:bold">=</span> data.getLong(<span style="color:#cd5555">&#34;mileage&#34;</span>)
 
-      <span style="color:#75715e">// 将每行数据转换为 SourceData 数据源
-</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">SourceData</span><span style="color:#f92672">(</span>vin<span style="color:#f92672">,</span> createTime<span style="color:#f92672">,</span> mileage<span style="color:#f92672">)</span>
-    <span style="color:#f92672">}</span>
+      <span style="color:#228b22">// 将每行数据转换为 SourceData 数据源
+</span><span style="color:#228b22"></span>      <span style="color:#008b45;font-weight:bold">SourceData</span>(vin, createTime, mileage)
+    }
 
-    <span style="color:#66d9ef">val</span> tripIdleTimeout<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Duration</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Duration</span><span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000</span><span style="color:#f92672">)</span>  <span style="color:#75715e">// 状态闲置时长，超时时间 3 分钟
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> tripDuration<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Duration</span>    <span style="color:#f92672">=</span> <span style="color:#a6e22e">Duration</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000</span><span style="color:#f92672">)</span>  <span style="color:#75715e">// 两个行程间隔时长，1 分钟
-</span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">val</span> finish <span style="color:#66d9ef">=</span> events
-      <span style="color:#f92672">.</span>groupByKey<span style="color:#f92672">(</span>event <span style="color:#66d9ef">=&gt;</span> event<span style="color:#f92672">.</span>vin<span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>mapGroupsWithState<span style="color:#f92672">[</span><span style="color:#66d9ef">TripInfo</span>, <span style="color:#66d9ef">TripUpdate</span><span style="color:#f92672">](</span><span style="color:#a6e22e">GroupStateTimeout</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTimeTimeout</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> tripIdleTimeout<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Duration</span> = <span style="color:#008b45;font-weight:bold">Duration</span>(<span style="color:#b452cd">3</span> * <span style="color:#b452cd">60</span> * <span style="color:#b452cd">1000</span>)  <span style="color:#228b22">// 状态闲置时长，超时时间 3 分钟
+</span><span style="color:#228b22"></span>    <span style="color:#8b008b;font-weight:bold">val</span> tripDuration<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Duration</span>    = <span style="color:#008b45;font-weight:bold">Duration</span>(<span style="color:#b452cd">1</span> * <span style="color:#b452cd">60</span> * <span style="color:#b452cd">1000</span>)  <span style="color:#228b22">// 两个行程间隔时长，1 分钟
+</span><span style="color:#228b22"></span>
+    <span style="color:#8b008b;font-weight:bold">val</span> finish <span style="color:#8b008b;font-weight:bold">=</span> events
+      .groupByKey(event <span style="color:#8b008b;font-weight:bold">=&gt;</span> event.vin)
+      .mapGroupsWithState[<span style="color:#00688b;font-weight:bold">TripInfo</span>, <span style="color:#00688b;font-weight:bold">TripUpdate</span>](<span style="color:#008b45;font-weight:bold">GroupStateTimeout</span>.<span style="color:#008b45;font-weight:bold">ProcessingTimeTimeout</span>) {
 
-      <span style="color:#66d9ef">case</span> <span style="color:#f92672">(</span>vin<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> source<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Iterator</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span><span style="color:#f92672">],</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">GroupState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripInfo</span><span style="color:#f92672">])</span> <span style="color:#66d9ef">=&gt;</span>
-        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>state<span style="color:#f92672">.</span>hasTimedOut <span style="color:#f92672">&amp;&amp;</span> state<span style="color:#f92672">.</span>exists<span style="color:#f92672">)</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// 超时
-</span><span style="color:#75715e"></span>          <span style="color:#a6e22e">TripUpdate</span><span style="color:#f92672">(</span>
-            vin<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDuration<span style="color:#f92672">,</span>
-            state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDistance<span style="color:#f92672">,</span>
-            tripStatus <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0</span> <span style="color:#75715e">// 超时结束的行程
-</span><span style="color:#75715e"></span>          <span style="color:#f92672">)</span>
-        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
-          <span style="color:#75715e">// Iterator 消费一次就没有了, 下面多次用到 source 源数据, 所以要转成 Seq,
-</span><span style="color:#75715e"></span>          <span style="color:#75715e">// 否则第二个使用 source 的函数接受到的 data 就是空的了, 会报错
-</span><span style="color:#75715e"></span>          <span style="color:#66d9ef">val</span> data <span style="color:#66d9ef">=</span> source<span style="color:#f92672">.</span>toSeq
-          <span style="color:#66d9ef">var</span> lastTrip <span style="color:#66d9ef">=</span> getLastState<span style="color:#f92672">(</span>data<span style="color:#f92672">,</span> state<span style="color:#f92672">)</span> <span style="color:#75715e">// 获取该车旧的行程状态
-</span><span style="color:#75715e"></span>
-          <span style="color:#75715e">// 更新行程信息
-</span><span style="color:#75715e"></span>          <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>state<span style="color:#f92672">.</span>exists<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-            state<span style="color:#f92672">.</span>setTimeoutDuration<span style="color:#f92672">(</span>tripIdleTimeout<span style="color:#f92672">.</span>milliseconds<span style="color:#f92672">)</span>
-            <span style="color:#66d9ef">val</span> lastTripInfo <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get <span style="color:#75715e">// 获取旧的行程的状态
-</span><span style="color:#75715e"></span>
-            <span style="color:#75715e">// 找到第一个 1 分钟未上传数据的点
-</span><span style="color:#75715e"></span>            data<span style="color:#f92672">.</span>map<span style="color:#f92672">{</span> <span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>createTime <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000L</span> <span style="color:#f92672">-</span> lastTrip<span style="color:#f92672">.</span>tripEndTime <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000L</span> <span style="color:#f92672">-</span> tripDuration<span style="color:#f92672">.</span>milliseconds <span style="color:#f92672">}.</span>foreach<span style="color:#f92672">(</span>println<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">))</span>
-            <span style="color:#66d9ef">val</span> guard<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> data<span style="color:#f92672">.</span>find<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>createTime <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000L</span> <span style="color:#f92672">-</span> lastTrip<span style="color:#f92672">.</span>tripEndTime <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000L</span> <span style="color:#f92672">-</span> tripDuration<span style="color:#f92672">.</span>milliseconds <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">)</span>
+      <span style="color:#8b008b;font-weight:bold">case</span> (vin<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">String</span>, source<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Iterator</span>[<span style="color:#00688b;font-weight:bold">SourceData</span>], state<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">GroupState</span>[<span style="color:#00688b;font-weight:bold">TripInfo</span>]) <span style="color:#8b008b;font-weight:bold">=&gt;</span>
+        <span style="color:#8b008b;font-weight:bold">if</span> (state.hasTimedOut &amp;&amp; state.exists) { <span style="color:#228b22">// 超时
+</span><span style="color:#228b22"></span>          <span style="color:#008b45;font-weight:bold">TripUpdate</span>(
+            vin,
+            state.get.tripStartTime,
+            state.get.tripEndTime,
+            state.get.startMileage,
+            state.get.endMileage,
+            state.get.tripDuration,
+            state.get.tripDistance,
+            tripStatus <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#b452cd">0</span> <span style="color:#228b22">// 超时结束的行程
+</span><span style="color:#228b22"></span>          )
+        } <span style="color:#8b008b;font-weight:bold">else</span> {
+          <span style="color:#228b22">// Iterator 消费一次就没有了, 下面多次用到 source 源数据, 所以要转成 Seq,
+</span><span style="color:#228b22"></span>          <span style="color:#228b22">// 否则第二个使用 source 的函数接受到的 data 就是空的了, 会报错
+</span><span style="color:#228b22"></span>          <span style="color:#8b008b;font-weight:bold">val</span> data <span style="color:#8b008b;font-weight:bold">=</span> source.toSeq
+          <span style="color:#8b008b;font-weight:bold">var</span> lastTrip <span style="color:#8b008b;font-weight:bold">=</span> getLastState(data, state) <span style="color:#228b22">// 获取该车旧的行程状态
+</span><span style="color:#228b22"></span>
+          <span style="color:#228b22">// 更新行程信息
+</span><span style="color:#228b22"></span>          <span style="color:#8b008b;font-weight:bold">if</span> (state.exists) {
+            state.setTimeoutDuration(tripIdleTimeout.milliseconds)
+            <span style="color:#8b008b;font-weight:bold">val</span> lastTripInfo <span style="color:#8b008b;font-weight:bold">=</span> state.get <span style="color:#228b22">// 获取旧的行程的状态
+</span><span style="color:#228b22"></span>
+            <span style="color:#228b22">// 找到第一个 1 分钟未上传数据的点
+</span><span style="color:#228b22"></span>            data.map{ <span style="color:#8b008b;font-weight:bold">_</span>.createTime * <span style="color:#b452cd">1000L</span> - lastTrip.tripEndTime * <span style="color:#b452cd">1000L</span> - tripDuration.milliseconds }.foreach(println(<span style="color:#8b008b;font-weight:bold">_</span>))
+            <span style="color:#8b008b;font-weight:bold">val</span> guard<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Option</span>[<span style="color:#00688b;font-weight:bold">SourceData</span>] <span style="color:#8b008b;font-weight:bold">=</span> data.find(<span style="color:#8b008b;font-weight:bold">_</span>.createTime * <span style="color:#b452cd">1000L</span> - lastTrip.tripEndTime * <span style="color:#b452cd">1000L</span> - tripDuration.milliseconds &gt; <span style="color:#b452cd">0</span>)
 
-            guard <span style="color:#66d9ef">match</span> <span style="color:#f92672">{</span>
-              <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Some</span><span style="color:#f92672">(</span>d<span style="color:#f92672">)</span> <span style="color:#66d9ef">=&gt;</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// 划分行程
-</span><span style="color:#75715e"></span>                println<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;开始划分新的行程了： &#34;</span><span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">)</span>
-                initState<span style="color:#f92672">(</span>data<span style="color:#f92672">,</span> state<span style="color:#f92672">)</span> <span style="color:#75715e">// 初始化一个新的行程
-</span><span style="color:#75715e"></span>                println<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;初始化新的行程后： &#34;</span><span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">)</span>
+            guard <span style="color:#8b008b;font-weight:bold">match</span> {
+              <span style="color:#8b008b;font-weight:bold">case</span> <span style="color:#008b45;font-weight:bold">Some</span>(d) <span style="color:#8b008b;font-weight:bold">=&gt;</span> { <span style="color:#228b22">// 划分行程
+</span><span style="color:#228b22"></span>                println(<span style="color:#cd5555">&#34;开始划分新的行程了： &#34;</span>, state.get.tripStartTime, state.get.startMileage, state.get.tripEndTime, state.get.endMileage)
+                initState(data, state) <span style="color:#228b22">// 初始化一个新的行程
+</span><span style="color:#228b22"></span>                println(<span style="color:#cd5555">&#34;初始化新的行程后： &#34;</span>, state.get.tripStartTime, state.get.startMileage, state.get.tripEndTime, state.get.endMileage)
 
-                println<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;lastTripInfo: &#34;</span><span style="color:#f92672">,</span> lastTripInfo<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span> lastTripInfo<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">)</span>
+                println(<span style="color:#cd5555">&#34;lastTripInfo: &#34;</span>, lastTripInfo.tripStartTime, lastTripInfo.tripEndTime)
 
-                <span style="color:#a6e22e">TripUpdate</span><span style="color:#f92672">(</span>
-                  vin<span style="color:#f92672">,</span>
-                  tripStartTime <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span>
-                  tripEndTime   <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span>
-                  startMileage  <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span>
-                  endMileage    <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">,</span>
-                  tripDuration  <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>tripDuration<span style="color:#f92672">,</span>
-                  tripDistance  <span style="color:#66d9ef">=</span> lastTripInfo<span style="color:#f92672">.</span>tripDistance<span style="color:#f92672">,</span>
-                  tripStatus    <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span> <span style="color:#75715e">// 正常结束的行程
-</span><span style="color:#75715e"></span>                <span style="color:#f92672">)</span>
+                <span style="color:#008b45;font-weight:bold">TripUpdate</span>(
+                  vin,
+                  tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.tripStartTime,
+                  tripEndTime   <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.tripEndTime,
+                  startMileage  <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.startMileage,
+                  endMileage    <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.endMileage,
+                  tripDuration  <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.tripDuration,
+                  tripDistance  <span style="color:#8b008b;font-weight:bold">=</span> lastTripInfo.tripDistance,
+                  tripStatus    <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#b452cd">1</span> <span style="color:#228b22">// 正常结束的行程
+</span><span style="color:#228b22"></span>                )
 
-              <span style="color:#f92672">}</span>
+              }
 
-              <span style="color:#66d9ef">case</span> <span style="color:#66d9ef">_</span> <span style="color:#66d9ef">=&gt;</span> <span style="color:#f92672">{</span>
-                <span style="color:#66d9ef">val</span> updatedTripInfo <span style="color:#66d9ef">=</span> getUpdateState<span style="color:#f92672">(</span>data<span style="color:#f92672">,</span> state<span style="color:#f92672">)</span>
-                state<span style="color:#f92672">.</span>update<span style="color:#f92672">(</span>updatedTripInfo<span style="color:#f92672">)</span>
-                <span style="color:#a6e22e">TripUpdate</span><span style="color:#f92672">(</span>
-                  vin<span style="color:#f92672">,</span>
-                  tripStartTime <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span>
-                  tripEndTime   <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span>
-                  startMileage  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span>
-                  endMileage    <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">,</span>
-                  tripDuration  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDuration<span style="color:#f92672">,</span>
-                  tripDistance  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDistance<span style="color:#f92672">,</span>
-                  tripStatus    <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">2</span> <span style="color:#75715e">// 正常进行中的行程
-</span><span style="color:#75715e"></span>                <span style="color:#f92672">)</span>
-              <span style="color:#f92672">}</span>
-            <span style="color:#f92672">}</span>
+              <span style="color:#8b008b;font-weight:bold">case</span> <span style="color:#8b008b;font-weight:bold">_</span> <span style="color:#8b008b;font-weight:bold">=&gt;</span> {
+                <span style="color:#8b008b;font-weight:bold">val</span> updatedTripInfo <span style="color:#8b008b;font-weight:bold">=</span> getUpdateState(data, state)
+                state.update(updatedTripInfo)
+                <span style="color:#008b45;font-weight:bold">TripUpdate</span>(
+                  vin,
+                  tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripStartTime,
+                  tripEndTime   <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripEndTime,
+                  startMileage  <span style="color:#8b008b;font-weight:bold">=</span> state.get.startMileage,
+                  endMileage    <span style="color:#8b008b;font-weight:bold">=</span> state.get.endMileage,
+                  tripDuration  <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripDuration,
+                  tripDistance  <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripDistance,
+                  tripStatus    <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#b452cd">2</span> <span style="color:#228b22">// 正常进行中的行程
+</span><span style="color:#228b22"></span>                )
+              }
+            }
 
-          <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// state 不存在, 则为第一次新进来的数据, 那么初始化一个初始状态
-</span><span style="color:#75715e"></span>            initState<span style="color:#f92672">(</span>data<span style="color:#f92672">,</span> state<span style="color:#f92672">)</span>
-            println<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;initState: &#34;</span><span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">)</span>
-            println<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;current State: &#34;</span><span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">)</span>
-            <span style="color:#66d9ef">val</span> updatedTripInfo <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">TripInfo</span><span style="color:#f92672">(</span>
-              state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span>
-              state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span>
-              state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span>
-              state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage
-            <span style="color:#f92672">)</span>
+          } <span style="color:#8b008b;font-weight:bold">else</span> { <span style="color:#228b22">// state 不存在, 则为第一次新进来的数据, 那么初始化一个初始状态
+</span><span style="color:#228b22"></span>            initState(data, state)
+            println(<span style="color:#cd5555">&#34;initState: &#34;</span>, state.get.tripStartTime, state.get.startMileage, state.get.tripEndTime, state.get.endMileage)
+            println(<span style="color:#cd5555">&#34;current State: &#34;</span>, state.get.tripStartTime, state.get.startMileage, state.get.tripEndTime, state.get.endMileage)
+            <span style="color:#8b008b;font-weight:bold">val</span> updatedTripInfo <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#008b45;font-weight:bold">TripInfo</span>(
+              state.get.tripStartTime,
+              state.get.tripEndTime,
+              state.get.startMileage,
+              state.get.endMileage
+            )
 
-            state<span style="color:#f92672">.</span>update<span style="color:#f92672">(</span>updatedTripInfo<span style="color:#f92672">)</span>
+            state.update(updatedTripInfo)
 
-            <span style="color:#a6e22e">TripUpdate</span><span style="color:#f92672">(</span>
-              vin<span style="color:#f92672">,</span>
-              tripStartTime <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime<span style="color:#f92672">,</span>
-              tripEndTime   <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripEndTime<span style="color:#f92672">,</span>
-              startMileage  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage<span style="color:#f92672">,</span>
-              endMileage    <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>endMileage<span style="color:#f92672">,</span>
-              tripDuration  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDuration<span style="color:#f92672">,</span>
-              tripDistance  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripDistance<span style="color:#f92672">,</span>
-              tripStatus    <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0</span> <span style="color:#75715e">// 初始的行程
-</span><span style="color:#75715e"></span>            <span style="color:#f92672">)</span>
-          <span style="color:#f92672">}</span>
-        <span style="color:#f92672">}</span>
-    <span style="color:#f92672">}</span>
+            <span style="color:#008b45;font-weight:bold">TripUpdate</span>(
+              vin,
+              tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripStartTime,
+              tripEndTime   <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripEndTime,
+              startMileage  <span style="color:#8b008b;font-weight:bold">=</span> state.get.startMileage,
+              endMileage    <span style="color:#8b008b;font-weight:bold">=</span> state.get.endMileage,
+              tripDuration  <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripDuration,
+              tripDistance  <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripDistance,
+              tripStatus    <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#b452cd">0</span> <span style="color:#228b22">// 初始的行程
+</span><span style="color:#228b22"></span>            )
+          }
+        }
+    }
 
-    finish<span style="color:#f92672">.</span>writeStream
-      <span style="color:#f92672">.</span>outputMode<span style="color:#f92672">(</span><span style="color:#a6e22e">OutputMode</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Update</span><span style="color:#f92672">())</span>
-      <span style="color:#f92672">.</span>trigger<span style="color:#f92672">(</span><span style="color:#a6e22e">Trigger</span><span style="color:#f92672">.</span><span style="color:#a6e22e">ProcessingTime</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1 seconds&#34;</span><span style="color:#f92672">))</span>
-      <span style="color:#f92672">.</span>format<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;console&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>option<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;truncate&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;false&#34;</span><span style="color:#f92672">)</span>
-      <span style="color:#f92672">.</span>start<span style="color:#f92672">()</span>
-      <span style="color:#f92672">.</span>awaitTermination<span style="color:#f92672">()</span>
-  <span style="color:#f92672">}</span>
+    finish.writeStream
+      .outputMode(<span style="color:#008b45;font-weight:bold">OutputMode</span>.<span style="color:#008b45;font-weight:bold">Update</span>())
+      .trigger(<span style="color:#008b45;font-weight:bold">Trigger</span>.<span style="color:#008b45;font-weight:bold">ProcessingTime</span>(<span style="color:#cd5555">&#34;1 seconds&#34;</span>))
+      .format(<span style="color:#cd5555">&#34;console&#34;</span>)
+      .option(<span style="color:#cd5555">&#34;truncate&#34;</span>, <span style="color:#cd5555">&#34;false&#34;</span>)
+      .start()
+      .awaitTermination()
+  }
 
-  <span style="color:#75715e">/**
-</span><span style="color:#75715e">    * @param sourceData 新的源数据序列
-</span><span style="color:#75715e">    * @param state 旧的状态
-</span><span style="color:#75715e">    * @return
-</span><span style="color:#75715e">    */</span>
-  <span style="color:#66d9ef">def</span> getUpdateState<span style="color:#f92672">(</span>sourceData<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span><span style="color:#f92672">],</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">GroupState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripInfo</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TripInfo</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">var</span> tripStartTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-    <span style="color:#66d9ef">var</span> tripEndTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-    <span style="color:#66d9ef">var</span> startMileage<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-    <span style="color:#66d9ef">var</span> endMileage<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+  <span style="color:#228b22">/**
+</span><span style="color:#228b22">    * @param sourceData 新的源数据序列
+</span><span style="color:#228b22">    * @param state 旧的状态
+</span><span style="color:#228b22">    * @return
+</span><span style="color:#228b22">    */</span>
+  <span style="color:#8b008b;font-weight:bold">def</span> getUpdateState(sourceData<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Seq</span>[<span style="color:#00688b;font-weight:bold">SourceData</span>], state<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">GroupState</span>[<span style="color:#00688b;font-weight:bold">TripInfo</span>])<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">TripInfo</span> = {
+    <span style="color:#8b008b;font-weight:bold">var</span> tripStartTime<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = <span style="color:#b452cd">0</span>
+    <span style="color:#8b008b;font-weight:bold">var</span> tripEndTime<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = <span style="color:#b452cd">0</span>
+    <span style="color:#8b008b;font-weight:bold">var</span> startMileage<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = <span style="color:#b452cd">0</span>
+    <span style="color:#8b008b;font-weight:bold">var</span> endMileage<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = <span style="color:#b452cd">0</span>
 
-    tripStartTime <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>tripStartTime
-    startMileage  <span style="color:#66d9ef">=</span> state<span style="color:#f92672">.</span>get<span style="color:#f92672">.</span>startMileage
-    tripEndTime   <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>createTime<span style="color:#f92672">).</span>max <span style="color:#75715e">// 更新 tripEndTime
-</span><span style="color:#75715e"></span>    endMileage    <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>mileage<span style="color:#f92672">).</span>max    <span style="color:#75715e">// 更新 endMileage
-</span><span style="color:#75715e"></span>
-    <span style="color:#a6e22e">TripInfo</span><span style="color:#f92672">(</span>
-      tripStartTime<span style="color:#f92672">,</span>
-      tripEndTime<span style="color:#f92672">,</span>
-      startMileage<span style="color:#f92672">,</span>
+    tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> state.get.tripStartTime
+    startMileage  <span style="color:#8b008b;font-weight:bold">=</span> state.get.startMileage
+    tripEndTime   <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.createTime).max <span style="color:#228b22">// 更新 tripEndTime
+</span><span style="color:#228b22"></span>    endMileage    <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.mileage).max    <span style="color:#228b22">// 更新 endMileage
+</span><span style="color:#228b22"></span>
+    <span style="color:#008b45;font-weight:bold">TripInfo</span>(
+      tripStartTime,
+      tripEndTime,
+      startMileage,
       endMileage
-    <span style="color:#f92672">)</span>
-  <span style="color:#f92672">}</span>
+    )
+  }
 
-  <span style="color:#75715e">/**
-</span><span style="color:#75715e">    * 获取上一个行程的状态
-</span><span style="color:#75715e">    * @param sourceData 新摄入的源数据序列
-</span><span style="color:#75715e">    * @param state 内存中上一个行程的状态
-</span><span style="color:#75715e">    * @return 刷新后的行程信息
-</span><span style="color:#75715e">    */</span>
-  <span style="color:#66d9ef">def</span> getLastState<span style="color:#f92672">(</span>sourceData<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span><span style="color:#f92672">],</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">GroupState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripInfo</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TripInfo</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>state<span style="color:#f92672">.</span>exists<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-      state<span style="color:#f92672">.</span>get
-    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span> <span style="color:#75715e">// 如果状态不存在, 则 sourceData 是新的源数据
-</span><span style="color:#75715e"></span>
-      <span style="color:#66d9ef">val</span> tripStartTime <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>createTime<span style="color:#f92672">).</span>min
-      <span style="color:#66d9ef">val</span> startMileage  <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>mileage<span style="color:#f92672">).</span>min
+  <span style="color:#228b22">/**
+</span><span style="color:#228b22">    * 获取上一个行程的状态
+</span><span style="color:#228b22">    * @param sourceData 新摄入的源数据序列
+</span><span style="color:#228b22">    * @param state 内存中上一个行程的状态
+</span><span style="color:#228b22">    * @return 刷新后的行程信息
+</span><span style="color:#228b22">    */</span>
+  <span style="color:#8b008b;font-weight:bold">def</span> getLastState(sourceData<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Seq</span>[<span style="color:#00688b;font-weight:bold">SourceData</span>], state<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">GroupState</span>[<span style="color:#00688b;font-weight:bold">TripInfo</span>])<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">TripInfo</span> = {
+    <span style="color:#8b008b;font-weight:bold">if</span> (state.exists) {
+      state.get
+    } <span style="color:#8b008b;font-weight:bold">else</span> { <span style="color:#228b22">// 如果状态不存在, 则 sourceData 是新的源数据
+</span><span style="color:#228b22"></span>
+      <span style="color:#8b008b;font-weight:bold">val</span> tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.createTime).min
+      <span style="color:#8b008b;font-weight:bold">val</span> startMileage  <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.mileage).min
 
-      <span style="color:#a6e22e">TripInfo</span><span style="color:#f92672">(</span>
-        tripStartTime<span style="color:#f92672">,</span>
-        tripEndTime <span style="color:#66d9ef">=</span> tripStartTime<span style="color:#f92672">,</span> <span style="color:#75715e">// 将新的源数据序列中的 createTime 最小值作为行程开始时间
-</span><span style="color:#75715e"></span>        startMileage<span style="color:#f92672">,</span>
-        endMileage <span style="color:#66d9ef">=</span> startMileage    <span style="color:#75715e">// 将新的源数据序列中的 mileage 最小值作为行程开始里程
-</span><span style="color:#75715e"></span>      <span style="color:#f92672">)</span>
-    <span style="color:#f92672">}</span>
-  <span style="color:#f92672">}</span>
+      <span style="color:#008b45;font-weight:bold">TripInfo</span>(
+        tripStartTime,
+        tripEndTime <span style="color:#8b008b;font-weight:bold">=</span> tripStartTime, <span style="color:#228b22">// 将新的源数据序列中的 createTime 最小值作为行程开始时间
+</span><span style="color:#228b22"></span>        startMileage,
+        endMileage <span style="color:#8b008b;font-weight:bold">=</span> startMileage    <span style="color:#228b22">// 将新的源数据序列中的 mileage 最小值作为行程开始里程
+</span><span style="color:#228b22"></span>      )
+    }
+  }
 
-  <span style="color:#75715e">/**
-</span><span style="color:#75715e">    * 初始化下一个行程
-</span><span style="color:#75715e">    * @param sourceData 新的源数据序列
-</span><span style="color:#75715e">    * @param state 内存中的旧的 state
-</span><span style="color:#75715e">    */</span>
-  <span style="color:#66d9ef">def</span> initState<span style="color:#f92672">(</span>sourceData<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SourceData</span><span style="color:#f92672">],</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">GroupState</span><span style="color:#f92672">[</span><span style="color:#66d9ef">TripInfo</span><span style="color:#f92672">])</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Unit</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+  <span style="color:#228b22">/**
+</span><span style="color:#228b22">    * 初始化下一个行程
+</span><span style="color:#228b22">    * @param sourceData 新的源数据序列
+</span><span style="color:#228b22">    * @param state 内存中的旧的 state
+</span><span style="color:#228b22">    */</span>
+  <span style="color:#8b008b;font-weight:bold">def</span> initState(sourceData<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Seq</span>[<span style="color:#00688b;font-weight:bold">SourceData</span>], state<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">GroupState</span>[<span style="color:#00688b;font-weight:bold">TripInfo</span>])<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Unit</span> = {
 
-    <span style="color:#66d9ef">val</span> tripStartTime <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>createTime<span style="color:#f92672">).</span>min
-    <span style="color:#66d9ef">val</span> startMileage  <span style="color:#66d9ef">=</span> sourceData<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>mileage<span style="color:#f92672">).</span>min
+    <span style="color:#8b008b;font-weight:bold">val</span> tripStartTime <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.createTime).min
+    <span style="color:#8b008b;font-weight:bold">val</span> startMileage  <span style="color:#8b008b;font-weight:bold">=</span> sourceData.map(<span style="color:#8b008b;font-weight:bold">_</span>.mileage).min
 
-    <span style="color:#66d9ef">val</span> initTripInfo <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">TripInfo</span><span style="color:#f92672">(</span>
-      tripStartTime<span style="color:#f92672">,</span>
-      tripEndTime <span style="color:#66d9ef">=</span> tripStartTime<span style="color:#f92672">,</span>
-      startMileage<span style="color:#f92672">,</span>
-      endMileage <span style="color:#66d9ef">=</span> startMileage
-    <span style="color:#f92672">)</span>
-    state<span style="color:#f92672">.</span>update<span style="color:#f92672">(</span>initTripInfo<span style="color:#f92672">)</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+    <span style="color:#8b008b;font-weight:bold">val</span> initTripInfo <span style="color:#8b008b;font-weight:bold">=</span> <span style="color:#008b45;font-weight:bold">TripInfo</span>(
+      tripStartTime,
+      tripEndTime <span style="color:#8b008b;font-weight:bold">=</span> tripStartTime,
+      startMileage,
+      endMileage <span style="color:#8b008b;font-weight:bold">=</span> startMileage
+    )
+    state.update(initTripInfo)
+  }
+}
 
 
-<span style="color:#75715e">/**
-</span><span style="color:#75715e">  * 行程信息
-</span><span style="color:#75715e">  * @param tripStartTime 行程开始时间
-</span><span style="color:#75715e">  * @param tripEndTime   行程结束时间
-</span><span style="color:#75715e">  * @param startMileage  开始里程数
-</span><span style="color:#75715e">  * @param endMileage    结束里程数
-</span><span style="color:#75715e">  */</span>
-<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TripInfo</span><span style="color:#f92672">(</span>
-    <span style="color:#66d9ef">var</span> tripStartTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripEndTime<span style="color:#66d9ef">:</span>   <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> startMileage<span style="color:#66d9ef">:</span>  <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> endMileage<span style="color:#66d9ef">:</span>    <span style="color:#66d9ef">Long</span>
-<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">def</span> tripDuration<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> tripEndTime <span style="color:#f92672">-</span> tripStartTime
-  <span style="color:#66d9ef">def</span> tripDistance<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span> <span style="color:#f92672">=</span> endMileage  <span style="color:#f92672">-</span> startMileage
-<span style="color:#f92672">}</span>
+<span style="color:#228b22">/**
+</span><span style="color:#228b22">  * 行程信息
+</span><span style="color:#228b22">  * @param tripStartTime 行程开始时间
+</span><span style="color:#228b22">  * @param tripEndTime   行程结束时间
+</span><span style="color:#228b22">  * @param startMileage  开始里程数
+</span><span style="color:#228b22">  * @param endMileage    结束里程数
+</span><span style="color:#228b22">  */</span>
+<span style="color:#8b008b;font-weight:bold">case</span> <span style="color:#8b008b;font-weight:bold">class</span> <span style="color:#008b45;font-weight:bold">TripInfo</span>(
+    <span style="color:#8b008b;font-weight:bold">var</span> tripStartTime<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripEndTime<span style="color:#8b008b;font-weight:bold">:</span>   <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> startMileage<span style="color:#8b008b;font-weight:bold">:</span>  <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> endMileage<span style="color:#8b008b;font-weight:bold">:</span>    <span style="color:#00688b;font-weight:bold">Long</span>
+) {
+  <span style="color:#8b008b;font-weight:bold">def</span> tripDuration<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = tripEndTime - tripStartTime
+  <span style="color:#8b008b;font-weight:bold">def</span> tripDistance<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span> = endMileage  - startMileage
+}
 
-<span style="color:#75715e">/**
-</span><span style="color:#75715e">  * 更新后的行程
-</span><span style="color:#75715e">  * @param vin           车架号
-</span><span style="color:#75715e">  * @param tripStartTime 行程开始时间
-</span><span style="color:#75715e">  * @param tripEndTime   行程结束时间
-</span><span style="color:#75715e">  * @param startMileage  开始里程数
-</span><span style="color:#75715e">  * @param endMileage    结束里程数
-</span><span style="color:#75715e">  * @param tripDuration  行驶时长
-</span><span style="color:#75715e">  * @param tripDistance  行驶距离
-</span><span style="color:#75715e">  * @param tripStatus    行程状态
-</span><span style="color:#75715e">  */</span>
-<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TripUpdate</span><span style="color:#f92672">(</span>
-    vin<span style="color:#66d9ef">:</span>               <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripStartTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripEndTime<span style="color:#66d9ef">:</span>   <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> startMileage<span style="color:#66d9ef">:</span>  <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> endMileage<span style="color:#66d9ef">:</span>    <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripDuration<span style="color:#66d9ef">:</span>  <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripDistance<span style="color:#66d9ef">:</span>  <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-    <span style="color:#66d9ef">var</span> tripStatus<span style="color:#66d9ef">:</span>    <span style="color:#66d9ef">Int</span>
-<span style="color:#f92672">)</span>
+<span style="color:#228b22">/**
+</span><span style="color:#228b22">  * 更新后的行程
+</span><span style="color:#228b22">  * @param vin           车架号
+</span><span style="color:#228b22">  * @param tripStartTime 行程开始时间
+</span><span style="color:#228b22">  * @param tripEndTime   行程结束时间
+</span><span style="color:#228b22">  * @param startMileage  开始里程数
+</span><span style="color:#228b22">  * @param endMileage    结束里程数
+</span><span style="color:#228b22">  * @param tripDuration  行驶时长
+</span><span style="color:#228b22">  * @param tripDistance  行驶距离
+</span><span style="color:#228b22">  * @param tripStatus    行程状态
+</span><span style="color:#228b22">  */</span>
+<span style="color:#8b008b;font-weight:bold">case</span> <span style="color:#8b008b;font-weight:bold">class</span> <span style="color:#008b45;font-weight:bold">TripUpdate</span>(
+    vin<span style="color:#8b008b;font-weight:bold">:</span>               <span style="color:#00688b;font-weight:bold">String</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripStartTime<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripEndTime<span style="color:#8b008b;font-weight:bold">:</span>   <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> startMileage<span style="color:#8b008b;font-weight:bold">:</span>  <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> endMileage<span style="color:#8b008b;font-weight:bold">:</span>    <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripDuration<span style="color:#8b008b;font-weight:bold">:</span>  <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripDistance<span style="color:#8b008b;font-weight:bold">:</span>  <span style="color:#00688b;font-weight:bold">Long</span>,
+    <span style="color:#8b008b;font-weight:bold">var</span> tripStatus<span style="color:#8b008b;font-weight:bold">:</span>    <span style="color:#00688b;font-weight:bold">Int</span>
+)
 </code></pre></div><p><strong>SourceData</strong> 是一个 case class:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#75715e">/**
-</span><span style="color:#75715e">  * 数据源
-</span><span style="color:#75715e">  * @param vin        车架号
-</span><span style="color:#75715e">  * @param createTime 信号发生时间
-</span><span style="color:#75715e">  * @param mileage    当前里程
-</span><span style="color:#75715e">  */</span>
-<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SourceData</span> <span style="color:#f92672">(</span>
-   vin<span style="color:#66d9ef">:</span>        <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span>
-   createTime<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Long</span><span style="color:#f92672">,</span>
-   mileage<span style="color:#66d9ef">:</span>    <span style="color:#66d9ef">Long</span>
-<span style="color:#f92672">)</span>
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#228b22">/**
+</span><span style="color:#228b22">  * 数据源
+</span><span style="color:#228b22">  * @param vin        车架号
+</span><span style="color:#228b22">  * @param createTime 信号发生时间
+</span><span style="color:#228b22">  * @param mileage    当前里程
+</span><span style="color:#228b22">  */</span>
+<span style="color:#8b008b;font-weight:bold">case</span> <span style="color:#8b008b;font-weight:bold">class</span> <span style="color:#008b45;font-weight:bold">SourceData</span> (
+   vin<span style="color:#8b008b;font-weight:bold">:</span>        <span style="color:#00688b;font-weight:bold">String</span>,
+   createTime<span style="color:#8b008b;font-weight:bold">:</span> <span style="color:#00688b;font-weight:bold">Long</span>,
+   mileage<span style="color:#8b008b;font-weight:bold">:</span>    <span style="color:#00688b;font-weight:bold">Long</span>
+)
 </code></pre></div><p>和<a href="https://ohmycloud.github.io/2018/11/18/Send-Data-To-Socket/">之前</a>一样, 先执行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">raku send-data-to-socket.pl6
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">raku send-data-to-socket.pl6
 </code></pre></div><p>再启动该 structured spark streaming 程序:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#75715e">#!/bin/sh
-</span><span style="color:#75715e"></span>
-spark-submit <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --class ohmysummer.SubTrip <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --master local<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --deploy-mode client <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --driver-memory 2g <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --driver-cores <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --executor-memory 2g <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --executor-cores <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --num-executors <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  target/socket-structured-streaming-1.0-SNAPSHOT.jar
+<div class="highlight"><pre style="background-color:#eed;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#1e889b">#!/bin/sh
+</span><span style="color:#1e889b"></span>
+spark-submit <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --class ohmysummer.SubTrip <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --master local[2] <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --deploy-mode client <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --driver-memory 2g <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --driver-cores <span style="color:#b452cd">2</span> <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --executor-memory 2g <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --executor-cores <span style="color:#b452cd">2</span> <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  --num-executors <span style="color:#b452cd">4</span> <span style="color:#cd5555">\
+</span><span style="color:#cd5555"></span>  target/socket-structured-streaming-1.0-SNAPSHOT.jar
 </code></pre></div><p>打印的日志如下:</p>
 <pre><code>2019-01-05 14:11:45 WARN  ProcessingTimeExecutor:66 - Current batch is falling behind. The trigger interval is 1000 milliseconds, but spent 1676 milliseconds
 61000
@@ -744,57 +747,47 @@ Batch: 112
   
   
   <li>
-    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f">
+    <a class="icon" href="http://www.facebook.com/sharer.php?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f" aria-label="Facebook">
       <i class="fab fa-facebook fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://twitter.com/share?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&text=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Twitter">
       <i class="fab fa-twitter fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="http://www.linkedin.com/shareArticle?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Linkedin">
       <i class="fab fa-linkedin fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://pinterest.com/pin/create/bookmarklet/?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&is_video=false&description=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Pinterest">
       <i class="fab fa-pinterest fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f">
+    <a class="icon" href="mailto:?subject=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&body=Check out this article: https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f" aria-label="Email">
       <i class="fas fa-envelope fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://getpocket.com/save?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Pocket">
       <i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="http://reddit.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="reddit">
       <i class="fab fa-reddit fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="http://www.stumbleupon.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
-      <i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i>
-    </a>
-  </li>
-  <li>
-    <a class="icon" href="http://digg.com/submit?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&title=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
-      <i class="fab fa-digg fa-lg" aria-hidden="true"></i>
-    </a>
-  </li>
-  <li>
-    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e4%bd%bf%e7%94%a8%20Structured%20Spark%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86%20%e6%88%91%e4%bb%ac%e6%9c%89%e4%b8%80%e8%be%86%e8%bd%a6%2c%20%e8%bd%a6%e4%b8%8a%e7%9a%84%e4%bc%a0%e6%84%9f%e5%99%a8%e6%af%8f%e9%9a%94%201%20%e7%a7%92%e5%8f%91%e5%87%ba%e4%b8%80%e6%9d%a1%20JSON%20%e6%a0%bc%e5%bc%8f%e7%9a%84%e6%95%b0%e6%8d%ae%e3%80%82%e6%af%8f%e6%9d%a1%e6%95%b0%e6%8d%ae%e5%8c%85%e5%90%ab%203%20%e4%b8%aa%e5%ad%97%e6%ae%b5%ef%bc%9a%0a%20%20%20field%20description%20type%20unit%20%20%20%20%20vin%20%e8%bd%a6%e8%be%86%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%20String%20%e8%be%86%20%20%20createTime%20%e4%bf%a1%e5%8f%b7%e5%8f%91%e7%94%9f%e6%97%b6%e9%97%b4%20Long%20%e6%af%ab%e7%a7%92%20%20%20mileage%20%e5%bd%93%e5%89%8d%e9%87%8c%e7%a8%8b%e6%95%b0%20Int%20%e5%8d%83%e7%b1%b3%20%20%20%20%e4%b8%8b%e9%9d%a2%e4%b8%80%e6%ae%b5%e6%a0%b7%e6%9c%ac%e6%95%b0%e6%8d%ae%3a%0a%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667565%2c%26%2339%3bmileage%26%2339%3b%3a0%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667566%2c%26%2339%3bmileage%26%2339%3b%3a1%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667567%2c%26%2339%3bmileage%26%2339%3b%3a2%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667568%2c%26%2339%3bmileage%26%2339%3b%3a3%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667569%2c%26%2339%3bmileage%26%2339%3b%3a4%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667570%2c%26%2339%3bmileage%26%2339%3b%3a5%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667571%2c%26%2339%3bmileage%26%2339%3b%3a6%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667572%2c%26%2339%3bmileage%26%2339%3b%3a7%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667573%2c%26%2339%3bmileage%26%2339%3b%3a8%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667574%2c%26%2339%3bmileage%26%2339%3b%3a9%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667575%2c%26%2339%3bmileage%26%2339%3b%3a10%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667576%2c%26%2339%3bmileage%26%2339%3b%3a11%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667577%2c%26%2339%3bmileage%26%2339%3b%3a12%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667578%2c%26%2339%3bmileage%26%2339%3b%3a13%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667579%2c%26%2339%3bmileage%26%2339%3b%3a14%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667580%2c%26%2339%3bmileage%26%2339%3b%3a15%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667581%2c%26%2339%3bmileage%26%2339%3b%3a16%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667582%2c%26%2339%3bmileage%26%2339%3b%3a17%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667583%2c%26%2339%3bmileage%26%2339%3b%3a18%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667584%2c%26%2339%3bmileage%26%2339%3b%3a19%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667585%2c%26%2339%3bmileage%26%2339%3b%3a20%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667586%2c%26%2339%3bmileage%26%2339%3b%3a21%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667587%2c%26%2339%3bmileage%26%2339%3b%3a22%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667588%2c%26%2339%3bmileage%26%2339%3b%3a23%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667589%2c%26%2339%3bmileage%26%2339%3b%3a24%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667590%2c%26%2339%3bmileage%26%2339%3b%3a25%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667591%2c%26%2339%3bmileage%26%2339%3b%3a26%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667592%2c%26%2339%3bmileage%26%2339%3b%3a27%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667593%2c%26%2339%3bmileage%26%2339%3b%3a28%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667594%2c%26%2339%3bmileage%26%2339%3b%3a29%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667595%2c%26%2339%3bmileage%26%2339%3b%3a30%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667596%2c%26%2339%3bmileage%26%2339%3b%3a31%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667597%2c%26%2339%3bmileage%26%2339%3b%3a32%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667598%2c%26%2339%3bmileage%26%2339%3b%3a33%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667599%2c%26%2339%3bmileage%26%2339%3b%3a34%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667600%2c%26%2339%3bmileage%26%2339%3b%3a35%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667601%2c%26%2339%3bmileage%26%2339%3b%3a36%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667602%2c%26%2339%3bmileage%26%2339%3b%3a37%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667603%2c%26%2339%3bmileage%26%2339%3b%3a38%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667604%2c%26%2339%3bmileage%26%2339%3b%3a39%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667605%2c%26%2339%3bmileage%26%2339%3b%3a40%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667606%2c%26%2339%3bmileage%26%2339%3b%3a41%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667607%2c%26%2339%3bmileage%26%2339%3b%3a42%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667608%2c%26%2339%3bmileage%26%2339%3b%3a43%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667609%2c%26%2339%3bmileage%26%2339%3b%3a44%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667610%2c%26%2339%3bmileage%26%2339%3b%3a45%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667611%2c%26%2339%3bmileage%26%2339%3b%3a46%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667612%2c%26%2339%3bmileage%26%2339%3b%3a47%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667613%2c%26%2339%3bmileage%26%2339%3b%3a48%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667614%2c%26%2339%3bmileage%26%2339%3b%3a49%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667615%2c%26%2339%3bmileage%26%2339%3b%3a50%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667616%2c%26%2339%3bmileage%26%2339%3b%3a51%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667617%2c%26%2339%3bmileage%26%2339%3b%3a52%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667618%2c%26%2339%3bmileage%26%2339%3b%3a53%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667619%2c%26%2339%3bmileage%26%2339%3b%3a54%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667620%2c%26%2339%3bmileage%26%2339%3b%3a55%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667621%2c%26%2339%3bmileage%26%2339%3b%3a56%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667622%2c%26%2339%3bmileage%26%2339%3b%3a57%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667623%2c%26%2339%3bmileage%26%2339%3b%3a58%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667624%2c%26%2339%3bmileage%26%2339%3b%3a59%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667745%2c%26%2339%3bmileage%26%2339%3b%3a60%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667746%2c%26%2339%3bmileage%26%2339%3b%3a61%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667747%2c%26%2339%3bmileage%26%2339%3b%3a62%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667748%2c%26%2339%3bmileage%26%2339%3b%3a63%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667749%2c%26%2339%3bmileage%26%2339%3b%3a64%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667750%2c%26%2339%3bmileage%26%2339%3b%3a65%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667751%2c%26%2339%3bmileage%26%2339%3b%3a66%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667752%2c%26%2339%3bmileage%26%2339%3b%3a67%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667753%2c%26%2339%3bmileage%26%2339%3b%3a68%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667754%2c%26%2339%3bmileage%26%2339%3b%3a69%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667755%2c%26%2339%3bmileage%26%2339%3b%3a70%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667756%2c%26%2339%3bmileage%26%2339%3b%3a71%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667757%2c%26%2339%3bmileage%26%2339%3b%3a72%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667758%2c%26%2339%3bmileage%26%2339%3b%3a73%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667759%2c%26%2339%3bmileage%26%2339%3b%3a74%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667760%2c%26%2339%3bmileage%26%2339%3b%3a75%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667761%2c%26%2339%3bmileage%26%2339%3b%3a76%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667762%2c%26%2339%3bmileage%26%2339%3b%3a77%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667763%2c%26%2339%3bmileage%26%2339%3b%3a78%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667764%2c%26%2339%3bmileage%26%2339%3b%3a79%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667765%2c%26%2339%3bmileage%26%2339%3b%3a80%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667766%2c%26%2339%3bmileage%26%2339%3b%3a81%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667767%2c%26%2339%3bmileage%26%2339%3b%3a82%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667768%2c%26%2339%3bmileage%26%2339%3b%3a83%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667769%2c%26%2339%3bmileage%26%2339%3b%3a84%7d%20%e5%bc%80%e8%bd%a6%e7%9a%84%e6%97%b6%e5%80%99%2c%20%e4%bb%8e%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%e5%88%b0%e5%8f%a6%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%2c%20%e4%bc%9a%e6%9c%89%e5%be%88%e5%a4%9a%e8%a1%8c%e7%a8%8b%e3%80%82">
+    <a class="icon" href="http://www.tumblr.com/share/link?url=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&name=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86&description=%e4%bd%bf%e7%94%a8%20Structured%20Spark%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86%20%e6%88%91%e4%bb%ac%e6%9c%89%e4%b8%80%e8%be%86%e8%bd%a6%2c%20%e8%bd%a6%e4%b8%8a%e7%9a%84%e4%bc%a0%e6%84%9f%e5%99%a8%e6%af%8f%e9%9a%94%201%20%e7%a7%92%e5%8f%91%e5%87%ba%e4%b8%80%e6%9d%a1%20JSON%20%e6%a0%bc%e5%bc%8f%e7%9a%84%e6%95%b0%e6%8d%ae%e3%80%82%e6%af%8f%e6%9d%a1%e6%95%b0%e6%8d%ae%e5%8c%85%e5%90%ab%203%20%e4%b8%aa%e5%ad%97%e6%ae%b5%ef%bc%9a%0a%20%20%20field%20description%20type%20unit%20%20%20%20%20vin%20%e8%bd%a6%e8%be%86%e5%94%af%e4%b8%80%e6%a0%87%e8%af%86%20String%20%e8%be%86%20%20%20createTime%20%e4%bf%a1%e5%8f%b7%e5%8f%91%e7%94%9f%e6%97%b6%e9%97%b4%20Long%20%e6%af%ab%e7%a7%92%20%20%20mileage%20%e5%bd%93%e5%89%8d%e9%87%8c%e7%a8%8b%e6%95%b0%20Int%20%e5%8d%83%e7%b1%b3%20%20%20%20%e4%b8%8b%e9%9d%a2%e4%b8%80%e6%ae%b5%e6%a0%b7%e6%9c%ac%e6%95%b0%e6%8d%ae%3a%0a%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667565%2c%26%2339%3bmileage%26%2339%3b%3a0%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667566%2c%26%2339%3bmileage%26%2339%3b%3a1%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667567%2c%26%2339%3bmileage%26%2339%3b%3a2%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667568%2c%26%2339%3bmileage%26%2339%3b%3a3%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667569%2c%26%2339%3bmileage%26%2339%3b%3a4%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667570%2c%26%2339%3bmileage%26%2339%3b%3a5%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667571%2c%26%2339%3bmileage%26%2339%3b%3a6%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667572%2c%26%2339%3bmileage%26%2339%3b%3a7%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667573%2c%26%2339%3bmileage%26%2339%3b%3a8%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667574%2c%26%2339%3bmileage%26%2339%3b%3a9%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667575%2c%26%2339%3bmileage%26%2339%3b%3a10%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667576%2c%26%2339%3bmileage%26%2339%3b%3a11%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667577%2c%26%2339%3bmileage%26%2339%3b%3a12%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667578%2c%26%2339%3bmileage%26%2339%3b%3a13%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667579%2c%26%2339%3bmileage%26%2339%3b%3a14%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667580%2c%26%2339%3bmileage%26%2339%3b%3a15%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667581%2c%26%2339%3bmileage%26%2339%3b%3a16%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667582%2c%26%2339%3bmileage%26%2339%3b%3a17%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667583%2c%26%2339%3bmileage%26%2339%3b%3a18%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667584%2c%26%2339%3bmileage%26%2339%3b%3a19%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667585%2c%26%2339%3bmileage%26%2339%3b%3a20%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667586%2c%26%2339%3bmileage%26%2339%3b%3a21%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667587%2c%26%2339%3bmileage%26%2339%3b%3a22%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667588%2c%26%2339%3bmileage%26%2339%3b%3a23%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667589%2c%26%2339%3bmileage%26%2339%3b%3a24%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667590%2c%26%2339%3bmileage%26%2339%3b%3a25%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667591%2c%26%2339%3bmileage%26%2339%3b%3a26%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667592%2c%26%2339%3bmileage%26%2339%3b%3a27%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667593%2c%26%2339%3bmileage%26%2339%3b%3a28%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667594%2c%26%2339%3bmileage%26%2339%3b%3a29%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667595%2c%26%2339%3bmileage%26%2339%3b%3a30%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667596%2c%26%2339%3bmileage%26%2339%3b%3a31%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667597%2c%26%2339%3bmileage%26%2339%3b%3a32%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667598%2c%26%2339%3bmileage%26%2339%3b%3a33%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667599%2c%26%2339%3bmileage%26%2339%3b%3a34%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667600%2c%26%2339%3bmileage%26%2339%3b%3a35%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667601%2c%26%2339%3bmileage%26%2339%3b%3a36%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667602%2c%26%2339%3bmileage%26%2339%3b%3a37%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667603%2c%26%2339%3bmileage%26%2339%3b%3a38%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667604%2c%26%2339%3bmileage%26%2339%3b%3a39%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667605%2c%26%2339%3bmileage%26%2339%3b%3a40%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667606%2c%26%2339%3bmileage%26%2339%3b%3a41%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667607%2c%26%2339%3bmileage%26%2339%3b%3a42%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667608%2c%26%2339%3bmileage%26%2339%3b%3a43%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667609%2c%26%2339%3bmileage%26%2339%3b%3a44%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667610%2c%26%2339%3bmileage%26%2339%3b%3a45%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667611%2c%26%2339%3bmileage%26%2339%3b%3a46%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667612%2c%26%2339%3bmileage%26%2339%3b%3a47%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667613%2c%26%2339%3bmileage%26%2339%3b%3a48%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667614%2c%26%2339%3bmileage%26%2339%3b%3a49%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667615%2c%26%2339%3bmileage%26%2339%3b%3a50%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667616%2c%26%2339%3bmileage%26%2339%3b%3a51%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667617%2c%26%2339%3bmileage%26%2339%3b%3a52%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667618%2c%26%2339%3bmileage%26%2339%3b%3a53%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667619%2c%26%2339%3bmileage%26%2339%3b%3a54%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667620%2c%26%2339%3bmileage%26%2339%3b%3a55%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667621%2c%26%2339%3bmileage%26%2339%3b%3a56%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667622%2c%26%2339%3bmileage%26%2339%3b%3a57%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667623%2c%26%2339%3bmileage%26%2339%3b%3a58%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667624%2c%26%2339%3bmileage%26%2339%3b%3a59%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667745%2c%26%2339%3bmileage%26%2339%3b%3a60%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667746%2c%26%2339%3bmileage%26%2339%3b%3a61%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667747%2c%26%2339%3bmileage%26%2339%3b%3a62%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667748%2c%26%2339%3bmileage%26%2339%3b%3a63%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667749%2c%26%2339%3bmileage%26%2339%3b%3a64%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667750%2c%26%2339%3bmileage%26%2339%3b%3a65%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667751%2c%26%2339%3bmileage%26%2339%3b%3a66%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667752%2c%26%2339%3bmileage%26%2339%3b%3a67%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667753%2c%26%2339%3bmileage%26%2339%3b%3a68%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667754%2c%26%2339%3bmileage%26%2339%3b%3a69%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667755%2c%26%2339%3bmileage%26%2339%3b%3a70%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667756%2c%26%2339%3bmileage%26%2339%3b%3a71%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667757%2c%26%2339%3bmileage%26%2339%3b%3a72%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667758%2c%26%2339%3bmileage%26%2339%3b%3a73%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667759%2c%26%2339%3bmileage%26%2339%3b%3a74%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667760%2c%26%2339%3bmileage%26%2339%3b%3a75%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667761%2c%26%2339%3bmileage%26%2339%3b%3a76%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667762%2c%26%2339%3bmileage%26%2339%3b%3a77%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667763%2c%26%2339%3bmileage%26%2339%3b%3a78%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667764%2c%26%2339%3bmileage%26%2339%3b%3a79%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667765%2c%26%2339%3bmileage%26%2339%3b%3a80%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667766%2c%26%2339%3bmileage%26%2339%3b%3a81%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667767%2c%26%2339%3bmileage%26%2339%3b%3a82%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667768%2c%26%2339%3bmileage%26%2339%3b%3a83%7d%20%7b%26%2339%3bvin%26%2339%3b%3a%26%2339%3bLSJA0000000000091%26%2339%3b%2c%26%2339%3bcreateTime%26%2339%3b%3a1546667769%2c%26%2339%3bmileage%26%2339%3b%3a84%7d%20%e5%bc%80%e8%bd%a6%e7%9a%84%e6%97%b6%e5%80%99%2c%20%e4%bb%8e%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%e5%88%b0%e5%8f%a6%e4%b8%80%e4%b8%aa%e5%9c%b0%e6%96%b9%2c%20%e4%bc%9a%e6%9c%89%e5%be%88%e5%a4%9a%e8%a1%8c%e7%a8%8b%e3%80%82" aria-label="Tumblr">
       <i class="fab fa-tumblr fa-lg" aria-hidden="true"></i>
     </a>
   </li>
   <li>
-    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86">
+    <a class="icon" href="https://news.ycombinator.com/submitlink?u=https%3a%2f%2fohmycloud.github.io%2fposts%2fsub-trip-with-structured-spark-streaming%2f&t=%e4%bd%bf%e7%94%a8%20Spark%20Structured%20Streaming%20%e8%bf%9b%e8%a1%8c%e8%a1%8c%e7%a8%8b%e5%88%92%e5%88%86" aria-label="Hacker News">
       <i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i>
     </a>
   </li>
@@ -804,13 +797,13 @@ Batch: 112
 
     <div id="actions-footer">
       
-        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;">
+        <a id="menu-toggle" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;" aria-label="Menu">
           <i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
-        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;">
+        <a id="toc-toggle" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;" aria-label="TOC">
           <i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
-        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;">
+        <a id="share-toggle" class="icon" href="#" onclick="$('#share-footer').toggle();return false;" aria-label="Share">
           <i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> share</a>
-        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');">
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" aria-label="Top of Page">
           <i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
     </div>
 
@@ -820,7 +813,7 @@ Batch: 112
 
   <footer id="footer">
   <div class="footer-left">
-    Copyright  &copy; 2020  ❤ 焉知非鱼 
+    Copyright  &copy; 2021  ❤ 焉知非鱼 
   </div>
   <div class="footer-right">
     <nav>
@@ -843,9 +836,10 @@ Batch: 112
   </div>
 </body>
 
-<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
-<script src="/lib/jquery/jquery.min.js"></script>
-<script src="/js/main.js"></script>
+<link rel="stylesheet" href=/lib/font-awesome/css/all.min.css>
+<script src=/lib/jquery/jquery.min.js></script>
+<script src=/js/main.js></script>
+<script src=/js/code-copy.js></script>
 
 
 

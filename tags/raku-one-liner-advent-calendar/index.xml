@@ -274,8 +274,11 @@ say 0.1 + 0.2 - 0.3 如果您熟悉编程，那么您很清楚，只要开始使
 您可能还看到了网站，0.30000000000000004.com，它有很多不同的编程语言列表，以及它们如何打印简单的表达式 0.1 + 0.2。在大多数情况下，您没有得到 0.3 这个准确值。通常当你得到零时，它实际上是在打印操作期间舍入的结果。
 在 Raku 中，0.1 + 0.2正好是 0.3，今天的单行程序正好打印了一个零。
 让我们稍微探讨一下 Raku 的内部结构，看看它是如何工作的。几天前，我们看到 Raku 的 grammar（在 Rakudo 编译器中实现）具有以下检测数字的片段：
-token numish { [ | &#39;NaN&#39; &amp;gt;&amp;gt; | &amp;lt;integer&amp;gt; | &amp;lt;dec_number&amp;gt; | &amp;lt;rad_number&amp;gt; | &amp;lt;rat_number&amp;gt; | &amp;lt;complex_number&amp;gt; | &#39;Inf&#39; &amp;gt;&amp;gt; | $&amp;lt;uinf&amp;gt;=&#39;∞&#39; | &amp;lt;unum=:No+:Nl&amp;gt; ] } 假如你很熟悉 Raku，就会知道 Raku 使用有理数来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。
-Grammar 中所谓的 rat_number 是用尖括号写的数字：</description>
+token numish {[|&amp;#39;NaN&amp;#39;&amp;gt;&amp;gt;|&amp;lt;integer&amp;gt;|&amp;lt;dec_number&amp;gt;|&amp;lt;rad_number&amp;gt;|&amp;lt;rat_number&amp;gt;|&amp;lt;complex_number&amp;gt;|&amp;#39;Inf&amp;#39;&amp;gt;&amp;gt;|$&amp;lt;uinf&amp;gt;=&amp;#39;∞&amp;#39;|&amp;lt;unum=:No+:Nl&amp;gt;]} 假如你很熟悉 Raku，就会知道 Raku 使用有理数来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。
+Grammar 中所谓的 rat_number 是用尖括号写的数字：
+token rat_number {&amp;#39;&amp;lt;&amp;#39;&amp;lt;bare_rat_number&amp;gt;&amp;#39;&amp;gt;&amp;#39;} token bare_rat_number {&amp;lt;?before&amp;lt;.[-−+0..9&amp;lt;&amp;gt;:boxd]&amp;gt;+?&amp;#39;/&amp;#39;&amp;gt;&amp;lt;nu=.signed-integer&amp;gt;&amp;#39;/&amp;#39;&amp;lt;de=integer&amp;gt;} 因此，如果您将程序更改为：
+say &amp;lt;1/10&amp;gt; + &amp;lt;2/10&amp;gt; - &amp;lt;3/10&amp;gt; 那么你将立即操作有理数。以下是以此格式转换数字的相应action操作：
+method rat_number($/) { make $&amp;lt;bare_rat_number&amp;gt;.ast } method bare_rat_number($/) { my $nu := $&amp;lt;nu&amp;gt;.</description>
     </item>
     
     <item>
