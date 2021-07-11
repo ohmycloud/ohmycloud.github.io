@@ -10,12 +10,233 @@
             <link href="https://ohmyweekly.github.io/tags/module/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/module/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/module/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-07-07T23:01:08+08:00</updated>
+    <updated>2021-07-11T22:08:29+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/tags/module/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku 中的模块]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-03-23-modules-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2020-08-05-modules-in-julia/?utm_source=atom_feed" rel="related" type="text/html" title="Julia 中的 模块" />
+            
+                <id>https://ohmyweekly.github.io/notes/2015-03-23-modules-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-10T00:00:00+08:00</published>
+            <updated>2021-07-10T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Modules in Raku</blockquote><h1 id="modules">Modules</h1>
+<h2 id="exporting-and-selective-importing">Exporting and Selective Importing</h2>
+<h3 id="is-export">is export</h3>
+<p>packages(包), subroutines(子例程), variables(变量), constants(常量) 和 enums(枚举) , 通过在它们的名字后面添加 <code>is export</code> 特性来导出。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">unit</span> <span class="k">module</span> <span class="nn">MyModule</span><span class="p">;</span>
+<span class="k">our</span> <span class="nv">$var</span> <span class="k">is</span> <span class="k">export</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+<span class="k">sub</span> <span class="nf">foo</span> <span class="k">is</span> <span class="k">export</span> <span class="p">{</span> <span class="o">...</span> <span class="p">};</span>
+<span class="k">constant</span> <span class="nv">$FOO</span> <span class="k">is</span> <span class="k">export</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">foobar</span><span class="p">&#34;;</span>
+<span class="k">enum</span> <span class="n">FooBar</span> <span class="k">is</span> <span class="k">export</span> <span class="p">&lt;</span><span class="s">one two three</span><span class="p">&gt;;</span>
+
+<span class="c1"># Packages like classes can be exported too</span>
+<span class="k">class</span> <span class="nc">MyClass</span> <span class="k">is</span> <span class="k">export</span> <span class="p">{};</span>
+
+<span class="c1"># If a subpackage is in the namespace of the current package</span>
+<span class="c1"># it doesn&#39;t need to be explicitly exported</span>
+<span class="k">class</span> <span class="nc">MyModule::MyClass</span> <span class="p">{};</span>
+</code></pre></div><p>就像所有的 traits 一样, 如果应用到子例程(routine)上, &ldquo;is export&rdquo; 应该出现在参数列表的后面:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span> <span class="p">(</span><span class="nb">Str</span> <span class="nv">$string</span><span class="p">)</span> <span class="k">is</span> <span class="k">export</span> <span class="p">{</span><span class="o">...</span><span class="p">}</span>
+</code></pre></div><p>你可以给 <code>is export</code> 传递命名参数以组织要导出的符号, 然后导入程序 (importer) 可以剔除和选择导入哪一个。有 3 个预先定义好的标签：<code>ALL</code>, <code>DEFAULT</code>, <code>MANDATORY</code>（强制的）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># lib/MyModule.pm</span>
+<span class="k">unit</span> <span class="k">module</span> <span class="nn">MyModule</span><span class="p">;</span>
+<span class="k">sub</span> <span class="nb">bag</span>        <span class="k">is</span> <span class="k">export</span>              <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">pants</span>      <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">MANDATORY</span><span class="p">)</span>  <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">sunglasses</span> <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">day</span><span class="p">)</span>        <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">torch</span>      <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">night</span><span class="p">)</span>      <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">underpants</span> <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">ALL</span><span class="p">)</span>        <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># main.pl</span>
+<span class="k">use</span> <span class="nb">lib</span> <span class="p">&#39;</span><span class="s1">lib</span><span class="p">&#39;;</span>
+<span class="k">use</span> <span class="nn">MyModule</span><span class="p">;</span>           <span class="c1">#bag, pants</span>
+<span class="k">use</span> <span class="nn">MyModule</span> <span class="p">:</span><span class="s">DEFAULT</span><span class="p">;</span>  <span class="c1">#the same</span>
+<span class="k">use</span> <span class="nn">MyModule</span> <span class="p">:</span><span class="s">day</span><span class="p">;</span>      <span class="c1">#pants, sunglasses</span>
+<span class="k">use</span> <span class="nn">MyModule</span> <span class="p">:</span><span class="s">night</span><span class="p">;</span>    <span class="c1">#pants, torch</span>
+<span class="k">use</span> <span class="nn">MyModule</span> <span class="p">:</span><span class="s">ALL</span><span class="p">;</span>      <span class="c1">#bag, pants, sunglasses, torch, underpants</span>
+</code></pre></div><h3 id="unitexport">UNIT::EXPORT::*</h3>
+<p>表象之下, 其实 <code>is export</code> 是把符号添加到 <code>EXPORT</code> 命名空间中的 <code>UNIT</code> 作用域包中。例如, <code>is export(:FOO)</code> 会把目标添加到 <code>UNIT::EXPORT::FOO</code> 包中。这正是 Raku 决定导入什么所做的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">unit</span> <span class="k">module</span> <span class="nn">MyModule</span><span class="p">;</span>
+
+<span class="k">sub</span> <span class="nf">foo</span> <span class="k">is</span> <span class="k">export</span>         <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">bar</span> <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">other</span><span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+</code></pre></div><p>等价于:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">unit</span> <span class="k">module</span> <span class="nn">MyModule</span><span class="p">;</span>
+
+<span class="k">my</span> <span class="nb">package</span> <span class="nn">EXPORT::DEFAULT</span> <span class="p">{</span>
+  <span class="k">our</span> <span class="k">sub</span> <span class="nf">foo</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nb">package</span> <span class="nn">EXPORT::other</span> <span class="p">{</span>
+  <span class="k">our</span> <span class="k">sub</span> <span class="nf">bar</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>多数时候, <code>is export</code> 足够用了, 但是当你想动态生成要导出的符号时, <code>EXPORT</code> 包就很有用了。例如：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># lib/MyModule.pm</span>
+<span class="k">unit</span> <span class="k">module</span> <span class="nn">MuModule</span><span class="p">;</span>
+
+<span class="k">my</span> <span class="nb">package</span> <span class="nn">EXPORT::DEFAULT</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">&lt;</span><span class="s">zero one two three four</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">kv</span> <span class="k">-&gt;</span> <span class="nv">$number</span><span class="o">,</span> <span class="nv">$name</span> <span class="p">{</span>
+      <span class="k">for</span> <span class="p">&lt;</span><span class="s">sqrt log</span><span class="p">&gt;</span> <span class="k">-&gt;</span> <span class="nv">$func</span> <span class="p">{</span>
+          <span class="n">OUR::</span><span class="p">{&#39;</span><span class="s1">&amp;</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$func</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">-of-</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$name</span> <span class="p">}</span> <span class="o">:=</span> <span class="k">sub</span> <span class="p">{</span> <span class="nv">$number</span><span class="o">.</span><span class="p">&#34;</span><span class="nv">$func</span><span class="s2">()</span><span class="p">&#34;</span> <span class="p">};</span>
+      <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># main.pl</span>
+<span class="k">use</span> <span class="nn">MyModule</span><span class="p">;</span>
+<span class="nb">say</span> <span class="n">sqrt-of-four</span><span class="p">;</span> <span class="c1">#-&gt; 2</span>
+<span class="nb">say</span> <span class="n">log-of-zero</span><span class="p">;</span>  <span class="c1">#-&gt; -Inf</span>
+</code></pre></div><h3 id="export">EXPORT</h3>
+<p>你可以用一个 <code>EXPORT</code> 子例程导出任意符号。<code>EXPORT</code> 必须返回一个 <code>Map</code>, 在 map 里面键是符号名, 键值是想要的值。符号名应该包含(如果有的话)关联类型。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">MyModule::Class</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">EXPORT</span> <span class="p">{</span>
+  <span class="p">{</span>
+      <span class="p">&#39;</span><span class="s1">$var</span><span class="p">&#39;</span>      <span class="o">=&gt;</span> <span class="p">&#39;</span><span class="s1">one</span><span class="p">&#39;</span><span class="o">,</span>
+      <span class="p">&#39;</span><span class="s1">@array</span><span class="p">&#39;</span>    <span class="o">=&gt;</span> <span class="p">&lt;</span><span class="s">one two three</span><span class="p">&gt;</span><span class="o">,</span>
+      <span class="p">&#39;</span><span class="s1">%hash</span><span class="p">&#39;</span>     <span class="o">=&gt;</span> <span class="p">{</span> <span class="s">one</span> <span class="o">=&gt;</span> <span class="p">&#39;</span><span class="s1">two</span><span class="p">&#39;</span>, <span class="s">three</span> <span class="o">=&gt;</span> <span class="p">&#39;</span><span class="s1">four</span><span class="p">&#39;}</span>,
+      <span class="p">&#39;</span><span class="s1">&amp;doit</span><span class="p">&#39;</span>     <span class="o">=&gt;</span> <span class="k">sub</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span><span class="o">,</span>
+      <span class="p">&#39;</span><span class="s1">ShortName</span><span class="p">&#39;</span> <span class="o">=&gt;</span> <span class="n">MyModule::class</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># main.pl</span>
+<span class="k">use</span> <span class="nb">lib</span> <span class="p">&#39;</span><span class="s1">lib</span><span class="p">&#39;;</span>
+<span class="k">use</span> <span class="nn">MyModule</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$var</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">%hash</span><span class="p">;</span>
+<span class="nf">doit</span><span class="p">();</span>
+<span class="nb">say</span> <span class="n">ShortName</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>  <span class="c1">#-&gt; MyModule::Class.new</span>
+</code></pre></div><p>注意, <code>EXPORT</code> 不能声明在包内, 因为目前的 rakudo(2015.09) 好像把 EXPORT 当作 compunit 的一部分而非包的一部分。</p>
+<p>虽然 <code>UNIT::EXPORT</code> 包处理传递给 <code>use</code> 的命名参数, 而 <code>EXPORT</code> sub 处理位置参数。如果你把位置参数传递给 <code>use</code>, 那么这些参数会被传递给 <code>EXPORT</code>。如果传递了位置参数, 那么 module 就不再需要导出默认符号了。你仍然可以伴随着你的位置参数, 通过显式地给 use 传递 <code>:DEFAULT</code> 参数来导入它们。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># lib/MyModule</span>
+
+<span class="k">class</span> <span class="nc">MyModule::Class</span> <span class="p">{}</span>
+
+<span class="k">sub</span> <span class="nf">EXPORT</span><span class="p">(</span><span class="nv">$short_name</span><span class="o">?</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">{</span>
+      <span class="nb">do</span> <span class="nv">$short_name</span> <span class="o">=&gt;</span> <span class="n">MyModule::Class</span> <span class="k">if</span> <span class="nv">$short_name</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">always</span> <span class="k">is</span> <span class="k">export</span><span class="p">(:</span><span class="s">MANDATORY</span><span class="p">)</span> <span class="p">{</span> <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">works</span><span class="p">&#34;</span> <span class="p">}</span>
+
+<span class="c1">#import with :ALL or :DEFAULT to get</span>
+<span class="k">sub</span> <span class="nf">shy</span> <span class="k">is</span> <span class="k">export</span> <span class="p">{</span> <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">you found me!</span><span class="p">&#34;</span> <span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># main.pl</span>
+<span class="k">use</span> <span class="nb">lib</span> <span class="p">&#39;</span><span class="s1">lib</span><span class="p">&#39;;</span>
+<span class="k">use</span> <span class="nn">MyModule</span> <span class="p">&#39;</span><span class="s1">foo</span><span class="p">&#39;;</span>
+<span class="nb">say</span> <span class="n">foo</span><span class="o">.</span><span class="nb">new</span><span class="p">();</span> <span class="c1">#MyModule::Class.new</span>
+<span class="nf">always</span><span class="p">();</span>      <span class="c1">#OK   - is imported</span>
+<span class="nf">shy</span><span class="p">();</span>         <span class="c1">#FAIL - won&#39;t be imported</span>
+</code></pre></div><h2 id="发布模块">发布模块</h2>
+<p>如果你已经写了一个 Raku 模块, 你想把它分享到社区, 我们会很高兴地把它放到 Raku 模块文件夹清单中。<a href="http://modules.raku.org/">Raku modules directory</a></p>
+<p>现在, 你需要使用 git 对你的模块进行版本控制。</p>
+<p>这需要你有一个 Github 帐号, 以使你的模块能被从它的 Github 仓库中分享出去。</p>
+<p>要分享你的模块, 按照下面说的做：</p>
+<ul>
+<li>
+<p>创建一个以你的模块命名的工程文件夹。例如, 如果你的模块是 <code>Vortex::TotalPerspective</code>, 那么就创建一个叫做 <code>Vortex::TotalPerspective</code> 的工程文件夹。这个工程目录的名字也会被用作 Github 仓库的名字。</p>
+</li>
+<li>
+<p>让你的工程目录看起来像这样：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">Vortex-TotalPerspective</span><span class="o">/</span>
+<span class="o">|--</span> <span class="nb">lib</span>
+<span class="o">|</span>   `<span class="o">--</span> <span class="n">Vortex</span>
+<span class="o">|</span>       `<span class="o">--</span> <span class="n">TotalPerspective</span><span class="o">.</span><span class="nf">pm</span>
+<span class="o">|--</span> <span class="n">LICENSE</span>
+<span class="o">|--</span> <span class="n">META</span><span class="o">.</span><span class="nf">info</span>
+<span class="o">|--</span> <span class="n">README</span><span class="o">.</span><span class="nf">md</span>
+`<span class="o">--</span> <span class="nb">t</span>
+    `<span class="o">--</span> <span class="n">basic</span><span class="o">.</span><span class="nb">t</span>
+</code></pre></div><p>如果你的工程包含能帮助主模块完成工作的其它模块, 它们应该被放到你的 lib 目录中像这样组织：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku">
+<span class="nb">lib</span>
+`<span class="o">--</span> <span class="n">Vortex</span>
+    <span class="o">|--</span> <span class="n">TotalPerspective</span><span class="o">.</span><span class="nf">pm</span>
+    `<span class="o">--</span> <span class="n">TotalPerspective</span>
+        <span class="o">|--</span> <span class="n">FairyCake</span><span class="o">.</span><span class="nf">pm</span>
+        `<span class="o">--</span> <span class="n">Gargravarr</span><span class="o">.</span><span class="nf">pm</span>
+</code></pre></div><ul>
+<li>
+<p><code>README.md</code> 文件是一个 markdown 格式的文件, 它稍后会被 Github 自动渲染成 HTML</p>
+</li>
+<li>
+<p>关于 LICENSE 文件, 如果你没有其它选择, 就是用和 Rakudo Raku 一样的 LICENSE 把。仅仅把它的原始 <a href="https://github.com/rakudo/rakudo/blob/nom/LICENSE">license</a> 复制/粘贴进你自己的 LICENSE 文件中。</p>
+</li>
+<li>
+<p>如果你还没有任何测试, 现在你可以忽略 <code>t</code> 目录 和 <code>basic.t</code> 文件。关于如何写测试, 你可以看看其它模块是怎么使用 <code>Test</code> 的。它和 Perl'5 的 <code>Test::More</code> 很类似。</p>
+</li>
+<li>
+<p>如果要文档化你的模块, 在你的模块中使用 <a href="http://design.raku.org/S26.html">Raku Pod</a> 标记。欢迎给模块写文档, 并且为了浏览的方便, 一旦 Raku module directory(或其它网站) 开始把 Pod 文档渲染成 HTML, 写文档尤为重要。</p>
+</li>
+<li>
+<p>让你的 <code>META.info</code> 文件看起来像这样:</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code> {
+        &quot;name&quot;        : &quot;Vortex::TotalPerspective&quot;,
+        &quot;version&quot;     : &quot;0.1.0&quot;,
+        &quot;description&quot; : &quot;Wonderful simulation to get some perspective.&quot;,
+        &quot;author&quot;      : &quot;Your Name&quot;,
+        &quot;provides&quot;    : {
+            &quot;Vortex::TotalPerspective&quot; : &quot;lib/Vortex/TotalPerspective.pm&quot;
+        },
+        &quot;depends&quot;     : [ ],
+        &quot;source-url&quot;  : &quot;git://github.com/you/Vortex-TotalPerspective.git&quot;
+    }
+</code></pre><p>关于选择版本号的方案, 或许使用 &ldquo;major.minor.patch&rdquo; （查看  the spec on versioning 获取详细信息 ）。如果版本号现在对你或你的用户来说不重要, 你可以给版本那儿放上一颗星(*)。</p>
+<p>在 <code>provides</code> 一节, 包含进你的发布中提供的所有命名空间。</p>
+<ul>
+<li>把你的工程放在 git 版本控制之下, 如果你还未这样做。</li>
+<li>一旦你对你的工程满意了, 在 Github 上为它创建一个仓库。必要的话,  查看 <a href="https://help.github.com/">Github&rsquo;s help docs</a>。 你的 Github 仓库的名字应该和你工程目录的名字一样。创建完 Githhub 仓库后, Github 会为你展示怎么配置你的本地仓库以获悉你的 Github 仓库。</li>
+<li>把你的工程推送到 Github</li>
+<li>在 IRC 频道找个人帮你展示怎么把你的模块添加到<a href="https://github.com/raku/ecosystem">ecosystem</a>, 或者让他们是否能替你添加。</li>
+<li>pull 请求被接收之后, 等个把小时。如果你的模块没有出现在  <a href="http://modules.raku.org/,">http://modules.raku.org/,</a> 请到 <a href="http://modules.raku.org/log/update.log">http://modules.raku.org/log/update.log</a> 翻看log 日志文件, 以查找是否有错误。</li>
+</ul>
+<p>就是这样啦！感谢为 Raku 社区做贡献！</p>
+<p>如果你想尝试安装你的模块, 使用熊猫 panda 安装工具, 这已经包含在 Rakudo Raku 中了:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">zef</span> <span class="nb">install</span> <span class="n">Vortex::TotalPerspective</span>
+</code></pre></div><p>这会下载你的模块到它自己的工作目录(~/.zef), 在那儿创建 build, 并把模块安装到 <code>~/.raku</code></p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/module" term="module" label="module" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>

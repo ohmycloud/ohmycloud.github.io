@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
-    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[IO on 焉知非鱼]]></title>
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[io on 焉知非鱼]]></title>
     
         <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
     
@@ -10,12 +10,168 @@
             <link href="https://ohmyweekly.github.io/tags/io/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/io/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/io/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-07-07T23:01:08+08:00</updated>
+    <updated>2021-07-11T22:08:29+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/tags/io/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku 中的 IO 操作]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-10-11-io-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2015-10-11-io-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Io in Raku</blockquote><p>文件存在、文件的时间戳、文件的修改时间等等</p>
+<h3 id="批量插入文本">批量插入文本</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@filenames</span> <span class="o">=</span> <span class="nb">dir</span> <span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="o">,</span>  <span class="s">test</span> <span class="o">=&gt;</span> <span class="nb">any</span><span class="p">(/</span><span class="sr">\</span><span class="ni">.</span><span class="sr">md</span><span class="ni">$</span><span class="p">/</span>, <span class="p">/</span><span class="sr">\</span><span class="ni">.</span><span class="sr">markdown</span><span class="p">/);</span>
+
+<span class="k">for</span> <span class="nv">@filenames</span> <span class="k">-&gt;</span> <span class="nv">$filePath</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$path</span> <span class="o">=</span> <span class="nv">$filePath</span><span class="o">.</span><span class="nb">path</span><span class="p">();</span>
+    <span class="nv">$path</span> <span class="o">~~</span> <span class="k">s</span><span class="p">/</span><span class="ni">.</span><span class="sr">md</span><span class="p">//;</span>
+    <span class="nv">$path</span> <span class="o">~~</span> <span class="k">s</span><span class="p">/</span><span class="ni">.</span><span class="sr">markdown</span><span class="p">//;</span>
+
+    <span class="k">my</span> <span class="nv">$date</span> <span class="o">=</span> <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="nb">now</span><span class="p">);</span>
+    <span class="k">my</span> <span class="nv">$head</span> <span class="o">=</span>
+<span class="k">qq</span><span class="sa">:heredoc</span> <span class="p">&#39;EOT&#39;;</span><span class="s2">
+</span><span class="s2">title:  </span><span class="nv">$path</span><span class="o">.</span><span class="nf">IO.basename</span><span class="p">()</span><span class="s2">
+</span><span class="s2">date: </span><span class="nv">$date</span><span class="s2">
+</span><span class="s2">tags: Raku
+</span><span class="s2">categories: Raku
+</span><span class="s2">
+</span><span class="s2">---
+</span><span class="s2">
+</span><span class="s2">&lt;blockquote class=&#34;blockquote-center&#34;&gt;这城市有太多风景都在提醒那过去！&lt;/blockquote&gt;
+</span><span class="s2">
+</span><span class="s2">[TOC]
+</span><span class="s2">
+</span><span class="s2"></span><span class="p">EOT</span>
+
+   <span class="k">my</span> <span class="nv">@content</span>   <span class="o">=</span> <span class="nb">slurp</span> <span class="nv">$filePath</span><span class="p">;</span>
+   <span class="nb">spurt</span><span class="p">(</span><span class="nv">$filePath</span><span class="o">.</span><span class="nb">path</span><span class="o">,</span> <span class="p">&#34;</span><span class="nv">$head</span><span class="s2">\n</span><span class="nv">@content</span><span class="o">[]</span><span class="p">&#34;);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>在当前目录中查找所有以 <code>.md</code> (.markdown)结尾的文件（即markdown文件）, 并在文件最前面插入一段文本， 形如：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">title:</span>  <span class="nb">Raku</span>
+<span class="n">date:</span> <span class="mi">2015</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">20</span><span class="nf">T23:19:13Z</span>
+<span class="n">tags:</span> <span class="nb">Raku</span>
+<span class="n">categories:</span> <span class="nb">Raku</span>
+
+<span class="o">---</span>
+
+<span class="p">&lt;</span><span class="s">blockquote class=&#34;blockquote-center&#34;</span><span class="p">&gt;</span><span class="n">我站在天桥上念你</span><span class="o">,</span> <span class="n">有点狼狈</span><span class="p">&lt;</span><span class="s">/blockquote</span><span class="p">&gt;</span>
+
+</code></pre></div><p>类 <code>IO::Path</code> 提供了 <code>basename</code>, <code>path</code>, <code>parts</code>, 等方法供使用, 具体用法请看文档:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">rakudoc IO::Path
+</code></pre></div><p>一些例子：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nb">IO::Path</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">/etc/passwd</span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">basename</span><span class="p">;</span>   <span class="c1"># passwd</span>
+<span class="nb">say</span> <span class="nb">IO::Path</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">docs/README.pod</span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">extension</span><span class="p">;</span>   <span class="c1"># pod</span>
+<span class="nb">say</span> <span class="nb">IO::Path</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">/etc/passwd</span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">dirname</span><span class="p">;</span>    <span class="c1"># /etc</span>
+<span class="nb">say</span> <span class="nb">IO::Path::Win32</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">C:\\Windows\\registry.ini</span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">volume</span><span class="p">;</span>    <span class="c1"># C:</span>
+<span class="nb">say</span> <span class="nb">IO::Path</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">/etc/passwd</span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">parts</span><span class="o">.</span><span class="nb">perl</span> <span class="c1"># (&#34;dirname&#34; =&gt; &#34;/etc&#34;, &#34;volume&#34;  =&gt; &#34;&#34;, &#34;basename&#34; =&gt; &#34;passwd&#34;).hash</span>
+</code></pre></div><p>例子:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># To iterate over the contents of the current directory: for dir() -&gt; $file</span>
+<span class="p">{</span>
+    <span class="nb">say</span> <span class="nv">$file</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1"># As before, but include even &#39;.&#39; and &#39;..&#39; which are filtered out by # the</span>
+<span class="k">default</span> <span class="p">:</span><span class="s">test</span> <span class="n">matcher:</span> <span class="k">for</span> <span class="nb">dir</span><span class="p">(</span><span class="s">test</span> <span class="o">=&gt;</span> <span class="o">*</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nv">$file</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="nv">$file</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1"># To get the names of all .jpg and .jpeg files in ~/Downloads: my @jpegs =</span>
+<span class="p">&#34;</span><span class="nv">%*ENV</span><span class="p">&lt;</span><span class="s">HOME</span><span class="p">&gt;</span><span class="s2">/Downloads</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">dir</span><span class="p">(</span><span class="s">test</span> <span class="o">=&gt;</span> <span class="p">/:</span><span class="na">i</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> jpe</span><span class="o">?</span><span class="sr">g </span><span class="ni">$</span><span class="p">/)</span><span class="o">».</span><span class="nb">Str</span><span class="p">;</span>
+
+<span class="c1"># An example program that lists all files and directories recursively:</span>
+
+<span class="k">sub</span> <span class="nb">MAIN</span><span class="p">(</span><span class="nv">$dir</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">@todo</span> <span class="o">=</span> <span class="nv">$dir</span><span class="o">.</span><span class="nb">IO</span><span class="p">;</span> <span class="k">while</span> <span class="nv">@todo</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="nv">@todo</span><span class="o">.</span><span class="nb">pop</span><span class="o">.</span><span class="nb">dir</span> <span class="k">-&gt;</span> <span class="nv">$path</span> <span class="p">{</span>
+            <span class="nb">say</span> <span class="nv">$path</span><span class="o">.</span><span class="nb">Str</span><span class="p">;</span> <span class="nv">@todo</span><span class="o">.</span><span class="nb">push</span><span class="o">:</span> <span class="nv">$path</span> <span class="k">if</span> <span class="nv">$path</span><span class="o">.</span><span class="nb">d</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><h3 id="文件测试操作符">文件测试操作符</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># If you have a string - a path to something in the filesystem:</span>
+
+<span class="k">if</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span> <span class="o">~~</span> <span class="p">:</span><span class="s">e</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#39;</span><span class="s1">file exists</span><span class="p">&#39;;</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$file</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;;</span> <span class="k">if</span> <span class="nv">$file</span><span class="o">.</span><span class="nb">IO</span> <span class="o">~~</span> <span class="p">:</span><span class="s">e</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#39;</span><span class="s1">file exists</span><span class="p">&#39;;</span>
+<span class="p">}</span>
+
+<span class="c1"># Instead of the colonpair syntax, you can use method calls too:</span>
+
+<span class="k">if</span> <span class="p">&#39;</span><span class="s1">path/to/file</span><span class="p">&#39;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">e</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#39;</span><span class="s1">file exists</span><span class="p">&#39;;</span>
+<span class="p">}</span>
+
+<span class="c1"># If you already have an IO object in $file, either by creating one yourself, or</span>
+<span class="c1"># by getting it from another subroutine, such as dir, you can write this:</span>
+
+<span class="k">my</span> <span class="nv">$file</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="p">;</span> <span class="k">if</span> <span class="nv">$file</span> <span class="o">~~</span> <span class="p">:</span><span class="s">e</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#39;</span><span class="s1">file exists</span><span class="p">&#39;;</span>
+<span class="p">}</span>
+</code></pre></div><h3 id="文件时间戳">文件时间戳</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">modified</span><span class="p">;</span>                <span class="c1"># e.g. Instant:1424089165</span>
+<span class="nb">say</span> <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">modified</span><span class="p">);</span>  <span class="c1"># e.g. 2015-02-16T12:18:50Z</span>
+
+<span class="k">my</span> <span class="nv">$modification_instant</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">modified</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$modification_time</span>    <span class="o">=</span> <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="nv">$modification_instant</span><span class="p">);</span>
+<span class="nb">say</span> <span class="nv">$modification_time</span><span class="p">;</span>  <span class="c1"># e.g. 2015-02-16T12:18:50Z</span>
+
+<span class="nb">say</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">accessed</span><span class="p">;</span>                <span class="c1"># e.g. Instant:1424353577</span>
+<span class="nb">say</span> <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">accessed</span><span class="p">);</span>  <span class="c1"># e.g. 2015-02-19T13:45:42Z</span>
+
+<span class="k">my</span> <span class="nv">$access_instant</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">accessed</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$access_time</span>    <span class="o">=</span>  <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="nv">$access_instant</span><span class="p">);</span>
+<span class="nb">say</span> <span class="nv">$access_time</span><span class="p">;</span>  <span class="c1"># e.g. 2015-02-19T13:45:42Z</span>
+
+<span class="nb">say</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">changed</span><span class="p">;</span>                <span class="c1"># e.g. Instant:1424089165</span>
+<span class="nb">say</span> <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">changed</span><span class="p">);</span>  <span class="c1"># e.g. 2015-02-16T12:18:50Z</span>
+
+<span class="k">my</span> <span class="nv">$change_instant</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">path/to/file</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">changed</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$change_time</span>    <span class="o">=</span>  <span class="nb">DateTime</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="nv">$chnge_instant</span><span class="p">);</span>
+<span class="nb">say</span> <span class="nv">$change_time</span><span class="p">;</span>  <span class="c1"># e.g. 2015-02-16T12:18:50Z</span>
+</code></pre></div>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/io" term="io" label="io" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>

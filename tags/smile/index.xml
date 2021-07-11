@@ -1,0 +1,86 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    smile on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/smile/</link>
+        <description>Recent content  in smile
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Sun, 11 Jul 2021 22:08:29 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/smile/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Raku 中的 Smile 类型</title>
+                <link>https://ohmyweekly.github.io/notes/2015-11-05-smile-type-in-raku/</link>
+                
+                
+                <description>&lt;blockquote&gt;Smile Type in Raku&lt;/blockquote&gt;&lt;p&gt;一个裸的 &lt;strong&gt;:D&lt;/strong&gt;、&lt;strong&gt;:U&lt;/strong&gt;、&lt;strong&gt;:T&lt;/strong&gt; 或 &lt;strong&gt;:_&lt;/strong&gt; 是限制默认类型为定义、未定义、类型对象或任何对象的类型约束。所以:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Con&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;method&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;man&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;U&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;D&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$x&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;其签名等价于 &lt;code&gt;(Con:U: Any:D $x)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Con:U&lt;/code&gt; 是调用者, 在调用者后面加上一个冒号。要标记一个显式的调用者, 在它后面放上一个冒号就好了:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;method&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;doit&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$x:&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$a&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$b&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;...&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;abstract-vs-concrete-types&#34;&gt;Abstract vs Concrete types&lt;/h3&gt;
+&lt;p&gt;　
+对于任何有名字的类型, 某些其它子集类型可以自动地通过在类型的名字后面追加一个合适的状语来派生出来：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Int:_       允许定义或未定的 Int 值
+Int:D       只允许有定义的(强制的)Int 值
+Int:U       只允许未定义值(抽象或失败)Int 值
+Int:T       允许Int只作为类型对象
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;即, 它们的意思有点像:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Int:D       Int:_ where DEFINITE($_)
+Int:U       Int:_ where not(DEFINITE($_))
+Int:T       Int:U where none(Failure)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;where DEFINITE&lt;/code&gt; 是一个布尔宏, 它说正处理的对象是否有一个合法的强制表示。(查看下面的自省) .&lt;/p&gt;
+&lt;p&gt;在 Raku 中, &lt;strong&gt;Int&lt;/strong&gt; 通常假定意为 &lt;code&gt;Int:_&lt;/code&gt;, 除了调用者, 其中默认为 &lt;code&gt;Int:D&lt;/code&gt;。（默认的 new 方法有一个原型, 它的调用者是 &lt;code&gt;:T&lt;/code&gt;, 所以所有的 new 方法都默认允许类型对象。）&lt;/p&gt;
+&lt;p&gt;这些默认可以通过各种编译指令在词法作用域中更改。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nn&#34;&gt;parameters&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;D&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;会让非调用者的参数默认为 &lt;code&gt;:D&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;作为对比,&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;variables&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;D&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;会对用于变量声明中的类型做同样的事情。
+在这样的词法作用域中, 你可以使用 &lt;code&gt;:_&lt;/code&gt; 形式回到标准的行为。特别地, 因为调用者默认为定义的:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;use&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;invocant&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;_&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;会让调用者允许任何类型的有定义的和未定义的调用者。&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rakulang">rakulang</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/smile">smile</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2015-11-05-smile-type-in-raku/</guid>
+                <pubDate>Sun, 11 Jul 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+

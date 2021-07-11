@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[signature on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/signature/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/signature/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/signature/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/signature/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-07-11T22:08:29+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/signature/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[探索 Raku 中的签名(第二部分)]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-08-29-exploring-raku-signatures-part-two/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2015-08-29-exploring-raku-signatures-part-two/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Exploring Raku Signatures Part Two</blockquote><p>在我们探索 Raku 签名的<a href="http://friedo.com/blog/2016/01/exploring-perl-6-signatures-part-1">第一部分</a>中, 我们了解了怎么使用 Raku 强大而灵活的类型系统来约束具名参数和位置参数是如何被传递给子例程和方法的。我们还涉及了怎么使用 <em>slurp</em> 签名来创建能接收任意具名和位置参数列表的可变函数。</p>
+<p>Raku 的签名系统提供了更多。在这篇文章中我们将验证其中更高级的特性, 它们让 Raku 的调用语义更强大。</p>
+<h2 id="class-约束">Class 约束</h2>
+<p>你可以使用签名来指定传递进函数中的参数的类型约束。你使用的类型可以是任意类名。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku">
+<span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span> <span class="nb">Numeric</span> <span class="nv">$foo</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$bar</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">my string is </span><span class="nv">$bar</span><span class="s2"> and my number is </span><span class="nv">$foo</span><span class="p">&#34;</span>
+<span class="p">}</span>
+</code></pre></div><p>这个签名要求我们传递 <strong>Numeric</strong> 和 <strong>Str</strong> 类型的参数。但是因为 Raku 的内置类型实际上就是类(classes), 并且因为 <strong>Numeric</strong> 拥有几个子类型, 我们可以传递进任何数字类型, 它都能工作:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nf">foo</span><span class="p">(</span><span class="mi">42</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">blah</span><span class="p">&#34;);</span>
+<span class="nf">foo</span><span class="p">(</span><span class="mf">42.99</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">yoohoo</span><span class="p">&#34;);</span>
+<span class="nf">foo</span><span class="p">(</span><span class="mi">3</span><span class="o">+</span><span class="mi">9</span><span class="no">i</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">hellooooooo</span><span class="p">&#34;);</span>
+<span class="c1"># etc</span>
+</code></pre></div><p>我们自己定义的类中签名的工作原理也一样。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.prop</span> <span class="k">is</span> <span class="k">rw</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">inspect-a-foo</span><span class="p">(</span> <span class="n">Foo</span> <span class="nv">$my-foo</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">this foo&#39;s property is </span><span class="p">&#34;</span> <span class="o">~</span> <span class="nv">$my-foo</span><span class="o">.</span><span class="nf">prop</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$f</span> <span class="o">=</span> <span class="n">Foo</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span> <span class="s">prop</span> <span class="o">=&gt;</span> <span class="mi">42</span> <span class="p">);</span>
+<span class="nf">inspect-a-foo</span><span class="p">(</span><span class="nv">$f</span><span class="p">);</span>
+<span class="c1"># this foo&#39;s property is 42</span>
+</code></pre></div><p>在上面的例子中,  子例程 <em>inspect-a-foo</em> 只会接收 <strong>Foo</strong> 类型的参数, 或者 <strong>Foo</strong> 的子类。</p>
+<h2 id="带有-where-block-的特异性">带有 <strong>where</strong> block 的特异性</h2>
+<p>通过在签名中使用 <em>where</em> 子句, Raku 允许我们更进一步的限制子例程的参数。<em>where</em> 子句接收任何 code block, 这个 <code>code block</code> 必须返回一个 true 值以使类型约束通过。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$positive</span> <span class="k">where</span> <span class="p">{</span> <span class="nv">$positive</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">}</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">我很确信 </span><span class="nv">$positive</span><span class="s2"> 是正的!</span><span class="p">&#34;</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">bar</span><span class="p">(</span> <span class="n">Foo</span> <span class="nv">$foo</span> <span class="k">where</span> <span class="p">{</span> <span class="nv">$foo</span><span class="o">.</span><span class="nf">prop</span><span class="o">.</span><span class="nb">isa</span><span class="p">(</span> <span class="nb">Int</span> <span class="p">)</span> <span class="ow">and</span> <span class="nv">$foo</span><span class="o">.</span><span class="nf">prop</span> <span class="o">&gt;</span> <span class="mi">40</span> <span class="p">}</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">这个 Foo 的属性是一个大于 40 的整数</span><span class="p">&#34;</span>
+<span class="p">}</span>
+</code></pre></div><p>可以指定多个 <em>where</em> 子句来约束多个参数。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku">
+<span class="k">sub</span> <span class="nf">quadrant2</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="p">{</span> <span class="nv">$x</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="p">}</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="p">{</span> <span class="nv">$y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">}</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">at the point (</span><span class="nv">$x</span><span class="s2">, </span><span class="nv">$y</span><span class="s2">)</span><span class="p">&#34;</span>
+<span class="p">}</span>
+
+<span class="nf">quadrant2</span><span class="p">(</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">1</span> <span class="p">);</span>
+<span class="c1"># Constraint type check failed for parameter &#39;$x&#39;</span>
+<span class="nf">quadrant2</span><span class="p">(</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="o">-</span><span class="mi">1</span> <span class="p">);</span>
+<span class="c1"># Constraint type check failed for parameter &#39;$y&#39;</span>
+<span class="nf">quadrant2</span><span class="p">(</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span> <span class="mi">1</span> <span class="p">);</span>
+<span class="c1"># at the point (-1, 1)</span>
+</code></pre></div><p>约束块儿(Constraint blocks)甚至不需要是 <em>blocks</em>。事实上, 任何 <strong>Callable</strong> 类都可以。因此, 你可以很容易地获得功能函数的约束检测, 它们能在多个不同的子例程之间循环利用。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">is-positive</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$n</span> <span class="p">)</span> <span class="p">{</span> <span class="nv">$n</span> <span class="o">&gt;</span> <span class="mi">0</span>  <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">is-negative</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$n</span> <span class="p">)</span> <span class="p">{</span> <span class="nv">$n</span> <span class="o">&lt;</span> <span class="mi">0</span>  <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">is-zero</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$n</span> <span class="p">)</span>     <span class="p">{</span> <span class="nv">$n</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">quadrant1</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-positive</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-positive</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">quadrant2</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-negative</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-positive</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">quadrant3</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-negative</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-negative</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">quadrant4</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-positive</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-negative</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">x-axis</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-zero</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">y-axis</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-zero</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="k">sub</span> <span class="nf">origin</span><span class="p">(</span> <span class="nb">Real</span> <span class="nv">$x</span> <span class="k">where</span> <span class="nf">is-zero</span><span class="p">(</span> <span class="nv">$x</span> <span class="p">)</span><span class="o">,</span> <span class="nb">Real</span> <span class="nv">$y</span> <span class="k">where</span> <span class="nf">is-zero</span><span class="p">(</span> <span class="nv">$y</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+</code></pre></div><h2 id="return-types">Return Types</h2>
+<p>每个 Raku 子例程也能指定它自己的返回值类型作为签名的一部分。这可以使用 <em>returns</em> 关键字来显式地指定, 但是我更喜欢用快捷形式的 <code>--&gt;</code> 操作符, 它在签名自身之内。下面声明的两个子例程是等价的:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">are-they-equal</span><span class="p">(</span> <span class="nb">Str</span> <span class="nv">$foo</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$bar</span> <span class="p">)</span> <span class="k">returns</span> <span class="nb">Bool</span> <span class="p">{</span>
+    <span class="nv">$foo</span> <span class="ow">eq</span> <span class="nv">$bar</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">are-they-equal</span><span class="p">(</span> <span class="nb">Str</span> <span class="nv">$foo</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$bar</span> <span class="k">--&gt;</span> <span class="nb">Bool</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="nv">$foo</span> <span class="ow">eq</span> <span class="nv">$bar</span>
+<span class="p">}</span>
+</code></pre></div><p>毫无疑问地, 如果返回错误的类型 Raku 会抛出错误。</p>
+<h2 id="自省">自省</h2>
+<p>Raku 中子例程是一等对象。但是 Raku 带来了一大堆新的内省工具, 包含询问子例程的签名信息的能力。每个子例程的签名实际上就是 <strong>Signature</strong> 类的一个对象。我们能找出子例程的元数和返回值类型。我们甚至能够在签名中抓取一个 <strong>Parameter</strong> 对象的列表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">are-they-equal</span><span class="p">(</span> <span class="nb">Str</span> <span class="nv">$foo</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$bar</span> <span class="p">)</span> <span class="k">returns</span> <span class="nb">Bool</span> <span class="p">{</span>
+    <span class="nv">$foo</span> <span class="ow">eq</span> <span class="nv">$bar</span>
+<span class="p">}</span>
+
+<span class="nb">say</span> <span class="nv">&amp;are-they-equal</span><span class="o">.</span><span class="nb">signature</span><span class="o">.</span><span class="nb">arity</span><span class="p">;</span>    <span class="c1"># 2</span>
+<span class="nb">say</span> <span class="nv">&amp;are-they-equal</span><span class="o">.</span><span class="nb">signature</span><span class="o">.</span><span class="k">returns</span><span class="p">;</span>  <span class="c1"># (Bool)</span>
+
+<span class="k">my</span> <span class="nv">@params</span> <span class="o">=</span> <span class="nv">&amp;are-they-equal</span><span class="o">.</span><span class="nb">signature</span><span class="o">.</span><span class="nb">params</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">@params</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">name</span><span class="p">;</span>      <span class="c1"># $foo</span>
+<span class="nb">say</span> <span class="nv">@params</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">type</span><span class="p">;</span>      <span class="c1"># (Str)</span>
+<span class="nb">say</span> <span class="nv">@params</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">sigil</span><span class="p">;</span>     <span class="c1"># $</span>
+</code></pre></div><p>总之, Raku 的签名很好很强大。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/signature" term="signature" label="signature" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

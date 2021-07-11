@@ -1,0 +1,131 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>
+            
+                    introspection on
+                
+            
+            焉知非鱼</title>
+        <link>https://ohmyweekly.github.io/tags/introspection/</link>
+        <description>Recent content  in introspection
+            on 焉知非鱼</description>
+        <language>en-us</language>
+        <lastBuildDate>Sun, 11 Jul 2021 22:08:29 +0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+            <atom:link href="https://ohmyweekly.github.io/tags/introspection/index.xml" rel="self" type="application/rss&#43;xml" />
+        
+            
+            <item>
+                <title>Raku 中的自省</title>
+                <link>https://ohmyweekly.github.io/notes/2015-07-25-introspection-in-raku/</link>
+                
+                
+                <description>&lt;blockquote&gt;Introspection in Raku&lt;/blockquote&gt;&lt;p&gt;Raku 支持&amp;quot;泛型, roles 和 多重分发&amp;quot;, 它们都是很好的特点, 并且已经在其它 advent calendar 中发布过了。&lt;/p&gt;
+&lt;p&gt;但是今天我们要看的是 &lt;strong&gt;MOP&lt;/strong&gt;。 &amp;ldquo;MOP&amp;rdquo; 代表着元对象协议(&amp;ldquo;Meta-Object Protocol&amp;rdquo;)。那意味着, 它们实际上是你能从用户那边改变的一部分, 而不是对象、类等定义语言的东西。&lt;/p&gt;
+&lt;p&gt;实际上, 在 Raku中, 你可以为类型添加方法, 移除某个方法, 包裹方法, 使用更多能力增强类(&lt;a href=&#34;https://github.com/jnthn/oo-actors&#34;&gt;OO::Actors&lt;/a&gt; 和 &lt;a href=&#34;https://github.com/jnthn/oo-monitors&#34;&gt;OO::Monitors&lt;/a&gt; 就是两个这样的例子), 或者你可以完全重定义它(并且, 例如, 使用 Ruby-like 的对象系统。&lt;a href=&#34;https://github.com/edumentab/rakudo-and-nqp-internals-course&#34;&gt;这儿有个例子&lt;/a&gt;)。&lt;/p&gt;
+&lt;p&gt;但是今天, 我们首先看一下第一部分: 自省。在类型创建完之后查看它的类型, 了解它, 并使用这些信息。&lt;/p&gt;
+&lt;p&gt;我们将要创建的模块是基于 &lt;a href=&#34;https://github.com/vendethiel/sixcheck&#34;&gt;Sixcheck&lt;/a&gt; 模块(一个 &lt;a href=&#34;https://en.wikipedia.org/wiki/QuickCheck&#34;&gt;QuickCheck-like&lt;/a&gt; 模块)的需求: 为某个类型生成一些随机数据, 然后把数据喂给我们正测试的函数, 并检查某些后置条件(post-condition)。&lt;/p&gt;
+&lt;p&gt;所以, 我们先写出第一个版本:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;my&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;%special-cases&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Mu&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;
+  &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;..&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;50&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;pick&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;,
+  &lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Str&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;(&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;a&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;..&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;z&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#39;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;pick&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;50&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;join&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&amp;#39;&amp;#39;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;,
+&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;sub&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;generate-data&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Mu:U&lt;/span&gt; \&lt;span class=&#34;nb&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nv&#34;&gt;%special-cases&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;??&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;%special-cases&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;}()&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;!!&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;t&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;nf&#34;&gt;generate-data&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;Int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;注意以下几点:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;我们给 &lt;code&gt;%special-cases&lt;/code&gt; 指定了键的类型。那是因为默认地, 键的类型为 &lt;strong&gt;Str&lt;/strong&gt;。显然地, 我们不想让我们的类型字符串化。我们实际上做的是指定它们为&amp;quot;Mu&amp;quot;的子类(这在类型&amp;quot;食物链&amp;quot;的顶端)。&lt;/li&gt;
+&lt;li&gt;我们在 &lt;strong&gt;Int&lt;/strong&gt; 和 &lt;strong&gt;Str&lt;/strong&gt; 周围放上圆括号, 以避免字符串化。&lt;/li&gt;
+&lt;li&gt;我们在函数参数类型中使用了 &lt;code&gt;:U&lt;/code&gt;。那意味着那个值必须是未定义的(undefined)。类型对象(就像 Int、Str 等等)是未定义的, 所以它能满足我们(你可能见过一个叫 Nil 的不同的未知值)。&lt;/li&gt;
+&lt;li&gt;类型对象实际上是对象, 就像其它任何对象一样。这就是为什么我们在类型对象上调用 &lt;code&gt;.new&lt;/code&gt; 方法, 例如, 它和直接调用 &lt;code&gt;Int.new&lt;/code&gt; 相同(那对一致性和 &lt;a href=&#34;https://design.raku.org/S09.html#Autovivification&#34;&gt;autovivification&lt;/a&gt; 很有用)。&lt;/li&gt;
+&lt;li&gt;我们为 &lt;em&gt;Int&lt;/em&gt; 和 &lt;em&gt;Str&lt;/em&gt; 提供了 fallback, 因为调用 &lt;em&gt;Int.new&lt;/em&gt; 和 &lt;em&gt;Str.new&lt;/em&gt; ( 0 和 &amp;quot;&amp;quot; )不会在我们创建的数据中给我们任何随机化。&lt;/li&gt;
+&lt;li&gt;Raku 在函数中自动返回最后一个表达式。所以不需要在那儿放上一个 &lt;em&gt;return&lt;/em&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们用代码生成数据, 公平且公正。但是我们需要生成更多那样简单的数据。&lt;/p&gt;
+&lt;p&gt;我们至少需要支持带有属性的类: 我们想查看属性列表, 为它们的类型生成数据, 并把它们喂给构造器。&lt;/p&gt;
+&lt;p&gt;我们要能够看到类的内部。用 Raku 的术语来说, 我们将要到达的是元对象协议(&lt;a href=&#34;https://rakuadvent.wordpress.com/2010/12/22/day-22-the-meta-object-protocol/&#34;&gt;Meta-Object Protocol&lt;/a&gt;)。首先我们定义一个类:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;class&lt;/span&gt; &lt;span class=&#34;nc&#34;&gt;Article&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;has&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;Str&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$.title&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;has&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;Str&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$.content&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;has&lt;/span&gt; &lt;span class=&#34;nb&#34;&gt;Int&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$.view-count&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+
+&lt;span class=&#34;c1&#34;&gt;# 我们可以这样手动创建一个实例&lt;/span&gt;
+&lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;title&lt;/span&gt;      &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;Raku Advent&lt;/span&gt;, &lt;span class=&#34;n&#34;&gt;第&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;19&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;天&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;,
+&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;            content    =&amp;gt; &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Magic&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;!&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;,
+&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;            view-count =&amp;gt; 0
+&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;            );
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;但是我们不想亲手创建那个文章 (article)。我们想把那个 &lt;strong&gt;class&lt;/strong&gt; Article 传递给我们的 &lt;em&gt;generate-data&lt;/em&gt; 函数, 并返回一个 Article(里面带有随机数据)。让我们回到我们的 &lt;em&gt;REPL&lt;/em&gt;&amp;hellip;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;nb&#34;&gt;say&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.^&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;attributes&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;         &lt;span class=&#34;c1&#34;&gt;# (Str $!title Str $!content Int $!view-count)&lt;/span&gt;
+&lt;span class=&#34;nb&#34;&gt;say&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.^&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;attributes&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;].&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;WHAT&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;# (Attribute)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果你点击了 MOP 链接, 你不会对我们得到一个含有 3 个元素的数组感到惊讶。如果你仍旧对该语法感到惊讶, 那么 &lt;code&gt;.^&lt;/code&gt; 是元方法调用。意思是 &lt;code&gt;a.^b&lt;/code&gt; 会被转换为 &lt;code&gt;a.HOW.b(a)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如果我们想知道我们可以访问到什么, 我们问它就是了(移除了匿名的那些):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;nb&#34;&gt;Attribute&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.^&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;methods&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;grep&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;*.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;name&lt;/span&gt; &lt;span class=&#34;ow&#34;&gt;ne&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&#34;s1&#34;&gt;&amp;lt;anon&amp;gt;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#39;);&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# (compose apply_handles get_value set_value&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;#      container readonly package inlined WHY set_why Str gist)&lt;/span&gt;
+
+&lt;span class=&#34;nb&#34;&gt;Attribute&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.^&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;attributes&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;# Method &amp;#39;gist&amp;#39; not found for invocant of class &amp;#39;BOOTSTRAPATTR&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;哎吆… 看起来这有点太 meta 了。幸好, 我们能使用 Rakudo 的一个非常好的属性: 它的大部分都是用 Raku 写的! 要查看我们可以得到什么, 我们查看&lt;a href=&#34;https://github.com/rakudo/rakudo/blob/nom/src/core/Attribute.pm&#34;&gt;源代码&lt;/a&gt;就好了:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;c1&#34;&gt;# has Str $!name;&lt;/span&gt;
+&lt;span class=&#34;o&#34;&gt;...&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# has Mu $!type;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我们得到了键的名字, 还有去生成值的类型。让我们看看&amp;hellip;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;gt; say Article.^attributes.map(*.name)
+($!title $!content $!view-count)
+&amp;gt; say Article.^attributes.map(*.type)
+((Str) (Str) (Int))
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;天才! 看起来是正确的。(如果你想知道为什么我们得到 &lt;code&gt;$!&lt;/code&gt;（私有的） twigils, 那是因为 &lt;code&gt;$.&lt;/code&gt; 只意味着将会生成的一个 getter 方法)。属性本身仍然是私有的, 并且在类中是可访问的。&lt;/p&gt;
+&lt;p&gt;现在, 我们唯一要做的事情就是创建一个循环&amp;hellip;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;k&#34;&gt;my&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;%args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+
+&lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.^&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;attributes&lt;/span&gt; &lt;span class=&#34;k&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;$attr&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nv&#34;&gt;%args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$attr&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;substr&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)}&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nf&#34;&gt;generate-data&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;$attr&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;type&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+&lt;span class=&#34;nb&#34;&gt;say&lt;/span&gt; &lt;span class=&#34;nv&#34;&gt;%args&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;perl&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这是一个将会打印什么的例子:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;p&#34;&gt;{:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;content&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;muenglhaxrvykfdjzopqbtwisc&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;title&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;rfpjndgohmasuwkyzebixqtvcl&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;)&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;view-count&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;45&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;每次你运行你的代码你都会得到不同的结果(然而我不认为它会创建一篇值得阅读的文章…)。剩下唯一要做的就是把它们传递给 Article 的构造函数:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;nb&#34;&gt;say&lt;/span&gt; &lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&lt;/span&gt;&lt;span class=&#34;nv&#34;&gt;%args&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;(前缀 &lt;code&gt;|&lt;/code&gt; 允许我们把 &lt;em&gt;%args&lt;/em&gt; 作为具名参数传递, 而不是单个位置参数)。再次, 你应该会打印这些东西:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-raku&#34; data-lang=&#34;raku&#34;&gt;&lt;span class=&#34;n&#34;&gt;Article&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nb&#34;&gt;new&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;title&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;kyvphxqmejtuicrbsnfoldgzaw&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;, &lt;span class=&#34;s&#34;&gt;content&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span class=&#34;s2&#34;&gt;jqbtcyovxlngpwikdszfmeuahr&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;&amp;#34;&lt;/span&gt;, &lt;span class=&#34;s&#34;&gt;view-count&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;26&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;呀! 我们设法在不了解 Article 的情况下胡乱地(blindly)创建了一个 Article 实例。 我们的代码能够用于为任何期望传递它的类属性的构造函数生成数据。好了!&lt;/p&gt;
+&lt;p&gt;PS: 留个作业! 移动到 generate-data 函数, 以至于我们能给 Article 添加一个 User &lt;code&gt;$.author&lt;/code&gt; 属性, 并且构建好这个函数。祝你好运!&lt;/p&gt;
+</description>
+                
+                        <author>焉知非鱼@fakeEmailToMakeValidatorHappy.com (焉知非鱼)</author>
+                
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/categories/rakulang">rakulang</category>
+                                
+                            
+                        
+                     
+                        
+                             
+                            
+                                
+                                 
+                                    <category domain="https://ohmyweekly.github.io/tags/introspection">introspection</category>
+                                
+                            
+                        
+                    
+                
+                <guid>https://ohmyweekly.github.io/notes/2015-07-25-introspection-in-raku/</guid>
+                <pubDate>Sun, 11 Jul 2021 00:00:00 +0800</pubDate>
+            </item>
+        
+    </channel>
+</rss>
+
+

@@ -1,1 +1,919 @@
-<!DOCTYPE html><html><head><title>https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/</title><link rel="canonical" href="https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/"/><meta name="robots" content="noindex"><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/" /></head></html>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
+    <meta charset="utf-8">
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Raku Multiple Dispatch With the New MoarVM Dispatcher ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.bd7287557074084b7eba924cf5291f3c285cf8e8324c500f4389ff9fb1a92169.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.bd7287557074084b7eba924cf5291f3c285cf8e8324c500f4389ff9fb1a92169.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.3ca622508ac5fb18aee4bc98a61b16f99348c918b1c684528246d1a95d82fd34.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.3ca622508ac5fb18aee4bc98a61b16f99348c918b1c684528246d1a95d82fd34.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Raku Multiple Dispatch With the New MoarVM Dispatcher" />
+<meta property="og:description"
+      content="Raku Multiple Dispatch With the New Moarvm Dispatcher" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/" />
+
+
+    
+        <meta property="article:published_time" content="2021-04-15T00:00:00&#43;08:00"/>
+    
+    
+        <meta property="article:modified_time" content="2021-04-15T00:00:00&#43;08:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Raku Multiple Dispatch With the New MoarVM Dispatcher"/>
+<meta name="twitter:description" content="Raku Multiple Dispatch With the New Moarvm Dispatcher"/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2021-07-05T10:46:28Z"/>
+    <meta name="hugo-commit-hash" content="724d5db5"/>
+    <meta name="generator" content="Hugo 0.85.0" />
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        rakulang, dartlang, nimlang, golang, rustlang, lang lang no see
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 68 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__raku__"
+                                
+                                
+                                title="See all 19 posts tagged with ‘Raku’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/raku/">Raku</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Raku Multiple Dispatch With the New MoarVM Dispatcher</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/2021-04-15-raku-multiple-dispatch-with-the-new-moarvm-dispatcher/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2021-04-15T00:00:00+0800" class="dt-published">Thu Apr 15, 2021</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+    <div class="description p-summary">
+        
+        
+        
+        
+        
+            
+            
+        
+        <p>Raku Multiple Dispatch With the New Moarvm Dispatcher</p>
+    </div>
+
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>我最近写了一篇关于<a href="https://ohmyweekly.github.io/notes/2021-03-15-towards-a-new-general-dispatch-mechanism-in-moarvm/">新的 MoarVM 调度机制</a>的文章，并在那篇文章中指出，我在 Raku 的多重分派语义方面还有不少需要实现的地方。从那以后，我在这个方向上取得了不小的进展。这篇文章包含了对所采取的方法的概述，以及一些非常粗略的性能测量。</p>
+<h2 id="我的天啊语义太多了">我的天啊，语义太多了&nbsp;<a class="headline-hash no-text-decoration" href="#我的天啊语义太多了">#</a> </h2>
+<p>在 Raku 的所有分派中，多重分派是最复杂的。多重分派允许我们写一组候选者，然后根据参数的数量进行选择。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nb">ok</span><span class="p">(</span><span class="nv">$condition</span><span class="o">,</span> <span class="nv">$desc</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">(</span><span class="nv">$condition</span> <span class="o">??</span> <span class="p">&#39;</span><span class="s1">ok</span><span class="p">&#39;</span> <span class="o">!!</span> <span class="p">&#39;</span><span class="s1">not ok</span><span class="p">&#39;)</span> <span class="o">~</span> <span class="p">&#34;</span><span class="s2"> - </span><span class="nv">$desc</span><span class="p">&#34;;</span>
+<span class="p">}</span>
+<span class="k">multi</span> <span class="nb">ok</span><span class="p">(</span><span class="nv">$condition</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">ok</span><span class="p">(</span><span class="nv">$condition</span><span class="o">,</span> <span class="p">&#39;&#39;);</span>
+<span class="p">}</span>
+</code></pre></div><p>或根据参数的类型:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nf">to-json</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$i</span><span class="p">)</span> <span class="p">{</span> <span class="o">~</span><span class="nv">$i</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">to-json</span><span class="p">(</span><span class="nb">Bool</span> <span class="nv">$b</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$b</span> <span class="o">??</span> <span class="p">&#39;</span><span class="s1">true</span><span class="p">&#39;</span> <span class="o">!!</span> <span class="p">&#39;</span><span class="s1">false</span><span class="p">&#39;</span> <span class="p">}</span>
+</code></pre></div><p>而且不只是一个参数，而是可能有很多参数:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nb">truncate</span><span class="p">(</span><span class="nb">Str</span> <span class="nv">$str</span><span class="o">,</span> <span class="nb">Int</span> <span class="nv">$chars</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nv">$str</span><span class="o">.</span><span class="nb">chars</span> <span class="o">&lt;</span> <span class="nv">$chars</span> <span class="o">??</span> <span class="nv">$str</span> <span class="o">!!</span> <span class="nv">$str</span><span class="o">.</span><span class="nb">substr</span><span class="p">(</span><span class="mi">0</span><span class="o">,</span> <span class="nv">$chars</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">...</span><span class="p">&#39;</span>
+<span class="p">}</span>
+
+<span class="k">multi</span> <span class="nb">truncate</span><span class="p">(</span><span class="nb">Str</span> <span class="nv">$str</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$after</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">with</span> <span class="nv">$str</span><span class="o">.</span><span class="nb">index</span><span class="p">(</span><span class="nv">$after</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nv">$pos</span> <span class="p">{</span>
+        <span class="nv">$str</span><span class="o">.</span><span class="nb">substr</span><span class="p">(</span><span class="mi">0</span><span class="o">,</span> <span class="nv">$pos</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">...</span><span class="p">&#39;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+        <span class="nv">$str</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>我们可以添加 <code>where</code> 子句来区分普通类型无法捕捉的属性上的候选者。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span> <span class="k">where</span> <span class="nv">$n</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="mi">1</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$n</span> <span class="o">*</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="p">}</span>
+</code></pre></div><p>每当我们写出一组这样的 <code>multi</code> 候选列表时，编译器就会自动生成一个 <code>proto</code> 例程。这就是安装在符号表中的，存放候选列表的东西。然而，我们也可以写自己的 <code>proto</code>，并使用特殊的术语 <code>{*}</code> 来决定在哪一点上进行调度，如果有的话。</p>
+<pre><code class="language-rakuu" data-lang="rakuu">proto mean($collection) {
+    $collection.elems == 0 ?? Nil !! {*}
+}
+
+multi mean(@arr) {
+    @arr.sum / @arr.elems
+}
+
+multi mean(%hash) {
+    %hash.values.sum / %hash.elems
+}
+</code></pre><p>候选者按窄度排序（使用拓扑排序）。如果多个候选者匹配，但它们窄度相同，那么这就是一个歧义错误。否则，我们调用最窄的一个。然后，我们选择的候选者可能会使用 <code>callsame</code> 和它的朋友们来推迟到下一个最窄的候选者，后者可能也会这样做，直到我们达到最一般的匹配的候选者。</p>
+<h2 id="多重分派无处不在">多重分派无处不在&nbsp;<a class="headline-hash no-text-decoration" href="#多重分派无处不在">#</a> </h2>
+<p>Raku 在很大程度上依赖于多重分派。Raku 中的大多数操作符都被编译成对多重分派子程序的调用。即使是 <code>$a+$b</code> 也会是一个多重分派。这意味着高效地进行多重分派对性能真的很重要。考虑到其语义的丰富性，这有可能有点令人担忧。不过，也有好消息。</p>
+<h2 id="大多数多重调度都很无聊">大多数多重调度都很无聊&nbsp;<a class="headline-hash no-text-decoration" href="#大多数多重调度都很无聊">#</a> </h2>
+<p>我们遇到的绝大多数情况是:</p>
+<ul>
+<li>一个仅由参数和名义类型的数量所做的决定。</li>
+<li>无 where 子句</li>
+<li>无自定义 proto</li>
+<li>无 callsame</li>
+</ul>
+<p>这并不是说其他情况不重要，它们确实相当有用，而且它们的表现也是可取的。不过，在普通情况下，我们能省则省，也是可取的。例如，我们不希望急于计算每一个单次多重调度的全部可能的候选者，因为大多数时候只有第一个才是重要的。这不仅仅是时间上的问题：回想一下，新的调度机制会在每个调用点存储调度程序，如果我们在每个调用点存储所有匹配的候选程序列表，我们也会浪费很多内存。</p>
+<h2 id="我们今天怎么做">我们今天怎么做？&nbsp;<a class="headline-hash no-text-decoration" href="#我们今天怎么做">#</a> </h2>
+<p>如今 Rakuo 的情况如下:</p>
+<ul>
+<li>
+<p>如果调度只由元数和名义类型决定，并且你不使用扁平化的参数来调用它，它可能会表现得很好，甚至可能会享受到候选者的内联和消除在慢速路径上发生的重复类型检查。这要归功于 proto 持有一个 &ldquo;dispatch cache&rdquo;，这是一个在 VM 中实现的特例机制，它使用搜索树，每个参数有一个级别。</p>
+</li>
+<li>
+<p>如果是这种情况，但它有一个自定义的 proto，也不会太差，虽然不会发生内联，它仍然可以使用搜索树。</p>
+</li>
+<li>
+<p>如果它使用 <code>where</code> 子句，速度会很慢，因为搜索树只处理在每一个名义类型集合中找到一个候选者，所以我们不能使用它。</p>
+</li>
+<li>
+<p>同样的道理也适用于 <code>callsame</code>，它的速度也会很慢。</p>
+</li>
+</ul>
+<p>实际上，今天的情况是，如果在热路径附近的任何地方，你根本不会在多重调度中使用 <code>where</code>子句（好吧，如果你知道热路径在哪里，并且知道这种调度很慢）。同理，<code>callsame</code> 也是如此，虽然那不太常触达。问题是，我们能不能用新的调度器做得更好？</p>
+<h2 id="守卫类型">守卫类型&nbsp;<a class="headline-hash no-text-decoration" href="#守卫类型">#</a> </h2>
+<p>我们先看看最简单的情况是如何处理的，然后再从那里开始建立。(这其实是我在实现上的做法，但同时我也有一个大概的想法，我希望最终的结果是什么)。</p>
+<p>回忆一下这对候选者。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nb">truncate</span><span class="p">(</span><span class="nb">Str</span> <span class="nv">$str</span><span class="o">,</span> <span class="nb">Int</span> <span class="nv">$chars</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nv">$str</span><span class="o">.</span><span class="nb">chars</span> <span class="o">&lt;</span> <span class="nv">$chars</span> <span class="o">??</span> <span class="nv">$str</span> <span class="o">!!</span> <span class="nv">$str</span><span class="o">.</span><span class="nb">substr</span><span class="p">(</span><span class="mi">0</span><span class="o">,</span> <span class="nv">$chars</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">...</span><span class="p">&#39;</span>
+<span class="p">}</span>
+
+<span class="k">multi</span> <span class="nb">truncate</span><span class="p">(</span><span class="nb">Str</span> <span class="nv">$str</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$after</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">with</span> <span class="nv">$str</span><span class="o">.</span><span class="nb">index</span><span class="p">(</span><span class="nv">$after</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nv">$pos</span> <span class="p">{</span>
+        <span class="nv">$str</span><span class="o">.</span><span class="nb">substr</span><span class="p">(</span><span class="mi">0</span><span class="o">,</span> <span class="nv">$pos</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">...</span><span class="p">&#39;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+        <span class="nv">$str</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>然后我们有一个调用 <code>truncate($message, &quot;\n&quot;)</code>，其中 <code>$message</code> 是 <code>Str</code> 类型的。在新的调度机制下，调用是使用 <code>raku-call</code> dispatcher 进行的，它识别出这是一个 <code>multi</code> 方法调度，因此委托给 <code>raku-multi</code>。(<code>multi</code> 方法调度也会在那里结束)。</p>
+<p>调度的记录阶段 - 在我们第一次到达这个调用点时 - 将进行如下操作。</p>
+<ol>
+<li>迭代候选者</li>
+<li>如果某个候选者在参数数上不匹配，就直接丢弃它。由于 <code>callsite</code> 的形状是一个常数，而且我们在每个 <code>callsite</code> 都会计算 dispatch 程序，所以我们不需要为此建立任何防护措施。</li>
+<li>如果在类型匹配并且成功了，注意涉及哪些参数，需要什么样的守卫。</li>
+<li>如果没有匹配或者模棱两可，就报错，不产生调度程序。</li>
+<li>否则，在确定了类型守卫后，将选定的候选程序委托给 <code>raku-invoke</code> 调度程序。</li>
+</ol>
+<p>当我们再次到达同一个调用点时，我们可以运行调度程序，它可以快速检查参数类型是否与上次看到的参数类型相匹配，如果相匹配，我们就知道要调用哪个候选程序。这些检查非常便宜 - 比遍历所有候选者并检查每个候选者是否匹配要便宜得多。优化器以后可能会证明这些检查总是会成为事实，并消除它们。</p>
+<p>因此，整个调度过程 - 至少对于这个我们只有类型和元数的简单案例 - 可以向虚拟机 &ldquo;解释&rdquo; 为 &ldquo;如果参数具有这些确切的类型，就调用这个例程&rdquo;。这和我们对方法分派所做的差不多，除了我们只关心第一个参数的类型 - 调用者 - 和方法名的值。(还记得上一篇文章中说过，如果是 <code>multi</code> 方法调度，那么方法调度和 <code>multi</code> 方法调度都会守护第一个参数的类型，但是消除了重复，所以只做一次检查)。</p>
+<h2 id="这就进入了恢复之洞">这就进入了恢复之洞&nbsp;<a class="headline-hash no-text-decoration" href="#这就进入了恢复之洞">#</a> </h2>
+<p>想出好的抽象是很难的，新的调度机制的很多挑战就在于此。Raku 有不少不同的类似调度的东西。然而，将它们全部直接编码在虚拟机中会导致很高的复杂度，这使得构建可靠的优化（甚至是可靠的未优化的实现！）具有挑战性。因此，我们的目标是研究出一套相对较小的原语，允许以这样一种方式向虚拟机 &ldquo;解释&rdquo; 调度，使其能够提供不错的性能。</p>
+<p>很明显，<code>callsame</code> 是一种调度恢复，但自定义 proto 这种情况和 <code>where</code> 子句这种情况呢？事实证明，这些也都可以用调度恢复的方式整齐地表达出来（<code>where</code> 子句情况需要在虚拟机层面增加一个小的内容，到时候可能对其他事情也有用）。不仅如此，用调度恢复来编码这些特性也是相当直接的，因此应该是高效的。我们教给专门人员的关于如何更好地使用调度恢复的每一个技巧，都可以让所有使用它们实现的语言特性也受益。</p>
+<h2 id="自定义-proto">自定义 proto&nbsp;<a class="headline-hash no-text-decoration" href="#自定义-proto">#</a> </h2>
+<p>回顾这个例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">proto</span> <span class="nf">mean</span><span class="p">(</span><span class="nv">$collection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nv">$collection</span><span class="o">.</span><span class="nb">elems</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">??</span> <span class="nb">Nil</span> <span class="o">!!</span> <span class="p">{</span><span class="o">*</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>在这里，我们希望运行 proto 的主体，然后在 <code>{*}</code> 这里进行候选者的选择。相比之下，当我们没有自定义的 proto 时，我们希望简单地继续调用正确的多。</p>
+<p>为了达到这个目的，我首先将 <code>multi</code> 候选者的选择逻辑从 <code>raku-multi</code> 调度器移到了 <code>raku-multi-core</code> 调度器中。然后，<code>raku-multi</code> dispatcher 会检查我们是否有一个 &ldquo;onlystar&rdquo; proto（一个不需要我们运行的 proto）。如果有，它就会立即委托给 <code>raku-multi-core</code>。如果没有，它就将调度的参数保存为恢复初始化状态，然后调用 proto。proto 的 <code>{*}</code> 被编译成一个 dispatch resumption。然后，这个 resumption 委托给 <code>raku-multi-core</code>。或者，在代码中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-nqp" data-lang="nqp"><span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-register</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">raku-multi</span><span class="p">&#39;</span><span class="o">,</span>
+    <span class="c1"># Initial dispatch, only setting up resumption if we need to invoke the</span>
+    <span class="c1"># proto.</span>
+    <span class="k">-&gt;</span> <span class="nv">$capture</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$callee</span> <span class="o">:=</span> <span class="nf">nqp::captureposarg</span><span class="p">(</span><span class="nv">$capture</span><span class="o">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="k">my</span> <span class="nb">int</span> <span class="nv">$onlystar</span> <span class="o">:=</span> <span class="nf">nqp::getattr_i</span><span class="p">(</span><span class="nv">$callee</span><span class="o">,</span> <span class="nb">Routine</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">$!onlystar</span><span class="p">&#39;);</span>
+        <span class="k">if</span> <span class="nv">$onlystar</span> <span class="p">{</span>
+            <span class="c1"># Don&#39;t need to invoke the proto itself, so just get on with the</span>
+            <span class="c1"># candidate dispatch.</span>
+            <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-delegate</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">raku-multi-core</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$capture</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="c1"># Set resume init args and run the proto.</span>
+            <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-set-resume-init-args</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$capture</span><span class="p">);</span>
+            <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-delegate</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">raku-invoke</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$capture</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span><span class="o">,</span>
+    <span class="c1"># Resumption means that we have reached the {*} in the proto and so now</span>
+    <span class="c1"># should go ahead and do the dispatch. Make sure we only do this if we</span>
+    <span class="c1"># are signalled to that it&#39;s a resume for an onlystar (resumption kind 5).</span>
+    <span class="k">-&gt;</span> <span class="nv">$capture</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$track_kind</span> <span class="o">:=</span> <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-track-arg</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$capture</span><span class="o">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-guard-literal</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$track_kind</span><span class="p">);</span>
+        <span class="k">my</span> <span class="nb">int</span> <span class="nv">$kind</span> <span class="o">:=</span> <span class="nf">nqp::captureposarg_i</span><span class="p">(</span><span class="nv">$capture</span><span class="o">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="k">if</span> <span class="nv">$kind</span> <span class="o">==</span> <span class="mi">5</span> <span class="p">{</span>
+            <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-delegate</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">raku-multi-core</span><span class="p">&#39;</span><span class="o">,</span>
+                <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-get-resume-init-args</span><span class="p">&#39;));</span>
+        <span class="p">}</span>
+        <span class="k">elsif</span> <span class="o">!</span><span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-next-resumption</span><span class="p">&#39;)</span> <span class="p">{</span>
+            <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-delegate</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">boot-constant</span><span class="p">&#39;</span><span class="o">,</span>
+                <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">boot-syscall</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">dispatcher-insert-arg-literal-obj</span><span class="p">&#39;</span><span class="o">,</span>
+                    <span class="nv">$capture</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="nb">Nil</span><span class="p">));</span>
+        <span class="p">}</span>
+    <span class="p">});</span>
+</code></pre></div><h2 id="合二为一">合二为一&nbsp;<a class="headline-hash no-text-decoration" href="#合二为一">#</a> </h2>
+<p>推迟到下一个候选者（例如用 <code>callsame</code>）和因为 <code>where</code> 子句失败而尝试下一个候选者看起来非常相似：两者都涉及遍历一个可能的候选者列表。有一些细节，但它们有很多共同点，如果能在使用新的 dispatcher 实现多重分派的过程中体现出来就更好了。</p>
+<p>在这之前，先说一个略显可怕的细节，当我们有 <code>where</code> 子句的时候，今天在 Rakuo 中是如何工作的。首先，调度器会做一个 &ldquo;试用绑定&rdquo;，它问一个问题：这个签名会不会绑定？要做到这一点，它必须评估所有的 <code>where</code> 子句。更糟糕的是，它还必须使用慢路径签名绑定器，它对签名进行解释，尽管我们在很多情况下可以编译它。如果候选者匹配，很好，我们选择它，然后调用它&hellip;&hellip;这将第二次运行 <code>where</code> 子句，作为编译后的签名绑定代码的一部分。这样做一点也不高效，除了在开发人员的时间上要高效得多，这也是为什么要这样做的原因。</p>
+<p>总之，毋庸置疑，在我使用新的调度器重新实现时，我相当希望尽可能避免这种重复的工作和慢路径绑定。而且，令人高兴的是，一个小小的补充提供了一个解决方案。有一个 op <code>assertparamcheck</code>，任何类型的参数检查都会被编译成（无论是类型检查、<code>where</code> 子句检查等），这将触发对一个函数的调用，该函数获取参数，也就是我们试图调用的东西，然后可以通过它们来产生错误信息。诀窍是提供一种调用例程的方法，使绑定失败后，不是调用报错函数，而是离开例程，然后做一个调度恢复! 这意味着我们可以将传递 <code>where</code> 子句检查失败变成一个调度恢复，然后会走到下一个候选者，并代替它进行尝试。</p>
+<h2 id="琐碎vs非琐碎">琐碎VS非琐碎&nbsp;<a class="headline-hash no-text-decoration" href="#琐碎vs非琐碎">#</a> </h2>
+<p>这让我们得到了大部分的解决方法，但在常见的情况下，仍然存在内存和时间效率的问题，即没有恢复和没有 <code>where</code> 子句。我为这种情况创造了一个术语 &ldquo;trivial multiple dispatch&rdquo;，这使得其他情况变得 &ldquo;non-trivial&rdquo;。事实上，我甚至做了一个调度器，叫做 <code>raku-multi-non-trivial</code>! 我们有两种方式可以结束。</p>
+<ol>
+<li>最初尝试寻找匹配的候选者，决定了我们必须考虑 <code>where</code> 子句。一旦我们看到是这种情况，我们就会继续制作一个可能匹配的候选者的完整列表。这是一个链表（原因见我之前的文章）。</li>
+<li>最初尝试寻找匹配的候选者时，发现了一个可以纯粹根据参数数和名词类型来挑选的候选者。我们就此停止，而不是试图建立一个完整的候选列表，并运行匹配的候选。在 <code>callsame</code> 的情况下，我们最终进入琐碎的调度恢复处理程序，它 - 因为这种情况现在是非琐碎的 - 建立完整的候选者列表，从它上面剪下第一项（因为我们已经运行了那项），然后委托给 <code>raku-multi-non-trivial</code>。</li>
+</ol>
+<p>在这个描述中失去了另一个重要的改进：今天，当有 <code>where</code> 子句时，我们完全失去了使用 MoarVM 多重调度缓存的能力，但在新的调度器下，我们在 <code>callsite</code> 存储了一个类型过滤的候选列表，然后使用廉价的类型守卫来检查它是否有效使用。</p>
+<h2 id="初步结果">初步结果&nbsp;<a class="headline-hash no-text-decoration" href="#初步结果">#</a> </h2>
+<p>我做了一些基准测试，看看新的调度机制在今天 Raku 已知的几种次优情况下的表现。这些数字并不能反映出什么是可能的，因为目前专门人员对新的调度器还没有太多的了解。相反，它们反映了我们可以期望的最小改进。</p>
+<p>考虑这个基准，使用一个带有 <code>where</code> 子句的 <code>multi</code> 来递归实现 factorial。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span> <span class="k">where</span> <span class="nv">$n</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="mi">1</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$n</span> <span class="o">*</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">100_000</span> <span class="p">{</span>
+    <span class="nf">fac</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>这需要进行一些调整（并在环境变量下运行）以使用新的调度器；这些都是暂时的，直到我将 Rakudo 转换为默认使用新的调度器。</p>
+<div class="highlight"><pre class="chroma"><code class="language-nqp" data-lang="nqp"><span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+
+<span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span> <span class="k">where</span> <span class="nv">$n</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="mi">1</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fac</span><span class="p">(</span><span class="nv">$n</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$n</span> <span class="o">*</span> <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;fac</span><span class="o">,</span> <span class="nv">$n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">100_000</span> <span class="p">{</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;fac</span><span class="o">,</span> <span class="mi">10</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>在我的机器上，第一个运行时间为4.86秒，第二个运行时间为1.34秒。因此，在新的调度器下，运行时间只需过去的四分之一多一点 - 这已经是一个相当大的改进了。</p>
+<p>一个涉及 <code>callsame</code> 的案例也很有意思。这里是没有使用新调度器的情况。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Any</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">a</span><span class="nv">$x</span><span class="p">&#34;</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Numeric</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">n</span><span class="p">&#34;</span> <span class="o">~</span> <span class="nb">callsame</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Real</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">r</span><span class="p">&#34;</span> <span class="o">~</span> <span class="nb">callsame</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">i</span><span class="p">&#34;</span> <span class="o">~</span> <span class="nb">callsame</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">1_000_000</span> <span class="p">{</span>
+    <span class="nf">fallback</span><span class="p">(</span><span class="mi">4</span><span class="o">+</span><span class="mi">2</span><span class="no">i</span><span class="p">);</span>
+    <span class="nf">fallback</span><span class="p">(</span><span class="mf">4.2</span><span class="p">);</span>
+    <span class="nf">fallback</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>
+<span class="p">}</span>   
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>而配合临时调整使用新的调度器:</p>
+<div class="highlight"><pre class="chroma"><code class="language-nqp" data-lang="nqp"><span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Any</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">a</span><span class="nv">$x</span><span class="p">&#34;</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Numeric</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">n</span><span class="p">&#34;</span> <span class="o">~</span> <span class="n">new-disp-callsame</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Real</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">r</span><span class="p">&#34;</span> <span class="o">~</span> <span class="n">new-disp-callsame</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">fallback</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="p">&#34;</span><span class="s2">i</span><span class="p">&#34;</span> <span class="o">~</span> <span class="n">new-disp-callsame</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">1_000_000</span> <span class="p">{</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;fallback</span><span class="o">,</span> <span class="mi">4</span><span class="o">+</span><span class="mi">2</span><span class="no">i</span><span class="p">);</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;fallback</span><span class="o">,</span> <span class="mf">4.2</span><span class="p">);</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;fallback</span><span class="o">,</span> <span class="mi">42</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>在我的机器上，第一个运行时间为31.3s，第二个运行时间为11.5s，这意味着使用新的调度器，我们最终需要的时间只有当前 Rakudo 的三分之一多一点。</p>
+<p>这些都是相当鼓舞人心的，但正如前面提到的，大部分的多重调度都是琐碎的那种，没有使用这些功能。如果我在让其他事情变得更好的路上把最常见的情况变得更糟，那就不好了。现在还不能对此进行公平的比较：琐碎的多重分派在特化器中已经受到了很多关注，而且它还不能很好地优化使用新调度器的代码。值得注意的是，在这样的例子中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="nf">m</span><span class="p">(</span><span class="nb">Int</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">m</span><span class="p">(</span><span class="nb">Str</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">1_000_000</span> <span class="p">{</span>
+    <span class="k">m</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">m</span><span class="p">(&#34;</span><span class="s2">x</span><span class="p">&#34;);</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>内嵌和其他优化会将其变成一个空循环，这是很难做到的。不过有一件事我们已经可以做了：在禁用 specializer 的情况下运行它。新的调度器版本看起来是这样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-nqp" data-lang="nqp"><span class="k">use</span> <span class="nb">nqp</span><span class="p">;</span>
+
+<span class="k">multi</span> <span class="nf">m</span><span class="p">(</span><span class="nb">Int</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+<span class="k">multi</span> <span class="nf">m</span><span class="p">(</span><span class="nb">Str</span><span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+
+<span class="k">for</span> <span class="o">^</span><span class="mi">1_000_000</span> <span class="p">{</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;m</span><span class="o">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="nf">nqp::dispatch</span><span class="p">(&#39;</span><span class="s1">raku-call</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">&amp;m</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">x</span><span class="p">&#34;);</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nb">now</span> <span class="o">-</span> <span class="k">INIT</span> <span class="nb">now</span><span class="p">;</span>
+</code></pre></div><p>结果分别是0.463s和0.332s。因此，基线执行时间 - 在特化器发挥其魔力之前 - 使用新的通用调度机制比使用我们目前使用的特化多重调度缓存要少。在做测量之前，我不知道这里会有什么预期。鉴于我们要从一个已经被剖析和调整过的特化机制转到一个没有受到如此关注的新的通用机制，我已经做好了最初做得差一点的准备，如果能做到平价就好了。在70%的时间里，跑进了70%的时间，这比我预期的进步更大。</p>
+<p>我期望，一旦特化器更好地理解新的调度机制，它也能把上面的内容变成一个空循环 - 不过，由于每次优化可以进行更多的迭代，这应该还是表现为新调度器的胜利。</p>
+<h2 id="最后的想法">最后的想法&nbsp;<a class="headline-hash no-text-decoration" href="#最后的想法">#</a> </h2>
+<p>只要增加一个相对较小的功能，新的调度机制已经可以处理大部分的 Raku 多重调度语义。此外，即使在 specializer 和 JIT 没有真正能够做好的情况下，一些微基准已经显示出3倍-4倍的提升。这是一个很好的起点。</p>
+<p>在我们使用新的调度器出货 Rakudo 版本之前，还有很多工作要做。然而，多重调度是设计中剩下的最大威胁：它比其他种类的调度相当多的参与，而且很有可能一个意想不到的缺点会引发新一轮的设计工作，或者揭示出一般机制与基线未优化的情况下, 与更专业的机制相比，性能会很吃力。到目前为止，没有任何迹象表明这两种情况，我谨慎乐观地认为整体设计是差不多的。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#我的天啊语义太多了">我的天啊，语义太多了</a></li>
+    <li><a href="#多重分派无处不在">多重分派无处不在</a></li>
+    <li><a href="#大多数多重调度都很无聊">大多数多重调度都很无聊</a></li>
+    <li><a href="#我们今天怎么做">我们今天怎么做？</a></li>
+    <li><a href="#守卫类型">守卫类型</a></li>
+    <li><a href="#这就进入了恢复之洞">这就进入了恢复之洞</a></li>
+    <li><a href="#自定义-proto">自定义 proto</a></li>
+    <li><a href="#合二为一">合二为一</a></li>
+    <li><a href="#琐碎vs非琐碎">琐碎VS非琐碎</a></li>
+    <li><a href="#初步结果">初步结果</a></li>
+    <li><a href="#最后的想法">最后的想法</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.0ba8e190674d48a904a724830c26f36870743a24700151e5e415dbeb9bff8db3.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.0ba8e190674d48a904a724830c26f36870743a24700151e5e415dbeb9bff8db3.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 68 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__raku__"
+                                
+                                
+                                title="See all 19 posts tagged with ‘Raku’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/raku/">Raku</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2021-05-19-a-tour-of-rusts-standard-library-traits/" class="nobr">« Rust 标准库中的 Trait 之旅</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2021-05-19-a-tour-of-rust-standard-library-traits/" class="nobr">Rust 的标准库 Trait 之旅 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/724d5db5">0.85.0</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.bb9cba24742e67e37fba39db0232882a4017cc42418c890851b702c95d7b558c.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
+</html>

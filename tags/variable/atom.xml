@@ -1,0 +1,1021 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[variable on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/variable/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/variable/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/variable/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/variable/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-07-11T22:08:29+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/variable/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku 中的变量]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-08-25-variables-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2015-08-25-variables-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Variables in Raku</blockquote><p>变量名以一个叫做魔符 sigil 的特殊字符开头, 后面跟着一个可选的第二个叫做 <code>twigil</code> 的特殊字符, 然后是一个标识符.</p>
+<h2 id="sigils">Sigils</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">符号</th>
+<th style="text-align:left">类型约束</th>
+<th style="text-align:center">默认类型</th>
+<th style="text-align:center">Flattens</th>
+<th style="text-align:center">Assignment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$</td>
+<td style="text-align:left">Mu (no type constraint)</td>
+<td style="text-align:center">Any</td>
+<td style="text-align:center">No</td>
+<td style="text-align:center">item</td>
+</tr>
+<tr>
+<td style="text-align:center">&amp;</td>
+<td style="text-align:left">Callable</td>
+<td style="text-align:center">Callable</td>
+<td style="text-align:center">No</td>
+<td style="text-align:center">item</td>
+</tr>
+<tr>
+<td style="text-align:center">@</td>
+<td style="text-align:left">Positional</td>
+<td style="text-align:center">Array</td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:center">list</td>
+</tr>
+<tr>
+<td style="text-align:center">%</td>
+<td style="text-align:left">Associative</td>
+<td style="text-align:center">Hash</td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:center">list</td>
+</tr>
+</tbody>
+</table>
+<p>例子:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$square</span> <span class="o">=</span> <span class="mi">9</span> <span class="o">**</span> <span class="mi">2</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">@array</span>  <span class="o">=</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="p">;</span>   <span class="c1"># Array variable with three elements</span>
+<span class="k">my</span> <span class="nv">%hash</span>   <span class="o">=</span> <span class="s">London</span> <span class="o">=&gt;</span> <span class="p">&#39;</span><span class="s1">UK</span><span class="p">&#39;</span>, <span class="s">Berlin</span> <span class="o">=&gt;</span> <span class="p">&#39;</span><span class="s1">Germany</span><span class="p">&#39;;</span>
+</code></pre></div><p>默认类型可以使用 <code>is</code> 关键字设置。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">FailHash</span> <span class="k">is</span> <span class="nb">Hash</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nb">Bool</span> <span class="nv">$!final</span> <span class="o">=</span> <span class="nb">False</span><span class="p">;</span>
+
+    <span class="k">multi</span> <span class="k">method</span> <span class="nb">AT-KEY</span> <span class="p">(</span> <span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nb">Str:D</span> \<span class="nb">key</span> <span class="p">){</span>
+        <span class="nb">fail</span> <span class="ne">X::OutOfRange</span><span class="o">.</span><span class="nb">new</span><span class="p">(:</span><span class="s">what</span><span class="p">(&#34;</span><span class="s2">Hash key</span><span class="p">&#34;)</span><span class="o">,</span> <span class="p">:</span><span class="s">got</span><span class="p">(</span><span class="nb">key</span><span class="p">)</span><span class="o">,</span> <span class="p">:</span><span class="s">range</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="nb">keys</span><span class="p">))</span> <span class="k">if</span> <span class="nv">$!final</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nb">self</span><span class="o">.</span><span class="nb">EXISTS-KEY</span><span class="p">(</span><span class="nb">key</span><span class="p">);</span>
+        <span class="nb">callsame</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">finalize</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$!final</span> <span class="o">=</span> <span class="nb">True</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">%h</span> <span class="k">is</span> <span class="nc">FailHash</span> <span class="o">=</span> <span class="s">oranges</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">round</span><span class="p">&#34;</span>, <span class="s">bananas</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">bendy</span><span class="p">&#34;;</span>
+<span class="nb">say</span> <span class="nv">%h</span><span class="p">&lt;</span><span class="s">oranges</span><span class="p">&gt;;</span>
+<span class="c1"># OUTPUT «round␤»</span>
+<span class="nv">%h</span><span class="o">.</span><span class="nf">finalize</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">%h</span><span class="p">&lt;</span><span class="s">cherry</span><span class="p">&gt;;</span>
+<span class="k">CATCH</span> <span class="p">{</span> <span class="k">default</span> <span class="p">{</span> <span class="nb">put</span> <span class="o">.^</span><span class="nb">name</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">: </span><span class="p">&#39;</span><span class="o">,</span> <span class="o">.</span><span class="nb">Str</span> <span class="p">}</span> <span class="p">}</span>
+<span class="c1"># OUTPUT «X::OutOfRange: Hash key out of range. Is: cherry, should be in (oranges bananas)»</span>
+</code></pre></div><p>不带符号的变量也是可行的, 查看 <a href="http://doc.raku.org/language/variables#Sigilless_variables">无符号变量</a>.</p>
+<h2 id="项和列表赋值">项和列表赋值</h2>
+<p>有两种类型的赋值, item 赋值和 list 赋值。两者都使用 = 号操作符。根据 = 号左边的语法来区别 = 是 item 赋值还是 list 赋值。</p>
+<p>Item 赋值把等号右侧的值放到左侧的变量(容器)中。</p>
+<p>例如, <a href="https://docs.raku.org/type/Array">数组</a>变量(@符号)在列表赋值时清空数组自身, 然后把等号右侧的值都放进数组自身中. 跟 Item 赋值相比, 这意味着等号左侧的变量类型始终是 Array, 不管右侧是什么类型。</p>
+<p>赋值类型(item 或 list)取决于当前表达式或声明符看到的第一个上下文:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$foo</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>            <span class="c1"># item assignment</span>
+<span class="nb">say</span> <span class="nv">$foo</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>          <span class="c1"># 5</span>
+
+<span class="k">my</span> <span class="nv">@bar</span> <span class="o">=</span> <span class="mi">7</span><span class="o">,</span> <span class="mi">9</span><span class="p">;</span>         <span class="c1"># list assignment</span>
+<span class="nb">say</span> <span class="nv">@bar</span><span class="o">.</span><span class="nb">WHAT</span><span class="p">;</span>          <span class="c1"># Array</span>
+<span class="nb">say</span> <span class="nv">@bar</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>          <span class="c1"># [7, 9]</span>
+
+<span class="p">(</span><span class="k">my</span> <span class="nv">$baz</span><span class="p">)</span> <span class="o">=</span> <span class="mi">11</span><span class="o">,</span> <span class="mi">13</span><span class="p">;</span>     <span class="c1"># list assignment</span>
+<span class="nb">say</span> <span class="nv">$baz</span><span class="o">.</span><span class="nb">WHAT</span><span class="p">;</span>          <span class="c1"># Parcel</span>
+<span class="nb">say</span> <span class="nv">$baz</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>          <span class="c1"># (11, 13)</span>
+</code></pre></div><p>因此, 包含在列表赋值中的赋值行为依赖于表达式或包含表达式的声明符。
+例如, 如果内部赋值是一个声明符(例如 <code>my</code>), 就使用 item 赋值, 它比逗号和列表赋值的优先级更高:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@array</span><span class="p">;</span>
+<span class="nv">@array</span> <span class="o">=</span> <span class="k">my</span> <span class="nv">$num</span> <span class="o">=</span> <span class="mi">42</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">str</span><span class="p">&#34;;</span>   <span class="c1"># item assignment: uses declarator</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                <span class="c1"># [42, &#34;str&#34;] (an Array)</span>
+<span class="nb">say</span> <span class="nv">$num</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                  <span class="c1"># 42 (a Num)</span>
+</code></pre></div><p>类似地, 如果内部赋值是一个用于声明符初始化的表达式, 则内部表达式的上下文决定赋值的类型:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$num</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">@array</span> <span class="o">=</span> <span class="nv">$num</span> <span class="o">=</span> <span class="mi">42</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">str</span><span class="p">&#34;;</span>    <span class="c1"># item assignment: uses expression</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                 <span class="c1"># [42, &#34;str&#34;] (an Array)</span>
+<span class="nb">say</span> <span class="nv">$num</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                   <span class="c1"># 42 (a Num)</span>
+
+<span class="k">my</span> <span class="p">(</span> <span class="nv">@foo</span><span class="o">,</span> <span class="nv">$bar</span> <span class="p">);</span>
+<span class="nv">@foo</span> <span class="o">=</span> <span class="p">(</span><span class="nv">$bar</span><span class="p">)</span> <span class="o">=</span> <span class="mi">42</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">str</span><span class="p">&#34;;</span>       <span class="c1"># list assignment: uses parens</span>
+<span class="nb">say</span> <span class="nv">@foo</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                   <span class="c1"># [42, &#34;str&#34;] (an Array)</span>
+<span class="nb">say</span> <span class="nv">$bar</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                   <span class="c1"># $(42, &#34;str&#34;)  (a Parcel)</span>
+</code></pre></div><p>然而, 如果内部赋值既不是声明符又不是表达式, 而是更大的表达式的一部分, 更大的表达式的上下文决定赋值的类型:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="p">(</span> <span class="nv">@array</span><span class="o">,</span> <span class="nv">$num</span> <span class="p">);</span>
+<span class="nv">@array</span> <span class="o">=</span> <span class="nv">$num</span> <span class="o">=</span> <span class="mi">42</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">str</span><span class="p">&#34;;</span>    <span class="c1"># list assignment</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>              <span class="c1"># [42, &#34;str&#34;] (an Array)</span>
+<span class="nb">say</span> <span class="nv">$num</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>                <span class="c1"># [42, &#34;str&#34;] (an Array)</span>
+</code></pre></div><p>这是因为整个表达式是 <code>@array = $num = 42, &quot;str&quot;</code>, 而 <code>$num = 42</code> 不是单独的表达式。</p>
+<p>查看<a href="https://docs.raku.org/language/operators">操作符</a>获取关于优先级的更多详情。</p>
+<h2 id="无符号变量">无符号变量</h2>
+<p>在 Raku 中创建不带符号的变量也是可能的:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">\degrees</span> <span class="o">=</span> <span class="no">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">\θ</span>       <span class="o">=</span> <span class="mi">15</span> <span class="o">*</span> <span class="n">degrees</span><span class="p">;</span>
+</code></pre></div><p>然而, 这些无符号变量并不创建<a href="https://docs.raku.org/language/containers">容器</a>. 那意味着上面的 <code>degrees</code> 和 <code>θ</code> 实际上直接代表 <code>Nums</code>。 为了说明, 我们定义一个无符号变量后再赋值:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">θ</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span> <span class="c1"># Dies with the error &#34;Cannot modify an immutable Num&#34;</span>
+</code></pre></div><p>无符号变量不强制上下文, 所以它们可被用于原样地传递某些东西:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">logged</span><span class="p">(</span><span class="nv">&amp;f</span><span class="o">,</span> <span class="o">|</span><span class="nb">args</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span><span class="p">(&#39;</span><span class="s1">Calling </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">&amp;f</span><span class="o">.</span><span class="nb">name</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> with arguments </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nb">args</span><span class="o">.</span><span class="nb">perl</span><span class="p">);</span>
+    <span class="k">my</span> <span class="nv">\result</span> <span class="o">=</span> <span class="nb">f</span><span class="p">(</span><span class="o">|</span><span class="nb">args</span><span class="p">);</span>
+    <span class="c1">#  ^^^^^^^ not enforcing any context here</span>
+    <span class="nb">say</span><span class="p">(</span><span class="nv">&amp;f</span><span class="o">.</span><span class="nb">name</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> returned </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nb">result</span><span class="o">.</span><span class="nb">perl</span><span class="p">);</span>
+    <span class="k">return</span> <span class="o">|</span><span class="nb">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><h2 id="twigils">Twigils</h2>
+<p><code>Twigils</code> 影响变量的作用域。请记住 twigils 对基本的魔符插值没有影响，那就是，如果 <code>$a</code> 内插，<code>$^a</code>, <code>$*a</code>, <code>$=a</code>, <code>$?a</code>, <code>$.a</code>, 等等也会内插. 它仅仅取决于 <code>$</code>。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Twigil</th>
+<th style="text-align:left">Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">*</td>
+<td style="text-align:left">动态的</td>
+</tr>
+<tr>
+<td style="text-align:center">!</td>
+<td style="text-align:left">属性(类成员)</td>
+</tr>
+<tr>
+<td style="text-align:center">?</td>
+<td style="text-align:left">编译时变量</td>
+</tr>
+<tr>
+<td style="text-align:center">.</td>
+<td style="text-align:left">方法(并非真正的变量)</td>
+</tr>
+<tr>
+<td style="text-align:center">&lt;</td>
+<td style="text-align:left">匹配对象索引(并非真正的变量)</td>
+</tr>
+<tr>
+<td style="text-align:center">^</td>
+<td style="text-align:left">自我声明的形式位置参数</td>
+</tr>
+<tr>
+<td style="text-align:center">:</td>
+<td style="text-align:left">自我声明的形式命名参数</td>
+</tr>
+<tr>
+<td style="text-align:center">=</td>
+<td style="text-align:left">Pod 变量</td>
+</tr>
+<tr>
+<td style="text-align:center">~</td>
+<td style="text-align:left">子语言</td>
+</tr>
+</tbody>
+</table>
+<h2 id="-twigil">* Twigil</h2>
+<p>动态变量通过 caller 查找, 不是通过外部作用域。例如:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$lexical</span>   <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="k">my</span> <span class="vg">$*dynamic1</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+<span class="k">my</span> <span class="vg">$*dynamic2</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+
+<span class="k">sub</span> <span class="nf">say-all</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="nv">$lexical</span><span class="s2">, </span><span class="nv">$*dynamic1</span><span class="s2">, </span><span class="nv">$*dynamic2</span><span class="p">&#34;;</span>
+<span class="p">}</span>
+
+<span class="c1"># prints 1, 10, 100</span>
+<span class="nf">say-all</span><span class="p">();</span>
+
+<span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$lexical</span>   <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="k">my</span> <span class="vg">$*dynamic1</span> <span class="o">=</span> <span class="mi">11</span><span class="p">;</span>
+    <span class="vg">$*dynamic2</span>    <span class="o">=</span> <span class="mi">101</span><span class="p">;</span> <span class="c1"># 注意,这儿没有使用 my 来声明</span>
+
+    <span class="c1"># prints 1, 11, 101</span>
+    <span class="nf">say-all</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1"># prints 1, 10, 101</span>
+<span class="nf">say-all</span><span class="p">();</span>
+</code></pre></div><p>第一次调用 <code>&amp;say-all</code> 时, 就像你期望的一样, 它打印 &ldquo;1, 10, 100&rdquo;。可是第二次它打印 &ldquo;1, 11, 101&rdquo;。 这是因为 <code>$lexical</code> 不是在调用者的作用域内被查找, 而是在 <code>&amp;say-all</code> 被定义的作用域里被查找的。这两个动态作用域变量在调用者的作用域内被查找, 所以值为 <code>11</code> 和 <code>101</code>。第三次调用 <code>&amp;say-all</code> 后,  <code>$*dynamic1</code> 不再是 11 了。但是 <code>$*dynamic2</code> 仍然是 101。这源于我们在块中声明了一个新的动态变量 <code>$*dynamic1</code> 的事实并且没有像我们对待 <code>$*dynamic2</code> 那样把值赋值给旧的变量。</p>
+<p>动态变量与其他变量类型在引用一个未声明的动态变量上不同的是前者不是一个编译时错误，而是运行时 <a href="https://docs.raku.org/type/Failure">failure</a>，这样一个动态变量可以在未定义时使用只要在把它用作任何其它东西的时候检查它是否定义过:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+    <span class="vg">$*FOO</span> <span class="o">//</span> <span class="p">&#39;</span><span class="s1">foo</span><span class="p">&#39;;</span>
+<span class="p">}</span>
+
+<span class="nb">say</span> <span class="n">foo</span><span class="p">;</span> <span class="c1"># -&gt; &#39;foo&#39;</span>
+
+<span class="k">my</span> <span class="vg">$*FOO</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">bar</span><span class="p">&#39;;</span>
+
+<span class="nb">say</span> <span class="n">foo</span><span class="p">;</span> <span class="c1"># -&gt; &#39;bar&#39;</span>
+</code></pre></div><h2 id="-twigil-1">! Twigil</h2>
+<p>属性是变量, 存在于每个类的实例中. 通过 <code>!</code> 符号它们可以从类的里面直接被访问到:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Point</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.x</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nv">$.y</span><span class="p">;</span>
+
+    <span class="k">method</span> <span class="nb">Str</span><span class="p">()</span> <span class="p">{</span>
+        <span class="p">&#34;</span><span class="s2">(</span><span class="nv">$!x</span><span class="s2">, </span><span class="nv">$!y</span><span class="s2">)</span><span class="p">&#34;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>注意属性是怎样被声明为 <code>$.x</code> 和 <code>$.y</code> 的, 但是仍然能够通过 <code>$!x</code> 和 <code>$!y</code> 访问到属性. 这是因为 在 Raku 中, 所有的属性都是<code>私有的</code>, 并且在类中能使用 <code>$!attribute-name</code> 直接访问这些属性. Raku 能自动为你生成访问方法. 关于对象、类和它们的属性和方法的详情, 请查看<a href="https://docs.raku.org/language/objects">面向对象</a>.</p>
+<h2 id="-twigil-2">? Twigil</h2>
+<p>编译时&quot;常量&quot;, 可通过 <code>?</code> twigil 访问. 编译器对它们很熟悉, 并且编译后不能被修改. 常用的一个例子如下:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">&#34;</span><span class="nv">$?FILE:</span><span class="s2"> </span><span class="nv">$?LINE</span><span class="p">&#34;;</span> <span class="c1"># prints &#34;hello.pl: 23&#34; if this is the 23 line of a</span>
+                      <span class="c1"># file named &#34;hello.pl&#34;.</span>
+</code></pre></div><p>关于这些特殊变量的列表请查看<a href="https://docs.raku.org/language/variables#Compile-time_variables">编译时变量</a>。</p>
+<p>尽管不能在运行时改变它们, 用户可以(重新)定义这种常量.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">constant</span> <span class="nv">$?TABSTOP</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span> <span class="c1"># this causes leading tabs in a heredoc or in a POD</span>
+                        <span class="c1"># block&#39;s virtual margin to be counted as 4 spaces.</span>
+</code></pre></div><h2 id="-twigil-3">. Twigil</h2>
+<p><code>.</code> twigil 真的不是用于变量的. 实际上, 看下面的代码:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Point</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.x</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nv">$.y</span><span class="p">;</span>
+
+    <span class="k">method</span> <span class="nb">Str</span><span class="p">()</span> <span class="p">{</span>
+        <span class="p">&#34;</span><span class="s2">(</span><span class="nv">$.x</span><span class="s2">, </span><span class="nv">$.y</span><span class="s2">)</span><span class="p">&#34;</span> <span class="c1"># 注意我们这次使用 . 而不是 !</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>对 <code>self</code>(自身)调用了方法 <code>x</code> 和方法 <code>y</code>, 这是自动为你生成的, 因为在你声明你的属性的时候, 你使用的是 <code>.</code> twigil 。 注意,  子类可能会覆盖那些方法. 如果你不想这个发生, 请使用 <code>$!x</code> 和 <code>$!y</code> 代替。</p>
+<p><code>.</code> twigil 只是调用了一个方法也表明下面是可能的</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">SaySomething</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">a</span><span class="p">()</span> <span class="p">{</span> <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">a</span><span class="p">&#34;;</span> <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">b</span><span class="p">()</span> <span class="p">{</span> <span class="nv">$.a</span><span class="p">;</span> <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">SaySomething</span><span class="o">.</span><span class="nf">b</span><span class="p">;</span> <span class="c1"># prints &#34;a&#34;</span>
+</code></pre></div><p>关于对象、类和它们的属性和方法的详情, 请查看<a href="https://docs.raku.org/language/objects">面向对象</a>.</p>
+<h2 id="-twigil-4">&lt; Twigil</h2>
+<p><code>&lt;</code> twigil 是 <code>$/&lt;...&gt;</code> 的别名, 其中,  <code>$/</code> 是匹配变量。关于匹配变量的更多详情请查看 <a href="https://docs.raku.org/language/variables#The_%24%2F_Variable">$/变量</a>和<a href="https://docs.raku.org/type/Match">类型匹配</a></p>
+<h2 id="-twigil-5">^ Twigil</h2>
+<p><code>^</code> twigil 为 block 块 或 子例程 声明了一个形式位置参数.  形如 <code>$^variable</code> 的变量是一种占位变量. 它们可用在裸代码块中来声明代码块的形式参数。看下面代码中的块:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">for</span> <span class="o">^</span><span class="mi">4</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="nv">$^seconds</span><span class="s2"> follows </span><span class="nv">$^first</span><span class="p">&#34;;</span>
+<span class="p">}</span>
+</code></pre></div><p>它打印出:</p>
+<pre><code>1 follows 0
+3 follows 2
+</code></pre><p>有两个形式参数，就是 <code>$first</code> 和 <code>$second</code>.  注意, 尽管 <code>$^second</code> 在代码中出现的比 <code>$^first</code> 早,  <code>$^first</code> 依然是代码块中的第一个形式参数. 这是因为占位符变量是以 Unicode 顺序排序的。</p>
+<p>子例程也能使用占位符变量, 但是只有在子例程没有显式的参数列表时才行. 这对普通的块也适用</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">say-it</span>    <span class="p">{</span> <span class="nb">say</span> <span class="nv">$^a</span><span class="p">;</span> <span class="p">}</span> <span class="c1"># valid</span>
+<span class="k">sub</span> <span class="nf">say-it</span><span class="p">()</span>  <span class="p">{</span> <span class="nb">say</span> <span class="nv">$^a</span><span class="p">;</span> <span class="p">}</span> <span class="c1"># invalid</span>
+              <span class="p">{</span> <span class="nb">say</span> <span class="nv">$^a</span><span class="p">;</span> <span class="p">}</span> <span class="c1"># valid</span>
+<span class="k">-&gt;</span> <span class="nv">$x</span><span class="o">,</span> <span class="nv">$y</span><span class="o">,</span> <span class="nv">$x</span> <span class="p">{</span> <span class="nb">say</span> <span class="nv">$^a</span><span class="p">;</span> <span class="p">}</span> <span class="c1"># 非法, 已经有参数列表 $x,$y,$x 了</span>
+</code></pre></div><p>占位符变量语法上不能有类型限制. 也注意, 也不能使用单个大写字母的占位符变量, 如 <code>$^A</code></p>
+<h2 id="-twigil-6">: Twigil</h2>
+<p><code>:</code> twigil 为块或子例程声明了一个形式<strong>命名参数</strong>。使用这种形式声明的变量也是占位符变量的一种类型。因此适用于使用 <code>^</code> twigil 声明的变量的东西在这儿也适用(除了它们不是位置的以外, 因此没有使用 Unicode 顺序排序)。所以这个:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">{</span> <span class="nv">$:add</span> <span class="o">??</span> <span class="nv">$^a</span> <span class="o">+</span> <span class="nv">$^b</span> <span class="o">!!</span> <span class="nv">$^a</span> <span class="o">-</span> <span class="nv">$^b</span> <span class="p">}(</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span> <span class="p">)</span> <span class="p">:!</span><span class="s">add</span>
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># -1</span>
+</code></pre></div><p>查看 <a href="https://docs.raku.org/routine/%5E">^</a>获取关于占位符变量的更多细节。</p>
+<h2 id="-twigil-7">= Twigil</h2>
+<p><code>=</code> twigil 用于访问 Pod 变量。当前文件中的每个 Pod 块都能通过一个 Pod 对象访问到, 例如 <code>$=data</code>, <code>$=SYNOPSIS</code> 或 <code>=UserBlock</code>, 即：一个和想要的块同名的变量加上一个 <code>=</code> twigil。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">=begin</span><span class="sd"> </span><span class="k">Foo</span><span class="sd">
+</span><span class="sd">...
+</span><span class="sd"></span><span class="k">=end Foo</span>
+
+<span class="c1">#after that, $=Foo gives you all Foo-Pod-blocks</span>
+</code></pre></div><p>您可以通过 <code>$=pod</code>访问 Pod 树，它包含所有作为分级数据结构的Pod结构。</p>
+<p>请注意，所有这些 <code>$=someBlockName</code> 都支持位置和关联角色。</p>
+<h2 id="-twigil-8">~ Twigil</h2>
+<p>注意: Slangs（俚语）在 Rakudo 中还没有被实现。 NYI = Not Yet Implemented。</p>
+<p><code>~</code> twigil 是指子语言（称为俚语）。下面是有用的：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">变量名</th>
+<th style="text-align:left">说 明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$~MAIN</td>
+<td style="text-align:left">the current main language (e.g. Perl statements)</td>
+</tr>
+<tr>
+<td style="text-align:center">$~Quote</td>
+<td style="text-align:left">the current root of quoting language</td>
+</tr>
+<tr>
+<td style="text-align:center">$~Quasi</td>
+<td style="text-align:left">the current root of quasiquoting language</td>
+</tr>
+<tr>
+<td style="text-align:center">$~Regex</td>
+<td style="text-align:left">the current root of regex language</td>
+</tr>
+<tr>
+<td style="text-align:center">$~Trans</td>
+<td style="text-align:left">the current root of transliteration language</td>
+</tr>
+<tr>
+<td style="text-align:center">$~P5Regex</td>
+<td style="text-align:left">the current root of the Perl 5 regex language</td>
+</tr>
+</tbody>
+</table>
+<p>你在你当前的词法作用域中扩充这些语言。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">use</span> <span class="nb">MONKEY-TYPING</span><span class="p">;</span>
+
+<span class="k">augment</span> <span class="n">slang</span> <span class="nb">Regex</span> <span class="p">{</span>  <span class="c1"># derive from $~Regex and then modify $~Regex</span>
+    <span class="k">token</span> <span class="nf">backslash:std</span>&lt;\Y&gt; <span class="p">{</span><span class="sr"> YY </span><span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div><h2 id="变量声明符和作用域">变量声明符和作用域</h2>
+<p>通常, 使用 <code>my</code> 关键字创建一个新的变量就足够了:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$amazing-variable</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">World</span><span class="p">&#34;;</span>
+<span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Hello </span><span class="nv">$amazing-variable</span><span class="s2">!</span><span class="p">&#34;;</span> <span class="c1"># Hello World!</span>
+</code></pre></div><p>然而, 有很多声明符能在 <a href="https://docs.raku.org/language/variables#Twigils">Twigils</a> 的能力之外改变作用域的细节。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">声明符</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">my</td>
+<td style="text-align:left">作为词法作用域名字的开头</td>
+</tr>
+<tr>
+<td style="text-align:center">our</td>
+<td style="text-align:left">作为包作用域名字的开头</td>
+</tr>
+<tr>
+<td style="text-align:center">has</td>
+<td style="text-align:left">作为属性名的开头</td>
+</tr>
+<tr>
+<td style="text-align:center">anon</td>
+<td style="text-align:left">作为私有名字的开头</td>
+</tr>
+<tr>
+<td style="text-align:center">state</td>
+<td style="text-align:left">作为词法作用域但是持久名字的开头</td>
+</tr>
+<tr>
+<td style="text-align:center">augment</td>
+<td style="text-align:left">给已存在的名字添加定义</td>
+</tr>
+<tr>
+<td style="text-align:center">supersede</td>
+<td style="text-align:left">替换已存在名字的定义</td>
+</tr>
+</tbody>
+</table>
+<p>还有两个类似于声明符的前缀, 但是作用于预定义变量:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">前缀</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">temp</td>
+<td style="text-align:left">在作用域的最后恢复变量的值</td>
+</tr>
+<tr>
+<td style="text-align:center">let</td>
+<td style="text-align:left">如果 block 成功退出就恢复变量的值</td>
+</tr>
+</tbody>
+</table>
+<h3 id="my-声明符">my 声明符</h3>
+<p>使用 <code>my</code> 声明一个变量给变量一个词法作用域. 这意味着变量只在当前块中存在.例如:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$foo</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">bar</span><span class="p">&#34;;</span>
+    <span class="nb">say</span> <span class="nv">$foo</span><span class="p">;</span> <span class="c1"># -&gt; &#34;bar&#34;</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="nv">$foo</span><span class="p">;</span> <span class="c1"># !!! &#34;Variable &#39;$foo&#39; is not declared&#34;</span>
+</code></pre></div><p>它抛出异常,因为只要我们在同一个作用域内 <code>$foo</code> 才被定义. 此外, 词法作用域意味着变量能在新的作用域内被临时地重新定义:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$location</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">outside</span><span class="p">&#34;;</span>
+
+<span class="k">sub</span> <span class="nf">outer-location</span> <span class="p">{</span>
+    <span class="c1"># Not redefined:</span>
+    <span class="nb">say</span> <span class="nv">$location</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">outer-location</span><span class="p">;</span> <span class="c1"># -&gt; &#34;outside&#34;</span>
+
+<span class="k">sub</span> <span class="nf">in-building</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$location</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">inside</span><span class="p">&#34;;</span>
+    <span class="nb">say</span> <span class="nv">$location</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">in-building</span><span class="p">;</span>    <span class="c1"># -&gt; &#34;inside&#34;</span>
+<span class="n">outer-location</span><span class="p">;</span> <span class="c1"># -&gt; &#34;outside&#34;</span>
+</code></pre></div><p>如果变量被重新定义了, 任何引用外部变量的代码会继续引用外部变量.
+所以, 在这儿, <code>&amp;outer-location</code> 仍然打印外部的 <code>$location</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">new-location</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$location</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">nowhere</span><span class="p">&#34;</span>
+    <span class="n">outer-location</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">new-location</span><span class="p">;</span> <span class="c1"># -&gt; &#34;outside&#34;</span>
+</code></pre></div><p>为了让 <code>new-location()</code> 能打印 <code>nowwhere</code>, 需要使用 <code>*</code> <a href="https://docs.raku.org/language/variables#The_%2A_Twigil">twigil</a> 让 <code>$location</code> 变为动态变量.
+对于子例程来说, <code>my</code> 是默认作用域, 所以 <code>my sub x( ) { }</code> 和 <code>sub x( ) { }</code> 是一样的.</p>
+<h3 id="our-声明符">our 声明符</h3>
+<p>our 跟 <code>my</code> 的作用类似, 除了把别名引入到符号表之外:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">module</span> <span class="nn">M</span> <span class="p">{</span>
+    <span class="k">our</span> <span class="nv">$Var</span><span class="p">;</span>
+    <span class="c1"># $Var available here</span>
+<span class="p">}</span>
+
+<span class="c1"># Available as $M::Var here.</span>
+</code></pre></div><h3 id="声明一组变量">声明一组变量</h3>
+<p>声明符 <code>my</code> 和 <code>our</code> 接收一组扩在圆括号中的变量作为参数来一次性声明多个变量。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="p">(</span><span class="nv">@a</span><span class="o">,</span> <span class="nv">$s</span><span class="o">,</span> <span class="nv">%h</span><span class="p">);</span>
+</code></pre></div><p>这可以和解构赋值结合使用。任何对这样一个列表的赋值会取得左侧列表中提供的元素数量并且从右侧列表中把对应的值赋值给它们。没有得到赋值的元素会根据变量的类型得到一个未定义值。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="p">(</span><span class="nb">Str</span> <span class="nv">$a</span><span class="o">,</span> <span class="nb">Str</span> <span class="nv">$b</span><span class="o">,</span> <span class="nb">Int</span> <span class="nv">$c</span><span class="p">)</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">a b</span><span class="p">&gt;;</span>
+<span class="nb">say</span> <span class="o">[</span><span class="nv">$a</span><span class="o">,</span> <span class="nv">$b</span><span class="o">,</span> <span class="nv">$c</span><span class="o">].</span><span class="nb">perl</span><span class="p">;</span>
+<span class="c1"># OUTPUT«[&#34;a&#34;, &#34;b&#34;, Int]␤»</span>
+</code></pre></div><p>要把列表解构到一个单个的值中, 通过使用 <code>($var,)</code> 创建一个带有一个值的列表字面值。当使用了一个变量声明符时只在单个变量周围提供一个圆括号就足够了。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nb">f</span> <span class="p">{</span> <span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span> <span class="p">};</span>
+<span class="k">my</span> <span class="p">(</span><span class="nv">$a</span><span class="p">)</span> <span class="o">=</span> <span class="nb">f</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$a</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>
+<span class="c1"># OUTPUT«1␤»</span>
+</code></pre></div><p>要跳过列表中的元素, 使用匿名状态变量 <code>$</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="p">(</span><span class="nv">$</span><span class="o">,</span><span class="nv">$a</span><span class="o">,</span><span class="nv">$</span><span class="o">,</span><span class="nv">%h</span><span class="p">)</span> <span class="o">=</span> <span class="p">(&#39;</span><span class="s1">a</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">b</span><span class="p">&#39;</span><span class="o">,</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">],</span> <span class="p">{:</span><span class="s">1th</span><span class="p">});</span>
+<span class="nb">say</span> <span class="o">[</span><span class="nv">$a</span><span class="o">,</span> <span class="nv">%h</span><span class="o">].</span><span class="nb">perl</span><span class="p">;</span>
+<span class="c1"># OUTPUT«[&#34;b&#34;, {:th(1)}]␤»</span>
+</code></pre></div><h3 id="has-声明符">has 声明符</h3>
+<p><code>has</code> 作用在类的实例或 role 的属性上, 还有类或 roles 的方法上。has 隐式作用于方法上, 所以 <code>has method x() {}</code> 和 <code>method x() {}</code> 做得是相同的事情。</p>
+<p>查看<a href="https://docs.raku.org/language/objects">面向对象</a>获取更多文档和例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">has</span> <span class="k">method</span> <span class="nb">x</span><span class="p">(</span> <span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre></div><p>等价于:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">method</span> <span class="nb">x</span><span class="p">(</span> <span class="p">)</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre></div><h3 id="anon-声明符">anon 声明符</h3>
+<p><code>anon</code> 声明符阻止符号本安装在词法作用域内, 还有方法表中, 和其它任何地方.
+例如, 你可以使用 <code>anon</code> 声明一个知道自己名字的子例程, 但是仍然不会被安装到作用域内:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%operations</span> <span class="o">=</span>
+    <span class="s">half</span>   <span class="o">=&gt;</span> <span class="k">anon</span> <span class="k">sub</span> <span class="nf">half</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span>   <span class="p">{</span> <span class="nv">$x</span> <span class="o">/</span> <span class="mi">2</span>  <span class="p">}</span>,
+    <span class="s">square</span> <span class="o">=&gt;</span> <span class="k">anon</span> <span class="k">sub</span> <span class="nf">square</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$x</span> <span class="o">*</span> <span class="nv">$x</span> <span class="p">}</span>,
+    <span class="p">;</span>
+<span class="nb">say</span> <span class="nv">%operations</span><span class="p">&lt;</span><span class="s">square</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">name</span><span class="p">;</span>       <span class="c1"># square</span>
+<span class="nb">say</span> <span class="nv">%operations</span><span class="p">&lt;</span><span class="s">square</span><span class="p">&gt;(</span><span class="mi">8</span><span class="p">);</span>         <span class="c1"># 64</span>
+</code></pre></div><h3 id="state-声明符">state 声明符</h3>
+<p><code>state</code> 声明词法作用域变量, 就像 my 那样。然而, <strong>初始化只发生一次</strong>, 就在正常执行流中第一次遇见初始化的时候。因此, state 变量会在闭合块或 程序的多次执行<strong>之间</strong>保留它们的值。</p>
+<p>因此, 下面这个子例程:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">a</span> <span class="p">{</span>
+    <span class="k">state</span> <span class="nv">@x</span><span class="p">;</span>
+    <span class="k">state</span> <span class="nv">$l</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">A</span><span class="p">&#39;;</span>
+    <span class="nv">@x</span><span class="o">.</span><span class="nb">push</span><span class="p">(</span><span class="nv">$l</span><span class="o">++</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="nb">say</span> <span class="n">a</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">6</span><span class="p">;</span>
+</code></pre></div><p>会持续增加 <code>$l</code> 并在每次被调用时把它追加到 <code>@x</code> 中, 所以它会打印出:</p>
+<pre><code>[A]
+[A B]
+[A B C]
+[A B C D]
+[A B C D E]
+[A B C D E F]
+</code></pre><p>This works per &ldquo;clone&rdquo; of the containing code object, as in this example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">({</span> <span class="k">state</span> <span class="nv">$i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="nv">$i</span><span class="o">++.</span><span class="nb">say</span><span class="p">;</span> <span class="p">}</span> <span class="ow">xx</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="nb">map</span><span class="o">:</span> <span class="p">{</span><span class="nv">$_</span><span class="p">()</span><span class="o">,</span> <span class="nv">$_</span><span class="p">()};</span> <span class="c1"># says 1 then 2 thrice</span>
+</code></pre></div><p>注意，这不是一个线程安全的解构, 当同一个 block 的同一个克隆运行在多个线程中时。要知道方法只有每个类一个克隆，而不是每个对象。</p>
+<p>至于 <code>my</code>，声明多个状态变量必须放置在圆括号中, 而声明一个单一变量，圆括号可以省略。</p>
+<p>请注意，许多操作符都伴随着隐式绑定，什么会导致超距作用。使用 <code>.clone</code> 或强迫创建一个可以绑定的新容器。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@a</span><span class="p">;</span>
+<span class="k">sub</span> <span class="nb">f</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">state</span> <span class="nv">$i</span><span class="p">;</span>
+    <span class="nv">$i</span><span class="o">++</span><span class="p">;</span>
+    <span class="nv">@a</span><span class="o">.</span><span class="nb">push</span><span class="o">:</span> <span class="p">&#34;</span><span class="s2">k</span><span class="nv">$i</span><span class="p">&#34;</span> <span class="o">=&gt;</span> <span class="nv">$i</span> <span class="c1"># &lt;-- .clone goes here</span>
+<span class="p">};</span>
+<span class="nb">f</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@a</span><span class="p">;</span> <span class="c1"># «Array $var = $[:k1(3), :k2(3), :k3(3)]»</span>
+</code></pre></div><p>所有的状态变量都是线程间共享的。这个结果可能是你不希望得到的或危险的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nb">code</span><span class="p">(){</span> <span class="k">state</span> <span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nb">say</span> <span class="o">++</span><span class="nv">$i</span><span class="p">;</span> <span class="nv">$i</span> <span class="p">};</span>
+<span class="nb">await</span>
+    <span class="k">start</span> <span class="p">{</span> <span class="k">loop</span> <span class="p">{</span> <span class="nb">last</span> <span class="k">if</span> <span class="nb">code</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">5</span> <span class="p">}</span> <span class="p">}</span><span class="o">,</span>
+    <span class="k">start</span> <span class="p">{</span> <span class="k">loop</span> <span class="p">{</span> <span class="nb">last</span> <span class="k">if</span> <span class="nb">code</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">5</span> <span class="p">}</span> <span class="p">};</span>
+
+<span class="c1"># OUTPUT«1␤2␤3␤4␤4␤3␤5␤»</span>
+<span class="c1"># OUTPUT«2␤1␤3␤4␤5␤»</span>
+<span class="c1"># many other more or less odd variations can be produced</span>
+</code></pre></div><h3 id="-变量">$ 变量</h3>
+<p>和显式地声明命名状态变量一样, <code>$</code> 能够用作不带显式状态声明的匿名状态变量。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">&#34;</span><span class="s2">1-a 2-b 3-c</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">subst</span><span class="p">(:</span><span class="s">g</span><span class="o">,</span> <span class="p">/</span><span class="se">\d</span><span class="p">/</span><span class="o">,</span> <span class="p">{&lt;</span><span class="s">one two three</span><span class="p">&gt;</span><span class="o">[</span><span class="nv">$</span><span class="o">++]</span><span class="p">});</span>
+<span class="c1"># OUTPUT«one-a two-b three-c␤»</span>
+</code></pre></div><p>更进一步, 状态变量不需要存在于子例程中。你可以, 举个例子, 在单行程序中使用 <code>$</code> 在文件中编号行号。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">raku</span> <span class="o">-</span><span class="ow">ne</span> <span class="p">&#39;</span><span class="s1">say ++$ ~ &#34; $_&#34;</span><span class="p">&#39;</span> <span class="n">example</span><span class="o">.</span><span class="nf">txt</span>
+</code></pre></div><p>实际上词法范围内每个对 <code>$</code> 的引用都是是一个<strong>单独的</strong>变量。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">raku</span> <span class="o">-</span><span class="no">e</span> <span class="p">&#39;</span><span class="s1">{ say ++$; say $++  } for ^5</span><span class="p">&#39;</span>
+<span class="c1"># OUTPUT«1␤0␤2␤1␤3␤2␤4␤3␤5␤4␤»</span>
+</code></pre></div><p>如果在作用域内你需要多次引用 <code>$</code> 的值, 那么它应该被拷贝到一个新的变量中。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">given</span> <span class="o">++</span><span class="nv">$</span> <span class="p">{</span>
+        <span class="k">when</span> <span class="mi">1</span> <span class="p">{</span>
+            <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">one</span><span class="p">&#34;;</span>
+        <span class="p">}</span>
+        <span class="k">when</span> <span class="mi">2</span> <span class="p">{</span>
+            <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">two</span><span class="p">&#34;;</span>
+        <span class="p">}</span>
+        <span class="k">when</span> <span class="mi">3</span> <span class="p">{</span>
+            <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">three</span><span class="p">&#34;;</span>
+        <span class="p">}</span>
+        <span class="k">default</span> <span class="p">{</span>
+            <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">many</span><span class="p">&#34;;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nf">foo</span><span class="p">()</span> <span class="k">for</span> <span class="o">^</span><span class="mi">3</span><span class="p">;</span>
+<span class="c1"># OUTPUT«one␤two␤three␤»</span>
+</code></pre></div><h3 id="-变量-1">@ 变量</h3>
+<p>和 <code>$</code> 变量类似, 也有一个位置匿名状态变量 <code>@</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">(</span><span class="nv">@</span><span class="p">)</span><span class="o">.</span><span class="nb">push</span><span class="p">(</span><span class="nv">$x</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nf">foo</span><span class="p">(</span><span class="nv">$_</span><span class="p">)</span> <span class="k">for</span> <span class="o">^</span><span class="mi">3</span><span class="p">;</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># [0]</span>
+<span class="c1"># [0 1]</span>
+<span class="c1"># [0 1 2]</span>
+</code></pre></div><p>这里的 <code>@</code> 是用圆括号括起来了以和名为 <code>@.push</code> 的类成员变量消除歧义。索引访问并不需要这种歧义，但你需要拷贝这个值，以便用它做任何有用的事情。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$v</span> <span class="o">=</span> <span class="nv">@</span><span class="p">;</span>
+    <span class="nv">$v</span><span class="o">[</span><span class="nv">$x</span><span class="o">]</span> <span class="o">=</span> <span class="nv">$x</span><span class="p">;</span>
+    <span class="nb">say</span> <span class="nv">$v</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nf">foo</span><span class="p">(</span><span class="nv">$_</span><span class="p">)</span> <span class="k">for</span> <span class="o">^</span><span class="mi">3</span><span class="p">;</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># [0]</span>
+<span class="c1"># [0 1]</span>
+<span class="c1"># [0 1 2]</span>
+</code></pre></div><p>就和 <code>$</code> 一样, 作用域中的每次提及 <code>@</code> 就引入了一个新的匿名数组。</p>
+<h3 id="-变量-2">% 变量</h3>
+<p>最后, 还有一个关联匿名状态变量 <code>%</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">(</span><span class="nv">%</span><span class="p">)</span><span class="o">.</span><span class="nb">push</span><span class="p">(</span><span class="nv">$x</span> <span class="o">=&gt;</span> <span class="nv">$x</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nf">foo</span><span class="p">(</span><span class="nv">$_</span><span class="p">)</span> <span class="k">for</span> <span class="o">^</span><span class="mi">3</span><span class="p">;</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># 0 =&gt; 0</span>
+<span class="c1"># 0 =&gt; 0, 1 =&gt; 1</span>
+<span class="c1"># 0 =&gt; 0, 1 =&gt; 1, 2 =&gt; 2</span>
+</code></pre></div><p>关于歧义的同样警告适用。正如你可能期望，索引访问也有可能（使用复制以使之有用）。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">foo</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$v</span> <span class="o">=</span> <span class="nv">%</span><span class="p">;</span>
+    <span class="nv">$v</span><span class="p">{</span><span class="nv">$x</span><span class="p">}</span> <span class="o">=</span> <span class="nv">$x</span><span class="p">;</span>
+    <span class="nb">say</span> <span class="nv">$v</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nf">foo</span><span class="p">(</span><span class="nv">$_</span><span class="p">)</span> <span class="k">for</span> <span class="o">^</span><span class="mi">3</span><span class="p">;</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># 0 =&gt; 0</span>
+<span class="c1"># 0 =&gt; 0, 1 =&gt; 1</span>
+<span class="c1"># 0 =&gt; 0, 1 =&gt; 1, 2 =&gt; 2</span>
+</code></pre></div><p>就像其它的匿名状态变量一样, 在给定作用域中每次提及 <code>%</code> 最终都会引入一个单独的变量。</p>
+<h3 id="augment-声明符">augment 声明符</h3>
+<p>使用 <code>augment</code>, 你可以给已经存在的类或 grammars 增加属性和方法.</p>
+<p>因为类通常使用 our 作用域, 因此是全局的, 这意味着修改全局状态, 这是强烈不鼓励的, 对于大部分情况, 有更好的方法.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># don&#39;t do this</span>
+<span class="k">use</span> <span class="nb">MONKEY-TYPING</span><span class="p">;</span>
+
+<span class="k">augment</span> <span class="k">class</span> <span class="nb">Int</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">is-answer</span> <span class="p">{</span> <span class="nb">self</span> <span class="o">==</span> <span class="mi">42</span> <span class="p">}</span>
+<span class="p">}</span>
+<span class="nb">say</span> <span class="mi">42</span><span class="o">.</span><span class="nf">is-answer</span><span class="p">;</span>       <span class="c1"># True</span>
+</code></pre></div><h3 id="temp-前缀">temp 前缀</h3>
+<p>像 my 一样, temp 在作用域的末尾恢复旧的变量值. 然而, temp 不创建新的变量.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$in</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1"># temp will &#34;entangle&#34; the global variable with the call stack</span>
+            <span class="c1"># that keeps the calls at the bottom in order.</span>
+
+<span class="k">sub</span> <span class="nb">f</span><span class="p">(</span><span class="o">*</span><span class="nv">@c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">(</span><span class="k">temp</span> <span class="nv">$in</span><span class="p">)</span><span class="o">++</span><span class="p">;</span>
+     <span class="p">&#34;</span><span class="s2">&lt;f&gt;\n</span><span class="p">&#34;</span>
+     <span class="o">~</span> <span class="nv">@c</span><span class="o">&gt;&gt;.</span><span class="nb">indent</span><span class="p">(</span><span class="nv">$in</span><span class="p">)</span><span class="o">.</span><span class="nb">join</span><span class="p">(&#34;</span><span class="s2">\n</span><span class="p">&#34;)</span>
+     <span class="o">~</span> <span class="p">(</span><span class="o">+</span><span class="nv">@c</span> <span class="o">??</span> <span class="p">&#34;</span><span class="s2">\n</span><span class="p">&#34;</span> <span class="o">!!</span> <span class="p">&#34;&#34;)</span>
+     <span class="o">~</span> <span class="p">&#39;</span><span class="s1">&lt;/f&gt;</span><span class="p">&#39;</span>
+<span class="p">};</span>
+
+<span class="k">sub</span> <span class="nf">g</span><span class="p">(</span><span class="o">*</span><span class="nv">@c</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">(</span><span class="k">temp</span> <span class="nv">$in</span><span class="p">)</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">&#34;</span><span class="s2">&lt;g&gt;\n</span><span class="p">&#34;</span>
+    <span class="o">~</span> <span class="nv">@c</span><span class="o">&gt;&gt;.</span><span class="nb">indent</span><span class="p">(</span><span class="nv">$in</span><span class="p">)</span><span class="o">.</span><span class="nb">join</span><span class="p">(&#34;</span><span class="s2">\n</span><span class="p">&#34;)</span>
+    <span class="o">~</span> <span class="p">(</span><span class="o">+</span><span class="nv">@c</span> <span class="o">??</span> <span class="p">&#34;</span><span class="s2">\n</span><span class="p">&#34;</span> <span class="o">!!</span> <span class="p">&#34;&#34;)</span>
+    <span class="o">~</span> <span class="p">&#34;</span><span class="s2">&lt;/g&gt;</span><span class="p">&#34;</span>
+<span class="p">};</span>
+
+<span class="nb">print</span> <span class="nf">g</span><span class="p">(</span><span class="nf">g</span><span class="p">(</span><span class="nb">f</span><span class="p">(</span><span class="nf">g</span><span class="p">())</span><span class="o">,</span> <span class="nf">g</span><span class="p">()</span><span class="o">,</span> <span class="nb">f</span><span class="p">()));</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># &lt;g&gt;</span>
+<span class="c1">#  &lt;g&gt;</span>
+<span class="c1">#   &lt;f&gt;</span>
+<span class="c1">#    &lt;g&gt;</span>
+<span class="c1">#    &lt;/g&gt;</span>
+<span class="c1">#   &lt;/f&gt;</span>
+<span class="c1">#   &lt;g&gt;</span>
+<span class="c1">#   &lt;/g&gt;</span>
+<span class="c1">#   &lt;f&gt;</span>
+<span class="c1">#   &lt;/f&gt;</span>
+<span class="c1">#  &lt;/g&gt;</span>
+<span class="c1"># &lt;/g&gt;</span>
+</code></pre></div><h3 id="let-前缀">let 前缀</h3>
+<p>跟 temp 类似, 如果 block 没有成功退出则恢复之前的值。成功的退出意味着该 block 返回了一个定义过的值或一个列表。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$answer</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+
+<span class="p">{</span>
+    <span class="k">let</span> <span class="nv">$answer</span> <span class="o">=</span> <span class="mi">84</span><span class="p">;</span>
+    <span class="nb">die</span> <span class="k">if</span> <span class="nb">not</span> <span class="nb">Bool</span><span class="o">.</span><span class="nb">pick</span><span class="p">;</span>
+    <span class="k">CATCH</span> <span class="p">{</span>
+        <span class="k">default</span> <span class="p">{</span> <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">it&#39;s been reset :(</span><span class="p">&#34;</span> <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">we made it 84 sticks!</span><span class="p">&#34;;</span>
+<span class="p">}</span>
+
+<span class="nb">say</span> <span class="nv">$answer</span><span class="p">;</span>
+</code></pre></div><p>在上面的例子中, 如果 <code>Bool.pick</code> 返回 true, 那么答案会保持为 84, 因为那个 block 返回了一个定义了的值(say 返回 true)。
+否则那个 <code>die</code> 语句会让那个 block 不成功地退出, 把答案重新设置为 42。</p>
+<h2 id="类型约束和初始化">类型约束和初始化</h2>
+<p>变量可以有类型约束, 约束在声明符和变量名之间:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nb">Int</span> <span class="nv">$x</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+<span class="nv">$x</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">a string</span><span class="p">&#39;;</span> <span class="c1"># throws an X::TypeCheck::Assignment error</span>
+<span class="k">CATCH</span> <span class="p">{</span> <span class="k">default</span> <span class="p">{</span> <span class="nb">put</span> <span class="o">.^</span><span class="nb">name</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">: </span><span class="p">&#39;</span><span class="o">,</span> <span class="o">.</span><span class="nb">Str</span> <span class="p">}</span> <span class="p">}</span>
+<span class="c1"># OUTPUT: X::TypeCheck::Assignment: Type check failed in assignment to $x; expected Int but got Str (&#34;a string&#34;)</span>
+</code></pre></div><p>如果一个标量有类型约束但是没有初始值, 它会使用类型约束的类型对象来初始化.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nb">Int</span> <span class="nv">$x</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$x</span><span class="o">.^</span><span class="nb">name</span><span class="p">;</span>    <span class="c1"># Int</span>
+<span class="nb">say</span> <span class="nv">$x</span><span class="o">.</span><span class="nb">defined</span><span class="p">;</span>  <span class="c1"># False</span>
+</code></pre></div><p>没有显式类型约束的标量的类型为 Mu, 但是默认会是 Any 类型的对象.</p>
+<p>带有 @ 符号的变量会被初始化为空的数组; 带有 % 符号的变量会被初始化为空的散列.</p>
+<p>变量的默认值可以使用 <code>is default</code> 特性设置, 通过把 Nil 赋值给变量来重新应用默认值:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nb">Real</span> <span class="nv">$product</span> <span class="k">is</span> <span class="k">default</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="nb">say</span> <span class="nv">$product</span><span class="p">;</span>                       <span class="c1"># 1</span>
+<span class="nv">$produce</span> <span class="o">*=</span> <span class="mi">5</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$product</span><span class="p">;</span>                       <span class="c1"># 5</span>
+<span class="nv">$product</span> <span class="o">=</span> <span class="nb">Nil</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$product</span><span class="p">;</span>                       <span class="c1"># 1</span>
+</code></pre></div><h2 id="默认的有定义的变量指令">默认的有定义的变量指令</h2>
+<p>为了强制所有的变量拥有一个有定义的约束, 使用 <code>use variables :D</code> 指令。这个指令是词法作用域的并且可以使用 <code>use variables :_</code> 指令进行切换。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">use</span> <span class="nb">variables</span> <span class="p">:</span><span class="s">D</span><span class="p">;</span>
+<span class="k">my</span> <span class="nb">Int</span> <span class="nv">$i</span><span class="p">;</span>
+<span class="c1"># OUTPUT«===SORRY!=== Error while compiling &lt;tmp&gt;␤Variable definition of type Int:D (implicit :D by pragma) requires an initializer ...</span>
+<span class="k">my</span> <span class="nb">Int</span> <span class="nv">$i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="c1"># that works</span>
+<span class="p">{</span> <span class="k">use</span> <span class="nb">variables</span> <span class="p">:</span><span class="s">_</span><span class="p">;</span> <span class="k">my</span> <span class="nb">Int</span> <span class="nv">$i</span><span class="p">;</span> <span class="p">}</span> <span class="c1"># 在这个 block 中关掉它</span>
+</code></pre></div><p>请注意, 赋值 Nil 会把这个变量恢复为它的默认值。一个有定义的约束类型的默认值是类型名加上 <code>:D</code>(例如 <code>Int:D</code>)。That means a definedness contraint is no guarantee of definedness. 这只适用于变量初始化, 不适用于签名。</p>
+<h2 id="特殊变量">特殊变量</h2>
+<p><strong>Pre-defined lexical variables</strong></p>
+<p>每个代码块中都有3个特别的变量:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">变量</th>
+<th style="text-align:left">意义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$_</td>
+<td style="text-align:left">特殊变量</td>
+</tr>
+<tr>
+<td style="text-align:center">$/</td>
+<td style="text-align:left">正则匹配</td>
+</tr>
+<tr>
+<td style="text-align:center">$!</td>
+<td style="text-align:left">异常</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_">$_</h3>
+<p><code>$_</code> 是特殊变量，在没有显式标识的代码块中，它是默认参数。所以诸如 <code>for @array { ... }</code> 和 <code>given $var { ... }</code> 之类的结构会将变量绑定给 <code>$_</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">for</span> <span class="p">&lt;</span><span class="s">a b c</span><span class="p">&gt;</span> <span class="p">{</span> <span class="nb">say</span> <span class="nv">$_</span> <span class="p">}</span>  <span class="c1"># sets $_ to &#39;a&#39;, &#39;b&#39; and &#39;c&#39; in turn</span>
+<span class="nb">say</span> <span class="nv">$_</span> <span class="k">for</span> <span class="p">&lt;</span><span class="s">a b c</span><span class="p">&gt;;</span>     <span class="c1"># same, even though it&#39;s not a block</span>
+<span class="k">given</span> <span class="p">&#39;</span><span class="s1">a</span><span class="p">&#39;</span>   <span class="p">{</span> <span class="nb">say</span> <span class="nv">$_</span> <span class="p">}</span>  <span class="c1"># sets $_ to &#39;a&#39;</span>
+<span class="nb">say</span> <span class="nv">$_</span> <span class="k">given</span> <span class="p">&#39;</span><span class="s1">a</span><span class="p">&#39;;</span>       <span class="c1"># same, 尽管这不是一个块</span>
+</code></pre></div><p>CATCH 块将 <code>$_</code> 设置为捕获到的异常。 <code>~~</code> 智能匹配操作符。
+对 <code>$_</code> 调用一个方法可以省略特殊变量 <code>$_</code> 的名字，从而写的更短：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="o">.</span><span class="nb">say</span><span class="p">;</span>                   <span class="c1"># 与 $_.say 相同</span>
+</code></pre></div><p><code>m/regex/</code> 和 <code>/regex/</code> 正则匹配 和 <code>s/regex/subst/</code> 替换是作用于 <code>$_</code> 上的.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Looking for strings with non-alphabetic characters...</span><span class="p">&#34;;</span>
+
+<span class="k">for</span> <span class="p">&lt;</span><span class="s">ab:c d$e fgh ij*</span><span class="p">&gt;</span> <span class="p">{</span>
+    <span class="o">.</span><span class="nb">say</span> <span class="k">if</span> <span class="k">m</span><span class="p">/&lt;</span><span class="o">!</span><span class="nb">alpha</span><span class="p">&gt;/;</span>
+<span class="p">}</span>
+</code></pre></div><p>输出:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">Looking</span> <span class="k">for</span> <span class="n">strings</span> <span class="k">with</span> <span class="n">non-alphabetic</span> <span class="n">characters</span><span class="o">...</span>
+<span class="n">ab:c</span>
+<span class="nb">d</span><span class="nv">$e</span>
+<span class="n">ij</span><span class="o">*</span>
+</code></pre></div><h3 id="heading">$/</h3>
+<p><code>$/</code> 是匹配变量。它存储着最近一次<a href="https://docs.raku.org/language/regexes">正则</a>匹配的结果，通常包含 <a href="https://docs.raku.org/type/Match">Match</a> 类型的对象。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">&#39;</span><span class="s1">abc 12</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="p">/</span><span class="se">\w</span><span class="o">+</span><span class="p">/;</span>  <span class="c1"># 设置 $/ 为一个Match 对象</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">Str</span><span class="p">;</span>         <span class="c1"># abc</span>
+</code></pre></div><p><code>Grammar.parse</code> 方法会把调用者的 <code>$/</code> 设置为 <code>Match object</code> 的结果。看下面的代码:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">use</span> <span class="nn">XML::Grammar</span><span class="p">;</span> <span class="c1"># panda install XML</span>
+<span class="n">XML</span><span class="o">.</span><span class="nb">Grammar</span><span class="o">.</span><span class="nb">parse</span><span class="p">(&#34;</span><span class="s2">&lt;p&gt;some text&lt;/p&gt;</span><span class="p">&#34;);</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="p">;</span>
+
+<span class="c1"># OUTPUT:</span>
+<span class="c1"># ｢&lt;p&gt;some text&lt;/p&gt;｣</span>
+<span class="c1">#  root =&gt; ｢&lt;p&gt;some text&lt;/p&gt;｣</span>
+<span class="c1">#   name =&gt; ｢p｣</span>
+<span class="c1">#   child =&gt; ｢some text｣</span>
+<span class="c1">#    text =&gt; ｢some text｣</span>
+<span class="c1">#    textnode =&gt; ｢some text｣</span>
+<span class="c1">#  element =&gt; ｢&lt;p&gt;some text&lt;/p&gt;｣</span>
+<span class="c1">#   name =&gt; ｢p｣</span>
+<span class="c1">#   child =&gt; ｢some text｣</span>
+<span class="c1">#    text =&gt; ｢some text｣</span>
+<span class="c1">#    textnode =&gt; ｢some text｣</span>
+</code></pre></div><p>其他匹配变量是 <code>$/</code> 元素的别名：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nv">$0</span>          <span class="c1"># same as $/[0]</span>
+<span class="nv">$1</span>          <span class="c1"># same as $/[1]</span>
+<span class="nv">$&lt;named&gt;</span>    <span class="c1"># same as $/&lt;named&gt;</span>
+</code></pre></div><h3 id="位置属性">位置属性</h3>
+<p>如果正则中有捕获分组, <code>$/</code> 中会有位置属性. 它们由圆括号组成.</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">&#39;</span><span class="s1">abbbbbcdddddeffg</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="p">/</span><span class="sr"> a </span><span class="p">(</span><span class="sr">b</span><span class="o">+</span><span class="p">)</span><span class="sr"> c </span><span class="p">(</span><span class="sr">d</span><span class="o">+</span><span class="sr">ef</span><span class="o">+</span><span class="p">)</span><span class="sr"> g </span><span class="p">/;</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span> <span class="c1"># ｢bbbbb｣</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">;</span> <span class="c1"># ｢dddddeff｣</span>
+</code></pre></div><p>这些捕获分组也能使用 <code>$0</code>,<code>$1</code>,<code>$2</code> 等便捷形式取得:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">$0</span><span class="p">;</span> <span class="c1"># ｢bbbbb｣</span>
+<span class="nb">say</span> <span class="nv">$1</span><span class="p">;</span> <span class="c1"># ｢dddddeff｣</span>
+</code></pre></div><p>要获取所有的位置属性, 使用 <code>$/.list</code>, <code>@$/</code>,<code>@( )</code> 中的任意一个都可以:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">@</span><span class="p">()</span><span class="o">.</span><span class="nb">join</span><span class="p">;</span> <span class="c1"># bbbbbdddddeff</span>
+</code></pre></div><h3 id="命名属性">命名属性</h3>
+<p>如果正则中有命名捕获分组, <code>$/</code> 可以有命名属性, 或者正则调用了另一个正则:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">&#39;</span><span class="s1">I.... see?</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="p">/</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr"> </span><span class="nv">$&lt;punctuation&gt;</span><span class="o">=</span><span class="p">[</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">-</span><span class="p">[</span><span class="se">\w\s</span><span class="p">]&gt;</span><span class="o">+</span><span class="sr"> </span><span class="p">]</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="nv">$&lt;final-word&gt;</span><span class="sr"> </span><span class="o">=</span><span class="sr"> </span><span class="p">[</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr"> </span><span class="ni">.</span><span class="sr"> </span><span class="p">]</span><span class="sr"> </span><span class="p">/;</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">punctuation</span><span class="p">&gt;;</span> <span class="c1"># ｢....｣</span>
+<span class="nb">say</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">final-word</span><span class="p">&gt;;</span>  <span class="c1"># ｢see?｣</span>
+</code></pre></div><p>这些命名捕获分组也能使用便捷形式的 <code>$&lt;named&gt;</code> 获取:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">$&lt;punctuation&gt;</span><span class="p">;</span> <span class="c1"># ｢....｣</span>
+<span class="nb">say</span> <span class="nv">$&lt;final-word&gt;</span><span class="p">;</span>  <span class="c1"># ｢see?｣</span>
+</code></pre></div><p>要获取所有的命名属性, 使用 <code>$/.hash</code>,  <code>%$/</code>, <code>%()</code>中的任何一个:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">%</span><span class="p">()</span><span class="o">.</span><span class="nb">join</span><span class="p">;</span>  <span class="c1"># &#34;punctuation     ....final-word  see?&#34;</span>
+</code></pre></div><h3 id="-变量-3">$! 变量</h3>
+<p><code>$!</code> 是错误变量. 如果 <code>try</code> block 或语句前缀捕获到异常, 那个异常就会被存储在 <code>$!</code> 中。如果没有捕获到异常, 那么 <code>$!</code> 会被设置为 Any 类型对象。
+注意, <code>CATCH</code> 块不设置 <code>$!</code>。CATCH 在 block 中把 <code>$_</code> 设置为捕获到的异常。</p>
+<h2 id="编译时变量">编译时变量</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Compile-time Variables</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$?FILE</td>
+<td style="text-align:left">所在文件</td>
+</tr>
+<tr>
+<td style="text-align:center">$?LINE</td>
+<td style="text-align:left">所在行</td>
+</tr>
+<tr>
+<td style="text-align:center">::?CLASS</td>
+<td style="text-align:left">所在类</td>
+</tr>
+<tr>
+<td style="text-align:center">&amp;?ROUTINE</td>
+<td style="text-align:left">所在子例程</td>
+</tr>
+<tr>
+<td style="text-align:center">&amp;?BLOCK</td>
+<td style="text-align:left">所在块</td>
+</tr>
+<tr>
+<td style="text-align:center">%?LANG</td>
+<td style="text-align:left">What is the current set of interwoven languages?</td>
+</tr>
+<tr>
+<td style="text-align:center">%?RESOURCES</td>
+<td style="text-align:left">The files associated with the &ldquo;Distribution&rdquo; of the current compilation unit.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">for</span> <span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span> <span class="p">{</span>
+    <span class="o">.</span><span class="nb">Str</span><span class="o">.</span><span class="nb">say</span> <span class="k">when</span> <span class="o">!.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">d</span><span class="p">;</span>
+    <span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">dir</span><span class="p">()</span><span class="o">&gt;&gt;.</span><span class="nv">&amp;?BLOCK</span> <span class="k">when</span> <span class="o">.</span><span class="nb">IO</span><span class="o">.</span><span class="nb">d</span> <span class="c1"># lets recurse a little!</span>
+<span class="p">}</span>
+</code></pre></div><p>其它编译时变量：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Compile-time Variables</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$?PACKAGE</td>
+<td style="text-align:left">所在包</td>
+</tr>
+<tr>
+<td style="text-align:center">$?MODULE</td>
+<td style="text-align:left">所在模块</td>
+</tr>
+<tr>
+<td style="text-align:center">$?CLASS</td>
+<td style="text-align:left">所在类(as variable)</td>
+</tr>
+<tr>
+<td style="text-align:center">$?ROLE</td>
+<td style="text-align:left">所在角色(as variable)</td>
+</tr>
+<tr>
+<td style="text-align:center">$?GRAMMAR</td>
+<td style="text-align:left">所在 grammar</td>
+</tr>
+<tr>
+<td style="text-align:center">$?TABSTOP</td>
+<td style="text-align:left">在 heredoc 或 虚拟边距中 tab 有多少空格</td>
+</tr>
+<tr>
+<td style="text-align:center">$?USAGE</td>
+<td style="text-align:left">从 MAIN 程序的签名中生成的使用信息</td>
+</tr>
+<tr>
+<td style="text-align:center">$?ENC</td>
+<td style="text-align:left">Str.encode/Buf.decode/various IO 方法的默认编码.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="动态变量">动态变量</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Dynamic Variable</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$*ARGFILES</td>
+<td style="text-align:left">神奇的命令行输入句柄</td>
+</tr>
+<tr>
+<td style="text-align:center">@*ARGS</td>
+<td style="text-align:left">来自命令行的参数</td>
+</tr>
+<tr>
+<td style="text-align:center">$*IN</td>
+<td style="text-align:left">标准输入文件句柄, AKA stdin</td>
+</tr>
+<tr>
+<td style="text-align:center">$*OUT</td>
+<td style="text-align:left">标准输出文件句柄, AKA stdout</td>
+</tr>
+<tr>
+<td style="text-align:center">$*ERR</td>
+<td style="text-align:left">标准错误文件句柄, AKA stderr</td>
+</tr>
+<tr>
+<td style="text-align:center">%*ENV</td>
+<td style="text-align:left">环境变量</td>
+</tr>
+<tr>
+<td style="text-align:center">$*REPO</td>
+<td style="text-align:left">存储安装过的/加载了的模块信息的变量</td>
+</tr>
+<tr>
+<td style="text-align:center">$*TZ</td>
+<td style="text-align:left">系统的本地时区.</td>
+</tr>
+<tr>
+<td style="text-align:center">$*CWD</td>
+<td style="text-align:left">当前工作目录.</td>
+</tr>
+<tr>
+<td style="text-align:center">$*KERNEL</td>
+<td style="text-align:left">在哪个内核下运行</td>
+</tr>
+<tr>
+<td style="text-align:center">$*DISTRO</td>
+<td style="text-align:left">在哪个操作系统分发下运行</td>
+</tr>
+<tr>
+<td style="text-align:center">$*VM</td>
+<td style="text-align:left">在哪个虚拟机下运行</td>
+</tr>
+<tr>
+<td style="text-align:center">$*PERL</td>
+<td style="text-align:left">在哪个 Perl 下运行</td>
+</tr>
+<tr>
+<td style="text-align:center">$*PID</td>
+<td style="text-align:left">当前进程的进程 ID</td>
+</tr>
+<tr>
+<td style="text-align:center">$*PROGRAM-NAME</td>
+<td style="text-align:left">当前可执行程序的路径就像它通过命令行键入一样, 或 -e 如果 perl 引用了 -e 标记</td>
+</tr>
+<tr>
+<td style="text-align:center">$*PROGRAM</td>
+<td style="text-align:left">正被执行的 Perl 程序的位置( 以 IO::Path 对象的形式)</td>
+</tr>
+<tr>
+<td style="text-align:center">$*EXECUTABLE</td>
+<td style="text-align:left">当前运行的可执行 perl 的绝对路径</td>
+</tr>
+<tr>
+<td style="text-align:center">$*EXECUTABLE-NAME</td>
+<td style="text-align:left">当前运行的可执行 perl 程序的名字。(e.g. raku-p, raku-m, Niecza.exe)</td>
+</tr>
+<tr>
+<td style="text-align:center">$*USER</td>
+<td style="text-align:left">正在运行该程序的用户. 它是一个被求值为 &ldquo;username (uid)&rdquo; 的对象. 它只有在被当作字符串时才被求值为用户名, 如果被当作数字则被求值为数值化的用户 id。</td>
+</tr>
+<tr>
+<td style="text-align:center">$*GROUP</td>
+<td style="text-align:left">运行程序的用户的主要组. 它是被计算为  &ldquo;groupname (gid)&rdquo; 的对象.它只有在被当作字符串时才被求值为组名, 如果被当作数字则被求值为数值化的组 id。</td>
+</tr>
+<tr>
+<td style="text-align:center">$*HOME</td>
+<td style="text-align:left">代表当前运行程序的用户家目录的 IO::Path 对象。如果家目录不确定则为 Nil。</td>
+</tr>
+<tr>
+<td style="text-align:center">$*SPEC</td>
+<td style="text-align:left">程序运行的平台的合适的 IO::Spec 子类, 对于特定操作系统代码,使用智能匹配: say &ldquo;We are on Windows!&rdquo; if $*SPEC ~~ IO::Spec::Win32</td>
+</tr>
+<tr>
+<td style="text-align:center">$*TMPDIR</td>
+<td style="text-align:left">代表着 &ldquo;系统临时目录&rdquo; 的 IO::Path 对象</td>
+</tr>
+<tr>
+<td style="text-align:center">$*TOLERANCE</td>
+<td style="text-align:left">由 &lt;=~=&gt; 操作符使用并且任何依赖它的操作, 来决定两个值是否近似地相等, 默认为 1e-15。</td>
+</tr>
+<tr>
+<td style="text-align:center">$*THREAD</td>
+<td style="text-align:left">代表当前执行线程的 Thread 对象。</td>
+</tr>
+<tr>
+<td style="text-align:center">$*SCHEDULER</td>
+<td style="text-align:left">代表当前默认调度程序的 ThreadPoolScheduler 对象。</td>
+</tr>
+</tbody>
+</table>
+<p>注意 <code>$*SCHEDULER</code> 的用法:</p>
+<p>对于当前的 Rakudo, 这个默认在方法 <code>.hyper</code> 和 <code>.race</code> 上采用最大 16 个线程。要更改线程的最大数量, 要么在运行 perl 之前设置环境变量  RAKUDO_MAX_THREADS 的值, 要么在使用 .hyper 或 .race 之前创建一个默认改变了的作用域的拷贝:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="vg">$*SCHEDULER</span> <span class="o">=</span> <span class="nb">ThreadPoolScheduler</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span> <span class="s">max_threads</span> <span class="o">=&gt;</span> <span class="mi">64</span> <span class="p">);</span>
+</code></pre></div><p>这种行为在 spec 测试中没有被测试并且还会变化。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/variable" term="variable" label="variable" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

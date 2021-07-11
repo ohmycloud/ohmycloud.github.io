@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[roles on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/roles/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/roles/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/roles/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/roles/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-07-11T22:08:29+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/roles/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku 中的角色冲突]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-11-16-roles-conflict-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2016-01-21-protocol-in-swift-and-roles-in-raku/?utm_source=atom_feed" rel="related" type="text/html" title="Swift 中的 protocol 和 Raku 中的 roles 一例" />
+            
+                <id>https://ohmyweekly.github.io/notes/2015-11-16-roles-conflict-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Roles Conflict in Raku</blockquote><p>学会了怎么创建类, 我们继续用它来构建我们的中心内容:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Hammer</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">hammer</span><span class="p">(</span><span class="nv">$stuff</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">You hammer on </span><span class="nv">$stuff</span><span class="s2">. BAM BAM BAM!</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Gavel</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">hammer</span><span class="p">(</span><span class="nv">$stuff</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">You hammer on </span><span class="nv">$stuff</span><span class="s2">. BAM BAM BAM!</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Mallet</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">hammer</span><span class="p">(</span><span class="nv">$stuff</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">You hammer on </span><span class="nv">$stuff</span><span class="s2">. BAM BAM BAM!</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>但是注意到了吗？这三个方法包含了同样的方法, 在类中重复了。我们必须那样做如果我们想让每个 <strong>Hammar</strong>、<strong>Gavel</strong> 和 <strong>Mallet</strong> 有能力击打的话。（并且那是合理的）。但是遗憾的是我们不得不把那个方法一式三份。</p>
+<p>为什么遗憾？ 因为一方面在真实世界中, 方法并不是很彼此相似, 有一天你决定在 <strong>hammer</strong> 方法中更改某些东西, 并没有意识到这个方法在三个不同的地方&hellip; 这导致了一堆痛苦和难受。</p>
+<p>所以我们的新玩具, 类, 展现出了一个问题。我们想在每个类中重用 hammer 方法。一个新的概念, <strong>role</strong> 来拯救我们来了:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">role</span> <span class="nc">Hammering</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">hammer</span><span class="p">(</span><span class="nv">$stuff</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">You hammer on </span><span class="nv">$stuff</span><span class="s2">. BAM BAM BAM!</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>虽然类经常以一个合适的名词命名, 但是 roles 经常以一个分词命名, 例如 <strong>Hammering</strong>。这不是一个必须遵守的规则, 但是它是一个好的经验法则。现在类的定义变的简单了:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Hammer</span> <span class="k">does</span> <span class="nc">Hammering</span> <span class="p">{</span> <span class="p">}</span>
+<span class="k">class</span> <span class="nc">Gavel</span>  <span class="k">does</span> <span class="nc">Hammering</span> <span class="p">{</span> <span class="p">}</span>
+<span class="k">class</span> <span class="nc">Mallet</span> <span class="k">does</span> <span class="nc">Hammering</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre></div><p>是的, 我们喜欢那样。</p>
+<p>这发生了什么？ 我们在类上使用 <strong>does</strong> 是干什么用的？ role 定义中的所有方法都被拷贝到类定义中。因为它是一个拷贝操作, 所以我们可以使用尽可能多的类。</p>
+<p>所以, 我们做的是: 当我们想重用方法的时候把方法放进 roles 里面。</p>
+<p>但是好处不止这一点儿。至少有两个好处:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$hammer</span> <span class="o">=</span> <span class="n">Hammer</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>    <span class="c1"># create a new hammer object</span>
+<span class="nb">say</span> <span class="nv">$hammer</span> <span class="o">~~</span> <span class="n">Hammer</span><span class="p">;</span>      <span class="c1"># &#34;Bool::True&#34; -- yes, this we know</span>
+<span class="nb">say</span> <span class="nv">$hammer</span> <span class="o">~~</span> <span class="n">Hammering</span><span class="p">;</span>   <span class="c1"># &#34;Bool::True&#34; -- ooh!</span>
+</code></pre></div><p>所以 <code>$hammer</code> 知道它遵守了(does) <strong>Hammering</strong>, 我们现在不仅知道了对象属于哪个类, 还知道了对象并入了什么 role。这很有用如果我们不确定我们处理的是什么类型的对象:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">if</span> <span class="nv">$unkown_object</span> <span class="o">~~</span> <span class="n">Hammering</span> <span class="p">{</span>
+    <span class="nv">$unknown_object</span><span class="o">.</span><span class="nf">hammer</span><span class="p">(&#34;</span><span class="s2">砸在钉子上</span><span class="p">&#34;);</span>     <span class="c1"># will always work</span>
+<span class="p">}</span>
+</code></pre></div><p>一个类能一次接收几个 roles 吗？ 是的, 它可以:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">role</span> <span class="nc">Flying</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">fly</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Whooosh!</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">FlyingHammer</span> <span class="k">does</span> <span class="nc">Hammering</span> <span class="k">does</span> <span class="nc">Flying</span> <span class="p">{</span> <span class="p">}</span>
+</code></pre></div><p>让一个类像那样遵守几个 roles 引入了一个有意思的可能: 冲突, 当来自两个不同 roles 的两个同名方法尝试占领同一个类时。这时会发生什么？ 好吧, 至少有 3 种可能:</p>
+<ul>
+<li>
+<ol>
+<li>第一个 role 赢了。 它的方法住进了类中</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>最后一个 role 赢了。 它覆盖了之前的方法</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>编译失败。冲突必须被解决。</li>
+</ol>
+</li>
+</ul>
+<p>这种情况下选项 3  应该是正确答案。原因和之前相同: 因为类和工程越来越庞大, 程序员可能意识不到两个 role 之间在哪儿发生冲突。所以我们标记了它。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">role</span> <span class="nc">Sleeping</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">lie</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">水平躺下</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">role</span> <span class="nc">Lying</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">lie</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">说谎...</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">SleepingLiar</span> <span class="k">does</span> <span class="nc">Sleeping</span> <span class="k">does</span> <span class="nc">Lying</span> <span class="p">{</span> <span class="p">}</span>    <span class="c1"># 冲突!</span>
+
+</code></pre></div><p>下一个问题, 那么: 当在类中有  role 冲突时, 我们怎么修复它？ 简单: 在类中自己定义一个同名的方法:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku">
+<span class="k">class</span> <span class="nc">SleepingLiar</span> <span class="k">does</span> <span class="nc">Sleeping</span> <span class="k">does</span> <span class="nc">Lying</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">lie</span> <span class="p">{</span>
+        <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Lying in my sleep....</span><span class="p">&#34;;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>如果你想从一个贴别的 role 中调用一个方法, 语法是这样的:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">SleepingLiar</span> <span class="k">does</span> <span class="nc">Sleeping</span> <span class="k">does</span> <span class="nc">Lying</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">lie</span> <span class="p">{</span>
+        <span class="nb">self</span><span class="o">.</span><span class="nf">Sleeping::lie</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>这就是 roles。它们把可重用的行为混合进类中。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/roles" term="roles" label="roles" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Swift 中的 protocol 和 Raku 中的 roles 一例]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-01-21-protocol-in-swift-and-roles-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+                <link href="https://ohmyweekly.github.io/notes/2015-11-16-roles-conflict-in-raku/?utm_source=atom_feed" rel="related" type="text/html" title="Raku 中的角色冲突" />
+            
+                <id>https://ohmyweekly.github.io/notes/2016-01-21-protocol-in-swift-and-roles-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Protocol in Swift and Roles in Raku</blockquote><p>Protocol 在 Swift 中是一组方法和属性的集合, 可用于代码复用。 Raku 中有与之类似的结构, 叫做 <code>Role</code>, 下面转换一个 Swift 的 Protocol 为 Raku 的 Role, 把部门人员的相关信息打印为一个表格:</p>
+<h2 id="protocol-in-swift">Protocol in Swift</h2>
+<p>　</p>
+<div class="highlight"><pre class="chroma"><code class="language-perl" data-lang="perl"><span class="nb">import</span> <span class="n">UIKit</span>
+
+<span class="n">func</span> <span class="n">padding</span><span class="p">(</span><span class="n">amount:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span> <span class="p">{</span>
+    <span class="n">var</span> <span class="n">paddingString</span> <span class="o">=</span> <span class="s">&#34;&#34;</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="n">in</span> <span class="mi">0</span><span class="o">..&lt;</span><span class="n">amount</span> <span class="p">{</span>
+        <span class="n">paddingString</span> <span class="o">+=</span> <span class="s">&#34; &#34;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">paddingString</span>
+<span class="p">}</span>
+
+<span class="sr">//</span> <span class="n">协议</span>
+
+<span class="n">protocol</span> <span class="n">TabularDataSource</span> <span class="p">{</span>
+    <span class="n">var</span> <span class="n">numberOfRows:</span> <span class="n">Int</span>    <span class="p">{</span> <span class="n">get</span> <span class="p">}</span>
+    <span class="n">var</span> <span class="n">numberOfColumns:</span> <span class="n">Int</span> <span class="p">{</span> <span class="n">get</span> <span class="p">}</span>
+
+    <span class="n">func</span> <span class="n">labelForRow</span><span class="p">(</span><span class="n">row:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span>        <span class="sr">//</span> <span class="n">行标签</span>
+    <span class="n">func</span> <span class="n">labelForColumn</span><span class="p">(</span><span class="n">column:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span>  <span class="sr">//</span> <span class="n">列标签</span>
+
+    <span class="n">func</span> <span class="n">itemForRow</span><span class="p">(</span><span class="n">row:</span> <span class="n">Int</span><span class="p">,</span> <span class="n">column:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Int</span> <span class="sr">//</span> <span class="n">表格中的单元格</span>
+<span class="p">}</span>
+
+
+
+<span class="n">struct</span> <span class="n">Person</span> <span class="p">{</span>
+    <span class="n">let</span> <span class="n">name:</span> <span class="n">String</span>
+    <span class="n">let</span> <span class="n">age:</span> <span class="n">Int</span>
+    <span class="n">let</span> <span class="n">yearsOfExperience:</span> <span class="n">Int</span>
+<span class="p">}</span>
+
+<span class="sr">//</span> <span class="n">让</span> <span class="o">**</span><span class="n">Department</span><span class="o">**</span> <span class="n">遵守</span> <span class="o">**</span><span class="n">TabularDataSource</span><span class="o">**</span><span class="n">协议</span>
+<span class="n">struct</span> <span class="n">Department:</span> <span class="n">TabularDataSource</span> <span class="p">{</span>
+    <span class="n">let</span> <span class="n">name:</span> <span class="n">String</span>
+    <span class="n">var</span> <span class="n">people</span> <span class="o">=</span> <span class="p">[</span><span class="n">Person</span><span class="p">]()</span>
+
+    <span class="n">init</span><span class="p">(</span><span class="n">name:</span> <span class="n">String</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="p">}</span>
+
+    <span class="n">mutating</span> <span class="n">func</span> <span class="n">addPerson</span><span class="p">(</span><span class="n">person:</span> <span class="n">Person</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">people</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">person</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="sr">//</span> <span class="n">实现协议中声明的属性和方法</span>
+    <span class="n">var</span> <span class="n">numberOfRows:</span> <span class="n">Int</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">people</span><span class="o">.</span><span class="n">count</span>
+    <span class="p">}</span>
+
+    <span class="n">var</span> <span class="n">numberOfColumns:</span> <span class="n">Int</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">2</span>
+    <span class="p">}</span>
+
+    <span class="n">func</span> <span class="n">labelForRow</span><span class="p">(</span><span class="n">row:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">people</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+    <span class="p">}</span>
+
+    <span class="n">func</span> <span class="n">labelForColumn</span><span class="p">(</span><span class="n">column:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span> <span class="p">{</span>
+        <span class="n">switch</span> <span class="n">column</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="s">&#34;Age&#34;</span>
+            <span class="k">case</span> <span class="mi">1</span><span class="p">:</span> <span class="k">return</span> <span class="s">&#34;Years of Experence&#34;</span>
+            <span class="n">default:</span> <span class="n">fatalError</span><span class="p">(</span><span class="s">&#34;Invalid column!&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">func</span> <span class="n">itemForRow</span><span class="p">(</span><span class="n">row:</span> <span class="n">Int</span><span class="p">,</span> <span class="n">column:</span> <span class="n">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Int</span> <span class="p">{</span>
+         <span class="n">let</span> <span class="n">person</span> <span class="o">=</span> <span class="n">people</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="sr">//</span> <span class="n">指定的行</span>
+         <span class="n">switch</span> <span class="n">column</span> <span class="p">{</span>
+             <span class="k">case</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="n">person</span><span class="o">.</span><span class="n">age</span>
+             <span class="k">case</span> <span class="mi">1</span><span class="p">:</span> <span class="k">return</span> <span class="n">person</span><span class="o">.</span><span class="n">yearsOfExperience</span>
+             <span class="n">default:fatalError</span><span class="p">(</span><span class="s">&#34;Invalid column!&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">var</span> <span class="n">deparment</span> <span class="o">=</span> <span class="n">Department</span><span class="p">(</span><span class="n">name:</span> <span class="s">&#34;Engineering&#34;</span><span class="p">)</span>
+<span class="n">deparment</span><span class="o">.</span><span class="n">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="p">(</span><span class="n">name:</span> <span class="s">&#34;Joe&#34;</span><span class="p">,</span> <span class="n">age:</span> <span class="mi">30</span><span class="p">,</span> <span class="n">yearsOfExperience:</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">deparment</span><span class="o">.</span><span class="n">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="p">(</span><span class="n">name:</span> <span class="s">&#34;Karen&#34;</span><span class="p">,</span> <span class="n">age:</span> <span class="mi">40</span><span class="p">,</span> <span class="n">yearsOfExperience:</span> <span class="mi">18</span><span class="p">))</span>
+<span class="n">deparment</span><span class="o">.</span><span class="n">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="p">(</span><span class="n">name:</span> <span class="s">&#34;Fred&#34;</span><span class="p">,</span> <span class="n">age:</span> <span class="mi">50</span><span class="p">,</span> <span class="n">yearsOfExperience:</span> <span class="mi">20</span><span class="p">))</span>
+
+<span class="sr">//</span> <span class="n">传入一个数据源</span>
+<span class="n">func</span> <span class="n">printTable</span><span class="p">(</span><span class="n">dataSource:</span> <span class="n">TabularDataSource</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">let</span> <span class="n">rowLabels</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..&lt;</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">numberOfRows</span><span class="p">)</span><span class="o">.</span><span class="nb">map</span> <span class="p">{</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">labelForRow</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span> <span class="p">}</span>
+    <span class="n">let</span> <span class="n">columnLabels</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..&lt;</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">numberOfColumns</span><span class="p">)</span><span class="o">.</span><span class="nb">map</span> <span class="p">{</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">labelForColumn</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span> <span class="p">}</span>
+
+    <span class="sr">//</span> <span class="n">创建一个数组存储每个行标签的宽度</span>
+    <span class="n">let</span> <span class="n">rowLabelWidths</span> <span class="o">=</span> <span class="n">rowLabels</span><span class="o">.</span><span class="nb">map</span> <span class="p">{</span> <span class="nv">$0</span><span class="o">.</span><span class="n">characters</span><span class="o">.</span><span class="n">count</span> <span class="p">}</span>
+
+    <span class="sr">//</span> <span class="n">限定行标签的最大长度</span>
+    <span class="n">guard</span> <span class="n">let</span> <span class="n">maxRowLabelWidth</span> <span class="o">=</span> <span class="n">rowLabelWidths</span><span class="o">.</span><span class="n">maxElement</span><span class="p">()</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+
+    <span class="sr">//</span> <span class="n">创建第一行</span><span class="p">,</span> <span class="n">包含列标题</span>
+    <span class="n">var</span> <span class="n">firstRow</span> <span class="o">=</span> <span class="n">padding</span><span class="p">(</span><span class="n">maxRowLabelWidth</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#34; |&#34;</span>
+
+    <span class="sr">//</span> <span class="n">跟踪每列的宽度</span>
+    <span class="n">var</span> <span class="n">columnWidths</span> <span class="o">=</span> <span class="p">[</span><span class="n">Int</span><span class="p">]()</span>
+
+    <span class="k">for</span> <span class="n">columnLabel</span> <span class="n">in</span> <span class="n">columnLabels</span> <span class="p">{</span>
+        <span class="n">let</span> <span class="n">columnHeader</span> <span class="o">=</span> <span class="s">&#34; \(columnLabel) |&#34;</span>
+        <span class="n">firstRow</span> <span class="o">+=</span> <span class="n">columnHeader</span>
+        <span class="n">columnWidths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">columnHeader</span><span class="o">.</span><span class="n">characters</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">firstRow</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="n">in</span> <span class="mi">0</span> <span class="o">..&lt;</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">numberOfRows</span> <span class="p">{</span>
+        <span class="n">let</span> <span class="n">paddingAmount</span> <span class="o">=</span> <span class="n">maxRowLabelWidth</span> <span class="o">-</span> <span class="n">rowLabelWidths</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">var</span> <span class="n">out</span> <span class="o">=</span> <span class="n">rowLabels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">padding</span><span class="p">(</span><span class="n">paddingAmount</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#34; |&#34;</span>
+
+        <span class="k">for</span> <span class="n">j</span> <span class="n">in</span> <span class="mi">0</span> <span class="o">..&lt;</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">numberOfColumns</span> <span class="p">{</span>
+            <span class="n">let</span> <span class="n">item</span> <span class="o">=</span> <span class="n">dataSource</span><span class="o">.</span><span class="n">itemForRow</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">column:</span> <span class="n">j</span><span class="p">)</span>
+            <span class="n">let</span> <span class="n">itemString</span> <span class="o">=</span> <span class="s">&#34; \(item) |&#34;</span>
+            <span class="n">let</span> <span class="n">paddingAmount</span> <span class="o">=</span> <span class="n">columnWidths</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">itemString</span><span class="o">.</span><span class="n">characters</span><span class="o">.</span><span class="n">count</span>
+            <span class="n">out</span> <span class="o">+=</span> <span class="n">padding</span><span class="p">(</span><span class="n">paddingAmount</span><span class="p">)</span> <span class="o">+</span> <span class="n">itemString</span>
+        <span class="p">}</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">printTable</span><span class="p">(</span><span class="n">deparment</span><span class="p">)</span>
+</code></pre></div><p>其中的计算属性在 Raku 中可以使用重写属性的方法来完成。</p>
+<h3 id="role-in-raku">Role in Raku</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">padding</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$amount</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$paddingString</span> <span class="o">=</span> <span class="p">&#34;&#34;;</span>
+    <span class="nv">$paddingString</span> <span class="o">~=</span> <span class="p">&#34;</span><span class="s2"> </span><span class="p">&#34;</span> <span class="k">for</span>  <span class="mi">0</span> <span class="o">..^</span> <span class="nv">$amount</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nv">$paddingString</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1"># 声明一个接口, 只定义了方法和属性, 没有做实现</span>
+<span class="k">role</span> <span class="nc">TabularDataSource</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.numberOfRows</span> <span class="k">is</span> <span class="k">rw</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nv">$.numberOfColumns</span> <span class="k">is</span> <span class="k">rw</span><span class="p">;</span>
+
+    <span class="k">method</span> <span class="nf">labelForRow</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$row</span><span class="p">)</span>             <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">labelForColumn</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$column</span><span class="p">)</span>       <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">itemForRow</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$row</span><span class="o">,</span> <span class="nb">Int</span> <span class="nv">$column</span><span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Person</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nb">Str</span> <span class="nv">$.name</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$.age</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$.yearsOfExperience</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Department</span> <span class="k">does</span> <span class="nc">TabularDataSource</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nv">$.name</span><span class="p">;</span>
+    <span class="k">has</span> <span class="nv">@.people</span><span class="p">;</span>
+
+    <span class="k">method</span> <span class="nb">new</span><span class="p">(</span><span class="nb">Str</span> <span class="nv">$name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">self</span><span class="o">.</span><span class="nb">bless</span><span class="p">(</span><span class="s">name</span> <span class="o">=&gt;</span> <span class="nv">$name</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="c1"># 实现接口中的方法</span>
+
+    <span class="c1"># 重写方法 has $.numberOfRows 其实是 has $!numberOfRows 加上 method numberOfRows() { ... } 方法。</span>
+    <span class="k">method</span> <span class="nf">numberOfRows</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nv">@!people</span><span class="o">.</span><span class="nb">elems</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">numberOfColumns</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">addPerson</span><span class="p">(</span><span class="n">Person</span> <span class="nv">$person</span><span class="p">)</span> <span class="k">is</span> <span class="k">rw</span> <span class="p">{</span>
+        <span class="nv">@!people</span><span class="o">.</span><span class="nb">append</span><span class="p">(</span><span class="nv">$person</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1"># 如果类遵守了某个 role 但是未实现其中的方法, 则会报错如下:</span>
+    <span class="c1"># Method &#39;labelForRow&#39; must be implemented by Department because it is required by a role</span>
+    <span class="k">method</span> <span class="nf">labelForRow</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$row</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nv">@!people</span><span class="o">[</span><span class="nv">$row</span><span class="o">].</span><span class="nb">name</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">labelForColumn</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$column</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">given</span> <span class="nv">$column</span> <span class="p">{</span>
+            <span class="k">when</span> <span class="mi">0</span>  <span class="p">{</span> <span class="k">return</span> <span class="p">&#34;</span><span class="s2">Age</span><span class="p">&#34;</span> <span class="p">}</span>
+            <span class="k">when</span> <span class="mi">1</span>  <span class="p">{</span> <span class="k">return</span> <span class="p">&#34;</span><span class="s2">Years of Experence</span><span class="p">&#34;</span> <span class="p">}</span>
+            <span class="k">default</span> <span class="p">{</span> <span class="nb">die</span><span class="p">(&#34;</span><span class="s2">Invalid column!</span><span class="p">&#34;)}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">itemForRow</span><span class="p">(</span><span class="nb">Int</span> <span class="nv">$row</span><span class="o">,</span> <span class="nb">Int</span> <span class="nv">$column</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$person</span> <span class="o">=</span> <span class="nv">@!people</span><span class="o">[</span><span class="nv">$row</span><span class="o">]</span><span class="p">;</span>
+
+        <span class="k">given</span> <span class="nv">$column</span> <span class="p">{</span>
+            <span class="k">when</span> <span class="mi">0</span>  <span class="p">{</span> <span class="k">return</span> <span class="nv">$person</span><span class="o">.</span><span class="nf">age</span>               <span class="p">}</span>
+            <span class="k">when</span> <span class="mi">1</span>  <span class="p">{</span> <span class="k">return</span> <span class="nv">$person</span><span class="o">.</span><span class="nf">yearsOfExperience</span> <span class="p">}</span>
+            <span class="k">default</span> <span class="p">{</span> <span class="nb">die</span><span class="p">(&#34;</span><span class="s2">Invalid column</span><span class="p">&#34;)</span>            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$department</span> <span class="o">=</span> <span class="n">Department</span><span class="o">.</span><span class="nb">new</span><span class="p">(&#34;</span><span class="s2">Engineering</span><span class="p">&#34;);</span>
+<span class="nv">$department</span><span class="o">.</span><span class="nf">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">name</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Joe</span><span class="p">&#34;</span>,   <span class="s">age</span> <span class="o">=&gt;</span> <span class="mi">30</span>, <span class="s">yearsOfExperience</span> <span class="o">=&gt;</span> <span class="mi">6</span><span class="p">));</span>
+<span class="nv">$department</span><span class="o">.</span><span class="nf">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">name</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Karen</span><span class="p">&#34;</span>, <span class="s">age</span> <span class="o">=&gt;</span> <span class="mi">40</span>, <span class="s">yearsOfExperience</span> <span class="o">=&gt;</span> <span class="mi">18</span><span class="p">));</span>
+<span class="nv">$department</span><span class="o">.</span><span class="nf">addPerson</span><span class="p">(</span><span class="n">Person</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">name</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Fred</span><span class="p">&#34;</span>,  <span class="s">age</span> <span class="o">=&gt;</span> <span class="mi">50</span>, <span class="s">yearsOfExperience</span> <span class="o">=&gt;</span> <span class="mi">20</span><span class="p">));</span>
+
+<span class="k">sub</span> <span class="nf">printTable</span><span class="p">(</span><span class="n">TabularDataSource</span> <span class="nv">$dataSource</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">@rowLabels</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..^</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">numberOfRows</span> <span class="p">)</span><span class="o">.</span><span class="nb">map</span><span class="o">:</span> <span class="p">{</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">labelForRow</span><span class="p">(</span><span class="nv">$_</span><span class="p">)};</span>
+    <span class="k">my</span> <span class="nv">@columnLabels</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..^</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">numberOfColumns</span><span class="p">)</span><span class="o">.</span><span class="nb">map</span><span class="o">:</span> <span class="p">{</span><span class="nv">$dataSource</span><span class="o">.</span><span class="nf">labelForColumn</span><span class="p">(</span><span class="nv">$_</span><span class="p">)};</span>
+ 
+    <span class="k">my</span> <span class="nv">@rowLabelWidths</span> <span class="o">=</span> <span class="nv">@rowLabels</span><span class="o">.</span><span class="nb">map</span><span class="o">:</span> <span class="p">{</span><span class="nv">$_</span><span class="o">.</span><span class="nb">chars</span><span class="p">};</span>
+    <span class="k">my</span> <span class="nv">$maxRowLabelWidth</span> <span class="o">=</span> <span class="nv">@rowLabelWidths</span><span class="o">.</span><span class="nb">max</span> <span class="o">//</span> <span class="k">return</span><span class="p">;</span>
+ 
+    <span class="k">my</span> <span class="nv">$firstRow</span> <span class="o">=</span> <span class="nf">padding</span><span class="p">(</span><span class="nv">$maxRowLabelWidth</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#34;</span><span class="s2"> |</span><span class="p">&#34;;</span>
+    <span class="k">my</span> <span class="nv">@columnWidths</span><span class="p">;</span>
+ 
+    <span class="k">for</span> <span class="nv">@columnLabels</span> <span class="k">-&gt;</span> <span class="nv">$columnLabel</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$columnHeader</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2"> </span><span class="nv">$columnLabel</span><span class="s2"> |</span><span class="p">&#34;;</span>
+        <span class="nv">$firstRow</span> <span class="o">~=</span> <span class="nv">$columnHeader</span><span class="p">;</span>
+        <span class="nv">@columnWidths</span><span class="o">.</span><span class="nb">append</span><span class="p">(</span><span class="nv">$columnHeader</span><span class="o">.</span><span class="nb">chars</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="nb">say</span><span class="p">(</span><span class="nv">$firstRow</span><span class="p">);</span>
+ 
+    <span class="k">for</span> <span class="mi">0</span> <span class="o">..^</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">numberOfRows</span> <span class="k">-&gt;</span> <span class="nv">$i</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">$paddingAmount</span> <span class="o">=</span> <span class="nv">$maxRowLabelWidth</span> <span class="o">-</span> <span class="nv">@rowLabelWidths</span><span class="o">[</span><span class="nv">$i</span><span class="o">]</span><span class="p">;</span>
+        <span class="k">my</span> <span class="nv">$out</span> <span class="o">=</span> <span class="nv">@rowLabels</span><span class="o">[</span><span class="nv">$i</span><span class="o">]</span> <span class="o">~</span> <span class="nf">padding</span><span class="p">(</span><span class="nv">$paddingAmount</span><span class="p">)</span> <span class="o">~</span> <span class="p">&#34;</span><span class="s2"> |</span><span class="p">&#34;;</span>
+ 
+        <span class="k">for</span> <span class="mi">0</span> <span class="o">..^</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">numberOfColumns</span> <span class="k">-&gt;</span> <span class="nv">$j</span> <span class="p">{</span>
+            <span class="k">my</span> <span class="nv">$item</span> <span class="o">=</span> <span class="nv">$dataSource</span><span class="o">.</span><span class="nf">itemForRow</span><span class="p">(</span><span class="nv">$i</span><span class="o">,</span> <span class="nv">$j</span><span class="p">);</span>
+            <span class="k">my</span> <span class="nv">$itemString</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2"> </span><span class="nv">$item</span><span class="s2"> |</span><span class="p">&#34;;</span>
+            <span class="k">my</span> <span class="nv">$paddingAmount</span> <span class="o">=</span> <span class="nv">@columnWidths</span><span class="o">[</span><span class="nv">$j</span><span class="o">]</span> <span class="o">-</span> <span class="nv">$itemString</span><span class="o">.</span><span class="nb">chars</span><span class="p">;</span>
+            <span class="nv">$out</span> <span class="o">~=</span> <span class="nf">padding</span><span class="p">(</span><span class="nv">$paddingAmount</span><span class="p">)</span> <span class="o">~</span> <span class="nv">$itemString</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="nb">say</span><span class="p">(</span><span class="nv">$out</span><span class="p">);</span>
+   <span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="nf">printTable</span><span class="p">(</span><span class="nv">$department</span><span class="p">);</span>
+</code></pre></div><p>role 中的 <code>{ ... }</code> 是 yadayada 操作符, 起占位作用, 表示方法会在别处实现。类中的方法同样也可以这样声明。</p>
+<p>最后输出:</p>
+<pre><code>      | Age | Years of Experence |
+Joe   |  30 |                  6 |
+Karen |  40 |                 18 |
+Fred  |  50 |                 20 |
+</code></pre>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/roles" term="roles" label="roles" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

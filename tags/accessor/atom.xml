@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[accessor on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/accessor/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/accessor/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/accessor/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/accessor/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-07-11T22:08:29+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/accessor/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[在 Raku 中自定义存取器]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2015-05-19-how-to-write-custom-accessor-methods-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2015-05-19-how-to-write-custom-accessor-methods-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-11T00:00:00+08:00</published>
+            <updated>2021-07-11T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>How to Write Custom Accessor Methods in Raku</blockquote><h2 id="how-does-one-write-custom-accessor-methods-in-raku">How does one write custom accessor methods in Raku?</h2>
+<p>我有一个类:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Wizard</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$.mana</span> <span class="k">is</span> <span class="k">rw</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><p>我可以这样做:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="n">Wizard</span> <span class="nv">$gandalf</span> <span class="o">.=</span> <span class="nb">new</span><span class="p">;</span>
+<span class="nv">$gandalf</span><span class="o">.</span><span class="nf">mana</span> <span class="o">=</span> <span class="mi">150</span><span class="p">;</span>
+</code></pre></div><p>我想在不放弃使用 <code>$gandalf.mana = 150;</code> 的情况下, 在 <code>setter</code> 里面做一些检查。换句话说, 我不想这样写: <code>$gandalf.setMana(150)</code>。 如果程序尝试设置一个负值的话, 就退出。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Wizard</span> <span class="p">{</span>
+    <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$!mana</span><span class="p">;</span>
+
+    <span class="k">method</span> <span class="nf">mana</span><span class="p">()</span> <span class="k">is</span> <span class="k">rw</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">Proxy</span><span class="o">.</span><span class="nb">new</span><span class="o">:</span>
+            <span class="s">FETCH</span> <span class="o">=&gt;</span> <span class="k">sub</span> <span class="p">(</span><span class="nv">$</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nv">$!mana</span> <span class="p">}</span>,
+            <span class="s">STORE</span> <span class="o">=&gt;</span> <span class="k">sub</span> <span class="p">(</span><span class="nv">$</span>, <span class="nv">$mana</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nb">die</span> <span class="p">&#34;</span><span class="s2">It&#39;s over 9000!</span><span class="p">&#34;</span> <span class="k">if</span> <span class="p">(</span><span class="nv">$mana</span> <span class="o">//</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">9000</span><span class="p">;</span>
+                <span class="nv">$!mana</span> <span class="o">=</span> <span class="nv">$mana</span><span class="p">;</span>
+            <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="n">Wizard</span> <span class="nv">$gandalf</span> <span class="o">.=</span> <span class="nb">new</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$gandalf</span><span class="o">.</span><span class="nf">mana</span><span class="p">;</span>
+<span class="nv">$gandalf</span><span class="o">.</span><span class="nf">mana</span> <span class="o">=</span> <span class="mi">150</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$gandalf</span><span class="o">.</span><span class="nf">mana</span><span class="p">;</span>
+</code></pre></div><p><code>Pxoxy</code> 是一种拦截对存储进行读写调用, 并做一些非默认行为的方式。在解析像 <code>$gandalf.mana = $gandalf.mana + 5</code> 这种表达式的时候, Raku 会自动调用 <code>FETCH</code> 和 <code>STORE</code> 方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Baby</span> <span class="p">{</span>
+    <span class="c1"># use . instead of ! for better `.raku` representation  </span>
+    <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$.mana</span><span class="p">;</span> 
+
+    <span class="c1"># overwrite the method the attribute declaration added</span>
+    <span class="k">method</span> <span class="nf">mana</span> <span class="p">()</span> <span class="k">is</span> <span class="k">rw</span> <span class="p">{</span>
+        <span class="nb">Proxy</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span>
+            <span class="s">FETCH</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="nv">$</span> <span class="p">{</span> <span class="nv">$!mana</span> <span class="p">}</span>,
+            <span class="s">STORE</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="nv">$</span>, <span class="nb">Int</span> <span class="nv">$new</span> <span class="p">{</span>
+                <span class="nb">die</span> <span class="p">&#39;</span><span class="s1">invalid mana</span><span class="p">&#39;</span> <span class="k">unless</span> <span class="nv">$new</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1"># placeholder for a better error</span>
+                <span class="nv">$!mana</span> <span class="o">=</span> <span class="nv">$new</span><span class="p">;</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="n">Baby</span> <span class="nv">$baby</span> <span class="o">.=</span> <span class="nb">new</span><span class="p">;</span>
+<span class="nv">$baby</span><span class="o">.</span><span class="nf">mana</span> <span class="o">=</span> <span class="mi">9</span><span class="p">;</span>
+
+<span class="nb">say</span> <span class="nv">$baby</span><span class="o">.</span><span class="nf">mana</span><span class="p">;</span>
+<span class="nv">$baby</span><span class="o">.</span><span class="nf">mana</span> <span class="o">=</span> <span class="o">-</span><span class="mi">9</span><span class="p">;</span>
+</code></pre></div>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/accessor" term="accessor" label="accessor" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>
