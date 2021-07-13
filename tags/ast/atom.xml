@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
+    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[ast on 焉知非鱼]]></title>
+    
+        <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
+    
+    
+    
+            <link href="https://ohmyweekly.github.io/tags/ast/" rel="alternate" type="text/html" title="HTML" />
+            <link href="https://ohmyweekly.github.io/tags/ast/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
+            <link href="https://ohmyweekly.github.io/tags/ast/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
+            <link href="https://ohmyweekly.github.io/tags/ast/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
+    <updated>2021-07-13T22:14:20+08:00</updated>
+    
+    
+    
+    
+        <id>https://ohmyweekly.github.io/tags/ast/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Actions 和抽象语法树]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-05-12-actions-and-ast-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2016-05-12-actions-and-ast-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-13T00:00:00+08:00</published>
+            <updated>2021-07-13T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Actions and Ast in Raku</blockquote><p>有一段结构化的文本, 写一个 Grammar 来解析它：</p>
+<div class="highlight"><pre class="chroma"><code class="language-txt" data-lang="txt">name = Animal Facts
+author = jnthn
+
+[cat]
+desc = The smartest and cutest
+cuteness = 100000
+
+[dugong]
+desc = The cow of the sea
+cuteness = -10
+
+[magpie]
+desc = crow; raven; rook; jackdaw; chough; magpie; jay
+cuteness = 99
+</code></pre></div><p>每一段都是一个章节, 有的章节没有 <code>[cat]</code> 这样的标题, 要求 Grammar 生成一个散列, 散列的键是方括号中的单词, 如果没有就默认为 <code>_</code>, 散列的值是一个散列的数组, 数组里面的每个散列的键为等号左边的单词, 键值为等号右边的字符。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">INIFile::Grammar</span> <span class="p">{</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="ni">^</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr">     </span><span class="c1"># 条目
+</span><span class="c1"></span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">section</span><span class="p">&gt;</span><span class="o">+</span><span class="sr">    </span><span class="c1"># 章节
+</span><span class="c1"></span><span class="sr">        </span><span class="ni">$</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">section</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&#39;</span><span class="s1">[</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">]</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr"> </span><span class="c1"># 每个章节含有多个条目 entry
+</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entries</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">entry</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="c1"># entry 可以为空
+</span><span class="c1"></span><span class="sr">        </span><span class="p">]</span><span class="o">+</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entry</span>   <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">value</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">key</span>     <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">value</span>   <span class="p">{</span><span class="sr"> </span><span class="se">\N</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">INIFileActions</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">entries</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">%entries</span><span class="p">;</span>
+        <span class="k">for</span> <span class="nv">$&lt;entry&gt;</span> <span class="k">-&gt;</span> <span class="nv">$e</span> <span class="p">{</span>
+            <span class="nv">%entries</span><span class="p">{</span><span class="nv">$e</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;}</span> <span class="o">:=</span> <span class="o">~</span><span class="nv">$e</span><span class="p">&lt;</span><span class="s">value</span><span class="p">&gt;;</span>
+        <span class="p">}</span>
+        <span class="k">make</span> <span class="nv">%entries</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">TOP</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">%result</span><span class="p">;</span>
+        <span class="nv">%result</span><span class="p">&lt;</span><span class="s">_</span><span class="p">&gt;</span> <span class="o">:=</span> <span class="nv">$&lt;entries&gt;</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+        <span class="k">for</span> <span class="nv">$&lt;section&gt;</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+            <span class="nv">%result</span><span class="p">{</span><span class="nv">$sec</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;}</span> <span class="o">:=</span> <span class="nv">$sec</span><span class="p">&lt;</span><span class="s">entries</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">make</span> <span class="nv">%result</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$m</span> <span class="o">:=</span> <span class="n">INIFile::Grammar</span><span class="o">.</span><span class="nb">parse</span><span class="p">(</span><span class="k">Q</span><span class="p">{</span><span class="s">
+</span><span class="s">name = Animal Facts
+</span><span class="s">author = jnthn
+</span><span class="s">
+</span><span class="s">[cat]
+</span><span class="s">desc = The smartest and cutest
+</span><span class="s">cuteness = 100000
+</span><span class="s">
+</span><span class="s">[dugong]
+</span><span class="s">desc = The cow of the sea
+</span><span class="s">cuteness = -10
+</span><span class="s">
+</span><span class="s">[magpie]
+</span><span class="s">desc = crow; raven; rook; jackdaw; chough; magpie; jay
+</span><span class="s">cuteness = 99
+</span><span class="s"></span><span class="p">}</span><span class="o">,</span> <span class="p">:</span><span class="s">actions</span><span class="p">(</span><span class="n">INIFileActions</span><span class="p">));</span>
+
+<span class="k">my</span> <span class="nv">%sections</span> <span class="o">:=</span> <span class="nv">$m</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+
+<span class="k">for</span> <span class="nv">%sections</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+    <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">章节: </span><span class="p">{</span><span class="nv">$sec</span><span class="o">.</span><span class="nb">key</span><span class="p">}&#34;);</span>
+    <span class="k">for</span> <span class="nv">$sec</span><span class="o">.</span><span class="nb">value</span> <span class="k">-&gt;</span> <span class="nv">$entry</span> <span class="p">{</span>
+        <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">    </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">key</span><span class="p">}</span><span class="s2">: </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">value</span><span class="p">}&#34;);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p><code>make</code> 是一个函数, 接收单个参数, <code>make</code> 的作用是, 对于每一个 <code>method</code> 中对应的 <code>$_</code> , 存储生成的抽象语法树(AST)(片段)到 <code>$/</code> 中。<code>.ast</code> 用于从已保存的 AST 抽象语法树中检索提取 AST (片段), <code>»</code> 相当于一个循环, 即检索每一个 <code>$&lt;entry&gt;</code> 之类的语法树。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">INIFile::Grammar</span> <span class="p">{</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="ni">^</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">section</span><span class="p">&gt;</span><span class="o">+</span><span class="sr">    </span><span class="c1"># 章节
+</span><span class="c1"></span><span class="sr">        </span><span class="ni">$</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">section</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">[</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">]</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="p">]</span><span class="o">?</span><span class="sr">   </span><span class="c1"># [key] 这一行是可选的
+</span><span class="c1"></span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr">                 </span><span class="c1"># 每个章节含有多个条目 entry
+</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entries</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">entry</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="c1"># entry 可以为空
+</span><span class="c1"></span><span class="sr">        </span><span class="p">]</span><span class="o">+</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entry</span>   <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">value</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">key</span>     <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">value</span>   <span class="p">{</span><span class="sr"> </span><span class="se">\N</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">INIFileActions</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nb">key</span>    <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="o">~</span><span class="nv">$/</span>                                 <span class="p">}</span>
+    <span class="k">method</span> <span class="nb">value</span>  <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="o">~</span><span class="nv">$/</span>                                 <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">entry</span>  <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;key&gt;</span><span class="o">.</span><span class="s">ast</span> <span class="o">=&gt;</span> <span class="nv">$&lt;value&gt;</span><span class="o">.</span><span class="nb">ast</span>          <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">entries</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;entry&gt;</span><span class="o">».</span><span class="nb">ast</span>                       <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">section</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;key&gt;</span><span class="o">.</span><span class="nb">ast</span> <span class="o">//</span> <span class="p">&#39;</span><span class="s1">_</span><span class="p">&#39;</span> <span class="o">=&gt;</span> <span class="nv">$&lt;entries&gt;</span><span class="o">.</span><span class="nb">ast</span> <span class="p">}</span> <span class="c1"># 如果 key 不存在就默认为 `_`</span>
+
+    <span class="k">method</span> <span class="nf">TOP</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;section&gt;</span><span class="o">».</span><span class="nb">ast</span><span class="p">;</span>  <span class="c1"># 等价于 $/.make($&lt;section&gt;».ast);</span>
+        <span class="c1"># &#39;-&#39; =&gt; $&lt;entries&gt;.ast    # &#39;_&#39; 没有 ast 方法</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$m</span> <span class="o">=</span> <span class="n">INIFile::Grammar</span><span class="o">.</span><span class="nb">parse</span><span class="p">(</span><span class="k">Q</span><span class="p">{</span><span class="s">
+</span><span class="s">name = Animal Facts
+</span><span class="s">author = jnthn
+</span><span class="s">
+</span><span class="s">[cat]
+</span><span class="s">desc = The smartest and cutest
+</span><span class="s">cuteness = 100000
+</span><span class="s">
+</span><span class="s">[dugong]
+</span><span class="s">desc = The cow of the sea
+</span><span class="s">cuteness = -10
+</span><span class="s">
+</span><span class="s">[magpie]
+</span><span class="s">desc = crow; raven; rook; jackdaw; chough; magpie; jay
+</span><span class="s">cuteness = 99
+</span><span class="s"></span><span class="p">}</span><span class="o">,</span> <span class="p">:</span><span class="s">actions</span><span class="p">(</span><span class="n">INIFileActions</span><span class="p">))</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+
+<span class="k">for</span> <span class="nv">@$m</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+    <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">章节: </span><span class="p">{</span><span class="nv">$sec</span><span class="o">.</span><span class="nb">key</span><span class="p">}&#34;);</span>
+
+    <span class="k">for</span> <span class="nv">$sec</span><span class="o">.</span><span class="nb">value</span> <span class="k">-&gt;</span> <span class="nv">$entry</span> <span class="p">{</span>
+        <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">    </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">key</span><span class="p">}</span><span class="s2">: </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">value</span><span class="p">}&#34;);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>Grammar 的解析是从上至下的, 从 top-level (<code>TOP</code>) 开始, 到分支(branch)。Actions 中的方法是随着解析而执行的, 但是抽象语法树(AST) 的存储和检索是自下而上的, 只有底部的存储完了, 其上层部分才可以使用 <code>.ast</code> 或 <code>.made</code> 方法进行检索, 检索到之后各自进行处理后再次存储, 以供它的上层部分使用, 以此类推。</p>
+<p>注意, 第一段代码中 <code>$m</code> 存储的死散列, 而第二段代码中, <code>$m</code> 存储的是数组! 这说明可以返回散列和数组两种形式。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/actions" term="actions" label="actions" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/ast" term="ast" label="ast" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+</feed>

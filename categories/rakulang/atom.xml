@@ -10,12 +10,924 @@
             <link href="https://ohmyweekly.github.io/categories/rakulang/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/categories/rakulang/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/categories/rakulang/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-07-12T22:13:54+08:00</updated>
+    <updated>2021-07-13T22:14:20+08:00</updated>
     
     
     
     
         <id>https://ohmyweekly.github.io/categories/rakulang/</id>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Actions 和抽象语法树]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-05-12-actions-and-ast-in-raku/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2016-05-12-actions-and-ast-in-raku/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-13T00:00:00+08:00</published>
+            <updated>2021-07-13T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Actions and Ast in Raku</blockquote><p>有一段结构化的文本, 写一个 Grammar 来解析它：</p>
+<div class="highlight"><pre class="chroma"><code class="language-txt" data-lang="txt">name = Animal Facts
+author = jnthn
+
+[cat]
+desc = The smartest and cutest
+cuteness = 100000
+
+[dugong]
+desc = The cow of the sea
+cuteness = -10
+
+[magpie]
+desc = crow; raven; rook; jackdaw; chough; magpie; jay
+cuteness = 99
+</code></pre></div><p>每一段都是一个章节, 有的章节没有 <code>[cat]</code> 这样的标题, 要求 Grammar 生成一个散列, 散列的键是方括号中的单词, 如果没有就默认为 <code>_</code>, 散列的值是一个散列的数组, 数组里面的每个散列的键为等号左边的单词, 键值为等号右边的字符。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">INIFile::Grammar</span> <span class="p">{</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="ni">^</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr">     </span><span class="c1"># 条目
+</span><span class="c1"></span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">section</span><span class="p">&gt;</span><span class="o">+</span><span class="sr">    </span><span class="c1"># 章节
+</span><span class="c1"></span><span class="sr">        </span><span class="ni">$</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">section</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&#39;</span><span class="s1">[</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">]</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr"> </span><span class="c1"># 每个章节含有多个条目 entry
+</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entries</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">entry</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="c1"># entry 可以为空
+</span><span class="c1"></span><span class="sr">        </span><span class="p">]</span><span class="o">+</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entry</span>   <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">value</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">key</span>     <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">value</span>   <span class="p">{</span><span class="sr"> </span><span class="se">\N</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">INIFileActions</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nf">entries</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">%entries</span><span class="p">;</span>
+        <span class="k">for</span> <span class="nv">$&lt;entry&gt;</span> <span class="k">-&gt;</span> <span class="nv">$e</span> <span class="p">{</span>
+            <span class="nv">%entries</span><span class="p">{</span><span class="nv">$e</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;}</span> <span class="o">:=</span> <span class="o">~</span><span class="nv">$e</span><span class="p">&lt;</span><span class="s">value</span><span class="p">&gt;;</span>
+        <span class="p">}</span>
+        <span class="k">make</span> <span class="nv">%entries</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">TOP</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">%result</span><span class="p">;</span>
+        <span class="nv">%result</span><span class="p">&lt;</span><span class="s">_</span><span class="p">&gt;</span> <span class="o">:=</span> <span class="nv">$&lt;entries&gt;</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+        <span class="k">for</span> <span class="nv">$&lt;section&gt;</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+            <span class="nv">%result</span><span class="p">{</span><span class="nv">$sec</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;}</span> <span class="o">:=</span> <span class="nv">$sec</span><span class="p">&lt;</span><span class="s">entries</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">make</span> <span class="nv">%result</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$m</span> <span class="o">:=</span> <span class="n">INIFile::Grammar</span><span class="o">.</span><span class="nb">parse</span><span class="p">(</span><span class="k">Q</span><span class="p">{</span><span class="s">
+</span><span class="s">name = Animal Facts
+</span><span class="s">author = jnthn
+</span><span class="s">
+</span><span class="s">[cat]
+</span><span class="s">desc = The smartest and cutest
+</span><span class="s">cuteness = 100000
+</span><span class="s">
+</span><span class="s">[dugong]
+</span><span class="s">desc = The cow of the sea
+</span><span class="s">cuteness = -10
+</span><span class="s">
+</span><span class="s">[magpie]
+</span><span class="s">desc = crow; raven; rook; jackdaw; chough; magpie; jay
+</span><span class="s">cuteness = 99
+</span><span class="s"></span><span class="p">}</span><span class="o">,</span> <span class="p">:</span><span class="s">actions</span><span class="p">(</span><span class="n">INIFileActions</span><span class="p">));</span>
+
+<span class="k">my</span> <span class="nv">%sections</span> <span class="o">:=</span> <span class="nv">$m</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+
+<span class="k">for</span> <span class="nv">%sections</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+    <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">章节: </span><span class="p">{</span><span class="nv">$sec</span><span class="o">.</span><span class="nb">key</span><span class="p">}&#34;);</span>
+    <span class="k">for</span> <span class="nv">$sec</span><span class="o">.</span><span class="nb">value</span> <span class="k">-&gt;</span> <span class="nv">$entry</span> <span class="p">{</span>
+        <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">    </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">key</span><span class="p">}</span><span class="s2">: </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">value</span><span class="p">}&#34;);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p><code>make</code> 是一个函数, 接收单个参数, <code>make</code> 的作用是, 对于每一个 <code>method</code> 中对应的 <code>$_</code> , 存储生成的抽象语法树(AST)(片段)到 <code>$/</code> 中。<code>.ast</code> 用于从已保存的 AST 抽象语法树中检索提取 AST (片段), <code>»</code> 相当于一个循环, 即检索每一个 <code>$&lt;entry&gt;</code> 之类的语法树。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">INIFile::Grammar</span> <span class="p">{</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="ni">^</span><span class="sr">
+</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">section</span><span class="p">&gt;</span><span class="o">+</span><span class="sr">    </span><span class="c1"># 章节
+</span><span class="c1"></span><span class="sr">        </span><span class="ni">$</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">section</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">[</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">]</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="p">]</span><span class="o">?</span><span class="sr">   </span><span class="c1"># [key] 这一行是可选的
+</span><span class="c1"></span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">entries</span><span class="p">&gt;</span><span class="sr">                 </span><span class="c1"># 每个章节含有多个条目 entry
+</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entries</span> <span class="p">{</span><span class="sr">
+</span><span class="sr">        </span><span class="p">[</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">entry</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\n</span><span class="sr">
+</span><span class="sr">        </span><span class="o">|</span><span class="sr"> </span><span class="se">\n</span><span class="sr"> </span><span class="c1"># entry 可以为空
+</span><span class="c1"></span><span class="sr">        </span><span class="p">]</span><span class="o">+</span><span class="sr">
+</span><span class="sr">    </span><span class="p">}</span>
+
+    <span class="k">token</span> <span class="nf">entry</span>   <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">key</span><span class="p">&gt;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\h</span><span class="o">*</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">value</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">key</span>     <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+    <span class="k">token</span> <span class="nf">value</span>   <span class="p">{</span><span class="sr"> </span><span class="se">\N</span><span class="o">+</span><span class="sr">                       </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">INIFileActions</span> <span class="p">{</span>
+    <span class="k">method</span> <span class="nb">key</span>    <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="o">~</span><span class="nv">$/</span>                                 <span class="p">}</span>
+    <span class="k">method</span> <span class="nb">value</span>  <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="o">~</span><span class="nv">$/</span>                                 <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">entry</span>  <span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;key&gt;</span><span class="o">.</span><span class="s">ast</span> <span class="o">=&gt;</span> <span class="nv">$&lt;value&gt;</span><span class="o">.</span><span class="nb">ast</span>          <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">entries</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;entry&gt;</span><span class="o">».</span><span class="nb">ast</span>                       <span class="p">}</span>
+    <span class="k">method</span> <span class="nf">section</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span>  <span class="p">{</span> <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;key&gt;</span><span class="o">.</span><span class="nb">ast</span> <span class="o">//</span> <span class="p">&#39;</span><span class="s1">_</span><span class="p">&#39;</span> <span class="o">=&gt;</span> <span class="nv">$&lt;entries&gt;</span><span class="o">.</span><span class="nb">ast</span> <span class="p">}</span> <span class="c1"># 如果 key 不存在就默认为 `_`</span>
+
+    <span class="k">method</span> <span class="nf">TOP</span><span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nv">$/</span><span class="o">.</span><span class="nb">make</span><span class="o">:</span> <span class="nv">$&lt;section&gt;</span><span class="o">».</span><span class="nb">ast</span><span class="p">;</span>  <span class="c1"># 等价于 $/.make($&lt;section&gt;».ast);</span>
+        <span class="c1"># &#39;-&#39; =&gt; $&lt;entries&gt;.ast    # &#39;_&#39; 没有 ast 方法</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$m</span> <span class="o">=</span> <span class="n">INIFile::Grammar</span><span class="o">.</span><span class="nb">parse</span><span class="p">(</span><span class="k">Q</span><span class="p">{</span><span class="s">
+</span><span class="s">name = Animal Facts
+</span><span class="s">author = jnthn
+</span><span class="s">
+</span><span class="s">[cat]
+</span><span class="s">desc = The smartest and cutest
+</span><span class="s">cuteness = 100000
+</span><span class="s">
+</span><span class="s">[dugong]
+</span><span class="s">desc = The cow of the sea
+</span><span class="s">cuteness = -10
+</span><span class="s">
+</span><span class="s">[magpie]
+</span><span class="s">desc = crow; raven; rook; jackdaw; chough; magpie; jay
+</span><span class="s">cuteness = 99
+</span><span class="s"></span><span class="p">}</span><span class="o">,</span> <span class="p">:</span><span class="s">actions</span><span class="p">(</span><span class="n">INIFileActions</span><span class="p">))</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+
+<span class="k">for</span> <span class="nv">@$m</span> <span class="k">-&gt;</span> <span class="nv">$sec</span> <span class="p">{</span>
+    <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">章节: </span><span class="p">{</span><span class="nv">$sec</span><span class="o">.</span><span class="nb">key</span><span class="p">}&#34;);</span>
+
+    <span class="k">for</span> <span class="nv">$sec</span><span class="o">.</span><span class="nb">value</span> <span class="k">-&gt;</span> <span class="nv">$entry</span> <span class="p">{</span>
+        <span class="nb">say</span><span class="p">(&#34;</span><span class="s2">    </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">key</span><span class="p">}</span><span class="s2">: </span><span class="p">{</span><span class="nv">$entry</span><span class="o">.</span><span class="nb">value</span><span class="p">}&#34;);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>Grammar 的解析是从上至下的, 从 top-level (<code>TOP</code>) 开始, 到分支(branch)。Actions 中的方法是随着解析而执行的, 但是抽象语法树(AST) 的存储和检索是自下而上的, 只有底部的存储完了, 其上层部分才可以使用 <code>.ast</code> 或 <code>.made</code> 方法进行检索, 检索到之后各自进行处理后再次存储, 以供它的上层部分使用, 以此类推。</p>
+<p>注意, 第一段代码中 <code>$m</code> 存储的死散列, 而第二段代码中, <code>$m</code> 存储的是数组! 这说明可以返回散列和数组两种形式。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/actions" term="actions" label="actions" />
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/ast" term="ast" label="ast" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[Raku 中的 Subscripts]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-06-01-accessing-data-structure-elements-by-index-or-key/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2016-06-01-accessing-data-structure-elements-by-index-or-key/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-13T00:00:00+08:00</published>
+            <updated>2021-07-13T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Accessing Data Structure Elements by Index or Key</blockquote><h1 id="subscriptshttpsdocsrakuorglanguagesubscripts"><a href="https://docs.raku.org/language/subscripts">Subscripts</a></h1>
+<p>通过索引或键访问数据结构中的元素。</p>
+<p>通常, 人们需要引用集合或数据结构中的一个特定的元素(或特定的元素切片)。从数学标记法中偷学到的, 向量 <code>v</code> 的组成部分用 <em>v₁, v₂, v₃</em> 来引用, 在 Raku 中这个概念叫做 “下标” (或“索引”)。</p>
+<h1 id="basics">Basics</h1>
+<p>Raku 提供了两个通用的下标接口：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left"></th>
+<th style="text-align:left">elements are identified by</th>
+<th style="text-align:left">interface name</th>
+<th style="text-align:left">supported by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">[ ]</td>
+<td style="text-align:left">zero-based indices</td>
+<td style="text-align:left">Positional</td>
+<td style="text-align:left">Array, List, Buf, Match, &hellip;</td>
+</tr>
+<tr>
+<td style="text-align:left">{ }</td>
+<td style="text-align:left">string or object keys</td>
+<td style="text-align:left">Associative</td>
+<td style="text-align:left">Hash, Bag, Mix, Match, &hellip;</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Positional</strong> 下标 (通过 <a href="http://doc.raku.org/language/operators#postcircumfix_%5B_%5D">postcircumfix <input disabled="" type="checkbox"> </a> 通过元素在有序集合中的位置来寻址元素。)索引 0 引用第一个元素, 索引 1 引用第二个元素, 以此类推：</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@chores</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">buy groceries</span><span class="p">&#34;</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">feed dog</span><span class="p">&#34;</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">wash car</span><span class="p">&#34;;</span>
+
+<span class="nb">say</span> <span class="nv">@chores</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># buy groceries</span>
+<span class="nb">say</span> <span class="nv">@chores</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># feed dog</span>
+<span class="nb">say</span> <span class="nv">@chores</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># wash car</span>
+</code></pre></div><ul>
+<li><strong>Associative</strong> 下标 (通过 <a href="http://doc.raku.org/language/operators#postcircumfix_%7B_%7D">postcircumfix { }</a>), 不要求集合以任何特定的顺序保存元素 - 相反, 它使用一个唯一的键来寻址每个值。键的种类取决于使用的集合： 举个例子, 一个标准的<a href="http://doc.raku.org/type/Hash">散列</a> 使用字符串作为键, 而一个 <a href="http://doc.raku.org/type/Mix">Mix</a> 能使用任意的对象作为键, 等等:</li>
+</ul>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%grade</span> <span class="o">=</span> <span class="s">Zoe</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">C</span><span class="p">&#34;</span>, <span class="s">Ben</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">B+</span><span class="p">&#34;;</span>
+<span class="nb">say</span> <span class="nv">%grade</span><span class="p">{&#34;</span><span class="s2">Zoe</span><span class="p">&#34;};</span>  <span class="c1"># C</span>
+<span class="nb">say</span> <span class="nv">%grade</span><span class="p">{&#34;</span><span class="s2">Ben</span><span class="p">&#34;};</span>  <span class="c1"># B+</span>
+
+<span class="k">my</span> <span class="nv">$stats</span> <span class="o">=</span> <span class="p">(</span> <span class="nb">Date</span><span class="o">.</span><span class="s">today</span> <span class="o">=&gt;</span> <span class="mf">4.18</span>, <span class="nb">Date</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="mi">2015</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="mf">17.253</span> <span class="p">)</span><span class="o">.</span><span class="nb">Mix</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$stats</span><span class="p">{</span> <span class="nb">Date</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="mi">2015</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="p">)</span> <span class="p">};</span>  <span class="c1"># 17.253</span>
+</code></pre></div><p>相对于传递单个-单词字符串键给 <code>{ }</code>, 你也可以使用<a href="http://doc.raku.org/language/quoting#Word_quoting:_qw">以尖括号引起单词的结构</a>, 就像它们是后缀操作符一样：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">%grade</span><span class="p">&lt;</span><span class="s">Zoe</span><span class="p">&gt;;</span>    <span class="c1"># C</span>
+<span class="nb">say</span> <span class="nv">%grade</span><span class="p">&lt;</span><span class="s">Ben</span><span class="p">&gt;;</span>    <span class="c1"># B+</span>
+</code></pre></div><p>这实际上仅仅是在编译时被转换为对应 <code>{ }</code> 形式的语法糖：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nv">%hash</span><span class="p">&lt;</span><span class="s">foo bar</span><span class="p">&gt;;</span>     <span class="c1"># same as %hash{ &lt;foo bar&gt; }</span>
+<span class="nv">%hash</span><span class="p">«</span><span class="s2">foo </span><span class="nv">$var</span><span class="p">»;</span>    <span class="c1"># same as %hash{ «foo $var» }</span>
+<span class="nv">%hash</span><span class="p">&lt;&lt;</span><span class="s2">foo </span><span class="nv">$var</span><span class="p">&gt;&gt;;</span>  <span class="c1"># same as %hash{ &lt;&lt;foo $var&gt;&gt; }</span>
+</code></pre></div><p>下标能应用到能返回可下标化对象的任何表达式上, 而不仅仅应用到变量上：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">&#34;</span><span class="s2">__Hello__</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">match</span><span class="p">(/</span><span class="sr">__</span><span class="p">(</span><span class="ni">.</span><span class="o">*</span><span class="p">)</span><span class="sr">__</span><span class="p">/)</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>   <span class="c1"># ｢Hello｣</span>
+<span class="nb">say</span> <span class="p">&#34;</span><span class="s2">__Hello__</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">match</span><span class="p">(/</span><span class="sr">__</span><span class="p">(</span><span class="ni">.</span><span class="o">*</span><span class="p">)</span><span class="sr">__</span><span class="p">/)</span><span class="o">.[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># same, in method notation</span>
+</code></pre></div><p>Positional 和 associative 下标并不互相排斥 - 举个例子, <code>Match</code> 对象两个都支持(每个访问不同的数据集)。还有, 为了让列表处理更方便, 类 <code>Any</code> 为位置下标提供了备用的实现, 这会把调用者看作含有一个元素的列表。(但是对于关系下标, 没有这样的备用实现, 所以会抛出一个异常, 当下标被应用到没有实现支持的对象上时。)</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="mi">42</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>    <span class="c1"># 42</span>
+<span class="nb">say</span> <span class="mi">42</span><span class="o">&lt;</span><span class="n">foo</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1"># ERROR: postcircumfix { } not defined for type Int</span>
+</code></pre></div><h1 id="nonexistent-elements">Nonexistent elements</h1>
+<p>当通过下标寻址一个不存在的元素所发生的事情取决于正在使用的集合类型。标准的 Array 和 Hash 集合返回它们的<a href="http://doc.raku.org/routine/of">value type constraint</a>  的类型对象(这默认是 <code>Any</code>)。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@array1</span><span class="p">;</span>     <span class="nb">say</span> <span class="nv">@array1</span><span class="o">[</span><span class="mi">10</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># (Any)</span>
+<span class="k">my</span> <span class="nb">Int</span> <span class="nv">@array2</span><span class="p">;</span> <span class="nb">say</span> <span class="nv">@array2</span><span class="o">[</span><span class="mi">10</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># (Int)</span>
+
+<span class="k">my</span> <span class="nv">%hash1</span><span class="p">;</span>      <span class="nb">say</span> <span class="nv">%hash1</span><span class="o">&lt;</span><span class="n">foo</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1"># (Any)</span>
+<span class="k">my</span> <span class="nb">Int</span> <span class="nv">%hash2</span><span class="p">;</span>  <span class="nb">say</span> <span class="nv">%hash2</span><span class="o">&lt;</span><span class="n">foo</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1"># (Int)</span>
+</code></pre></div><p>然而, 其它类型的集合可能在寻址不存在的元素的下标时反应也不用：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="p">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">[</span><span class="mi">3</span><span class="o">]</span><span class="p">;</span>       <span class="c1"># Nil</span>
+<span class="nb">say</span> <span class="nb">bag</span><span class="p">(&lt;</span><span class="s">a a b b b</span><span class="p">&gt;)&lt;</span><span class="s">c</span><span class="p">&gt;;</span>  <span class="c1"># 0</span>
+</code></pre></div><p>为了在下标操作中默默地跳过不存在的元素, 查看 <a href="http://doc.raku.org/language/subscripts#Truncating_slices">#Truncating slices</a>  和 <a href="http://doc.raku.org/language/subscripts#%3Av"><code>#:v</code></a> 副词。</p>
+<h1 id="from-the-end">From the end</h1>
+<p>Positional 索引是从集合的开头计数的, 但是也有一种标记法用于, 通过相对于末尾的位置来寻址元素：<code>*-1</code> 引用最后一个元素, <code>*-2</code> 引用倒数第二个元素, 以此类推。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@alphabet</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">A</span><span class="p">&#39;</span> <span class="o">..</span> <span class="p">&#39;</span><span class="s1">Z</span><span class="p">&#39;;</span>
+<span class="nb">say</span> <span class="nv">@alphabet</span><span class="o">[*-</span><span class="mi">1</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># Z</span>
+<span class="nb">say</span> <span class="nv">@alphabet</span><span class="o">[*-</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># Y</span>
+<span class="nb">say</span> <span class="nv">@alphabet</span><span class="o">[*-</span><span class="mi">3</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># X</span>
+</code></pre></div><p>注意：星号很重要。在 Raku 中, 如果像在很多其它编程语言中那样传递一个裸的负整数(例如 <code>@alphabet[-1]</code>), 会抛出错误。</p>
+<p>这里实际发生的是, <code>*-1</code> 那样的表达式通过 <a href="http://doc.raku.org/type/Whatever">Whatever</a> 柯里化声明了一个代码对象 - <code>[ ]</code> 会把代码对象作为索引, 通过集合的长度作为参数来调用它并使用结果值作为实际的索引。换句话说, <code>@alphabet[*-1]</code> 变成了 <code>@alphabet[@alphabet.elems - 1]</code>。</p>
+<p>这意味着你可以使用任何依赖于集合尺寸的表达式：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">@array</span><span class="o">[*</span> <span class="ow">div</span> <span class="mi">2</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># 选择最中间的那个元素</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">[</span><span class="nv">$i</span> <span class="nv">%</span> <span class="o">*]</span><span class="p">;</span>   <span class="c1"># wrap around a given index (&#34;模运算&#34;)</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">[</span> <span class="k">-&gt;</span> <span class="nv">$size</span> <span class="p">{</span> <span class="nv">$i</span> <span class="nv">%</span> <span class="nv">$size</span> <span class="p">}</span> <span class="o">]</span><span class="p">;</span>  <span class="c1"># same as previous</span>
+</code></pre></div><h1 id="slices">Slices</h1>
+<p>当需要访问集合中的多个元素时, 有一个快捷方式用于处理多个单独的下标操作：仅仅在下标中指定一个索引/键的列表, 来取回一个元素的列表 - 也被叫做&quot;切片&quot; - 以相同的顺序。</p>
+<p>对于 positional 切片, 你可以混合普通切片和 <a href="http://doc.raku.org/language/subscripts#From_the_end">from-the-end</a> 切片：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@alphabet</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1">a</span><span class="p">&#39;</span> <span class="o">..</span> <span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;;</span>
+<span class="n">dd</span> <span class="nv">@alphabet</span><span class="o">[</span><span class="mi">15</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="o">*-</span><span class="mi">9</span><span class="o">,</span> <span class="mi">11</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># (&#34;p&#34;, &#34;e&#34;, &#34;r&#34;, &#34;l&#34;)</span>
+</code></pre></div><p>对于 associative 切片, 尖括号形式的切片通常会很方便：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%color</span> <span class="o">=</span> <span class="s">kiwi</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">green</span><span class="p">&#34;</span>, <span class="s">banana</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">yellow</span><span class="p">&#34;</span>, <span class="s">cherry</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">red</span><span class="p">&#34;;</span>
+
+<span class="n">dd</span> <span class="nv">%color</span><span class="p">{&#34;</span><span class="s2">cherry</span><span class="p">&#34;</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">kiwi</span><span class="p">&#34;};</span>  <span class="c1"># (&#34;red&#34;, &#34;green&#34;)</span>
+<span class="n">dd</span> <span class="nv">%color</span><span class="p">&lt;</span><span class="s">cherry kiwi</span><span class="p">&gt;;</span>       <span class="c1"># (&#34;red&#34;, &#34;green&#34;)</span>
+<span class="n">dd</span> <span class="nv">%color</span><span class="p">{</span><span class="o">*</span><span class="p">};</span>                 <span class="c1"># (&#34;green&#34;, &#34;red&#34;, &#34;yellow&#34;)</span>
+</code></pre></div><p>要知道切片是由传入 (<a href="http://doc.raku.org/language/subscripts#Multiple_dimensions">one dimension of</a>)下标的类型控制的, 而非它的长度：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">subscript</th>
+<th style="text-align:left">result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">any Positional object not covered below</td>
+<td style="text-align:left">normal slice</td>
+</tr>
+<tr>
+<td style="text-align:left">a Range or infinite sequence</td>
+<td style="text-align:left">truncating slice (only for positional subscripts)</td>
+</tr>
+<tr>
+<td style="text-align:left">* (Whatever-star)</td>
+<td style="text-align:left">full slice (as if all keys/indices were specified)</td>
+</tr>
+<tr>
+<td style="text-align:left">any other object</td>
+<td style="text-align:left">single-element access rather than a slice</td>
+</tr>
+<tr>
+<td style="text-align:left">empty</td>
+<td style="text-align:left">Zen slice</td>
+</tr>
+</tbody>
+</table>
+<p>所以, 即使一个单个元素的列表也会返回一个切片, 而一个裸的标量值不会：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">@alphabet</span><span class="o">[</span><span class="mi">2</span><span class="o">,]</span><span class="p">;</span>  <span class="c1"># (&#34;c&#34;,)</span>
+<span class="n">dd</span> <span class="nv">@alphabet</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>   <span class="c1"># &#34;c&#34;</span>
+</code></pre></div><p>(尖括号形式的 associative 下标也没有问题, 因为 <a href="http://doc.raku.org/language/quoting#Word_quoting:_qw">word quoting</a> 在单个单词的情况下很方便的返回一个 Str。</p>
+<p>对于普通的切片, 下标的内容 (<a href="http://doc.raku.org/language/subscripts#Multiple_dimensions">the current dimension of</a>) 在它的元素被解释为索引/键之前会被展平(flattened)：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">@alphabet</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">..</span><span class="mi">2</span><span class="o">,</span> <span class="p">(</span><span class="mi">3</span><span class="o">,</span><span class="p">)))</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># (&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;d&#34;)</span>
+</code></pre></div><h2 id="truncating-slices">Truncating slices</h2>
+<p>通常, 在切片下标中引用不存在的元素会让输出列表包含未定义的值。然而, 如果传递给位置下标的对象是一个 Range 或使用序列操作符构建的无限序列, 它会被自动截断到集合的实际尺寸：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@letters</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">a b c d e f</span><span class="p">&gt;;</span>
+<span class="n">dd</span> <span class="nv">@letters</span><span class="o">[</span><span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">,</span> <span class="mi">6</span><span class="o">,</span> <span class="mi">7</span><span class="o">]</span><span class="p">;</span>  <span class="c1"># (&#34;d&#34;, &#34;e&#34;, &#34;f&#34;, Any, Any)</span>
+<span class="n">dd</span> <span class="nv">@letters</span><span class="o">[</span><span class="mi">3</span> <span class="o">..</span> <span class="mi">7</span><span class="o">]</span><span class="p">;</span>         <span class="c1"># (&#34;d&#34;, &#34;e&#34;, &#34;f&#34;)</span>
+</code></pre></div><p><a href="http://doc.raku.org/language/subscripts#From_the_end">From-the-end</a> 索引被允许作为范围的端点, 代表无限的范围和序列：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="nv">@array</span><span class="o">[*-</span><span class="mi">3</span> <span class="o">..</span> <span class="o">*]</span><span class="p">;</span>       <span class="c1"># select the last three elements</span>
+<span class="nb">say</span> <span class="nv">@array</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">4</span> <span class="o">...</span> <span class="o">*]</span><span class="p">;</span>  <span class="c1"># select all elements with even indices</span>
+</code></pre></div><p>如果你不想把你的切片指定为 <code>range/sequence</code> 但仍旧想默默地跳过不存在的元素, 你可以使用 <a href="http://doc.raku.org/language/subscripts#%3Av">#:v</a> 副词。</p>
+<h2 id="zen-slices">Zen slices</h2>
+<p>如果你写的下标没有指定任何索引/键, 那它就会返回被脚注的对象自身。因为它是空的但是返回了全部东西, 这就是所谓的 &ldquo;Zen slice&rdquo;。</p>
+<p>这和传递一个 Whatever-star, 还有传递一个空的列表都不同(它返回一个空的切片)：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%bag</span> <span class="o">:=</span> <span class="p">(&#34;</span><span class="s2">orange</span><span class="p">&#34;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">apple</span><span class="p">&#34;</span> <span class="o">=&gt;</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="nb">Bag</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%bag</span><span class="o">&lt;&gt;</span><span class="p">;</span>    <span class="c1"># (&#34;orange&#34;=&gt;1,&#34;apple&#34;=&gt;3).Bag</span>
+<span class="n">dd</span> <span class="nv">%bag</span><span class="p">{};</span>    <span class="c1"># (&#34;orange&#34;=&gt;1,&#34;apple&#34;=&gt;3).Bag</span>
+<span class="n">dd</span> <span class="nv">%bag</span><span class="p">{</span><span class="o">*</span><span class="p">};</span>   <span class="c1"># (1, 3)</span>
+<span class="n">dd</span> <span class="nv">%bag</span><span class="p">{()};</span>  <span class="c1"># ()</span>
+</code></pre></div><p>这通常被用于把整个数组/散列插值到字符串中：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@words</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">cruel</span><span class="p">&#34;</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">world</span><span class="p">&#34;;</span>
+<span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Hello, </span><span class="nv">@words</span><span class="o">[]</span><span class="s2">!</span><span class="p">&#34;</span>  <span class="c1"># Hello, cruel world!</span>
+</code></pre></div><h1 id="autovivification">Autovivification</h1>
+<p>下标参与 &ldquo;autovivification&rdquo;, 这是一种数组和散列在需要时会自动存在的处理, 以至于你没有必要在每一层级预声明集合的类型来构建嵌套的数据结构：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$beatles</span><span class="p">;</span>
+<span class="nv">$beatles</span><span class="p">{&#34;</span><span class="s2">White Album</span><span class="p">&#34;}</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">Back in the U.S.S.R.</span><span class="p">&#34;;</span>  <span class="c1"># autovivification!</span>
+<span class="nb">say</span> <span class="nv">$beatles</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>  <span class="c1"># {&#34;White Album&#34; =&gt; [&#34;Back in the U.S.S.R.&#34;]}</span>
+</code></pre></div><p><code>$beatles</code> 从未定义开始, 但是它变成了一个 Hash 对象, 因为它在赋值时用 <code>{ }</code> 标注了。类似地, <code>$beatles{&quot;White Album”}</code> 变成一个 Array 对象, 因为它在赋值时用 <code>[ ]</code> 标注了。</p>
+<p>注意下标本身不会引起 autovivification, 它只发生在下标链的结果被赋值时(或变化时)。</p>
+<h1 id="binding">Binding</h1>
+<p>下标表达式也可以用在绑定语句的左侧。如果被标注的集合的类型支持, 这会使用指定的容器替换集合里的插槽的值:</p>
+<p>内置的 Array 和 Hash 类型支持这种绑定, 为了允许构建复杂的联动的数据结构：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@a</span> <span class="o">=</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">11</span><span class="o">,</span> <span class="mi">12</span><span class="o">,</span> <span class="mi">13</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="nv">@a</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span> <span class="o">:=</span> <span class="nv">$x</span><span class="p">;</span>  <span class="c1"># binding! (@a[2] and $x refer to the same container now.)</span>
+
+<span class="nv">$x</span><span class="o">++</span><span class="p">;</span> <span class="nv">@a</span><span class="o">[</span><span class="mi">2</span><span class="o">]++</span><span class="p">;</span>
+
+<span class="n">dd</span> <span class="nv">@a</span><span class="p">;</span>  <span class="c1"># [10, 11, 3, 13]&lt;&gt;</span>
+<span class="n">dd</span> <span class="nv">$x</span><span class="p">;</span>  <span class="c1"># 3</span>
+</code></pre></div><p>查看 <a href="http://doc.raku.org/language/subscripts#method_BIND-POS">#method BIND-POS</a> 和 <a href="http://doc.raku.org/language/subscripts#method_BIND-KEY">#method BIND-KEY</a> 了解底层机制.</p>
+<h1 id="adverbs">Adverbs</h1>
+<p>下标操作的返回值和可能存在的副作用能够使用副词来控制。</p>
+<p>要知道副词操作符的优先级相对宽松, 这可能需要你在合成表达式中添加括号：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">if</span> <span class="nv">$foo</span> <span class="o">||</span> <span class="nv">%hash</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;:</span><span class="s">exists</span> <span class="p">{</span> <span class="o">...</span> <span class="p">};</span>    <span class="c1"># WRONG, tries to adverb the || op</span>
+<span class="k">if</span> <span class="nv">$foo</span> <span class="o">||</span> <span class="p">(</span><span class="nv">%hash</span><span class="p">&lt;</span><span class="s">key</span><span class="p">&gt;:</span><span class="s">exists</span><span class="p">)</span> <span class="p">{</span> <span class="o">...</span> <span class="p">};</span>  <span class="c1"># correct</span>
+</code></pre></div><p>支持的副词有:</p>
+<h2 id="exists">:exists</h2>
+<p>返回请求的元素是否存在, 而不是返回元素实际的值。这能够用于区别未定义值的元素和一点儿也不属于集合部分的元素：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@foo</span> <span class="o">=</span> <span class="nb">Any</span><span class="o">,</span> <span class="mi">10</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@foo</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">defined</span><span class="p">;</span>    <span class="c1"># False</span>
+<span class="n">dd</span> <span class="nv">@foo</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">:</span><span class="s">exists</span><span class="p">;</span>     <span class="c1"># True</span>
+<span class="n">dd</span> <span class="nv">@foo</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">exists</span><span class="p">;</span>     <span class="c1"># False</span>
+<span class="n">dd</span> <span class="nv">@foo</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">exists</span><span class="p">;</span>  <span class="c1"># (True, False)</span>
+
+<span class="k">my</span> <span class="nv">%fruit</span> <span class="o">=</span> <span class="s">apple</span> <span class="o">=&gt;</span> <span class="nb">Any</span>, <span class="s">orange</span> <span class="o">=&gt;</span> <span class="mi">10</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">defined</span><span class="p">;</span>       <span class="c1"># False</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple</span><span class="p">&gt;:</span><span class="s">exists</span><span class="p">;</span>        <span class="c1"># True</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">banana</span><span class="p">&gt;:</span><span class="s">exists</span><span class="p">;</span>       <span class="c1"># False</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple banana</span><span class="p">&gt;:</span><span class="s">exists</span><span class="p">;</span> <span class="c1"># (True, False)</span>
+</code></pre></div><p>也可以对副词取反来测试不存在：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple banana</span><span class="p">&gt;:!</span><span class="s">exists</span><span class="p">;</span> <span class="c1"># (False, True)</span>
+</code></pre></div><p>要检查切片的所有元素是否存在, 使用 <a href="http://doc.raku.org/routine/all">all</a> junction:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">if</span> <span class="nb">all</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple orange banana</span><span class="p">&gt;:</span><span class="s">exists</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+</code></pre></div><p><code>:exists</code> 可以和  <a href="http://doc.raku.org/language/subscripts#%3Adelete">:delete</a> 还有 <code>:p/:kv</code> 副词组合 - 这时表达式的行为就由那些副词决定, 除了使用表明元素存在的对应 Bool 值替换返回的元素值之外。</p>
+<p>查看 <a href="http://doc.raku.org/language/subscripts#method_EXISTS-POS">method EXISTS-POS</a> 和 <a href="http://doc.raku.org/language/subscripts#method_EXISTS-KEY">method EXISTS-KEY</a> 了解底层机制.</p>
+<h2 id="delete">:delete</h2>
+<p>从集合中删除元素, 除了返回它们的值以外。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@tens</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">30</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">3</span><span class="o">]</span><span class="p">:</span><span class="s">delete</span><span class="p">;</span>     <span class="c1"># 30</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="p">;</span>               <span class="c1"># [0, 10, 20]&lt;&gt;</span>
+
+<span class="k">my</span> <span class="nv">%fruit</span> <span class="o">=</span> <span class="s">apple</span> <span class="o">=&gt;</span> <span class="mi">5</span>, <span class="s">orange</span> <span class="o">=&gt;</span> <span class="mi">10</span>, <span class="s">banana</span> <span class="o">=&gt;</span> <span class="mi">4</span>, <span class="s">peach</span> <span class="o">=&gt;</span> <span class="mi">17</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple</span><span class="p">&gt;:</span><span class="s">delete</span><span class="p">;</span>         <span class="c1"># 5</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">peach orange</span><span class="p">&gt;:</span><span class="s">delete</span><span class="p">;</span>  <span class="c1"># (17, 10)</span>
+<span class="n">dd</span> <span class="nv">%fruit</span><span class="p">;</span>                       <span class="c1"># {banana =&gt; 4}&lt;&gt;</span>
+</code></pre></div><p>使用否定形式的副词, 元素实际上不会被删除。这意味着你可以传递一个标记, 让它变成有条件的删除：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%fruit</span><span class="p">&lt;</span><span class="s">apple</span><span class="p">&gt;</span> <span class="p">:</span><span class="s">delete</span><span class="p">(</span><span class="nv">$flag</span><span class="p">);</span>  <span class="c1"># deletes the element only if $flag is</span>
+                                  <span class="c1"># true, but always returns the value.</span>
+</code></pre></div><p>能和 <code>:exists</code> 还有 <code>:p/:kv/:k/:v</code> 副词组合 - 这时返回值由那些副词决定, 但是同时元素也会被删除。</p>
+<p>查看 <a href="http://doc.raku.org/language/subscripts#method_DELETE-POS">method DELETE-POS</a> and <a href="http://doc.raku.org/language/subscripts#method_DELETE-KEY">method DELETE-KEY</a> 了解底层机制.</p>
+<h2 id="p">:p</h2>
+<p>以 Pair 的形式, 返回元素的索引/键和元素值, 并默默跳过不存在的元素：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@tens</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">30</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">:</span><span class="s">p</span><span class="p">;</span>        <span class="c1"># 1 =&gt; 10</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">p</span><span class="p">;</span>  <span class="c1"># (0 =&gt; 0, 2 =&gt; 20)</span>
+
+<span class="k">my</span> <span class="nv">%month</span> <span class="o">=</span> <span class="s">Jan</span> <span class="o">=&gt;</span> <span class="mi">1</span>, <span class="s">Feb</span> <span class="o">=&gt;</span> <span class="mi">2</span>, <span class="s">Mar</span> <span class="o">=&gt;</span> <span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Feb</span><span class="p">&gt;:</span><span class="s">p</span><span class="p">;</span>          <span class="c1"># &#34;Feb&#34; =&gt; 2</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:</span><span class="s">p</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34; =&gt; 1, &#34;Mar&#34; =&gt; 3)</span>
+</code></pre></div><p>如果你不想跳过不存在的元素, 使用否定形式:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:!</span><span class="s">p</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34; =&gt; 1, &#34;Foo&#34; =&gt; Any, &#34;Mar&#34; =&gt; 3)</span>
+</code></pre></div><p>能和 <code>:exists</code> 还有 <code>:delete</code> 组合。</p>
+<p>也可以查看 <a href="http://doc.raku.org/routine/pairs">pairs</a> 子例程.</p>
+<h2 id="kv">:kv</h2>
+<p>以列表的形式返回元素的索引/键和值, 并默默地跳过不存在的元素。当作用在切片上时, 返回值是一个展平的键和值交叉着的单个列表：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@tens</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">30</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">:</span><span class="s">kv</span><span class="p">;</span>        <span class="c1"># (1, 10)</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">kv</span><span class="p">;</span>  <span class="c1"># (0, 0, 2, 20)</span>
+
+<span class="k">my</span> <span class="nv">%month</span> <span class="o">=</span> <span class="s">Jan</span> <span class="o">=&gt;</span> <span class="mi">1</span>, <span class="s">Feb</span> <span class="o">=&gt;</span> <span class="mi">2</span>, <span class="s">Mar</span> <span class="o">=&gt;</span> <span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Feb</span><span class="p">&gt;:</span><span class="s">kv</span><span class="p">;</span>          <span class="c1"># (&#34;Feb&#34;, 2)</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:</span><span class="s">kv</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34;, 1, &#34;Mar&#34;, 3)</span>
+</code></pre></div><p>如果你不想跳过不存在的元素, 使用否定形式:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:!</span><span class="s">kv</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34;, 1, &#34;Foo&#34;, Any, &#34;Mar&#34;, 3)</span>
+</code></pre></div><p>这个副词一般用于遍历切片：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">for</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Feb Mar</span><span class="p">&gt;:</span><span class="s">kv</span> <span class="k">-&gt;</span> <span class="nv">$month</span><span class="o">,</span> <span class="nv">$i</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">&#34;</span><span class="nv">$month</span><span class="s2"> had </span><span class="p">{</span><span class="nb">Date</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="mi">2015</span><span class="o">,</span> <span class="nv">$i</span><span class="o">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="nb">days-in-month</span><span class="p">}</span><span class="s2"> days in 2015</span><span class="p">&#34;</span>
+<span class="p">}</span>
+</code></pre></div><p>能和 <code>:exists</code> 还有 <code>:delete</code> 组合。</p>
+<p>也可以查看  <a href="http://doc.raku.org/routine/kv">kv</a> 子例程.</p>
+<h2 id="k">:k</h2>
+<p>只返回元素的索引/键, 而不是它们的值, 并默默地跳过不存在的元素：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@tens</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">30</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">:</span><span class="s">k</span><span class="p">;</span>        <span class="c1"># 1</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">k</span><span class="p">;</span>  <span class="c1"># (0, 2)</span>
+
+<span class="k">my</span> <span class="nv">%month</span> <span class="o">=</span> <span class="s">Jan</span> <span class="o">=&gt;</span> <span class="mi">1</span>, <span class="s">Feb</span> <span class="o">=&gt;</span> <span class="mi">2</span>, <span class="s">Mar</span> <span class="o">=&gt;</span> <span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Feb</span><span class="p">&gt;:</span><span class="s">k</span><span class="p">;</span>          <span class="c1"># &#34;Feb&#34;</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:</span><span class="s">k</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34;, &#34;Mar&#34;)</span>
+</code></pre></div><p>如果你不想跳过不存在的元素, 使用否定形式:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:!</span><span class="s">k</span><span class="p">;</span>  <span class="c1"># (&#34;Jan&#34;, &#34;Foo&#34;, &#34;Mar&#34;)</span>
+</code></pre></div><p>还可以查看 <a href="http://doc.raku.org/routine/keys">keys</a> 子例程.</p>
+<h2 id="v">:v</h2>
+<p>返回元素的裸值(不是有可能返回一个可变值容器), 并默默跳过不存在的元素：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@tens</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">30</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">:</span><span class="s">v</span><span class="p">;</span>        <span class="c1"># 10</span>
+<span class="n">dd</span> <span class="nv">@tens</span><span class="o">[</span><span class="mi">0</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">]</span><span class="p">:</span><span class="s">v</span><span class="p">;</span>  <span class="c1"># (0, 20)</span>
+<span class="nv">@tens</span><span class="o">[</span><span class="mi">3</span><span class="o">]</span> <span class="o">=</span> <span class="mi">31</span><span class="p">;</span>        <span class="c1"># OK</span>
+<span class="nv">@tens</span><span class="o">[</span><span class="mi">3</span><span class="o">]</span><span class="p">:</span><span class="s">v</span> <span class="o">=</span> <span class="mi">31</span><span class="p">;</span>      <span class="c1"># ERROR, cannot assign to immutable integer value</span>
+
+<span class="k">my</span> <span class="nv">%month</span> <span class="o">=</span> <span class="s">Jan</span> <span class="o">=&gt;</span> <span class="mi">1</span>, <span class="s">Feb</span> <span class="o">=&gt;</span> <span class="mi">2</span>, <span class="s">Mar</span> <span class="o">=&gt;</span> <span class="mi">3</span><span class="p">;</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Feb</span><span class="p">&gt;:</span><span class="s">v</span><span class="p">;</span>          <span class="c1"># 2</span>
+<span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:</span><span class="s">v</span><span class="p">;</span>  <span class="c1"># (1, 3)</span>
+</code></pre></div><p>如果你不想跳过不存在的元素, 使用否定形式:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">dd</span> <span class="nv">%month</span><span class="p">&lt;</span><span class="s">Jan Foo Mar</span><span class="p">&gt;:!</span><span class="s">v</span><span class="p">;</span>  <span class="c1"># (1, Any, 3)</span>
+</code></pre></div><p>还可以查看  <a href="http://doc.raku.org/routine/values">values</a> 子例程.</p>
+<h1 id="custom-types">Custom types</h1>
+<p>这页描述的下标接口并不意味着和 Raku 的内置集合类型相排斥 - 你可以(并且应该)为任何想通过索引或键提供数据访问的自定义类型重用它们。</p>
+<p>你不必手动重载 <a href="http://doc.raku.org/routine/%5B%20%5D#postcircumfix_%5B_%5D">postcircumfix [ ]</a> 和  <a href="http://doc.raku.org/">postcircumfix { }</a> 操作符并重新实现它们所有的戏法, 为了实现它, 相反, 你可以依赖这个事实, 在幕后, 它们的标准实现分派给了一个定义良好的底层方法集。例如：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">当你这样写</th>
+<th style="text-align:left">这会在幕后调用如下底层方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">%foo<!-- raw HTML omitted --></td>
+<td style="text-align:left">%foo.AT-KEY(&ldquo;aa&rdquo;)</td>
+</tr>
+<tr>
+<td style="text-align:left">%foo<!-- raw HTML omitted -->:delete</td>
+<td style="text-align:left">%foo.DELETE-KEY(&ldquo;aa&rdquo;)</td>
+</tr>
+<tr>
+<td style="text-align:left">@foo[3,4,5]</td>
+<td style="text-align:left">@foo.AT-POS(3), @foo.AT-POS(4), @foo.AT-POS(5)</td>
+</tr>
+<tr>
+<td style="text-align:left">@foo[*-1]</td>
+<td style="text-align:left">@foo.AT-POS(@foo.elems - 1)</td>
+</tr>
+</tbody>
+</table>
+<p>所以, 为了让你的下标工作, 你只需要为你的自定义类型实现或委托那些底层方法(<a href="http://doc.raku.org/language/subscripts#Methods_to_implement_for_positional_subscripting">下面描述详情</a>)。</p>
+<p>如果你这样做了, 你还应该让你的类型各自遵守 <a href="http://doc.raku.org/type/Positional">Positional</a> 或 <a href="http://doc.raku.org/type/Associative">Associative</a> role</p>
+<h2 id="custom-type-example">Custom type example</h2>
+<p>设想一下 <code>HTTP::Header</code> 类型, 尽管它作为一个有特定行为的自定义类, 却能像散列那样索引：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$request</span> <span class="o">=</span> <span class="n">HTTP::Request</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">GET</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">raku.org</span><span class="p">&#34;);</span>
+<span class="nb">say</span> <span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="o">.</span><span class="nb">WHAT</span><span class="p">;</span>  <span class="c1"># (HTTP::Header)</span>
+
+<span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="p">&lt;</span><span class="s">Accept</span><span class="p">&gt;</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">text/plain</span><span class="p">&#34;;</span>
+<span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="p">{&#39;</span><span class="s1">Accept-</span><span class="p">&#39;</span> <span class="ow">X</span><span class="o">~</span> <span class="p">&lt;</span><span class="s">Charset Encoding Language</span><span class="p">&gt;}</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">utf-8 gzip en</span><span class="p">&gt;;</span>
+<span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="o">.</span><span class="nb">push</span><span class="p">(&#39;</span><span class="s1">Accept-Language</span><span class="p">&#39;</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">fr</span><span class="p">&#34;);</span>  <span class="c1"># like .push on a Hash</span>
+
+<span class="nb">say</span> <span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="p">&lt;</span><span class="s">Accept-Language</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>  <span class="c1"># [&#34;en&#34;, &#34;fr&#34;]</span>
+
+<span class="k">my</span> <span class="nv">$rawheader</span> <span class="o">=</span> <span class="nv">$request</span><span class="o">.</span><span class="nf">header</span><span class="o">.</span><span class="nb">Str</span><span class="p">;</span>  <span class="c1"># stringify according to HTTP spec</span>
+</code></pre></div><p>实现这个类的最简单的方法是, 给它一个 Hash 类型的属性, 并把所有的下标和迭代相关功能性委托给那个属性。(使用一个自定义类型约束来确保使用者不会在里面插入任何不合法的值)：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">HTTP::Header</span> <span class="k">does</span> <span class="nb">Associative</span> <span class="k">is</span> <span class="nb">Iterable</span> <span class="p">{</span>
+    <span class="k">subset</span> <span class="nc">StrOrArrayOfStr</span> <span class="k">where</span> <span class="nb">Str</span> <span class="o">|</span> <span class="p">(</span> <span class="nb">Array</span> <span class="o">&amp;</span> <span class="p">{</span><span class="o">.</span><span class="nb">all</span> <span class="o">~~</span> <span class="nb">Str</span><span class="p">}</span> <span class="p">);</span>
+
+    <span class="k">has</span> <span class="nv">%!fields</span> <span class="k">of</span> <span class="nc">StrOrArrayOfStr</span>
+                 <span class="nb">handles</span> <span class="p">&lt;</span><span class="s">AT-KEY EXISTS-KEY DELETE-KEY push
+</span><span class="s">                          iterator list kv keys values</span><span class="p">&gt;;</span>
+
+    <span class="k">method</span> <span class="nb">Str</span> <span class="p">{</span> <span class="cm">#`[not shown, for brevity]</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>然而, HTTP header 字段名被认为是大小写无关的(更偏好驼峰法)。我们可以通过把 <code>*-key</code> 和 <code>push</code> 方法拿到 <code>handles</code> 列表的外面来容纳它, 并像这样各自实现它们：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">method</span> <span class="nb">AT-KEY</span>     <span class="p">(</span><span class="nv">$key</span><span class="p">)</span> <span class="k">is</span> <span class="k">rw</span> <span class="p">{</span> <span class="nv">%!fields</span><span class="p">{</span><span class="n">normalize-key</span> <span class="nv">$key</span><span class="p">}</span>        <span class="p">}</span>
+<span class="k">method</span> <span class="nb">EXISTS-KEY</span> <span class="p">(</span><span class="nv">$key</span><span class="p">)</span>       <span class="p">{</span> <span class="nv">%!fields</span><span class="p">{</span><span class="n">normalize-key</span> <span class="nv">$key</span><span class="p">}:</span><span class="s">exists</span> <span class="p">}</span>
+<span class="k">method</span> <span class="nb">DELETE-KEY</span> <span class="p">(</span><span class="nv">$key</span><span class="p">)</span>       <span class="p">{</span> <span class="nv">%!fields</span><span class="p">{</span><span class="n">normalize-key</span> <span class="nv">$key</span><span class="p">}:</span><span class="s">delete</span> <span class="p">}</span>
+<span class="k">method</span> <span class="nb">push</span> <span class="p">(</span><span class="o">*</span><span class="nv">@_</span><span class="p">)</span> <span class="p">{</span> <span class="cm">#`[not shown, for brevity]</span> <span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">normalize-key</span> <span class="p">(</span><span class="nv">$key</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$key</span><span class="o">.</span><span class="nb">subst</span><span class="p">(/</span><span class="se">\w</span><span class="o">+</span><span class="p">/</span><span class="o">,</span> <span class="o">*.</span><span class="nb">tc</span><span class="o">,</span> <span class="p">:</span><span class="s">g</span><span class="p">)</span> <span class="p">}</span>
+</code></pre></div><p>注意下标  <code>%!fields</code> 返回一个适当的 rw 容器, 而我们的 <code>AT-KEY</code> 能够简单地传递。</p>
+<p>然而, 我们可能倾向于少一点对用户输入的限制, 相反我们自己关心字段值的消毒。那种情况下, 我们可以移除 <code>%!fields</code> 上的 <code>StrOrArrayOfStr</code> 类型约束, 并在赋值时使用返回自定义的关心消毒值的 Proxy 容器来替换我们的 <code>AT-KEY</code> 实现：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">AT-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="p">)</span> <span class="k">is</span> <span class="k">rw</span> <span class="p">{</span>
+    <span class="k">my</span> <span class="nv">$element</span> <span class="o">:=</span> <span class="nv">%!fields</span><span class="p">{</span><span class="n">normalize-key</span> <span class="nv">$key</span><span class="p">};</span>
+
+    <span class="nb">Proxy</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span>
+        <span class="s">FETCH</span> <span class="o">=&gt;</span> <span class="k">method</span> <span class="p">()</span> <span class="p">{</span> <span class="nv">$element</span> <span class="p">}</span>,
+
+        <span class="s">STORE</span> <span class="o">=&gt;</span> <span class="k">method</span> <span class="p">(</span><span class="nv">$value</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nv">$element</span> <span class="o">=</span> <span class="nb">do</span> <span class="k">given</span> <span class="nv">$value</span><span class="o">».</span><span class="nb">split</span><span class="p">(/&#39;</span><span class="s1">,</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">+</span><span class="p">/)</span><span class="o">.</span><span class="nb">flat</span> <span class="p">{</span>
+                <span class="k">when</span> <span class="mi">1</span>  <span class="p">{</span> <span class="o">.[</span><span class="mi">0</span><span class="o">]</span> <span class="p">}</span>    <span class="c1"># a single value is stored as a string</span>
+                <span class="k">default</span> <span class="p">{</span> <span class="o">.</span><span class="nb">Array</span> <span class="p">}</span>  <span class="c1"># multiple values are stored as an array</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>注意把方法声明为 <code>multi</code> 并把它限制为 <code>:D</code> (defined invocants) 确保未定义情况被传递给由 Any 提供的默认实现。</p>
+<h2 id="methods-to-implement-for-positional-subscripting">Methods to implement for positional subscripting</h2>
+<p>为了通过 <a href="http://doc.raku.org/routine/%5B%20%5D#postcircumfix_%5B_%5D">postcircumfix [ ]</a> 让基于索引的下标在你的自定义类型中工作, 你应该至少实现下面的 <code>elems</code>, <code>AT-POS</code> 和 <code>EXISTS-POS-</code> 还有其它可选项。</p>
+<h3 id="elems-方法">elems 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">elems</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span><span class="p">)</span>
+</code></pre></div><p>预期返回一个数字, 用于表明对象中有多少个可标注的元素。可能被用户直接调用, 并且当从末尾索引元素的时候, 还会被  <code>postcircumfix [ ]</code> 调用, 就像 <code>@foo[*-1]</code> 中那样。</p>
+<p>如果没有实现这个方法, 你的类型会从 Any 继承默认的实现, 对定义过的调用者这总是返回 1 - 这最不可能是你想要的。所以, 如果不能从你的位置类型知晓元素的个数, 那就添加一个 fails 或 dies 实现, 以避免沉默地做了错事。</p>
+<h3 id="at-pos-方法">AT-POS 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">AT-POS</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$index</span><span class="p">)</span>
+</code></pre></div><p>期望返回 <code>$index</code> 位置处的元素。这就是 <code>postcircumfix [ ]</code> 通常调用的方法。
+如果你想让元素可变(像它们用于 Array 类型那样), 你就必须确保以 item 容器的形式返回它, 并在被赋值时更新它。(记得使用 <code>return-rw</code> 或 <code>rw</code> 子例程 trait 以使它工作。)</p>
+<h3 id="exists-pos-方法">EXISTS-POS 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">EXISTS-POS</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$index</span><span class="p">)</span>
+</code></pre></div><p>返回一个布尔值以表明在 <code>$index</code> 位置处是否有元素。这就是引用 <code>@foo[42]:exists</code> 时, <code>postcircumfix [ ]</code> 所调用的方法。</p>
+<p>元素&quot;存在&quot;意味着什么, 取决于你的类型。</p>
+<p>如果你没有实现它, 你的类型会从 <code>Any</code> 那儿继承默认的实现, 对于索引 0 它会返回 True, 对于 其它索引它会返回 <code>false</code> - 这可能不是你想要的。所以如果你的类型不能做元素存在检测, 那就添加一个 fails 或 die 实现, 以避免静默地做错事情。</p>
+<h3 id="delete-pos-方法">DELETE-POS 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">DELETE-POS</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$index</span><span class="p">)</span>
+</code></pre></div><p>删除 <code>$index</code> 处的元素, 并返回它所删除的这个元素。这就是引用 <code>@foo[42]:delete</code> 时, <code>postcircumfix [ ]</code> 所调用的方法。</p>
+<p>&ldquo;删除&quot;元素的意思是什么, 取决于你的类型。</p>
+<p>实现这个方法是可选的; 如果你没有实现它, 那么用户尝试从这种类型的对象中删除元素会得到一个合适的错误信息。</p>
+<h3 id="assign-pos-方法">ASSIGN-POS 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">ASSIGN-POS</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$index</span><span class="o">,</span> <span class="nv">$new</span><span class="p">)</span>
+</code></pre></div><p>把 <code>$index</code> 位置处的元素设置为 <code>$new</code> 值。实现这个方法完全是可选的; 如果你没有实现这个方法, 那么会使用 <code>self.AT-POS($index) = $new</code> 代替, 如果你确实实现了该方法, 那么确保它拥有相同的效果。</p>
+<p>这意味着 opt-in 性能优化, 以至于简单的诸如 <code>@numbers[5] = &quot;five&quot;</code> 的赋值能在不调用 <code>AT-POS</code>(这必须创建并返回一个潜在的昂贵的容器对象) 方法时操作。</p>
+<p>注意, 实现 <code>ASSIGN-POS</code> 不能解除让 <code>AT-POS</code> 变成一个 <code>rw</code> 方法, 因为诸如 <code>@numbers[5]++</code> 的不太重要的赋值/修改仍旧会使用 <code>AT-POS</code>。</p>
+<h3 id="bind-pos-方法">BIND-POS 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">BIND-POS</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$index</span><span class="o">,</span> \<span class="nb">new</span><span class="p">)</span>
+</code></pre></div><p>把值或容器 <code>new</code> 绑定给位置 <code>$index</code> 处的插槽上, 替换那儿能找到的任何容器。这是当你这样写的时候所调用的东西:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$x</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+<span class="nv">@numbers</span><span class="o">[</span><span class="mi">5</span><span class="o">]</span> <span class="o">:=</span> <span class="nv">$x</span><span class="p">;</span>
+</code></pre></div><p>一般的数组类支持这以允许创建复杂的链接数据结构, 但是对于更特定领域类型它可能没有意义, 所以不强求去实现它。如果你没有实现该方法, 用户会获得一个合适的错误信息, 当它们尝试绑定到这种类型的对象的一个位置插槽上时。</p>
+<h2 id="methods-to-implement-for-associative-subscripting">Methods to implement for associative subscripting</h2>
+<p>为了通过 <code>postcircumfix { }</code> 让基于键的下标能够工作于你的自定义类型中, 你应该至少实现 <code>AT-KEY</code> 和 <code>EXISTS-KEY</code> - 还有可选地实现下面的方法。</p>
+<h3 id="at-key-方法">AT-KEY 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">AT-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="p">)</span>
+</code></pre></div><p>返回和 <code>$key</code> 相关联的元素。这正是 <code>postcircumfix { }</code> 通常所调用的方法。</p>
+<p>如果你想让元素可变(就像它们是为了内置的 Hash 类型), 你必须确保以 item 容器的形式返回它, 并在被赋值时更新它。(记得使用 <code>return-rw</code> 或 <code>is rw</code> 子例程 trait 以使其有效; 查看例子。)</p>
+<p>另一方面, 如果你想让你的集合只读, 请直接返回非容器值。</p>
+<h3 id="exists-key-方法">EXISTS-KEY 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">EXISTS-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="p">)</span>
+</code></pre></div><p>返回一个布尔值以表明和 <code>$key</code> 相关联的元素是否存在。这就是引用 <code>%foo&lt;aa&gt;:exists</code> 时, <code>postcircumfix { }</code> 所调用的方法。</p>
+<p>元素&quot;存在&quot;意味着什么, 取决于你的类型。</p>
+<p>如果你没有实现它, 你的类型会从 <code>Any</code> 那儿继承默认的实现, 这通常返回 False - 这可能不是你想要的。所以如果你的类型不能做元素存在检测, 那就添加一个 fails 或 die 实现, 以避免静默地做错事情</p>
+<h3 id="delete-key-方法">DELETE-KEY 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">DELETE-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="p">)</span>
+</code></pre></div><p>删除和 <code>$key</code> 相关联的元素, 并返回它所删除的这个元素。这就是引用 <code>%foo&lt;aa&gt;:delete</code> 时, <code>postcircumfix { }</code> 所调用的方法。</p>
+<p>&ldquo;删除&quot;元素的意思是什么, 取决于你的类型 - 尽管它通常让 <code>EXISTS-KEY</code> 因为那个键变为 <code>False</code>。</p>
+<p>实现这个方法是可选的; 如果你没有实现它, 那么用户尝试从这种类型的对象中删除元素会得到一个合适的错误信息。</p>
+<h3 id="assign-key-方法">ASSIGN-KEY 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">ASSIGN-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="o">,</span> <span class="nv">$new</span><span class="p">)</span>
+</code></pre></div><p>把和 <code>$key</code>  相关联的元素设置为 <code>$new</code> 值。实现这个方法完全是可选的; 如果你没有实现这个方法, 那么会使用 <code>self.AT-KEY($key) = $new</code> 代替, 如果你确实实现了该方法, 那么确保它拥有相同的效果。</p>
+<p>这意味着 opt-in 性能优化, 以至于简单的诸如 <code>%age&lt;Claire&gt; = 29</code> 的赋值能在不调用 <code>AT-KEY</code>(这必须创建并返回一个潜在的昂贵的容器对象) 方法时操作。</p>
+<p>注意, 实现 <code>ASSIGN-KEY</code> 不能解除让 <code>AT-KEY</code> 变成一个 <code>rw</code> 方法, 因为诸如 <code>%age&lt;Claire&gt;++</code> 的不太重要的赋值/修改 仍旧会使用 <code>AT-KEY</code>。</p>
+<h3 id="bind-key-方法">BIND-KEY 方法</h3>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">multi</span> <span class="k">method</span> <span class="nb">BIND-KEY</span> <span class="p">(</span><span class="vg">::?CLASS:D</span><span class="o">:</span> <span class="nv">$key</span><span class="o">,</span> \<span class="nb">new</span><span class="p">)</span>
+</code></pre></div><p>把值或容器 <code>new</code> 绑定给跟 <code>$key</code> 相关联的插槽上, 替换那儿能找到的任何容器。这是当你这样写的时候所调用的东西:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$x</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+<span class="nv">%age</span><span class="p">&lt;</span><span class="s">Claire</span><span class="p">&gt;</span> <span class="o">:=</span> <span class="nv">$x</span><span class="p">;</span>
+</code></pre></div><p>一般的散列类支持这以允许创建复杂的链接数据结构, 但是对于更特定领域类型它可能没有意义, 所以不强求去实现它。如果你没有实现该方法, 用户会获得一个合适的错误信息, 当它们尝试绑定到这种类型的对象的一个位置插槽上时。</p>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/subscripts" term="subscripts" label="subscripts" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[买水果]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-04-12-janes-fruit/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2016-04-12-janes-fruit/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-13T00:00:00+08:00</published>
+            <updated>2021-07-13T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>Janes Fruit</blockquote><h2 id="问题描述">问题描述</h2>
+<p>小詹妮拿着 5 美元去超市买东西,  为新搬来的邻居买水果篮礼物。因为她是个勤奋并缺乏想象力的孩纸, 她打算正好花 5 美元, 不多也不少。</p>
+<p>事实上超市里水果的价格并非整数, 正好花光 5 美元并不容易。 - 但是詹妮已经准备好了。她从背包里拿出上网本, 输入她看到过的水果的单价, 并且开启了一个程序为她收集 — 就是这样, 5 美元能买的水果的组合就出现在屏幕上。</p>
+<p>挑战: 用你选择的语言展示詹妮的程序是什么样子。</p>
+<ul>
+<li>目标就是 500 美分 (等于 5 美元)</li>
+<li>解决方法可以包含多种同类型的水果 - 假设它们数量没有限制</li>
+<li>解决方法没有必要包含所有水果类型</li>
+<li>对给定的输入检测所有可能的方法</li>
+</ul>
+<h2 id="输入描述">输入描述</h2>
+<p>每行一种水果 — 规定了水果的名字(不含空格的单词)和水果的单价(单位为美分, 整数)</p>
+<h2 id="输出描述">输出描述</h2>
+<p>每个解决方法一行 — 用以逗号分割的数量+名字对儿, 描述了那种类型要买的水果数。</p>
+<p>不要列出数量为 0 的水果。如果为复数就给名字加 <strong>s</strong>。</p>
+<h2 id="输入样本">输入样本</h2>
+<pre><code>banana 32
+kiwi 41
+mango 97
+papaya 254
+pineapple 399
+</code></pre><h2 id="输出样本">输出样本</h2>
+<pre><code>6 kiwis, 1 papaya
+7 bananas, 2 kiwis, 2 mangos
+</code></pre><h2 id="有挑战的输入">有挑战的输入</h2>
+<pre><code>apple 59
+banana 32
+coconut 155
+grapefruit 128
+jackfruit 1100
+kiwi 41
+lemon 70
+mango 97
+orange 73
+papaya 254
+pear 37
+pineapple 399
+watermelon 500
+</code></pre><p>注意, 这种输入有 180 种解决方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="p">(</span><span class="nv">@names</span><span class="o">,</span> <span class="nv">@prices</span><span class="p">)</span> <span class="o">:=</span> <span class="p">(</span><span class="nv">$_</span><span class="o">»[</span><span class="mi">0</span><span class="o">],</span> <span class="nv">$_</span><span class="o">»[</span><span class="mi">1</span><span class="o">]».</span><span class="nb">Int</span> <span class="k">given</span> <span class="nb">lines</span><span class="o">».</span><span class="nb">words</span><span class="p">);</span>
+
+<span class="k">for</span> <span class="nf">find-coefficients</span><span class="p">(</span><span class="mi">500</span><span class="o">,</span> <span class="nv">@prices</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nv">@quantities</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">(</span><span class="nv">@names</span> <span class="ow">Z</span> <span class="nv">@quantities</span><span class="p">)</span>
+        <span class="o">.</span><span class="nb">map</span><span class="p">(</span><span class="k">-&gt;</span> <span class="o">[</span><span class="nv">$name</span><span class="o">,</span> <span class="nv">$qty</span><span class="o">]</span> <span class="p">{</span> <span class="p">&#34;</span><span class="nv">$qty</span><span class="s2"> </span><span class="nv">$name</span><span class="p">&#34;</span><span class="o">~</span><span class="p">(&#34;</span><span class="s2">s</span><span class="p">&#34;</span> <span class="k">if</span> <span class="nv">$qty</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nv">$qty</span> <span class="p">})</span>
+        <span class="o">.</span><span class="nb">join</span><span class="p">(&#34;</span><span class="s2">, </span><span class="p">&#34;);</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">find-coefficients</span> <span class="p">(</span><span class="nv">$goal</span><span class="o">,</span> <span class="nv">@terms</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">gather</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">@coefficients</span><span class="p">;</span>
+
+        <span class="k">loop</span> <span class="p">(</span><span class="k">my</span> <span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nv">$i</span> <span class="o">&lt;</span> <span class="nv">@terms</span><span class="p">;</span> <span class="nv">@coefficients</span><span class="o">[</span><span class="nv">$i</span><span class="o">]++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">given</span> <span class="o">[+]</span><span class="p">(</span><span class="nv">@coefficients</span> <span class="ow">Z</span><span class="o">*</span> <span class="nv">@terms</span><span class="p">)</span> <span class="o">&lt;=&gt;</span> <span class="nv">$goal</span> <span class="p">{</span>
+                <span class="k">when</span> <span class="nb">Less</span> <span class="p">{</span> <span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span>                      <span class="p">}</span>
+                <span class="k">when</span> <span class="nb">More</span> <span class="p">{</span> <span class="nv">@coefficients</span><span class="o">[</span><span class="nv">$i</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nv">$i</span><span class="o">++</span> <span class="p">}</span>
+                <span class="k">when</span> <span class="nb">Same</span> <span class="p">{</span> <span class="nb">take</span> <span class="nv">@coefficients</span><span class="o">.</span><span class="nb">values</span>   <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>在循环的每一次迭代中，数组 <code>@coefficients</code> 被&quot;增一&quot;，就像它的元素是一个数字的位数一样 - 但不是一个有固定基数的数字：相反，只要超过了搜索条件（sum &gt; goal），它就会溢出&quot;数字&quot;。</p>
+<p>同样的事情也可以用递归的方式更优雅地完成。对于那些不喜欢天真的暴力解决方法的人来说，这个挑战也可能是一个尝试一些<a href="https://en.wikipedia.org/wiki/Dynamic_programming">动态编程</a>技术的好机会。</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@fruits</span> <span class="o">=</span> <span class="nb">lines</span><span class="o">».</span><span class="nb">split</span><span class="p">(&#34;</span><span class="s2"> </span><span class="p">&#34;)</span><span class="o">.</span><span class="nb">sort</span><span class="p">(</span><span class="o">-*[</span><span class="mi">1</span><span class="o">]</span><span class="p">);</span>
+<span class="k">my</span> <span class="nv">@names</span>  <span class="o">=</span> <span class="nv">@fruits</span><span class="o">»[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">@prices</span> <span class="o">=</span> <span class="nv">@fruits</span><span class="o">»[</span><span class="mi">1</span><span class="o">]».</span><span class="nb">Int</span><span class="p">;</span>
+
+<span class="k">for</span> <span class="nf">find-coefficients</span><span class="p">(</span><span class="mi">500</span><span class="o">,</span> <span class="nv">@prices</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nv">@quantities</span> <span class="p">{</span>
+    <span class="nb">say</span> <span class="p">(</span><span class="nv">@names</span> <span class="ow">Z</span> <span class="nv">@quantities</span><span class="p">)</span>
+        <span class="o">.</span><span class="nb">map</span><span class="p">(</span><span class="k">-&gt;</span> <span class="o">[</span><span class="nv">$name</span><span class="o">,</span> <span class="nv">$qty</span><span class="o">]</span> <span class="p">{</span> <span class="p">&#34;</span><span class="nv">$qty</span><span class="s2"> </span><span class="nv">$name</span><span class="p">&#34;</span><span class="o">~</span><span class="p">(&#34;</span><span class="s2">s</span><span class="p">&#34;</span> <span class="k">if</span> <span class="nv">$qty</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nv">$qty</span> <span class="p">})</span>
+        <span class="o">.</span><span class="nb">join</span><span class="p">(&#34;</span><span class="s2">, </span><span class="p">&#34;);</span>
+<span class="p">}</span>
+
+<span class="k">sub</span> <span class="nf">find-coefficients</span> <span class="p">(</span><span class="nv">$goal</span><span class="o">,</span> <span class="nv">@terms</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">gather</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="nv">@initial</span> <span class="o">=</span> <span class="mi">0</span> <span class="ow">xx</span> <span class="nv">@terms</span><span class="p">;</span>
+
+        <span class="k">my</span> <span class="nv">%partials</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="nv">@initial</span><span class="o">,]</span><span class="p">);</span>
+        <span class="k">my</span> <span class="nv">@todo</span> <span class="o">=</span> <span class="p">(</span><span class="nv">@initial</span><span class="o">,</span><span class="p">);</span>
+        <span class="k">my</span> <span class="nv">%seen-partials</span> <span class="o">:=</span> <span class="nb">SetHash</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+        <span class="k">my</span> <span class="nv">%seen-solutions</span> <span class="o">:=</span> <span class="nb">SetHash</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="nv">@todo</span> <span class="p">{</span>
+            <span class="k">my</span> <span class="nv">@current</span> <span class="o">:=</span> <span class="nv">@todo</span><span class="o">.</span><span class="nb">shift</span><span class="p">;</span>
+            <span class="k">my</span> <span class="nv">$sum</span> <span class="o">=</span> <span class="o">[+]</span> <span class="nv">@current</span> <span class="ow">Z</span><span class="o">*</span> <span class="nv">@terms</span><span class="p">;</span>
+
+            <span class="nb">next</span> <span class="k">if</span> <span class="nv">$sum</span> <span class="o">&gt;</span> <span class="nv">$goal</span><span class="p">;</span>
+
+            <span class="nv">%partials</span><span class="p">{</span><span class="nv">$sum</span><span class="p">}</span><span class="o">.</span><span class="nb">push</span><span class="o">:</span> <span class="nv">@current</span><span class="p">;</span>
+
+            <span class="c1"># Find solutions by adding known partials to the current partial</span>
+            <span class="k">for</span> <span class="nv">%partials</span><span class="p">{</span><span class="nv">$goal</span> <span class="o">-</span> <span class="nv">$sum</span><span class="p">}</span><span class="o">[*]</span> <span class="k">-&gt;</span> <span class="nv">@known</span> <span class="p">{</span>
+                <span class="o">.</span><span class="nb">take</span> <span class="k">if</span> <span class="o">!</span><span class="nv">%seen-solutions</span><span class="p">{</span><span class="o">~</span><span class="nv">$_</span><span class="p">}</span><span class="o">++</span> <span class="k">given</span> <span class="nb">list</span> <span class="nv">@current</span> <span class="ow">Z</span><span class="o">+</span> <span class="nv">@known</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="c1"># Schedule additional iterations</span>
+            <span class="k">if</span> <span class="nv">$sum</span> <span class="o">&lt;=</span> <span class="nv">$goal</span> <span class="ow">div</span> <span class="mi">2</span> <span class="p">{</span>
+                <span class="k">for</span> <span class="nv">@terms</span><span class="o">.</span><span class="nb">keys</span> <span class="p">{</span>
+                    <span class="k">my</span> <span class="nv">@next</span> <span class="o">=</span> <span class="nv">@current</span><span class="p">;</span>
+                    <span class="nv">@next</span><span class="o">[</span><span class="nv">$_</span><span class="o">]++</span><span class="p">;</span>
+                    <span class="nv">@todo</span><span class="o">.</span><span class="nb">push</span><span class="o">:</span> <span class="nv">@next</span> <span class="k">if</span> <span class="o">!</span><span class="nv">%seen-partials</span><span class="p">{</span><span class="o">~</span><span class="nv">@next</span><span class="p">}</span><span class="o">++</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>注意:</p>
+<ul>
+<li>对于挑战的输入(解空间=1,127,153,664)，它只需要 4296 次迭代，而每次迭代都要花费几次哈希查询。</li>
+</ul>
+]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/gather" term="gather" label="gather" />
+                            
+                        
+                    
+                
+            
+        </entry>
+    
+        
+        <entry>
+            <title type="html"><![CDATA[列表解析]]></title>
+            <link href="https://ohmyweekly.github.io/notes/2016-05-11-list-comprehensions/?utm_source=atom_feed" rel="alternate" type="text/html" />
+            
+            
+                <id>https://ohmyweekly.github.io/notes/2016-05-11-list-comprehensions/</id>
+            
+            
+                    <author>
+                        <name>焉知非鱼</name>
+                    </author>
+            <published>2021-07-13T00:00:00+08:00</published>
+            <updated>2021-07-13T00:00:00+08:00</updated>
+            
+            
+            <content type="html"><![CDATA[<blockquote>List Comprehensions</blockquote><h2 id="列表解析">列表解析</h2>
+<p>列表解析即 List Comprehensions。</p>
+<p>生成 <code>1x1, 2x2, 3x3, ..., 10x10</code> 的列表：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">(</span><span class="nv">$_</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">10</span><span class="p">);</span>
+</code></pre></div><p><code>for</code> 语句前面还可以添加 if 修饰符，这样我们就可以仅筛选出偶数的平方：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">(</span><span class="nv">$_</span><span class="o">**</span><span class="mi">2</span> <span class="k">if</span> <span class="o">!</span><span class="p">(</span><span class="nv">$_</span> <span class="nv">%</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">10</span><span class="p">);</span>
+<span class="p">(</span><span class="nv">$_</span><span class="o">**</span><span class="mi">2</span> <span class="k">if</span> <span class="nv">$_</span> <span class="nv">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">10</span><span class="p">)</span> <span class="c1"># 同上</span>
+</code></pre></div><p>组合多个 if 条件:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@list</span> <span class="o">=</span> <span class="p">(</span><span class="nv">$_</span> <span class="k">if</span> <span class="nv">$_</span> <span class="nv">%2</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="nv">$_</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="mi">6</span> <span class="p">);</span> <span class="c1"># [3 5]   </span>
+</code></pre></div><p>还可以生成全排列：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">(</span><span class="nv">$_</span> <span class="k">for</span> <span class="p">&#34;</span><span class="s2">ABC</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">comb</span> <span class="ow">X</span><span class="o">~</span> <span class="p">&#34;</span><span class="s2">XYZ</span><span class="p">&#34;</span><span class="o">.</span><span class="nb">comb</span><span class="p">);</span>
+<span class="c1"># (&#34;AX&#34;, &#34;AY&#34;, &#34;AZ&#34;, &#34;BX&#34;, &#34;BY&#34;, &#34;BZ&#34;, &#34;CX&#34;, &#34;CY&#34;, &#34;CZ&#34;)</span>
+
+<span class="k">my</span> <span class="nv">@a</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mi">4</span><span class="p">);</span>
+<span class="k">my</span> <span class="nv">@b</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="k">my</span> <span class="nv">@list</span> <span class="o">=</span> <span class="p">(</span><span class="nv">@a</span> <span class="ow">X</span> <span class="nv">@b</span><span class="p">);</span> <span class="c1"># 这儿也可以用圆括号, 也可以不用</span>
+<span class="c1"># [(1 2) (1 4) (1 6) (3 2) (3 4) (3 6) (4 2) (4 4) (4 6)]</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">&gt; <span class="o">(</span><span class="nv">$_</span> when /7$/ <span class="k">for</span> 1..99<span class="o">)</span>
+<span class="o">(</span><span class="m">7</span> <span class="m">17</span> <span class="m">27</span> <span class="m">37</span> <span class="m">47</span> <span class="m">57</span> <span class="m">67</span> <span class="m">77</span> <span class="m">87</span> 97<span class="o">)</span>
+</code></pre></div><p>大小写转换：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@a</span> <span class="o">=</span> <span class="p">&lt;</span><span class="s">Hello World IBM Apple</span><span class="p">&gt;;</span>
+<span class="p">(</span><span class="o">.</span><span class="nb">lc</span> <span class="k">for</span> <span class="nv">@a</span><span class="p">);</span> <span class="c1"># hello world ibm apple</span>
+</code></pre></div><p>删除字符串末尾的空白：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@freshfruit</span> <span class="o">=</span> <span class="p">&#39;</span><span class="s1"> banana</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1"> loganberry </span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">passion fruit </span><span class="p">&#39;;</span>
+<span class="p">(</span><span class="o">.</span><span class="nb">trim</span> <span class="k">for</span> <span class="nv">@freshfruit</span><span class="p">);</span> <span class="c1"># &#34;banana&#34; &#34;loganberry&#34; &#34;passion fruit&#34;</span>
+</code></pre></div><p>向量运算：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@vec</span> <span class="o">=</span> <span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">6</span><span class="p">;</span>
+<span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="nv">$_</span> <span class="k">for</span> <span class="nv">@vec</span><span class="p">);</span>            <span class="c1"># 6 12 18</span>
+<span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="nv">$_</span> <span class="k">if</span> <span class="nv">$_</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">for</span> <span class="nv">@vec</span><span class="p">);</span>  <span class="c1"># 12 18</span>
+<span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="nv">$_</span> <span class="k">if</span> <span class="nv">$_</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">for</span> <span class="nv">@vec</span><span class="p">);</span>  <span class="c1"># ()</span>
+</code></pre></div><p>嵌套数组：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@vec</span> <span class="o">=</span> <span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">6</span><span class="p">;</span>
+<span class="p">(</span><span class="o">[</span><span class="nv">$_</span><span class="o">,</span> <span class="nv">$_</span><span class="o">**</span><span class="mi">2</span><span class="o">].</span><span class="nb">perl</span> <span class="k">for</span> <span class="nv">@vec</span><span class="p">);</span> <span class="c1"># [2, 4] [4, 16] [6, 36]</span>
+<span class="p">(</span><span class="o">[</span><span class="nv">$_</span><span class="o">,</span> <span class="nv">$_</span><span class="o">**</span><span class="mi">2</span><span class="o">].</span><span class="nb">WHAT</span> <span class="k">for</span> <span class="nv">@vec</span><span class="p">);</span> <span class="c1"># (Array) (Array) (Array)</span>
+</code></pre></div><p>多个列表之间的列表解析:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@vec1</span> <span class="o">=</span> <span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">6</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">@vec2</span> <span class="o">=</span> <span class="mi">4</span><span class="o">,</span><span class="mi">3</span><span class="o">,-</span><span class="mi">9</span><span class="p">;</span>
+<span class="p">(</span><span class="nv">$_</span> <span class="k">for</span> <span class="nv">@vec1</span> <span class="ow">X</span><span class="o">*</span> <span class="nv">@vec2</span><span class="p">);</span>     <span class="c1"># 8 6 -18 16 12 -36 24 18 -54</span>
+<span class="p">(</span><span class="nv">$_</span> <span class="k">for</span> <span class="nv">@vec1</span> <span class="ow">X</span><span class="o">+</span> <span class="nv">@vec2</span><span class="p">);</span>     <span class="c1"># 5 -7 8 7 -5 10 9 -3</span>
+<span class="p">(</span><span class="nv">$_</span> <span class="k">for</span> <span class="nv">@vec1</span> <span class="ow">Z</span><span class="o">*</span> <span class="nv">@vec2</span><span class="p">);</span>     <span class="c1"># 8 12 -54</span>
+<span class="p">(</span><span class="nv">$_</span> <span class="k">for</span> <span class="nv">@vec1</span> <span class="o">&gt;&gt;*&lt;&lt;</span> <span class="nv">@vec2</span><span class="p">);</span>  <span class="c1"># 8 12 -54</span>
+</code></pre></div><p>使用列表解析处理矩阵:</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">&gt; my @a <span class="o">=</span> <span class="o">([</span>1,2,3<span class="o">]</span>, <span class="o">[</span>4,5,6<span class="o">]</span>, <span class="o">[</span>7,8,9<span class="o">])</span><span class="p">;</span>
+&gt; @a<span class="o">[</span>0<span class="o">]</span>                    <span class="c1"># 1 2 3</span>
+&gt; @a<span class="o">[</span>0<span class="o">][</span>1<span class="o">]</span>                 <span class="c1"># 2</span>
+&gt; @a<span class="o">[</span>0<span class="o">][</span>2<span class="o">]</span>                 <span class="c1"># 3</span>
+&gt; <span class="o">(</span><span class="nv">$_</span><span class="o">[</span>1<span class="o">]</span> <span class="k">for</span> @a<span class="o">)</span>           <span class="c1"># 2 5 8</span>
+&gt; <span class="o">(</span><span class="nv">$_</span><span class="o">[</span>2<span class="o">]</span> <span class="k">for</span> @a<span class="o">)</span>           <span class="c1"># 3 6 9</span>
+&gt; <span class="o">(</span><span class="nv">$_</span><span class="o">[</span>2<span class="o">]</span>-1 <span class="k">for</span> @a<span class="o">)</span>         <span class="c1"># 2 5 8</span>
+&gt; <span class="o">(</span>@a<span class="o">[</span><span class="nv">$_</span><span class="o">][</span><span class="nv">$_</span><span class="o">]</span> <span class="k">for</span> 0..2<span class="o">)</span>    <span class="c1"># 1 5 9</span>
+</code></pre></div><p>矩阵转置:</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">transpose</span> <span class="p">(</span><span class="nv">@m</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nv">@m</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">keys</span><span class="o">.</span><span class="nb">map</span><span class="o">:</span> <span class="p">{</span><span class="o">[</span> <span class="nv">@m</span><span class="o">»[</span><span class="nv">$_</span><span class="o">]</span> <span class="o">]</span><span class="p">};</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">@a</span> <span class="o">=</span> <span class="o">[</span><span class="p">&lt;</span><span class="s"> a b c d e </span><span class="p">&gt;</span><span class="o">],</span>
+        <span class="o">[</span><span class="p">&lt;</span><span class="s"> f g h i j </span><span class="p">&gt;</span><span class="o">],</span>
+        <span class="o">[</span><span class="p">&lt;</span><span class="s"> k l m n o </span><span class="p">&gt;</span><span class="o">],</span>
+        <span class="o">[</span><span class="p">&lt;</span><span class="s"> p q r s t </span><span class="p">&gt;</span><span class="o">]</span><span class="p">;</span>
+
+<span class="p">(</span><span class="o">.</span><span class="nb">say</span> <span class="k">for</span> <span class="nv">@a</span><span class="o">.&amp;</span><span class="nf">transpose</span><span class="p">);</span>
+</code></pre></div><pre><code>a f k p
+b g l q
+c h m r
+d i n s
+e j o t
+</code></pre><p>一丢丢解释：<code>@m[0].keys</code> 获取 <code>column index</code>, 根据获取到的列索引, 使用超运算符 <code>»</code> 遍历数组中对应列索引位置的元素。注意 <code>[]</code> 实际上是后缀操作符, 原来使用 <code>».[]</code> 的语法是错误的。</p>
+<p>使用 gather 进行列表解析：</p>
+<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">@s</span> <span class="o">=</span> <span class="k">gather</span> <span class="p">{</span> <span class="k">for</span> <span class="o">^</span><span class="mi">100</span> <span class="p">{</span> <span class="nb">take</span> <span class="mi">2</span> <span class="o">*</span> <span class="nv">$_</span> <span class="k">if</span> <span class="nv">$_</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="p">}</span> <span class="p">};</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># 1到20之间哪些数字组成直角？</span>
+<span class="k">my</span> <span class="nv">$n</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">@a</span> <span class="o">=</span> <span class="k">gather</span> <span class="k">for</span> <span class="mi">1</span><span class="o">..</span><span class="nv">$n</span> <span class="k">-&gt;</span> <span class="nv">$x</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="nv">$x</span><span class="o">..</span><span class="nv">$n</span> <span class="k">-&gt;</span> <span class="nv">$y</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="nv">$y</span><span class="o">..</span><span class="nv">$n</span> <span class="k">-&gt;</span> <span class="nv">$z</span> <span class="p">{</span>
+            <span class="nb">take</span> <span class="nv">$x</span><span class="o">,</span><span class="nv">$y</span><span class="o">,</span><span class="nv">$z</span> <span class="k">if</span> <span class="nv">$x</span><span class="o">*</span><span class="nv">$x</span> <span class="o">+</span> <span class="nv">$y</span><span class="o">*</span><span class="nv">$y</span> <span class="o">==</span> <span class="nv">$z</span><span class="o">*</span><span class="nv">$z</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="nb">say</span> <span class="p">&#34;</span><span class="nv">@a</span><span class="o">[]</span><span class="p">&#34;;</span>
+
+<span class="c1"># 3 4 5 5 12 13 6 8 10 8 15 17 9 12 15 12 16 20       </span>
+</code></pre></div>]]></content>
+            
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/categories/rakulang" term="rakulang" label="rakulang" />
+                            
+                        
+                    
+                 
+                    
+                         
+                        
+                            
+                             
+                                <category scheme="https://ohmyweekly.github.io/tags/list-comprehensions" term="list-comprehensions" label="List Comprehensions" />
+                            
+                        
+                    
+                
+            
+        </entry>
     
         
         <entry>
@@ -2331,8 +3243,8 @@ mean (g) = 4.95872541158849
 </code></pre></div><p>rule 中空白的使用:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">$str</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">Swift          is hard    to  learn</span><span class="p">&#34;;</span>
 <span class="k">my</span> <span class="k">token</span> <span class="nf">word</span> <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr"> </span><span class="p">}</span>
-<span class="k">my</span> <span class="k">rule</span>  <span class="nf">line</span> <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">word</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">[&#39;</span><span class="s1">,</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">]</span><span class="sr"> }
-</span><span class="sr"></span><span class="nv">$str</span><span class="sr"> </span><span class="o">~~</span><span class="sr"> m</span><span class="p">:</span><span class="na">g</span><span class="p">/</span> <span class="p">&lt;</span><span class="s">line</span><span class="p">&gt;</span> <span class="o">/</span><span class="p">;</span>
+<span class="k">my</span> <span class="k">rule</span>  <span class="nf">line</span> <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">word</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">[&#39;</span><span class="s1">,</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">]</span><span class="sr"> </span><span class="p">}</span>
+<span class="nv">$str</span> <span class="o">~~</span> <span class="k">m</span><span class="p">:</span><span class="na">g</span><span class="p">/</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">line</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">/;</span>
 </code></pre></div><p>逗号附近的方括号保证了 <code>&lt;.ws&gt;</code> 调用产生的空白作为分割符的一部分。这利用了 <code>&lt;.ws&gt;</code> 的一个特点：</p>
 <p>在两个 <code>\w</code> 之间解释为 <code>\s+</code>, 其它地方解释为 <code>\s*</code>。</p>
 ]]></content>
@@ -3237,22 +4149,22 @@ grammars 的主要组成部分是 <a href="http://doc.raku.org/language/regexes"
 </code></pre></div><p><code>&amp;number</code> 就是直接引用了具名的 regex 或 子例程。而在 <code>/ /</code> 或 grammars 里面, 引用一个具名正则的语法也很特殊, 就是给名字包裹上 <code>&lt; &gt;</code>。<code>&lt;&gt;</code> 就像引号那样, 当用它引起某个具名正则后, 引用这个 <code>&lt;&gt;</code> 就会把该具名正则插入(带入)到整个正则之中, 就像字符串插值那样：</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># 具名正则的声明</span>
 <span class="k">my</span> <span class="k">regex</span> <span class="nf">number</span> <span class="p">{</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="sr"> </span><span class="p">[</span><span class="sr"> \</span><span class="ni">.</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="p">]</span><span class="o">?</span><span class="sr"> </span><span class="p">}</span>  
-<span class="k">my</span> <span class="k">token</span> <span class="nf">ident</span>  <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">            </span><span class="p">}</span>
-<span class="k">my</span> <span class="k">rule</span>  <span class="nf">alpha</span>  <span class="p">{</span><span class="sr"> </span><span class="p">&lt;[</span><span class="sr">A</span><span class="o">..</span><span class="sr">Za</span><span class="o">..</span><span class="sr">z</span><span class="p">]&gt;</span><span class="sr">   </span><span class="p">}</span>
-
-<span class="c1"># 1.0 通过 &amp; 来引用</span>
-<span class="nb">say</span> <span class="nb">so</span> <span class="p">&#34;</span><span class="s2">12.34</span><span class="p">&#34;</span> <span class="o">~~</span> <span class="nv">&amp;number</span><span class="p">;</span> <span class="c1"># true</span>
-
-<span class="c1"># 2.0 在正则构造 // 里使用</span>
-<span class="nb">say</span> <span class="nb">so</span> <span class="p">&#34;</span><span class="s2">12.88 + 0.12</span><span class="p">&#34;</span> <span class="o">~~</span> <span class="p">/</span><span class="sr">  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  </span><span class="p">/;</span> <span class="c1"># true</span>
-<span class="c1"># say so &#34;12.88 + 0.12&#34; ~~ /  \s* &#39;+&#39; \s*  /;</span>
-<span class="c1"># wrong, method &#39;number&#39; not found for invocant of class &#39;Cursor&#39;</span>
-
-<span class="c1"># 3.0 在 grammar 里面使用</span>
-<span class="k">grammar</span> <span class="nc">EquationParse</span> <span class="p">{</span>
+<span class="k">my</span> <span class="k">token</span> <span class="nf">ident</span>  <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">            }
+</span><span class="sr">my rule  alpha  </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">[A..Za..z]</span><span class="p">&gt;</span>   <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr"></span><span class="c1"># 1.0 通过 &amp; 来引用
+</span><span class="c1"></span><span class="sr">say so </span><span class="p">&#34;</span><span class="s2">12.34</span><span class="p">&#34;</span><span class="sr"> </span><span class="o">~~</span><span class="sr"> </span><span class="nv">&amp;number</span><span class="sr">; </span><span class="c1"># true
+</span><span class="c1"></span><span class="sr">
+</span><span class="sr"></span><span class="c1"># 2.0 在正则构造 // 里使用
+</span><span class="c1"></span><span class="sr">say so </span><span class="p">&#34;</span><span class="s2">12.88 + 0.12</span><span class="p">&#34;</span><span class="sr"> </span><span class="o">~~</span><span class="sr"> /  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  /; </span><span class="c1"># true
+</span><span class="c1"># say so &#34;12.88 + 0.12&#34; ~~ /  \s* &#39;+&#39; \s*  /;
+</span><span class="c1"># wrong, method &#39;number&#39; not found for invocant of class &#39;Cursor&#39;
+</span><span class="c1"></span><span class="sr">
+</span><span class="sr"></span><span class="c1"># 3.0 在 grammar 里面使用
+</span><span class="c1"></span><span class="sr">grammar EquationParse </span><span class="p">{</span>
     <span class="c1"># 这里也不能给 number 起别名, 除非 number 是在 grammar 内部声明的</span>
-    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  </span><span class="p">}</span>
-<span class="p">}</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr">  </span><span class="p">}</span><span class="sr">
+</span><span class="sr"></span><span class="p">}</span>
 
 <span class="c1"># 等式解析</span>
 <span class="k">my</span> <span class="nv">$expr</span> <span class="o">=</span> <span class="n">EquationParse</span><span class="o">.</span><span class="nb">parse</span><span class="p">(&#34;</span><span class="s2">12.88 + 0.12 = 13.00</span><span class="p">&#34;);</span>
@@ -3280,15 +4192,15 @@ grammars 的主要组成部分是 <a href="http://doc.raku.org/language/regexes"
 <p><a href="https://docs.raku.org/type/Grammar">Grammars</a> 由 rules，token 和 regexes 组成; 他们实际上是方法，因为 grammars 是类。这些方法可以共享一个共同的名称和功能，因此可以使用 <a href="https://docs.raku.org/syntax/proto">proto</a>。</p>
 <p>如果你有很多备选分支(alternations), 那么生成可读性好的代码或子类化(subclass)你的 grammar 可能会变得很困难。在下面的 <code>Actions</code> 类中, <code>TOP</code> 方法中的三元操作符并不理想, 并且当我们添加的操作越多, 它就变得越糟糕:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">Calculator</span> <span class="p">{</span>
-    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr"> </span><span class="p">[</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">add</span><span class="p">&gt;</span><span class="sr"> </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">sub</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">]</span><span class="sr"> </span><span class="p">}</span>
-    <span class="k">rule</span>  <span class="nf">add</span> <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">num</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">num</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
-    <span class="k">rule</span>  <span class="nf">sub</span> <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">num</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">-</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">num</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">}</span>
-    <span class="k">token</span> <span class="nf">num</span> <span class="p">{</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="sr"> </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="k">class</span> <span class="nc">Calculations</span> <span class="p">{</span>
-    <span class="k">method</span> <span class="nf">TOP</span> <span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span> <span class="k">make</span> <span class="nv">$&lt;add&gt;</span> <span class="o">??</span> <span class="nv">$&lt;add&gt;</span><span class="o">.</span><span class="k">made</span> <span class="o">!!</span> <span class="nv">$&lt;sub&gt;</span><span class="o">.</span><span class="k">made</span><span class="p">;</span> <span class="p">}</span>
-    <span class="k">method</span> <span class="nb">add</span> <span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span> <span class="k">make</span> <span class="o">[+]</span> <span class="nv">$&lt;num&gt;</span><span class="p">;</span> <span class="p">}</span>
+    <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr"> </span><span class="p">[</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">add</span><span class="p">&gt;</span><span class="sr"> </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">sub</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">]</span><span class="sr"> }
+</span><span class="sr">    rule  add </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">num</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">num</span><span class="p">&gt;</span> <span class="p">}</span><span class="sr">
+</span><span class="sr">    rule  sub </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">num</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">-</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">num</span><span class="p">&gt;</span> <span class="p">}</span><span class="sr">
+</span><span class="sr">    token num </span><span class="p">{</span> \<span class="nb">d</span><span class="o">+</span> <span class="p">}</span><span class="sr">
+</span><span class="sr">}
+</span><span class="sr">
+</span><span class="sr">class Calculations </span><span class="p">{</span>
+    <span class="k">method</span> <span class="nf">TOP</span> <span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span> <span class="k">make</span> <span class="nv">$&lt;add&gt;</span> <span class="o">??</span> <span class="nv">$&lt;add&gt;</span><span class="o">.</span><span class="k">made</span> <span class="o">!!</span> <span class="nv">$&lt;sub&gt;</span><span class="o">.</span><span class="k">made</span><span class="p">;</span> <span class="p">}</span><span class="sr">
+</span><span class="sr">    method add </span><span class="p">(</span><span class="ni">$</span><span class="p">/)</span> <span class="p">{</span> <span class="k">make</span> <span class="o">[+]</span> <span class="nv">$&lt;num&gt;</span><span class="p">;</span> <span class="p">}</span>
     <span class="k">method</span> <span class="k">sub</span> <span class="p">(</span><span class="nv">$/</span><span class="p">)</span> <span class="p">{</span> <span class="k">make</span> <span class="o">[-]</span> <span class="nv">$&lt;num&gt;</span><span class="p">;</span> <span class="p">}</span>
 <span class="p">}</span>
 
@@ -9117,18 +10029,18 @@ How are you doing today?
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">No Match</span><span class="p">&#34;;</span>
 <span class="p">}</span>
 
-<span class="k">if</span> <span class="p">&#39;</span><span class="s1">aaaaaaaaaaz</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">*</span><span class="sr">z / </span><span class="p">{</span>
+<span class="k">if</span> <span class="p">&#39;</span><span class="s1">aaaaaaaaaaz</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">*</span><span class="sr">z </span><span class="p">/</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Match</span><span class="p">&#34;;</span>
-  <span class="p">}</span><span class="sr"> else </span><span class="p">{</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">No Match</span><span class="p">&#34;;</span>
-<span class="p">}</span><span class="sr">
-</span><span class="sr">
-</span><span class="sr">if </span><span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~~</span><span class="sr"> m/ a</span><span class="o">*</span><span class="sr">z / </span><span class="p">{</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">*</span><span class="sr">z </span><span class="p">/</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Match</span><span class="p">&#34;;</span>
-  <span class="p">}</span><span class="sr"> else </span><span class="p">{</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">No Match</span><span class="p">&#34;;</span>
-<span class="p">}</span><span class="sr">
-</span></code></pre></div><p><code>+</code> 意思是至少匹配 1 次。</p>
+<span class="p">}</span>
+</code></pre></div><p><code>+</code> 意思是至少匹配 1 次。</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">if</span> <span class="p">&#39;</span><span class="s1">az</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">+</span><span class="sr">z </span><span class="p">/</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Match</span><span class="p">&#34;;</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
@@ -9147,12 +10059,12 @@ How are you doing today?
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">No Match</span><span class="p">&#34;;</span>
 <span class="p">}</span>
 
-<span class="k">if</span> <span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">+</span><span class="sr">z / </span><span class="p">{</span>
+<span class="k">if</span> <span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">m</span><span class="p">/</span><span class="sr"> a</span><span class="o">+</span><span class="sr">z </span><span class="p">/</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">Match</span><span class="p">&#34;;</span>
-  <span class="p">}</span><span class="sr"> else </span><span class="p">{</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
     <span class="nb">say</span> <span class="p">&#34;</span><span class="s2">No Match</span><span class="p">&#34;;</span>
-<span class="p">}</span><span class="sr">
-</span></code></pre></div><h3 id="匹配结果">匹配结果</h3>
+<span class="p">}</span>
+</code></pre></div><h3 id="匹配结果">匹配结果</h3>
 <p>　
 当匹配字符串的正则表达式成功时, 匹配结果被存储在一个特殊的变量 <code>$/</code> 中。</p>
 <p><strong>脚本</strong></p>
@@ -10198,8 +11110,8 @@ Stage moar       :   0.000
 </span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">quibble</span><span class="p">(</span><span class="vg">%*LANG</span><span class="p">&lt;</span><span class="s">Quote</span><span class="p">&gt;</span><span class="o">,</span> <span class="nv">$qm</span><span class="p">)&gt;</span><span class="sr">
 </span><span class="sr">    </span><span class="o">|</span><span class="sr"> </span><span class="p">{}</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">.</span><span class="nf">qok</span><span class="p">(</span><span class="nv">$/</span><span class="p">)&gt;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">quibble</span><span class="p">(</span><span class="vg">%*LANG</span><span class="p">&lt;</span><span class="s">Quote</span><span class="p">&gt;)&gt;</span><span class="sr">
 </span><span class="sr">    </span><span class="p">]</span><span class="sr">
-</span><span class="sr">}
-</span></code></pre></div><p>可以看到 <code>qq</code> 和 <code>Q</code> 的主体看起来像 <code>q</code>, 我们也来看看它们是否有我们要找的那个 bug:</p>
+</span><span class="sr"></span><span class="p">}</span>
+</code></pre></div><p>可以看到 <code>qq</code> 和 <code>Q</code> 的主体看起来像 <code>q</code>, 我们也来看看它们是否有我们要找的那个 bug:</p>
 <pre><code>zoffix@leliana:~$ raku -e '.say for qqww&lt;„hello world”&gt;'
 „hello
 world”
@@ -10215,8 +11127,8 @@ world
 </span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">quibble</span><span class="p">(</span><span class="vg">%*LANG</span><span class="p">&lt;</span><span class="s">Quote</span><span class="p">&gt;</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">q</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$qm</span><span class="p">)&gt;</span><span class="sr">
 </span><span class="sr">    </span><span class="o">|</span><span class="sr"> </span><span class="c1"># (this branch omited)
 </span><span class="c1"></span><span class="sr">    </span><span class="p">]</span><span class="sr">
-</span><span class="sr">}
-</span></code></pre></div><p>在第二行中, 我们创建了一个变量, 然后匹配字面值 <code>q</code> 然后是 <code>quote_mod</code> token。那个是我们的 <code>--target=parse</code> 输出中的一部分并且如果你像我们找出 <code>quote</code> token 那样找出它, 你会注意到它是一个 proto regex, 即, 在那种情况下, 匹配我们代码的 <code>ww</code> 块。后面跟着的空 <code>{}</code> 块我们可以忽略(那是一个 bug 的替代方法可能在你读到这儿时已经被修复了)。目前为止, 我们已经匹配了我们代码的 <code>qww</code> 块。</p>
+</span><span class="sr"></span><span class="p">}</span>
+</code></pre></div><p>在第二行中, 我们创建了一个变量, 然后匹配字面值 <code>q</code> 然后是 <code>quote_mod</code> token。那个是我们的 <code>--target=parse</code> 输出中的一部分并且如果你像我们找出 <code>quote</code> token 那样找出它, 你会注意到它是一个 proto regex, 即, 在那种情况下, 匹配我们代码的 <code>ww</code> 块。后面跟着的空 <code>{}</code> 块我们可以忽略(那是一个 bug 的替代方法可能在你读到这儿时已经被修复了)。目前为止, 我们已经匹配了我们代码的 <code>qww</code> 块。</p>
 <p>再往前走, 我们遇见了对 <code>qok</code> token 的调用, 当前的 <a href="https://docs.raku.org/type/Match">Match</a> 对象作为其参数。<code>&lt;.qok&gt;</code> 中的点号表明这是一个非捕获 token 匹配, 这就是它为什么它没有在我们的 <code>--target=parse</code> 输出中出现的原因。我们定位到那个 token 并看看它是关于什么的:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">token</span> <span class="nf">qok</span><span class="p">(</span><span class="nv">$x</span><span class="p">)</span> <span class="p">{</span><span class="sr">
 </span><span class="sr">    </span><span class="o">»</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">!</span><span class="p">[</span><span class="sr">(</span><span class="p">]&gt;</span><span class="sr">
@@ -10227,8 +11139,8 @@ world
 </span><span class="sr">    </span><span class="p">]</span><span class="sr">
 </span><span class="sr">    </span><span class="p">[</span><span class="sr"> </span><span class="se">\s</span><span class="o">*</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">#</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">.</span><span class="nf">panic</span><span class="p">:</span> <span class="p">&#34;</span><span class="s2"># not allowed as delimiter</span><span class="p">&#34;&gt;</span><span class="sr"> </span><span class="p">]</span><span class="o">?</span><span class="sr">
 </span><span class="sr">    </span><span class="p">&lt;</span><span class="o">.</span><span class="ow">ws</span><span class="p">&gt;</span><span class="sr">
-</span><span class="sr">}
-</span></code></pre></div><p>我的天呐! 这么多符号, 但是这个家伙很容易了: <code>»</code> 是一个<a href="https://docs.raku.org/language/regexes#%3C%3C_and_%3E%3E_,_left_and_right_word_boundary">右单词边界</a>后面不能跟着一个开圆括号(<code>&lt;![(]&gt;</code>), 再跟着一个备选分支(<code>[]</code>), 再跟着一个检查, 即我们不想尝试使用 <code>#</code> 号作为分割符(<code>[...]?</code>), 最后跟着一个 <a href="https://docs.raku.org/language/grammars#ws">&lt;.ws&gt;</a> token 吞噬各种各样的空白。</p>
+</span><span class="sr"></span><span class="p">}</span>
+</code></pre></div><p>我的天呐! 这么多符号, 但是这个家伙很容易了: <code>»</code> 是一个<a href="https://docs.raku.org/language/regexes#%3C%3C_and_%3E%3E_,_left_and_right_word_boundary">右单词边界</a>后面不能跟着一个开圆括号(<code>&lt;![(]&gt;</code>), 再跟着一个备选分支(<code>[]</code>), 再跟着一个检查, 即我们不想尝试使用 <code>#</code> 号作为分割符(<code>[...]?</code>), 最后跟着一个 <a href="https://docs.raku.org/language/grammars#ws">&lt;.ws&gt;</a> token 吞噬各种各样的空白。</p>
 <p>在备选分支中, 我们使用了首个token匹配的 <code>||</code> 备选分支(和最长token匹配 <code>|</code> 相反), 并且首个 token 向前查看一个冒号 <code>&lt;?[:]&gt;</code>。 如果失败了, 我们就字符串化那个给定的参数(<code>~$x</code>)并且之后在 <a href="https://github.com/rakudo/rakudo/blob/83b8b1a/src/Raku/World.nqp">World对象</a> 身上调用 <code>is_name</code> 方法, 原样地传递带有前置 <code>&amp;</code> 符号的字符串化的参数。传递的 <code>~$x</code> 是目前为止我们的 <code>token quote:sym&lt;q&gt;</code> token 所匹配到的东西(并且那是字符串 <code>qww</code>)。<code>is_name</code> 方法仅仅检查那个给定的符号是否被定义还有根据那个返回值检查我们的 token 匹配会通过还是会失败。如果那个求值代码返回一个真值那么我们正在使用的  <code>&lt;!{ ... }&gt;</code> 结构就会失败。</p>
 <p>总而言之, 这个 token 所做的所有事情就是检查我们没有使用 <code>#</code> 作为分隔符并且没有尝试去调用一个方法或sub。房间的这个角落没有 bug 迹象。 让我们回到我们的 <code>token quote:sym&lt;q&gt;</code> 来查看下一步做什么:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">token</span> <span class="nf">quote:sym</span>&lt;q&gt; <span class="p">{</span><span class="sr">
@@ -10305,8 +11217,8 @@ world
         <span class="k">my</span> <span class="nv">$lang</span> <span class="o">:=</span> <span class="nb">self</span><span class="o">.</span><span class="nf">quote_lang</span><span class="p">(</span><span class="nv">$l</span><span class="o">,</span> <span class="nv">$start</span><span class="o">,</span> <span class="nv">$stop</span><span class="o">,</span> <span class="nv">@base_tweaks</span><span class="o">,</span> <span class="nv">@extra_tweaks</span><span class="p">);</span>
         <span class="nv">$&lt;B&gt;</span><span class="o">.</span><span class="p">&#39;</span><span class="s1">!make</span><span class="p">&#39;(</span><span class="o">[</span><span class="nv">$lang</span><span class="o">,</span> <span class="nv">$start</span><span class="o">,</span> <span class="nv">$stop</span><span class="o">]</span><span class="p">);</span>
     <span class="p">}</span><span class="sr">
-</span><span class="sr"></span><span class="p">}</span>
-</code></pre></div><p>我们通过把向前查看捕获到 <code>$&lt;B&gt;</code> 捕获中开始, 它用作更新当前的 Cursor 位置, 然后进入以执行那个代码块。我们把当前的 Cursor 存储在 <code>$c</code> 中, 然后在它身上调用 <code>.peek_delimiters</code> 方法。如果我们为了它在内置的 rakudo 目录中进行 <code>grep</code>, 我们会看到它被定义在 <a href="https://github.com/raku/nqp/blob/4fd4b48afb45c8b25ccf7cfc5e39cb4bd658901d/src/HLL/Grammar.nqp#L200">NQP</a>中, 在 <a href="https://github.com/raku/nqp/blob/4fd4b48afb45c8b25ccf7cfc5e39cb4bd658901d/src/HLL/Grammar.nqp#L200">nqp/src/HLL/Grammar.nqp</a>中, 但是在我们冲出去阅读它的代码之前, 注意它是怎样返回两个分隔符的。我们仅仅把它们打印出来好了?</p>
+</span><span class="sr">}
+</span></code></pre></div><p>我们通过把向前查看捕获到 <code>$&lt;B&gt;</code> 捕获中开始, 它用作更新当前的 Cursor 位置, 然后进入以执行那个代码块。我们把当前的 Cursor 存储在 <code>$c</code> 中, 然后在它身上调用 <code>.peek_delimiters</code> 方法。如果我们为了它在内置的 rakudo 目录中进行 <code>grep</code>, 我们会看到它被定义在 <a href="https://github.com/raku/nqp/blob/4fd4b48afb45c8b25ccf7cfc5e39cb4bd658901d/src/HLL/Grammar.nqp#L200">NQP</a>中, 在 <a href="https://github.com/raku/nqp/blob/4fd4b48afb45c8b25ccf7cfc5e39cb4bd658901d/src/HLL/Grammar.nqp#L200">nqp/src/HLL/Grammar.nqp</a>中, 但是在我们冲出去阅读它的代码之前, 注意它是怎样返回两个分隔符的。我们仅仅把它们打印出来好了?</p>
 <p><code>src/Raku/Grammar.nqp</code> 的 <code>.nqp</code> 后缀名表明我们正处在 NQP 的地盘儿, 所以我们不要使用 <a href="https://github.com/raku/nqp/blob/master/docs/ops.markdown">NQP ops</a>仅仅并且不是完全的 Raku 代码。通过把下面这一行代码添加到 <code>@delim</code> 被赋值给 <code>$start</code> 和 <code>$stop</code> 的地方, 我们能找出 <code>.peek_delimiters</code> 给我们的东西:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nf">nqp::say</span><span class="p">(&#34;</span><span class="nv">$sart</span><span class="s2"> </span><span class="nv">$stop</span><span class="p">&#34;);</span>
 </code></pre></div><p>编译!</p>
@@ -11409,24 +12321,24 @@ Fred  |  50 |                 20 |
 </code></pre></div><h2 id="对象化">对象化</h2>
 <p>一路上我做了相当多的选择, 让我们到达这里。这就是我们上次重构的地方:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="k">rule</span> <span class="nf">Number</span>                <span class="p">{</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="sr">                                                          </span><span class="p">};</span>
-<span class="k">my</span> <span class="k">rule</span> <span class="nf">Variable</span>              <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                                                          </span><span class="p">};</span>
-<span class="k">my</span> <span class="k">rule</span> <span class="nf">String</span>                <span class="p">{</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">-</span><span class="p">[</span><span class="sr"> &#34; </span><span class="p">]&gt;</span><span class="o">+</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span><span class="sr">                                            </span><span class="p">};</span>
-<span class="k">my</span> <span class="k">rule</span> <span class="nf">Assignment-Expression</span> <span class="p">{</span><span class="sr"> var </span><span class="p">&lt;</span><span class="nf">Variable</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Number</span><span class="p">&gt;</span><span class="sr">                                  </span><span class="p">};</span>
-<span class="k">my</span> <span class="k">rule</span> <span class="nf">Function-Call</span>         <span class="p">{</span><span class="sr"> console </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> log </span><span class="p">&#39;</span><span class="s1">(</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">String</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Variable</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">String</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">)</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">};</span>
-
-<span class="p">&#39;</span><span class="s1">var a = 3; console.log( &#34;Hey, did you know a = &#34; + a + &#34;?&#34; );</span><span class="p">&#39;</span> <span class="o">~~</span> <span class="k">rule</span> <span class="p">{</span> <span class="p">&lt;</span><span class="s">Assignment-Expression</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Function-Call</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> <span class="p">}</span>
-
-<span class="k">sub</span> <span class="nf">assignment-expression</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span>
+<span class="k">my</span> <span class="k">rule</span> <span class="nf">Variable</span>              <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                                                          };
+</span><span class="sr">my rule String                </span><span class="p">{</span> <span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">-[ &#34; ]</span><span class="p">&gt;</span><span class="o">+</span> <span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span>                                            <span class="p">}</span><span class="sr">;
+</span><span class="sr">my rule Assignment-Expression </span><span class="p">{</span> <span class="n">var</span> <span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Number</span><span class="p">&gt;</span>                                  <span class="p">}</span><span class="sr">;
+</span><span class="sr">my rule Function-Call         </span><span class="p">{</span> <span class="n">console</span> <span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span> <span class="nb">log</span> <span class="p">&#39;</span><span class="s1">(</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">)</span><span class="p">&#39;</span> <span class="p">}</span><span class="sr">;
+</span><span class="sr">
+</span><span class="sr"></span><span class="p">&#39;</span><span class="s1">var a = 3; console.log( &#34;Hey, did you know a = &#34; + a + &#34;?&#34; );</span><span class="p">&#39;</span><span class="sr"> </span><span class="o">~~</span><span class="sr"> rule </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">Assignment-Expression</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Function-Call</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">sub assignment-expression</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/ </span><span class="p">)</span><span class="sr"> </span><span class="p">{</span>
     <span class="p">&#39;</span><span class="s1">my $</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> = </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Number</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span>
-<span class="p">}</span>
-
-<span class="k">sub</span> <span class="nf">function-call</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span>
+<span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">sub function-call</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/ </span><span class="p">)</span><span class="sr"> </span><span class="p">{</span>
     <span class="p">&#39;</span><span class="s1">say </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> ~ $</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> ~ </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;;</span>
-<span class="p">}</span>
-
-<span class="nb">say</span> <span class="nf">assignment-expression</span><span class="p">(</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Assignment-Expression</span><span class="p">&gt;</span> <span class="p">);</span>
-<span class="nb">say</span> <span class="nf">function-call</span><span class="p">(</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Function-Call</span><span class="p">&gt;</span> <span class="p">);</span>
-</code></pre></div><p>这就是我们的回报。我们先捡起最后那两个 <code>say</code> 语句。 我们还没有给顶层 rule 一个名字, 所以我们就叫它&hellip; 好吧, 现在还是叫 &lsquo;top&rsquo; 吧。</p>
+<span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">say assignment-expression</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/</span><span class="p">&lt;</span><span class="nf">Assignment-Expression</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">)</span><span class="sr">;
+</span><span class="sr">say function-call</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/</span><span class="p">&lt;</span><span class="nf">Function-Call</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">)</span><span class="sr">;
+</span></code></pre></div><p>这就是我们的回报。我们先捡起最后那两个 <code>say</code> 语句。 我们还没有给顶层 rule 一个名字, 所以我们就叫它&hellip; 好吧, 现在还是叫 &lsquo;top&rsquo; 吧。</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">sub</span> <span class="nf">top</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span> <span class="nf">assignment-expression</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="o">~</span> <span class="nf">function-call</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">}</span>
 </code></pre></div><h2 id="收回你的吐槽">收回你的吐槽</h2>
 <p>我们暂时还没有对处于文件顶层的 rules 做太多处理, 所以让我们开始工作吧。 在 Raku 中, 就一般编程而言, 把你的代码打包复用是不错的注意。而 Raku 让我们使用 <code>class</code> 关键字将我们的程序打包, 我们拥有的那些 rules 从任何意义上来说实际上不是&quot;代码&rdquo;。而它们能够用于代码中, 并且我们确实使用了它们, 它们自身实际上并没有做出任何决定。</p>
@@ -11538,34 +12450,34 @@ Fred  |  50 |                 20 |
 <span class="p">}</span>
 </code></pre></div><p>还有, 因为 Raku 为我们调用方法, 我们不需要自己来调用 <code>self.Function-Call(...)</code>, 我们需要做的全部工作就是查看 <code>Function-Call(...)</code> 返回给我们的语法树。最终我们做到了。一个完整, 虽然微小的编译器。为了防止你在编辑时迷失, 这儿有一个最终的结果。</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">grammar</span> <span class="nc">JavaScript</span> <span class="p">{</span>
-    <span class="k">rule</span> <span class="nf">Number</span>                <span class="p">{</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="sr">                                                          };
-</span><span class="sr">    rule Variable              </span><span class="p">{</span> \<span class="nb">w</span><span class="o">+</span>                                                          <span class="p">}</span><span class="sr">;
-</span><span class="sr">    rule String                </span><span class="p">{</span> <span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">-[ &#34; ]</span><span class="p">&gt;</span><span class="o">+</span> <span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span>                                            <span class="p">}</span><span class="sr">;
-</span><span class="sr">    rule Assignment-Expression </span><span class="p">{</span> <span class="n">var</span> <span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Number</span><span class="p">&gt;</span>                                  <span class="p">}</span><span class="sr">;
-</span><span class="sr">    rule Function-Call         </span><span class="p">{</span> <span class="n">console</span> <span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span> <span class="nb">log</span> <span class="p">&#39;</span><span class="s1">(</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">)</span><span class="p">&#39;</span> <span class="p">}</span><span class="sr">;
-</span><span class="sr">    rule TOP                   </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">Assignment-Expression</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> <span class="p">&lt;</span><span class="s">Function-Call</span><span class="p">&gt;</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span>              <span class="p">}</span><span class="sr">
-</span><span class="sr">}
-</span><span class="sr">
-</span><span class="sr">class Actions </span><span class="p">{</span>
+    <span class="k">rule</span> <span class="nf">Number</span>                <span class="p">{</span><span class="sr"> </span><span class="se">\d</span><span class="o">+</span><span class="sr">                                                          </span><span class="p">};</span>
+    <span class="k">rule</span> <span class="nf">Variable</span>              <span class="p">{</span><span class="sr"> </span><span class="se">\w</span><span class="o">+</span><span class="sr">                                                          </span><span class="p">};</span>
+    <span class="k">rule</span> <span class="nf">String</span>                <span class="p">{</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">-</span><span class="p">[</span><span class="sr"> &#34; </span><span class="p">]&gt;</span><span class="o">+</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">&#34;</span><span class="p">&#39;</span><span class="sr">                                            </span><span class="p">};</span>
+    <span class="k">rule</span> <span class="nf">Assignment-Expression</span> <span class="p">{</span><span class="sr"> var </span><span class="p">&lt;</span><span class="nf">Variable</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Number</span><span class="p">&gt;</span><span class="sr">                                  </span><span class="p">};</span>
+    <span class="k">rule</span> <span class="nf">Function-Call</span>         <span class="p">{</span><span class="sr"> console </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> log </span><span class="p">&#39;</span><span class="s1">(</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">String</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Variable</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">+</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">String</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">)</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">};</span>
+    <span class="k">rule</span> <span class="nf">TOP</span>                   <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Assignment-Expression</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">Function-Call</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span><span class="sr">              </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Actions</span> <span class="p">{</span>
     <span class="k">method</span> <span class="nf">Assignment-Expression</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span>
         <span class="k">make</span> <span class="p">&#39;</span><span class="s1">my $</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> = </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Number</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span>
-    <span class="p">}</span><span class="sr">
-</span><span class="sr">
-</span><span class="sr">    method Function-Call</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/ </span><span class="p">)</span><span class="sr"> </span><span class="p">{</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">Function-Call</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span>
         <span class="k">make</span> <span class="p">&#39;</span><span class="s1">say </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> ~ $</span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Variable</span><span class="p">&gt;</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1"> ~ </span><span class="p">&#39;</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">String</span><span class="p">&gt;</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">~</span> <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;;</span>
-    <span class="p">}</span><span class="sr">
-</span><span class="sr">
-</span><span class="sr">    method TOP</span><span class="p">(</span><span class="sr"> </span><span class="ni">$</span><span class="sr">/ </span><span class="p">)</span><span class="sr"> </span><span class="p">{</span>
+    <span class="p">}</span>
+
+    <span class="k">method</span> <span class="nf">TOP</span><span class="p">(</span> <span class="nv">$/</span> <span class="p">)</span> <span class="p">{</span>
         <span class="k">make</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Assignment-Expression</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">ast</span> <span class="o">~</span> <span class="nv">$/</span><span class="p">&lt;</span><span class="s">Function-Call</span><span class="p">&gt;</span><span class="o">.</span><span class="nb">ast</span> 
-    <span class="p">}</span><span class="sr">
-</span><span class="sr">}
-</span><span class="sr">
-</span><span class="sr">my </span><span class="nv">$j</span><span class="sr"> </span><span class="o">=</span><span class="sr"> JavaScript</span><span class="ni">.</span><span class="sr">new;
-</span><span class="sr">my </span><span class="nv">$a</span><span class="sr"> </span><span class="o">=</span><span class="sr"> Actions</span><span class="ni">.</span><span class="sr">new;
-</span><span class="sr">say </span><span class="nv">$j</span><span class="ni">.</span><span class="sr">parse</span><span class="p">(</span><span class="sr">
-</span><span class="sr">   </span><span class="p">&#39;</span><span class="s1">var a = 3; console.log( &#34;Hey, did you know a = &#34; + a + &#34;?&#34; );</span><span class="p">&#39;</span><span class="sr">,
-</span><span class="sr">   </span><span class="p">:</span><span class="na">actions</span><span class="p">(</span><span class="nv">$a</span><span class="p">))</span><span class="ni">.</span><span class="sr">ast;
-</span></code></pre></div><h2 id="到哪里去">到哪里去</h2>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$j</span> <span class="o">=</span> <span class="n">JavaScript</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+<span class="k">my</span> <span class="nv">$a</span> <span class="o">=</span> <span class="n">Actions</span><span class="o">.</span><span class="nb">new</span><span class="p">;</span>
+<span class="nb">say</span> <span class="nv">$j</span><span class="o">.</span><span class="nb">parse</span><span class="p">(</span>
+   <span class="p">&#39;</span><span class="s1">var a = 3; console.log( &#34;Hey, did you know a = &#34; + a + &#34;?&#34; );</span><span class="p">&#39;</span><span class="o">,</span>
+   <span class="p">:</span><span class="s">actions</span><span class="p">(</span><span class="nv">$a</span><span class="p">))</span><span class="o">.</span><span class="nb">ast</span><span class="p">;</span>
+</code></pre></div><h2 id="到哪里去">到哪里去</h2>
 <p>一个简单但整洁的更改是你可以扩展 Assignment-Expression 来既接收数字又接收字符串。上次我们谈论了 rules 中的轮试,所以这个提示应该足够让你开始了:</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">rule</span> <span class="nf">Assignment-Expression</span> <span class="p">{</span><span class="sr"> var </span><span class="p">&lt;</span><span class="nf">Variable</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">=</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">(&lt;</span><span class="nf">Number</span><span class="p">&gt;</span><span class="sr"> </span><span class="o">|</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">String</span><span class="p">&gt;)</span><span class="sr"> </span><span class="p">}</span>
 </code></pre></div><p>你必须修改下 Assignment-Expression 方法以使它起作用。或者你可以狡猾一点然后发现( <code>&lt;Number&gt; | &lt;String&gt;</code> ) 可以转换为它自己的小的普通的 &ldquo;Term&rdquo; rule, &ldquo;rule Term { <!-- raw HTML omitted --> | <!-- raw HTML omitted --> }&rdquo;, 然后添加一个 action &ldquo;method Term($/) { make $/<!-- raw HTML omitted --> or $/<!-- raw HTML omitted -->}&rdquo; 而只在 Assignment-Expression 中修改一个东西。</p>
@@ -11747,36 +12659,36 @@ Fred  |  50 |                 20 |
 <span class="k">grammar</span> <span class="nc">Lines</span> <span class="p">{</span>
     <span class="k">token</span> <span class="nf">TOP</span> <span class="p">{</span><span class="sr">
 </span><span class="sr">        </span><span class="ni">^</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">line</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="ni">$</span><span class="sr">
-</span><span class="sr">    </span><span class="p">}</span>
-
-    <span class="k">token</span> <span class="nf">line</span> <span class="p">{</span><span class="sr">
-</span><span class="sr">        \[
-</span><span class="sr">        </span><span class="p">&lt;</span><span class="nf">student</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">semicolon</span><span class="p">&gt;</span><span class="sr">
-</span><span class="sr">        \]
-</span><span class="sr">        </span><span class="se">\n</span><span class="sr">                   </span><span class="c1"># 换行 \n 是最容易被忽略的地方
-</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
-
-    <span class="k">token</span> <span class="nf">student</span> <span class="p">{</span><span class="sr">
-</span><span class="sr">       </span><span class="p">&lt;</span><span class="nf">myname</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">comma</span><span class="p">&gt;</span><span class="sr">   </span><span class="c1"># 分隔符也可以是一个 subrule
-</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
-
-    <span class="k">token</span> <span class="nf">myname</span> <span class="p">{</span><span class="sr">
-</span><span class="sr">        </span><span class="p">&lt;[</span><span class="sr">A</span><span class="o">..</span><span class="sr">Za</span><span class="o">..</span><span class="sr">z-</span><span class="p">]&gt;</span><span class="o">+</span><span class="sr">       </span><span class="c1"># 字符类的写法 &lt;[...]&gt;
-</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
-
-    <span class="k">token</span> <span class="nf">comma</span> <span class="p">{</span><span class="sr">
-</span><span class="sr">        </span><span class="p">&#39;</span><span class="s1">,</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">+</span><span class="sr">              </span><span class="c1"># 逗号, 分号 不能裸露出现在 token 中
-</span><span class="c1"></span><span class="sr">    </span><span class="p">}</span>
-
-    <span class="k">token</span> <span class="nf">semicolon</span> <span class="p">{</span><span class="sr">
-</span><span class="sr">        </span><span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span><span class="sr"> </span><span class="se">\s</span><span class="o">+</span><span class="sr">
-</span><span class="sr">    </span><span class="p">}</span>
-
-<span class="p">}</span>
-
-<span class="k">my</span> <span class="nv">$parse</span> <span class="o">=</span> <span class="n">Lines</span><span class="o">.</span><span class="nb">parsefile</span><span class="p">(&#39;</span><span class="s1">test.txt</span><span class="p">&#39;);</span>
-<span class="nb">say</span> <span class="nv">$parse</span><span class="p">;</span>
-</code></pre></div><p>test.txt 的内容如下：</p>
+</span><span class="sr">    }
+</span><span class="sr">
+</span><span class="sr">    token line </span><span class="p">{</span>
+        \<span class="o">[</span>
+        <span class="p">&lt;</span><span class="s">student</span><span class="p">&gt;</span><span class="o">+</span> <span class="nv">%</span> <span class="p">&lt;</span><span class="s">semicolon</span><span class="p">&gt;</span>
+        \<span class="o">]</span>
+        \<span class="n">n</span>                   <span class="c1"># 换行 \n 是最容易被忽略的地方</span>
+    <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">    token student </span><span class="p">{</span>
+       <span class="p">&lt;</span><span class="s">myname</span><span class="p">&gt;</span><span class="o">+</span> <span class="nv">%</span> <span class="p">&lt;</span><span class="s">comma</span><span class="p">&gt;</span>   <span class="c1"># 分隔符也可以是一个 subrule</span>
+    <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">    token myname </span><span class="p">{</span>
+        <span class="p">&lt;</span><span class="s">[A..Za..z-]</span><span class="p">&gt;</span><span class="o">+</span>       <span class="c1"># 字符类的写法 &lt;[...]&gt;</span>
+    <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">    token comma </span><span class="p">{</span>
+        <span class="p">&#39;</span><span class="s1">,</span><span class="p">&#39;</span> \<span class="k">s</span><span class="err">+</span>              <span class="err">#</span> <span class="err">逗号,</span> <span class="err">分号</span> <span class="err">不能裸露出现在</span> <span class="err">token</span> <span class="err">中</span>
+    <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">    token semicolon </span><span class="p">{</span>
+        <span class="p">&#39;</span><span class="s1">;</span><span class="p">&#39;</span> \<span class="k">s</span><span class="err">+</span>
+    <span class="p">}</span><span class="sr">
+</span><span class="sr">
+</span><span class="sr">}
+</span><span class="sr">
+</span><span class="sr">my </span><span class="nv">$parse</span><span class="sr"> </span><span class="o">=</span><span class="sr"> Lines</span><span class="ni">.</span><span class="sr">parsefile</span><span class="p">(&#39;</span><span class="s1">test.txt</span><span class="p">&#39;)</span><span class="sr">;
+</span><span class="sr">say </span><span class="nv">$parse</span><span class="sr">;
+</span></code></pre></div><p>test.txt 的内容如下：</p>
 <pre><code>[Lue, Fan]
 [Lou, Man-Li]
 [Tian, Mijie; Zhou, Lin; Zou, Xiao; Zheng, Qiaoji; Luo, Lingling; Jiang, Na; Lin, Dunmin]
@@ -11787,15 +12699,15 @@ Fred  |  50 |                 20 |
     <span class="k">token</span> <span class="nf">TOP</span>             <span class="p">{</span><span class="sr"> </span><span class="ni">^</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">university</span><span class="p">&gt;</span><span class="sr"> </span><span class="ni">$</span><span class="sr">             </span><span class="p">}</span>
     <span class="k">token</span> <span class="nf">university</span>      <span class="p">{</span><span class="sr"> </span><span class="p">[</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">bracket</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">info</span><span class="p">&gt;</span><span class="sr"> </span><span class="p">]</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">; </span><span class="p">&#39;</span><span class="sr"> </span><span class="p">}</span>
     <span class="k">token</span> <span class="nf">bracket</span>         <span class="p">{</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">[</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">studentname</span><span class="p">&gt;</span><span class="sr">  </span><span class="p">&#39;</span><span class="s1">] </span><span class="p">&#39;</span><span class="sr">      </span><span class="p">}</span>
-    <span class="k">token</span> <span class="nf">studentname</span>     <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nv">stdname</span><span class="o">=.</span><span class="nf">info</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">; </span><span class="p">&#39;</span><span class="sr">      </span><span class="p">}</span>
-    <span class="k">token</span> <span class="nf">info</span>            <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">field</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">, </span><span class="p">&#39;</span><span class="sr">              </span><span class="p">}</span>
-    <span class="k">token</span> <span class="nf">field</span>           <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="o">-</span><span class="p">[</span><span class="sr">,\]\[;</span><span class="se">\n</span><span class="p">]&gt;</span><span class="o">+</span><span class="sr">               </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1"># grammar 像类一样可以继承, 里面的 token 可以被重写</span>
-<span class="k">grammar</span> <span class="nc">MyUniversity</span>  <span class="k">is</span> <span class="nc">University::Grammar</span> <span class="p">{</span>
-    <span class="k">token</span> <span class="nf">university</span>      <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">info</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">; </span><span class="p">&#39;</span><span class="sr"> </span><span class="p">}</span>
-<span class="p">}</span>
+    <span class="k">token</span> <span class="nf">studentname</span>     <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nv">stdname</span><span class="o">=.</span><span class="nf">info</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">; </span><span class="p">&#39;</span><span class="sr">      }
+</span><span class="sr">    token info            </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">field</span><span class="p">&gt;</span><span class="o">+</span> <span class="nv">%</span> <span class="p">&#39;</span><span class="s1">, </span><span class="p">&#39;</span>              <span class="p">}</span><span class="sr">
+</span><span class="sr">    token field           </span><span class="p">{</span> <span class="p">&lt;</span><span class="s">-[,\]\[;\n]</span><span class="p">&gt;</span><span class="o">+</span>               <span class="p">}</span><span class="sr">
+</span><span class="sr">}
+</span><span class="sr">
+</span><span class="sr"></span><span class="c1"># grammar 像类一样可以继承, 里面的 token 可以被重写
+</span><span class="c1"></span><span class="sr">grammar MyUniversity  is University</span><span class="o">:</span><span class="p">:</span><span class="na">Grammar</span><span class="sr"> </span><span class="p">{</span>
+    <span class="k">token</span> <span class="nf">university</span>      <span class="p">{</span><span class="sr"> </span><span class="p">&lt;</span><span class="nf">info</span><span class="p">&gt;</span><span class="o">+</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">; </span><span class="p">&#39;</span><span class="sr"> </span><span class="p">}</span><span class="sr">
+</span><span class="sr"></span><span class="p">}</span>
 
 <span class="k">my</span> <span class="nv">$str</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">Zhejiang Univ, Coll Environm &amp; Resources Sci, Dept Resource Sci, Hangzhou 310029, Peoples R China; La Trobe Univ, Dept Agr Sci, Bundoora, Vic 3083, Australia; Hangzhou Normal Coll, Fac Life Sci, Hangzhou, Peoples R China</span><span class="p">&#34;;</span>
 
@@ -15754,10 +16666,10 @@ clown: 47</p>
 <span class="p">}</span>
 
 <span class="k">grammar</span> <span class="nc">FormalLetter</span> <span class="k">is</span> <span class="nc">Letter</span> <span class="p">{</span>
-    <span class="k">rule</span> <span class="nf">greet</span> <span class="p">{</span><span class="sr"> Dear </span><span class="ni">$</span><span class="o">=</span><span class="p">(</span><span class="se">\S</span><span class="o">+?</span><span class="p">)</span><span class="sr"> , </span><span class="ni">$$</span><span class="sr">}
-</span><span class="sr">    rule close </span><span class="p">{</span> <span class="n">Yours</span> <span class="n">sincerely</span><span class="o">,</span> <span class="nv">$</span><span class="o">=</span><span class="p">(</span><span class="o">.+</span><span class="p">)</span> <span class="p">}</span><span class="sr">
-</span><span class="sr">}
-</span></code></pre></div><p>派生出来的 FormalLetter 重写了 greet 和 close, 但是没重写 body。</p>
+    <span class="k">rule</span> <span class="nf">greet</span> <span class="p">{</span><span class="sr"> Dear </span><span class="ni">$</span><span class="o">=</span><span class="p">(</span><span class="se">\S</span><span class="o">+?</span><span class="p">)</span><span class="sr"> , </span><span class="ni">$$</span><span class="p">}</span>
+    <span class="k">rule</span> <span class="nf">close</span> <span class="p">{</span><span class="sr"> Yours sincerely, </span><span class="ni">$</span><span class="o">=</span><span class="p">(</span><span class="ni">.</span><span class="o">+</span><span class="p">)</span><span class="sr"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>派生出来的 FormalLetter 重写了 greet 和 close, 但是没重写 body。</p>
 <p>但是这一切在 multi 方法下也能正常运行吗？我们是不是可以定义一种“原型角色”来允许我们在一个语法里用同样的名字有多种角色, 内容各不相同？比如, 我们可能希望用一个角色 term 来解析语言, 不过有很多不同的 terms：字符串、数字……而且数字可能是十进制、二进制、八进制、十六进制等……</p>
 <p>Raku 语法可以包含一个原型角色, 然后你可以定义、重定义同名角色随便多少次。显然让我们回到文章最开始的 <code>/ foo | food /</code>。所有你起了相同名字的角色会编译成一个大的 alternation。</p>
 <p>不仅如此 - 调用其他角色的角色, 有些可能是原型角色, 这些也会全部扁平化到一个大的 LTM 轮流选择里。实践中, 这意味着一个 term 的所有可能会一次被全部尝试一遍, 机会平等。没哪个会因为自己是先定义的所以胜出, 只有最长匹配的那个选择才胜出。</p>
@@ -16009,9 +16921,9 @@ Perl 5 中匹配 IPv4 地址的正则如下:</p>
 <span class="k">my</span> <span class="nv">@ip4addrs</span> <span class="o">=</span> <span class="o">.</span><span class="nb">comb</span><span class="p">(/</span><span class="sr"> </span><span class="p">(</span><span class="se">\d</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">1</span><span class="o">..</span><span class="mi">3</span><span class="p">)</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">4</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">/);</span>   <span class="c1"># 127.0.0.1 173.194.32.32</span>
 </code></pre></div><p>如果我们对单独的数字感兴趣：</p>
 <div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nv">$_</span> <span class="o">=</span> <span class="p">&#34;</span><span class="s2">Go 127.0.0.1, I said! He went to 173.194.32.32.</span><span class="p">&#34;;</span>
-<span class="nb">say</span> <span class="o">.</span><span class="nb">list</span><span class="o">&gt;&gt;.</span><span class="nb">Str</span><span class="o">.</span><span class="nb">perl</span> <span class="k">for</span> <span class="k">m</span><span class="p">:</span><span class="na">g</span><span class="p">/</span><span class="sr"> </span><span class="p">(</span><span class="se">\d</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">1</span><span class="o">..</span><span class="mi">3</span><span class="p">)</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">4</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> /;
-</span><span class="sr"></span><span class="c1"># output: (&#34;127&#34;, &#34;0&#34;, &#34;0&#34;, &#34;1&#34;) (&#34;173&#34;, &#34;194&#34;, &#34;32&#34;, &#34;32&#34;)
-</span></code></pre></div><h2 id="引号">引号</h2>
+<span class="nb">say</span> <span class="o">.</span><span class="nb">list</span><span class="o">&gt;&gt;.</span><span class="nb">Str</span><span class="o">.</span><span class="nb">perl</span> <span class="k">for</span> <span class="k">m</span><span class="p">:</span><span class="na">g</span><span class="p">/</span><span class="sr"> </span><span class="p">(</span><span class="se">\d</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">1</span><span class="o">..</span><span class="mi">3</span><span class="p">)</span><span class="sr"> </span><span class="o">**</span><span class="sr"> </span><span class="mi">4</span><span class="sr"> </span><span class="nv">%</span><span class="sr"> </span><span class="p">&#39;</span><span class="s1">.</span><span class="p">&#39;</span><span class="sr"> </span><span class="p">/;</span>
+<span class="c1"># output: (&#34;127&#34;, &#34;0&#34;, &#34;0&#34;, &#34;1&#34;) (&#34;173&#34;, &#34;194&#34;, &#34;32&#34;, &#34;32&#34;)</span>
+</code></pre></div><h2 id="引号">引号</h2>
 <p>在很多地方, Raku 都提供给你更合理的默认设置以便在大多数情况下让你的工作变得更简单有趣。引号也不例外。</p>
 <p>最常见的两种引号就是单引号和双引号。单引号最简单：让你引起一个字符串。唯一的“魔法”就是你可以用反斜杠转义一个单引号。而因为反斜杠的这个作用, 你可以用 <code>\\</code> 来表示反斜杠本身了。不过其实这个做法也是没必要的, 反斜杠自己可以直接传递。下面是一组例子：</p>
 <pre><code>&gt; say 'Everybody loves Magical Trevor’;
