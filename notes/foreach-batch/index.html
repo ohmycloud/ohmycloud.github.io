@@ -1,10 +1,760 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/foreach-batch/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/foreach-batch/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/foreach-batch/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Apache Spark 2.4.0 特性  - foreachBatch ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Apache Spark 2.4.0 特性  - foreachBatch" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/foreach-batch/" />
+
+
+    
+        <meta property="article:published_time" content="2019-10-03T15:13:39&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-10-03T15:13:39&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Apache Spark 2.4.0 特性  - foreachBatch"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/foreach-batch/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Apache Spark 2.4.0 特性  - foreachBatch</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/foreach-batch/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-10-03T15:13:39+0000" class="dt-published">Thu Oct 3, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>当我第一次听说 foreachBatch 功能时，我以为这是结构化流模块中 foreachPartition 的实现。但是，经过一些分析，我发现我错了，因为此新功能解决了其他但也很重要的问题。您会发现更多。</p>
+<p>在 Apache Spark 2.4.0 功能系列的这一新文章中，我将展示 foreachBatch 方法的实现。在第一部分中，我将简要介绍有关此功能的要点。我还将在其中添加有关实现的一些详细信息。在接下来的2部分中，我将展示<code>.foreachBatch</code> 数据接收器解决的问题。</p>
+<h2 id="定义">定义&nbsp;<a class="headline-hash no-text-decoration" href="#定义">#</a> </h2>
+<p>在 2.4.0 发行版之前，foreach 是我们可以放置一些自定义逻辑的单一接收器。它很容易使用，因为它看起来像包装在类中的 foreach 循环。另外，foreach 接收器非常适合连续执行，因为我们将重点放在每次一行所带来的信息上。但是，由于基于微批处理的管道的适应性通常更差一些，因为我们经常需要对整个累积的微批处理进行某些处理。</p>
+<p>2.4.0 版本使用新的 org.apache.spark.sql.execution.streaming.sources.ForeachBatchSink 接收器解决了微批处理的这些问题。它的主要思想很简单。引擎累积在给定的微批次中处理的数据，并将其作为数据集传递到接收器。这不仅意味着您可以对整个数据应用一种逻辑，而且还可以在流传输管道中执行一些纯批处理，例如将数据写入不可流式的数据存储中。</p>
+<p>除了具体的数据集之外，foreachBatch 消费者方法还接受一个名为 batchId 的属性。此参数包含生成数据集的微批处理的 ID。您可以使用此属性实现一次传递语义，因为默认情况下，引擎以至少一次语义运行。</p>
+<p>最后，由于 ForeachBatchSink 解决了微批次问题，因此您不能将其与连续触发器一起使用。在 DataStreamWriter 内部进行的简单检查显示：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">source</span> <span class="o">==</span> <span class="s">&#34;foreachBatch&#34;</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertNotPartitioned</span><span class="o">(</span><span class="s">&#34;foreachBatch&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="o">(</span><span class="n">trigger</span><span class="o">.</span><span class="n">isInstanceOf</span><span class="o">[</span><span class="kt">ContinuousTrigger</span><span class="o">])</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">throw</span> <span class="k">new</span> <span class="nc">AnalysisException</span><span class="o">(</span><span class="s">&#34;&#39;foreachBatch&#39; is not supported with continuous trigger&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span></code></pre></div><p>您还可以看到接收器不支持分区管道（<code>.partitionBy(...)</code>）。 如果您对引入此逻辑的任务感兴趣，可以在“另请阅读”部分中找到一个链接。</p>
+<h2 id="用例不流式接收器">用例：不流式接收器&nbsp;<a class="headline-hash no-text-decoration" href="#用例不流式接收器">#</a> </h2>
+<p>我已经在上一节中提到了 foreachBatch 的第一个用例。 当您要将处理后的数据保存到关系数据库或键值存储之类的不可流式接收器中时，此新接收器很有用。 为了简单起见，我将使用内存中单例键值存储：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="s">&#34;foreachBatch&#34;</span> <span class="n">should</span> <span class="s">&#34;save the data into a key-value memory store&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000L</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stream</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;number&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">trigger</span><span class="o">(</span><span class="nc">Trigger</span><span class="o">.</span><span class="nc">ProcessingTime</span><span class="o">(</span><span class="mi">2000L</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreachBatch</span><span class="o">((</span><span class="n">dataset</span><span class="o">,</span> <span class="n">batchId</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">dataset</span><span class="o">.</span><span class="n">foreachPartition</span><span class="o">(</span><span class="n">rows</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">rows</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">          <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">addValue</span><span class="o">(</span><span class="s">s&#34;batch_</span><span class="si">${</span><span class="n">batchId</span><span class="si">}</span><span class="s">_</span><span class="si">${</span><span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="s">&#34;number&#34;</span><span class="o">)</span><span class="si">}</span><span class="s">&#34;</span><span class="o">,</span> <span class="s">&#34;&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">})</span>
+</span></span><span class="line"><span class="cl">      <span class="o">})</span>
+</span></span><span class="line"><span class="cl">    <span class="o">})</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">20000L</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="c1">// According to the defined timeout, we should have at least 10 processed batches
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">val</span> <span class="n">distinctKeys</span> <span class="k">=</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">allValues</span><span class="o">.</span><span class="n">keys</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">key</span> <span class="k">=&gt;</span> <span class="n">key</span><span class="o">.</span><span class="n">dropRight</span><span class="o">(</span><span class="mi">2</span><span class="o">)).</span><span class="n">toSeq</span><span class="o">.</span><span class="n">distinct</span>
+</span></span><span class="line"><span class="cl">  <span class="n">distinctKeys</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">atLeastOneElementOf</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="s">&#34;batch_0&#34;</span><span class="o">,</span> <span class="s">&#34;batch_1&#34;</span><span class="o">,</span> <span class="s">&#34;batch_2&#34;</span><span class="o">,</span> <span class="s">&#34;batch_3&#34;</span><span class="o">,</span> <span class="s">&#34;batch_4&#34;</span><span class="o">,</span> <span class="s">&#34;batch_5&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;batch_6&#34;</span><span class="o">,</span> <span class="s">&#34;batch_7&#34;</span><span class="o">,</span> <span class="s">&#34;batch_8&#34;</span><span class="o">,</span> <span class="s">&#34;batch_9&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>当然，您应该注意传递语义。 如果您的接收器是基于键的接收器，并且您的处理始终生成相同的数据，那么您是安全的。 即使您需要重新处理记录，也总是会在存储中得到相同的结果。 如果不是这种情况，则应在写入数据之前添加一个额外的步骤来对数据删除重复数据。</p>
+<h2 id="用例来自单个源的多个接收器又名副输出">用例：来自单个源的多个接收器（又名副输出）&nbsp;<a class="headline-hash no-text-decoration" href="#用例来自单个源的多个接收器又名副输出">#</a> </h2>
+<p>第二个用例与 Apache Beam 中的副输出非常相似，因为 foreachBatch 提供了将微批处理写入不同位置的可能性。 您只必须记住将批处理数据集缓存在接收器中。 否则，您可能会完全重新计算它。 下一个代码段提供了使用Apache Spark foreachBatch 接收器的副输出实现的示例：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="s">&#34;foreachBatch&#34;</span> <span class="n">should</span> <span class="s">&#34;generate 2 outputs&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000L</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stream</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;number&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">trigger</span><span class="o">(</span><span class="nc">Trigger</span><span class="o">.</span><span class="nc">ProcessingTime</span><span class="o">(</span><span class="mi">2000L</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreachBatch</span><span class="o">((</span><span class="n">dataset</span><span class="o">,</span> <span class="n">batchId</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">dataset</span><span class="o">.</span><span class="n">persist</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="n">dataset</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">json</span><span class="o">(</span><span class="s">s&#34;/tmp/spark/side-output/json/batch_</span><span class="si">${</span><span class="n">batchId</span><span class="si">}</span><span class="s">&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">dataset</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">parquet</span><span class="o">(</span><span class="s">s&#34;/tmp/spark/side-output/parquet/batch_</span><span class="si">${</span><span class="n">batchId</span><span class="si">}</span><span class="s">&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">dataset</span><span class="o">.</span><span class="n">unpersist</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="o">})</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">20000L</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="n">batchNr</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span> <span class="s">s&#34;/tmp/spark/side-output/json/batch_</span><span class="si">${</span><span class="n">batchNr</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">jsonFiles</span> <span class="k">=</span> <span class="nc">FileUtils</span><span class="o">.</span><span class="n">getFile</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">&#34;/tmp/spark/side-output/json&#34;</span><span class="o">)).</span><span class="n">listFiles</span><span class="o">().</span><span class="n">toSeq</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">file</span> <span class="k">=&gt;</span> <span class="n">file</span><span class="o">.</span><span class="n">getAbsolutePath</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">jsonFiles</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allElementsOf</span> <span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="n">jsonBatch</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">1</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">2</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">3</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">4</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">5</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">6</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">7</span><span class="o">),</span> <span class="n">jsonBatch</span><span class="o">(</span><span class="mi">8</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="n">batchNr</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span> <span class="s">s&#34;/tmp/spark/side-output/parquet/batch_</span><span class="si">${</span><span class="n">batchNr</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">parquetFiles</span> <span class="k">=</span> <span class="nc">FileUtils</span><span class="o">.</span><span class="n">getFile</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">&#34;/tmp/spark/side-output/parquet&#34;</span><span class="o">)).</span><span class="n">listFiles</span><span class="o">.</span><span class="n">toSeq</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">file</span> <span class="k">=&gt;</span> <span class="n">file</span><span class="o">.</span><span class="n">getAbsolutePath</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">parquetFiles</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allElementsOf</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="n">parquetBatch</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">1</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">2</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">3</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">4</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">5</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">6</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">7</span><span class="o">),</span> <span class="n">parquetBatch</span><span class="o">(</span><span class="mi">8</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>该代码看起来与上一节中的代码相似。 它还会将数据写入不可流式接收器。 区别在于，使用相同的输出将数据以2种不同的格式写入2个不同的位置。 如果您想为多个工作流准备数据，这将很有用。 就我而言，我为事务和 Parquet 生成了 JSON 文件，用于分析目的。</p>
+<p>根据官方文档，重要的是缓存和取消持久化批处理数据集，以确保引擎不会每次都重新计算它。</p>
+<p>foreachBatch 接收器是结构化流模块中的缺失部分。 2.4.0 版本中添加的此功能是流和批处理世界之间的桥梁。 如本文所示，它有助于将流数据集成到管道的批处理部分中。 现在，Apache Spark 不再需要手动创建“批处理”，而是为我们完成了它，并在 foreachBatch 接收器中公开了对整个 Dataset API 的访问。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#定义">定义</a></li>
+    <li><a href="#用例不流式接收器">用例：不流式接收器</a></li>
+    <li><a href="#用例来自单个源的多个接收器又名副输出">用例：来自单个源的多个接收器（又名副输出）</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/initializing-state-in-structured-streaming/" class="nobr">« Spark Structured Streaming 中的初始化状态</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/continuous-execution/" class="nobr">Spark Structured Streaming 中的持续执行 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

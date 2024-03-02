@@ -1,10 +1,948 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            探索 Apache Spark 中的状态流 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="探索 Apache Spark 中的状态流" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/" />
+
+
+    
+        <meta property="article:published_time" content="2019-11-22T17:51:31&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-11-22T17:51:31&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="探索 Apache Spark 中的状态流"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">探索 Apache Spark 中的状态流</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-11-22T17:51:31+0000" class="dt-published">Fri Nov 22, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<blockquote>
+<p>更新(2017.08.01): Spark v2.2 最近推出了一个叫做 <code>mapGroupsWithState</code> 的有状态流的新抽象, 我最近有一篇<a href="https://blog.yuvalitzchakov.com/exploring-stateful-streaming-with-spark-structured-streaming/">博客</a>也是关于它的。我强烈建议你检查一下。</p>
+</blockquote>
+<h2 id="介绍">介绍&nbsp;<a class="headline-hash no-text-decoration" href="#介绍">#</a> </h2>
+<p>Apache Spark 由几个模块组成，每个模块都有不同的用途。 它的功能强大的模块之一是 Streaming API，它使开发人员能够在称为 Discretized Stream 或 DStream 的抽象下使用连续流（或准确地说是微批次）。</p>
+<p>在这篇文章中，我将深入探讨 Spark Streaming 的一个特殊属性，它是有状态的 Streaming API。 有状态流使我们能够维护微批之间的状态，从而使我们能够形成数据的会话化。</p>
+<p>免责声明-为了遵循本文的流程，应该对 Spark 的工作原理有基本的了解，并对 DStream 抽象具有一般的了解。 如果没有，请继续阅读，不用担心，我会等你&hellip;</p>
+<p>欢迎回来！ 让我们继续。</p>
+<h2 id="通过例子理解">通过例子理解&nbsp;<a class="headline-hash no-text-decoration" href="#通过例子理解">#</a> </h2>
+<p>为了了解如何使用 API​​，让我们创建一个简单的传入数据示例，该示例要求我们进行会话化。我们的输入数据流将是 <code>UserEvent</code> 类型：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">UserEvent</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">data</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">isLast</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">)</span>
+</span></span></code></pre></div><p>每个事件描述一个唯一的用户。我们通过用户 ID 标识用户，并用 <code>String</code> 表示发生的事件的内容。我们还想知道用户何时结束会话，因此我们提供了一个 <code>isLast</code> 标志来指示会话结束。</p>
+<p>我们负责汇总所有用户事件的状态将是 <code>UserSession</code> 类型的状态：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">UserSession</span><span class="o">(</span><span class="n">userEvents</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">])</span>
+</span></span></code></pre></div><p>其中包含特定用户发生的事件序列。在此示例中，我们假设数据源是来自于 Kafka 使用的 JSON 编码数据流。</p>
+<p>我们的 <code>Id</code> 属性将用作键，而 <code>UserEvent</code> 将是我们的值。两个放在一块，我们得到一个 <code>DStream[(Int, UserEvent)]</code>。</p>
+<p>在我们开始之前，有两个重要的关键点：</p>
+<p>1.检查点是有状态流的初步选择</p>
+<p>来自于 Spark 文档：</p>
+<blockquote>
+<p>流式应用程序必须24/7全天候运行，因此必须对与应用程序逻辑无关的故障（例如，系统故障，JVM崩溃等）具有弹性。为此，Spark Streaming 需要将足够的信息检查点指向容错存储系统，以便可以从故障中恢复。</p>
+</blockquote>
+<p>Spark 的检查点机制是在我们 spark 工作的整个生命周期中保证容错能力的框架方法。当我们以24/7全天候运行时，某些故障可能无法直接控制，例如网络故障或数据中心崩溃。为了保证采用一种干净的恢复方式，Spark 可以在选择的每个时间间隔内将我们的数据检查到一个永久数据存储，例如 Amazon S3，HDFS 或 Azure Blob 存储（如果我们这样做的话）。</p>
+<p>检查点是任何无状态转换的功能，但是<strong>必须为有状态流提供检查点目录</strong>，否则您的应用程序将无法启动。</p>
+<p>提供检查点目录就像使用目录位置调用 <code>StreamingContext</code> 一样容易：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">sparkContext</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">SparkContext</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">val</span> <span class="n">ssc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StreamingContext</span><span class="o">(</span><span class="n">sparkContext</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="mi">4000</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="n">ssc</span><span class="o">.</span><span class="n">checkpoint</span><span class="o">(</span><span class="s">&#34;path/to/persistent/storage&#34;</span><span class="o">)</span>
+</span></span></code></pre></div><p>需要注意的重要一件事是，<strong>只有在你未修改现有代码的情况下，检查点数据才可用</strong>，并且主要适合于从作业失败中恢复。修改代码后（即将新版本上传到 Spark 集群），检查点数据不再兼容，必须删除这些数据后才能开始工作。</p>
+<ol start="2">
+<li>DStream 中的键值对</li>
+</ol>
+<p>一个常见的错误是想知道为什么在使用 DStream 时为什么看不到有状态的转换方法（我们将很快看到的 <code>updateStateByKey</code> 和 <code>mapWithState</code>）。有状态转换要求我们对 DStream 进行操作，该 DStream 封装了一个键值对，格式为 <code>DStream[(K,V)]</code>，其中 <code>K</code> 是键的类型，<code>V</code> 是值的类型。通过使用此类流，Spark 可以根据键对数据进行随机排序，因此给定键的所有数据都可以在同一工作节点上使用，并允许您进行有意义的聚合。</p>
+<p>好的，我们准备好了。我们去写一些代码。</p>
+<h2 id="简要回顾过去">简要回顾过去&nbsp;<a class="headline-hash no-text-decoration" href="#简要回顾过去">#</a> </h2>
+<p>在 Spark 1.6.0 之前，唯一可用的状态转换是 <code>PairDStreamFunctions.updateStateByKey</code>。</p>
+<p>最简单的形式（我们将要介绍）的签名如下所示：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">updateStateByKey</span><span class="o">[</span><span class="kt">S</span><span class="o">](</span><span class="n">updateFunc</span><span class="k">:</span> <span class="o">(</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">V</span><span class="o">],</span> <span class="nc">Option</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">⇒</span> <span class="nc">Option</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span>
+</span></span></code></pre></div><p><code>updateStateByKey</code> 需要一个接受以下参数的函数：</p>
+<ol>
+<li><code>Seq[V]</code>-当前批次中给定键收到的新值的列表。</li>
+<li><code>Option[S]</code>-我们在每次迭代中更新的状态。</li>
+</ol>
+<p>对于我们的工作的第一次调用，状态将为 <code>None</code>，表示它是给定键的第一批。之后，完全由我们来管理其值。完成给定键的特定状态后，我们需要返回 <code>None</code> 来指示 Spark 我们不再需要该状态。</p>
+<p>对于我们的场景而言，一个简单的实现看起来像这样：</p>
+<pre tabindex="0"><code>def updateUserEvents(newEvents: Seq[UserEvent],
+                    state: Option[UserSession]): Option[UserSession] = {
+  /*
+  Append the new events to the state. If this the first time we&#39;re invoked for the key
+  we fallback to creating a new UserSession with the new events.
+  */
+  val newState = state
+    .map(prev =&gt; UserSession(prev.userEvents ++ newEvents))
+    .orElse(Some(UserSession(newEvents)))
+
+/*
+If we received the `isLast` event in the current batch, save the session to the underlying store and return None to delete the state.
+Otherwise, return the accumulated state so we can keep updating it in the next batch.
+*/
+  if (newEvents.exists(_.isLast)) {
+    saveUserSession(state)
+    None
+  } else newState
+}
+</code></pre><p>在每个批次中，我们都希望获取给定用户的状态，并将旧事件和新事件都合并到新的 <code>Option[UserSession]</code> 中。然后，我们要检查是否已到达此用户会话的末尾，因此我们在任何 <code>UserEvent</code> 上检查 <code>isLast</code> 标志的新到达序列。如果收到最后一条消息，则将用户操作保存到一些持久性存储中，然后返回 <code>None</code> 表示我们已完成。如果尚未收到结束消息，则只需返回新创建的状态即可进行下一次迭代。</p>
+<p>我们的Spark DAG（有向无环图）如下所示：</p>
+<pre tabindex="0"><code>val kafkaStream =
+      KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topics)
+
+kafkaStream
+  .map(deserializeUserEvent)
+  .updateStateByKey(updateUserEvents)
+</code></pre><p>第一个 <code>map</code> 用于将 JSON 解析为 <code>（Int, UserEvent)</code> 的元组，其中 <code>Int</code> 为 <code>UserEvent.id</code>。然后，将元组传递给我们的 <code>updateStateByKey</code> 来完成其余的工作。</p>
+<p><strong>updateStateByKey 的缺点</strong></p>
+<ol>
+<li>
+<p>使用 <code>updateStateByKey</code> 的主要缺点是，对于每个新的传入批处理，转换都会迭代<strong>整个状态存储</strong>，而不管给定键的新值是否已被消耗。这可能会影响性能，尤其是随着时间处理大量状态时。有<a href="http://spark.apache.org/docs/latest/streaming-programming-guide.html#reducing-the-batch-processing-times">多种技术</a>可以提高性能，但这仍然是一个难题。</p>
+</li>
+<li>
+<p>没有内置的超时机制-请考虑一下我们的示例中的情况，即如果表示用户会话结束的事件丢失或由于某种原因没有到达。 <code>updateStateByKey</code> 迭代所有键这一事实的一个好处是，我们可以自己实现这样的超时，但这绝对是框架该做的功能。</p>
+</li>
+<li>
+<p>你收到的就是返回的内容-由于 <code>updateStateByKey</code> 的返回值与我们存储的状态相同。对于我们的 <code>Option[UserSession]</code>，我们被迫将其返回到下游。但是，如果状态完成后，我想输出一个不同的类型并在另一个转换中使用它，会发生什么？目前，这是不可能的。</p>
+</li>
+</ol>
+<h2 id="引入-mapwithstate">引入 mapWithState&nbsp;<a class="headline-hash no-text-decoration" href="#引入-mapwithstate">#</a> </h2>
+<p><code>mapWithState</code> 是在 Spark 1.6.0 中作为实验性 API 发布的 <code>updateStateByKeys</code> 的后继产品。这是从在 Spark 中使用状态流进行的过程中汲取的教训，并带来了新的有前途的产品。</p>
+<p><code>mapWithState</code> 带有 <code>updateStateByKey</code> 中缺少的功能：</p>
+<ol>
+<li>
+<p>内置的超时机制-我们可以告诉 <code>mapWithState</code> 我们想要保持状态的时间，以防万一没有新数据出现。一旦达到超时，最后一次调用 <code>mapWithState</code> 时会带有一个特殊标志（稍后将会看到）。</p>
+</li>
+<li>
+<p>部分更新-仅迭代在当前批次中具有新数据的键。这意味着不再需要在每个批处理间隔内迭代整个状态存储，这是一个很好的性能优化。</p>
+</li>
+<li>
+<p>选择你的返回类型-现在，无论我们的状态对象是哪种类型，我们都可以选择所需的返回类型。</p>
+</li>
+<li>
+<p>初始状态-我们可以选择一个自定义的 RDD 来在启动时初始化我们的状态转换。</p>
+</li>
+</ol>
+<p>让我们看一下构成新 API 的不同部分。</p>
+<p><code>mapWithState</code> 的签名：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">mapWithState</span><span class="o">[</span><span class="kt">StateType</span>, <span class="kt">MappedType</span><span class="o">](</span><span class="n">spec</span><span class="k">:</span> <span class="kt">StateSpec</span><span class="o">[</span><span class="kt">K</span>, <span class="kt">V</span>, <span class="kt">StateType</span>, <span class="kt">MappedType</span><span class="o">])</span>
+</span></span></code></pre></div><p>与 <code>updateStateByKey</code> 要求我们传递带有消息序列的函数和状态（以 <code>Option[S]</code> 形式）相反，现在我们需要传递 <a href="http://spark.apache.org/docs/1.6.1/api/scala/index.html#org.apache.spark.streaming.StateSpec"><code>StateSpec</code></a>：</p>
+<blockquote>
+<p>表示对 DStream（Scala）或 JavaPairDStream（Java）的 DStream 转换 <code>mapWithState</code>  操作的所有规范的抽象类。 使用 <code>StateSpec.apply()</code> 或 <code>StateSpec.create()</code> 创建此类的实例。</p>
+</blockquote>
+<p>Scala中的示例：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="c1">// A mapping function that maintains an integer state and return a String
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">def</span> <span class="n">mappingFunction</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">],</span> <span class="n">state</span><span class="k">:</span> <span class="kt">State</span><span class="o">[</span><span class="kt">Int</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// Use state.exists(), state.get(), state.update() and state.remove()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// to manage state, and return the necessary string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">val</span> <span class="n">spec</span> <span class="k">=</span> <span class="nc">StateSpec</span><span class="o">.</span><span class="n">function</span><span class="o">(</span><span class="n">mappingFunction</span><span class="o">)</span>
+</span></span></code></pre></div><p>有趣的是 <code>StateSpec.function</code>，这是用于创建 <code>StateSpec</code> 的工厂方法。 它需要具有以下签名的功能：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">mappingFunction</span><span class="k">:</span> <span class="o">(</span><span class="kt">KeyType</span><span class="o">,</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">ValueType</span><span class="o">],</span> <span class="nc">State</span><span class="o">[</span><span class="kt">StateType</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">MappedType</span>
+</span></span></code></pre></div><p><code>mappingFunction</code> 需要几个参数。 让我们构造它们以匹配我们的示例：</p>
+<ol>
+<li><code>KeyType</code>-显然是键类型 <code>Int</code></li>
+<li><code>Option[ValueType]</code>-传入数据类型，<code>Option[UserEvent]</code></li>
+<li><code>State[StateType]</code>-迭代之间要保留的状态，<code>State[UserSession]</code></li>
+<li><code>MappedType</code>-我们的返回类型，可以是任何类型。 对于我们的示例，我们将传递一个 <code>Option[UserSession]</code>。</li>
+</ol>
+<p>mapWithState 和 updateStateByKey 之间的区别</p>
+<ol>
+<li>我们键的值，以前没有暴露出来。</li>
+<li>以 <code>Option[S]</code> 的形式传入的新值，以前是 <code>Seq[S]</code>。</li>
+<li>现在，我们的状态被封装在 <code>State[StateType]</code> 类型的对象中。</li>
+<li>我们可以从转换中返回想要的任何类型，而不再局限于我们所持有的状态的类型。</li>
+</ol>
+<p>（存在一个更高级的 API，我们还可以收到一个 <strong>Time</strong> 对象，但这里不再赘述。请在<a href="http://spark.apache.org/docs/1.6.1/api/scala/index.html#org.apache.spark.streaming.StateSpec$">此处</a>随意检查不同的重载）。</p>
+<h3 id="使用-state-对象探索状态管理">使用 State 对象探索状态管理&nbsp;<a class="headline-hash no-text-decoration" href="#使用-state-对象探索状态管理">#</a> </h3>
+<p>以前，管理我们的状态意味着要使用 <code>Option[S]</code>。为了更新状态，我们将创建一个新实例，并从转换中返回该实例。当我们想要删除状态时，我们将返回 <code>None</code>。由于我们现在可以自由地从 <code>mapWithState</code> 返回任何类型，因此我们需要一种与 Spark 交互的方式，以表达我们希望在每次迭代中对状态进行的处理。为此，我们有 <code>State[S]</code> 对象。</p>
+<p>该对象公开了几种方法：</p>
+<ul>
+<li><code>def exist(): Boolean</code>-检查状态是否存在。</li>
+<li><code>def get(): S</code>-获取状态（如果存在），否则将抛出 java.util.NoSuchElementException。 （我们需要注意这一点！）</li>
+<li><code>def isTimingOut(): Boolean</code>-当前批处理后，状态是否超时并且将被系统删除。</li>
+<li><code>def remove(): Unit</code>-删除状态（如果存在）。</li>
+<li><code>def update(newState: S): Unit</code>-用新值更新状态。</li>
+<li><code>def getOption(): Option[S]</code>-获取状态为 <code>scala.Option</code> 类型。</li>
+</ul>
+<p>我们很快就会看到。</p>
+<h3 id="更改我们的代码以符合新的-api">更改我们的代码以符合新的 API&nbsp;<a class="headline-hash no-text-decoration" href="#更改我们的代码以符合新的-api">#</a> </h3>
+<p>让我们重建以前的 <code>updateUserEvents</code> 以符合新的 API。现在，我们的新方法签名如下所示：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">updateUserEvents</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span> <span class="n">state</span><span class="k">:</span> <span class="kt">State</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span>
+</span></span></code></pre></div><p>现在，我们不再接收 <code>Seq[UserEvent]</code>，而是分别接收每个事件。</p>
+<p>让我们继续进行更改：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">updateUserEvents</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                     <span class="n">value</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span>
+</span></span><span class="line"><span class="cl">                     <span class="n">state</span><span class="k">:</span> <span class="kt">State</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">  Get existing user events, or if this is our first iteration
+</span></span></span><span class="line"><span class="cl"><span class="cm">  create an empty sequence of events.
+</span></span></span><span class="line"><span class="cl"><span class="cm">  */</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">existingEvents</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOption</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">userEvents</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">  Extract the new incoming value, appending the new event with the old
+</span></span></span><span class="line"><span class="cl"><span class="cm">  sequence of events.
+</span></span></span><span class="line"><span class="cl"><span class="cm">  */</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">updatedUserSession</span><span class="k">:</span> <span class="kt">UserSession</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">    <span class="n">value</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">newEvent</span> <span class="k">=&gt;</span> <span class="nc">UserSession</span><span class="o">(</span><span class="n">newEvent</span> <span class="o">+:</span> <span class="n">existingEvents</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">UserSession</span><span class="o">(</span><span class="n">existingEvents</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">Look for the end event. If found, return the final `UserSession`,
+</span></span></span><span class="line"><span class="cl"><span class="cm">If not, update the internal state and return `None`
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>      
+</span></span><span class="line"><span class="cl">  <span class="n">updatedUserSession</span><span class="o">.</span><span class="n">userEvents</span><span class="o">.</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">isLast</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="k">_</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span><span class="o">.</span><span class="n">remove</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Some</span><span class="o">(</span><span class="n">updatedUserSession</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">updatedUserSession</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">None</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>对于 <code>mapWithState</code> 的每次迭代：</p>
+<ul>
+<li>如果这是我们的第一次迭代，则状态将为空。我们需要创建它并追加新事件。如果不是，那么事件已经存在，请从 <code>State[UserSession]</code> 中提取它们，然后将新事件与旧事件一起添加。</li>
+<li>查找 <code>isLast</code> 事件标志。如果存在，请删除 <code>UserSession</code> 状态并返回 <code>Option[UserSession]</code>。否则，更新状态并返回 <code>None</code>。</li>
+</ul>
+<p>返回 <code>Option[UserSession]</code> 转换的选择取决于我们。我们可以选择返回 <code>Unit</code> 并从 <code>mapWithState</code> 发送完整的 <code>UserSession</code>，就像使用 <code>updateStateByKey</code> 一样。但是，我更喜欢我们可以将 <code>UserSession</code> 传递给另一个转换，以根据需要执行更多工作。</p>
+<p>我们的新Spark DAG现在看起来像这样：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">stateSpec</span> <span class="k">=</span> <span class="nc">StateSpec</span><span class="o">.</span><span class="n">function</span><span class="o">(</span><span class="n">updateUserEvents</span> <span class="k">_</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">kafkaStream</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">deserializeUserEvent</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">mapWithState</span><span class="o">(</span><span class="n">stateSpec</span><span class="o">)</span>
+</span></span></code></pre></div><p>但是，还需要添加一件事。 由于我们没有将 <code>UserSession</code> 保存在转换中，因此我们需要添加其他转换以将其存储在持久性存储中。 为此，我们可以使用 <code>foreachRDD</code>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">kafkaStream</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">deserializeUserEvent</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">mapWithState</span><span class="o">(</span><span class="n">stateSpec</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">foreachRDD</span> <span class="o">{</span> <span class="n">rdd</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(!</span><span class="n">rdd</span><span class="o">.</span><span class="n">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">rdd</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">maybeUserSession</span> <span class="k">=&gt;</span> <span class="n">maybeUserSession</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">saveUserSession</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span></code></pre></div><p>(如果您不想为 RDD 中的每个值打开与基础持久性存储的连接，那么请考虑使用 <code>rdd.foreachPartition</code> 而不是 <code>rdd.foreach</code>（但这超出了本文的范围)</p>
+<h3 id="超时结束">超时结束&nbsp;<a class="headline-hash no-text-decoration" href="#超时结束">#</a> </h3>
+<p>实际上，当处理大量数据时，我们必须保护自己免受数据丢失的影响。在当前的实现中，如果 <code>isLast</code> 甚至都没有显示，我们最终将使用户操作“停留”在该状态。</p>
+<p>添加超时很简单：</p>
+<ul>
+<li>构造 <code>StateSpec</code> 时添加超时。</li>
+<li>处理有状态转换中的超时。</li>
+</ul>
+<p>第一步很容易达到：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.streaming._</span>
+</span></span><span class="line"><span class="cl"><span class="k">val</span> <span class="n">stateSpec</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">StateSpec</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">function</span><span class="o">(</span><span class="n">updateUserEvents</span> <span class="k">_</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">timeout</span><span class="o">(</span><span class="nc">Minutes</span><span class="o">(</span><span class="mi">5</span><span class="o">))</span>
+</span></span></code></pre></div><p>(<code>Minutes</code> 是 Scala 的 Duration 类的 Spark 包装器类。)</p>
+<p>对于我们的 <code>updateUserEvents</code>，我们需要监视 <code>State[S].isTimingOut</code> 标志以了解我们正在超时。关于超时，我想提两件事：</p>
+<ul>
+<li>重要的是要注意，一旦发生超时，我们的 <code>value</code> 参数将为 <code>None</code>（解释为什么我们会收到 <code>Option[S]</code> 而不是 <code>S</code> 来获得值。有关更多信息，请参见<a href="http://stackoverflow.com/questions/38397688/spark-mapwithstate-api-explanation/38397937#38397937">此处</a>）。</li>
+<li>如果由于超时而调用 <code>mapWithState</code>，则我们<strong>不能调用 <code>state.remove()</code></strong>，它将由框架代表我们完成。从 <code>State.remove</code> 的文档中：</li>
+</ul>
+<blockquote>
+<p>如果状态已被删除（即 <code>remove()</code> 已经被调用）或由于超时而将被删除（即 <code>isTimingOut()</code> 为 true），则无法更新状态。</p>
+</blockquote>
+<p>让我们修改代码：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">updateUserEvents</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                     <span class="n">value</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span>
+</span></span><span class="line"><span class="cl">                     <span class="n">state</span><span class="k">:</span> <span class="kt">State</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">updateUserSession</span><span class="o">(</span><span class="n">newEvent</span><span class="k">:</span> <span class="kt">UserEvent</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">existingEvents</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">getOption</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">userEvents</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">updatedUserSession</span> <span class="k">=</span> <span class="nc">UserSession</span><span class="o">(</span><span class="n">newEvent</span> <span class="o">+:</span> <span class="n">existingEvents</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">updatedUserSession</span><span class="o">.</span><span class="n">userEvents</span><span class="o">.</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">isLast</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="k">_</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="o">.</span><span class="n">remove</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">Some</span><span class="o">(</span><span class="n">updatedUserSession</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">updatedUserSession</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">None</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">value</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">newEvent</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">updateUserSession</span><span class="o">(</span><span class="n">newEvent</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="k">_</span> <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">isTimingOut</span><span class="o">()</span> <span class="k">=&gt;</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>我已将用户操作的更新提取到本地方法 <code>updateUserSession</code> 中，如果由于新的传入值而调用该方法，则将调用该方法。否则，我们将超时，需要返回到目前为止累积的用户事件。</p>
+<h3 id="包装起来">包装起来&nbsp;<a class="headline-hash no-text-decoration" href="#包装起来">#</a> </h3>
+<p>希望我能传达出 Spark 有状态流的一般用法。有状态流，尤其是新的 <code>mapWithState</code> 转换为希望使用 Spark 处理有状态数据的最终用户带来了强大的功能，同时享受了 Spark 带来的弹性，分布和容错能力的保证。</p>
+<p>在即将发布的 Spark 2.0.0 发行版中，还有更多改进，例如状态版本控制，这将使我们能够标记累积的数据，并且仅保留所存储状态的一个子集。如果您对更多内容感兴趣，请参阅“<a href="https://docs.google.com/document/d/1-ncawFx8JS5Zyfq1HAEGBx56RDet9wfVp_hDM8ZL254/edit?usp=sharing">用于流聚合的状态存储</a>”建议。</p>
+<p>如果您想玩转，可以在 <a href="https://github.com/YuvalItzchakov/spark-stateful-example">GitHub</a> 上找到包含代码的完整工作库。</p>
+<p>此外，<a href="https://databricks.com/blog/2016/02/01/faster-stateful-stream-processing-in-apache-spark-streaming.html">此</a> DataBricks 帖子中对 <code>updateStateByKey</code> 和 <code>mapWithState</code> 性能特征进行了很好的比较。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#介绍">介绍</a></li>
+    <li><a href="#通过例子理解">通过例子理解</a></li>
+    <li><a href="#简要回顾过去">简要回顾过去</a></li>
+    <li><a href="#引入-mapwithstate">引入 mapWithState</a>
+      <ul>
+        <li><a href="#使用-state-对象探索状态管理">使用 State 对象探索状态管理</a></li>
+        <li><a href="#更改我们的代码以符合新的-api">更改我们的代码以符合新的 API</a></li>
+        <li><a href="#超时结束">超时结束</a></li>
+        <li><a href="#包装起来">包装起来</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/why-you-might-be-misusing-spark-streaming-api/" class="nobr">« 为什么你可能会误用 Spark Streaming API</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/a-closer-look-at-ownership-in-rust/" class="nobr">细究 Rust 中的所有权 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

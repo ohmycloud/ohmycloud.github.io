@@ -1,10 +1,831 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            通过状态快照进行容错 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="通过状态快照进行容错" />
+<meta property="og:description"
+      content="Fault Tolerance via State Snapshots" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/" />
+
+
+    
+        <meta property="article:published_time" content="2020-08-19T00:00:00&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2020-08-19T00:00:00&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="通过状态快照进行容错"/>
+<meta name="twitter:description" content="Fault Tolerance via State Snapshots"/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__programming__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘programming’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/programming/">programming</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__training__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Training’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/training/">Training</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">通过状态快照进行容错</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/2020-08-19-fault-tolerance/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2020-08-19T00:00:00+0000" class="dt-published">Wed Aug 19, 2020</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+    <div class="description p-summary">
+        
+        
+        
+        
+        
+            
+            
+        
+        <p>Fault Tolerance via State Snapshots</p>
+    </div>
+
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<h2 id="状态后端">状态后端&nbsp;<a class="headline-hash no-text-decoration" href="#状态后端">#</a> </h2>
+<p>Flink 管理的 keyed state 是一种碎片化的、键/值存储，每项 keyed state 的工作副本都被保存在负责该键的 taskmanager 的本地某处。Operator 的状态也被保存在需要它的机器的本地。Flink 会定期对所有状态进行持久化快照，并将这些快照复制到某个更持久的地方，比如分布式文件系统。</p>
+<p>在发生故障的情况下，Flink 可以恢复你的应用程序的完整状态，并恢复处理，就像什么都没有发生过一样。</p>
+<p>Flink 管理的这种状态被存储在状态后端中。状态后端有两种实现&ndash;一种是基于 RocksDB 的，它是一个嵌入式的键/值存储，将其工作状态保存在磁盘上；另一种是基于堆的状态后端，将其工作状态保存在内存中，在 Java 堆上。这种基于堆的状态后端有两种风味：将其状态快照持久化到分布式文件系统的 FsStateBackend 和使用 JobManager 的堆的 MemoryStateBackend。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">名称</th>
+<th style="text-align:left">工作状态</th>
+<th style="text-align:left">状态备份</th>
+<th style="text-align:left">快照</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">RocksDBStateBackend</td>
+<td style="text-align:left">本地磁盘(tmp dir)</td>
+<td style="text-align:left">分布式文件系统</td>
+<td style="text-align:left">完全/增量</td>
+</tr>
+<tr>
+<td style="text-align:left">支持大于可用内存的状态; 经验法则：比基于堆的后端慢10倍。</td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">FsStateBackend</td>
+<td style="text-align:left">JVM Heap</td>
+<td style="text-align:left">分布式文件系统</td>
+<td style="text-align:left">Full</td>
+</tr>
+<tr>
+<td style="text-align:left">速度快，需要大量堆积; 受制于 GC</td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">MemoryStateBackend</td>
+<td style="text-align:left">JVM Heap</td>
+<td style="text-align:left">JobManager JVM Heap</td>
+<td style="text-align:left">Full</td>
+</tr>
+<tr>
+<td style="text-align:left">有利于小状态（地方）的测试和实验。</td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+</tr>
+</tbody>
+</table>
+<p>当处理保存在基于堆的状态后端的状态时，访问和更新涉及到在堆上读写对象。但是对于保存在 RocksDBStateBackend 中的对象，访问和更新涉及到序列化和反序列化，因此成本更高。但是使用 RocksDB 可以拥有的状态数量只受限于本地磁盘的大小。还要注意的是，只有 RocksDBStateBackend 能够进行增量快照，这对于有大量缓慢变化的状态的应用来说是一个很大的好处。</p>
+<p>所有这些状态后端都能够进行异步快照，这意味着它们可以在不妨碍正在进行的流处理的情况下进行快照。</p>
+<h2 id="状态快照">状态快照&nbsp;<a class="headline-hash no-text-decoration" href="#状态快照">#</a> </h2>
+<h3 id="定义">定义&nbsp;<a class="headline-hash no-text-decoration" href="#定义">#</a> </h3>
+<ul>
+<li>快照&ndash;一个通用术语，指的是一个 Flink 作业状态的全局、一致的图像。快照包括进入每个数据源的指针（例如，进入文件或 Kafka 分区的偏移），以及来自每个作业的有状态操作符的状态副本，这些操作符是在处理了所有事件后产生的，直到源中的这些位置。</li>
+<li>检查点&ndash;Flink 为了能够从故障中恢复而自动拍摄的快照。检查点可以是增量的，并为快速恢复进行了优化。</li>
+<li>外部化检查点&ndash;通常检查点不打算被用户操纵。Flink 只在作业运行时保留n个最近的检查点（n是可配置的），并在作业取消时删除它们。但你也可以配置它们被保留，在这种情况下，你可以手动从它们恢复。</li>
+<li>保存点&ndash;由用户（或API调用）手动触发的快照，用于某些操作目的，例如有状态的重新部署/升级/重新缩放操作。保存点始终是完整的，并为操作的灵活性进行了优化。</li>
+</ul>
+<h3 id="状态快照是如何工作的">状态快照是如何工作的？&nbsp;<a class="headline-hash no-text-decoration" href="#状态快照是如何工作的">#</a> </h3>
+<p>Flink 使用 <a href="https://en.wikipedia.org/wiki/Chandy-Lamport_algorithm">Chandy-Lamport</a> 算法的一个变体，称为异步屏障快照。</p>
+<p>当任务管理器被检查点协调器（作业管理器的一部分）指示开始检查点时，它让所有的源记录它们的偏移量，并在它们的流中插入编号的检查点障碍。这些屏障在作业图(job graph)中流动，指示每个检查点前后的流的部分。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/stream_barriers.svg" alt="img"></p>
+<p>检查点n将包含每个 operator 的状态，这些状态是由于消耗了检查点障碍n之前的每个事件，而没有消耗它之后的任何事件。</p>
+<p>当作业图中的每个 operator 接收到这些障碍之一时，它就会记录其状态。具有两个输入流（如 CoProcessFunction）的 operator 执行屏障对齐，这样快照将反映消耗两个输入流的事件所产生的状态，直到（但不超过）两个屏障。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/stream_aligning.svg" alt="img"></p>
+<p>Flink 的状态后端使用复制-写机制，允许在异步快照状态的旧版本时，流处理不受阻碍地继续。只有当快照被持久化后，这些旧版本的状态才会被垃圾回收。</p>
+<h3 id="一次性保证">一次性保证&nbsp;<a class="headline-hash no-text-decoration" href="#一次性保证">#</a> </h3>
+<p>当流处理应用中出现问题时，有可能出现丢失，或者重复的结果。在 Flink 中，根据你对应用的选择和你运行它的集群，这些结果中的任何一种都是可能的。</p>
+<ul>
+<li>Flink 不努力从故障中恢复（最多一次）。</li>
+<li>没有任何损失，但您可能会遇到重复的结果（至少一次）。</li>
+<li>没有任何东西丢失或重复（精确地一次）。</li>
+</ul>
+<p>鉴于 Flink 通过倒带和重放源数据流从故障中恢复，当理想情况被描述为精确一次时，这并不意味着每个事件都将被精确处理一次。相反，它意味着每一个事件都会对 Flink 所管理的状态产生一次确切的影响。</p>
+<p>Barrier 对齐只需要用于提供精确的一次保证。如果你不需要这个，你可以通过配置 Flink 使用 CheckpointingMode.AT_LEAST_ONCE 来获得一些性能，它的效果是禁用屏障对齐。</p>
+<h3 id="精确一次-端到端">精确一次, 端到端&nbsp;<a class="headline-hash no-text-decoration" href="#精确一次-端到端">#</a> </h3>
+<p>为了实现端到端精确的一次，让源的每个事件精确地影响汇，以下几点必须是真的。</p>
+<ol>
+<li>你的源必须是可重播的，并且</li>
+<li>你的接收器必须是事务性的(或幂等的)</li>
+</ol>
+<h2 id="实践">实践&nbsp;<a class="headline-hash no-text-decoration" href="#实践">#</a> </h2>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html">Flink Operations Playground</a> 包括<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/try-flink/flink-operations-playground.html#observing-failure--recovery">观察故障和恢复</a>的部分。</p>
+<h2 id="进一步阅读">进一步阅读&nbsp;<a class="headline-hash no-text-decoration" href="#进一步阅读">#</a> </h2>
+<ul>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/concepts/stateful-stream-processing.html">有状态的流处理</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/state/state_backends.html">状态后端</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/connectors/guarantees.html">数据源和接收器的容错保证</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/state/checkpointing.html">启用和配置检查点</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/state/checkpoints.html">检查点</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/state/savepoints.html">保存点</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/state/large_state_tuning.html">调整检查点和大状态</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/checkpoint_monitoring.html">监测检查点</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/task_failure_recovery.html">任务故障恢复</a></li>
+</ul>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#状态后端">状态后端</a></li>
+    <li><a href="#状态快照">状态快照</a>
+      <ul>
+        <li><a href="#定义">定义</a></li>
+        <li><a href="#状态快照是如何工作的">状态快照是如何工作的？</a></li>
+        <li><a href="#一次性保证">一次性保证</a></li>
+        <li><a href="#精确一次-端到端">精确一次, 端到端</a></li>
+      </ul>
+    </li>
+    <li><a href="#实践">实践</a></li>
+    <li><a href="#进一步阅读">进一步阅读</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__programming__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘programming’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/programming/">programming</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__training__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Training’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/training/">Training</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2020-08-19-streaming-analytics/" class="nobr">« 流分析</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2020-08-17-true-polymorphic-objects/" class="nobr">真正的多态对象 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

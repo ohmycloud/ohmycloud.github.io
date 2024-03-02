@@ -1,10 +1,1709 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            使用 Spark Structured Streaming 解析 JSON ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="使用 Spark Structured Streaming 解析 JSON" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/" />
+
+
+    
+        <meta property="article:published_time" content="2017-03-15T16:36:25&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2017-03-15T16:36:25&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Spark Structured Streaming 解析 JSON"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">使用 Spark Structured Streaming 解析 JSON</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/spark-structured-streaming-%E8%A7%A3%E6%9E%90-json/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2017-03-15T16:36:25+0000" class="dt-published">Wed Mar 15, 2017</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<h2 id="producer">Producer&nbsp;<a class="headline-hash no-text-decoration" href="#producer">#</a> </h2>
+<p>发送 JSON 数据到 Kafka：</p>
+<pre tabindex="0"><code>from confluent_kafka import Producer
+
+p = Producer({&#39;bootstrap.servers&#39;: &#39;localhost:9092&#39;})
+
+def delivery_report(err, msg):
+    &#34;&#34;&#34; Called once for each message produced to indicate delivery result.
+        Triggered by poll() or flush(). &#34;&#34;&#34;
+    if err is not None:
+        print(&#39;Message delivery failed: {}&#39;.format(err))
+    else:
+        print(&#39;Message delivered to {} [{}]&#39;.format(msg.topic(), msg.partition()))
+
+with open(&#34;/Users/ohmycloud/bigdata/Spark/camelia.json&#34;) as f:
+  data = f.read()
+  p.poll(0)
+  p.produce(&#39;net-logs&#39;, data.encode(&#39;utf-8&#39;), callback=delivery_report)
+
+p.flush()
+</code></pre><p><a href="https://developers.nest.com/documentation/api-reference">JSON</a> 数据内容如下：</p>
+<pre tabindex="0"><code>{
+    &#34;metadata&#34;:{
+        &#34;access_token&#34;:&#34;c.FmDPkzyzaQe...&#34;,
+        &#34;client_version&#34;:1
+    },
+    &#34;devices&#34;:{
+        &#34;thermostats&#34;:{
+            &#34;peyiJNo0IldT2YlIVtYaGQ&#34;:{
+                &#34;device_id&#34;:&#34;peyiJNo0IldT2YlIVtYaGQ&#34;,
+                &#34;locale&#34;:&#34;en-US&#34;,
+                &#34;software_version&#34;:&#34;4.0&#34;,
+                &#34;structure_id&#34;:&#34;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&#34;,
+                &#34;name&#34;:&#34;Hallway (upstairs)&#34;,
+                &#34;name_long&#34;:&#34;Hallway Thermostat (upstairs)&#34;,
+                &#34;last_connection&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+                &#34;is_online&#34;:true,
+                &#34;can_cool&#34;:true,
+                &#34;can_heat&#34;:true,
+                &#34;is_using_emergency_heat&#34;:true,
+                &#34;has_fan&#34;:true,
+                &#34;fan_timer_active&#34;:true,
+                &#34;fan_timer_timeout&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+                &#34;has_leaf&#34;:true,
+                &#34;temperature_scale&#34;:&#34;C&#34;,
+                &#34;target_temperature_f&#34;:72,
+                &#34;target_temperature_c&#34;:21.5,
+                &#34;target_temperature_high_f&#34;:80,
+                &#34;target_temperature_high_c&#34;:24.5,
+                &#34;target_temperature_low_f&#34;:65,
+                &#34;target_temperature_low_c&#34;:19.5,
+                &#34;eco_temperature_high_f&#34;:80,
+                &#34;eco_temperature_high_c&#34;:24.5,
+                &#34;eco_temperature_low_f&#34;:65,
+                &#34;eco_temperature_low_c&#34;:19.5,
+                &#34;away_temperature_high_f&#34;:80,
+                &#34;away_temperature_high_c&#34;:24.5,
+                &#34;away_temperature_low_f&#34;:65,
+                &#34;away_temperature_low_c&#34;:19.5,
+                &#34;hvac_mode&#34;:&#34;heat&#34;,
+                &#34;previous_hvac_mode&#34;:&#34;heat&#34;,
+                &#34;ambient_temperature_f&#34;:72,
+                &#34;ambient_temperature_c&#34;:21.5,
+                &#34;humidity&#34;:40,
+                &#34;hvac_state&#34;:&#34;heating&#34;,
+                &#34;where_id&#34;:&#34;UNCBGUnN24...&#34;,
+                &#34;is_locked&#34;:true,
+                &#34;locked_temp_min_f&#34;:65,
+                &#34;locked_temp_max_f&#34;:80,
+                &#34;locked_temp_min_c&#34;:19.5,
+                &#34;locked_temp_max_c&#34;:24.5,
+                &#34;label&#34;:&#34;Pat&#39;s room&#34;,
+                &#34;where_name&#34;:&#34;Hallway&#34;,
+                &#34;sunlight_correction_enabled&#34;:true,
+                &#34;sunlight_correction_active&#34;:true,
+                &#34;fan_timer_duration&#34;:&#34;15&#34;,
+                &#34;time_to_target&#34;:&#34;~15&#34;,
+                &#34;time_to_target_training&#34;:&#34;training&#34;
+            }
+        },
+        &#34;smoke_co_alarms&#34;:{
+            &#34;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&#34;:{
+                &#34;device_id&#34;:&#34;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&#34;,
+                &#34;locale&#34;:&#34;en-US&#34;,
+                &#34;software_version&#34;:&#34;1.01&#34;,
+                &#34;structure_id&#34;:&#34;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&#34;,
+                &#34;name&#34;:&#34;Hallway (upstairs)&#34;,
+                &#34;name_long&#34;:&#34;Hallway Protect (upstairs)&#34;,
+                &#34;last_connection&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+                &#34;is_online&#34;:true,
+                &#34;battery_health&#34;:&#34;ok&#34;,
+                &#34;co_alarm_state&#34;:&#34;ok&#34;,
+                &#34;smoke_alarm_state&#34;:&#34;ok&#34;,
+                &#34;is_manual_test_active&#34;:true,
+                &#34;last_manual_test_time&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+                &#34;ui_color_state&#34;:&#34;gray&#34;,
+                &#34;where_id&#34;:&#34;UNCBGUnN24...&#34;,
+                &#34;where_name&#34;:&#34;Hallway&#34;
+            }
+        },
+        &#34;cameras&#34;:{
+            &#34;awJo6rH0IldT2YlIVtYaGQ&#34;:{
+                &#34;device_id&#34;:&#34;awJo6rH...&#34;,
+                &#34;software_version&#34;:&#34;4.0&#34;,
+                &#34;structure_id&#34;:&#34;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&#34;,
+                &#34;where_id&#34;:&#34;d6reb_OZTM...&#34;,
+                &#34;where_name&#34;:&#34;Hallway&#34;,
+                &#34;name&#34;:&#34;Hallway (upstairs)&#34;,
+                &#34;name_long&#34;:&#34;Hallway Camera (upstairs)&#34;,
+                &#34;is_online&#34;:true,
+                &#34;is_streaming&#34;:true,
+                &#34;is_audio_input_enabled&#34;:true,
+                &#34;last_is_online_change&#34;:&#34;2016-12-29T18:42:00.000Z&#34;,
+                &#34;is_video_history_enabled&#34;:true,
+                &#34;web_url&#34;:&#34;https://home.nest.com/cameras/device_id?auth=access_token&#34;,
+                &#34;app_url&#34;:&#34;nestmobile://cameras/device_id?auth=access_token&#34;,
+                &#34;is_public_share_enabled&#34;:true,
+                &#34;activity_zones&#34;:[
+                    {
+                        &#34;name&#34;:&#34;Walkway&#34;,
+                        &#34;id&#34;:&#34;244083&#34;
+                    },
+                    {
+                        &#34;name&#34;:&#34;Walkway2&#34;,
+                        &#34;id2&#34;:&#34;244084&#34;
+                    }
+                ],
+                &#34;public_share_url&#34;:&#34;https://video.nest.com/live/STRING1?STRING2&#34;,
+                &#34;snapshot_url&#34;:&#34;STRING1/device_id/STRING2?auth=access_token&#34;,
+                &#34;last_event&#34;:{
+                    &#34;has_sound&#34;:true,
+                    &#34;has_motion&#34;:true,
+                    &#34;has_person&#34;:true,
+                    &#34;start_time&#34;:&#34;2016-12-29T00:00:00.000Z&#34;,
+                    &#34;end_time&#34;:&#34;2016-12-29T18:42:00.000Z&#34;,
+                    &#34;urls_expire_time&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+                    &#34;web_url&#34;:&#34;https://home.nest.com/cameras/device_id/cuepoints/STRING?auth=access_token&#34;,
+                    &#34;app_url&#34;:&#34;nestmobile://cameras/device_id/cuepoints/STRING?auth=access_token&#34;,
+                    &#34;image_url&#34;:&#34;STRING1/device_id/STRING2?auth=access_token&#34;,
+                    &#34;animated_image_url&#34;:&#34;STRING1/device_id/STRING2?auth=access_token&#34;,
+                    &#34;activity_zone_ids&#34;:[
+                        &#34;244083&#34;,
+                        &#34;244084&#34;
+                    ]
+                }
+            }
+        }
+    },
+    &#34;structures&#34;:{
+        &#34;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&#34;:{
+            &#34;structure_id&#34;:&#34;VqFabWH21nwVyd4RWgJgNb292wa7hG_dUwo2i2SG7j3-BOLY0BA4sw&#34;,
+            &#34;thermostats&#34;:[
+                &#34;peyiJNo0IldT2YlIVtYaGQ&#34;,
+                &#34;ggfgfdgrgrgg&#34;
+            ],
+            &#34;smoke_co_alarms&#34;:[
+                &#34;RTMTKxsQTCxzVcsySOHPxKoF4OyCifrs&#34;,
+                &#34;ddddddddddd&#34;
+            ],
+            &#34;cameras&#34;:[
+                &#34;awJo6r...&#34;,
+                &#34;ddddddssssssss&#34;
+            ],
+            &#34;away&#34;:&#34;home&#34;,
+            &#34;name&#34;:&#34;Home&#34;,
+            &#34;country_code&#34;:&#34;US&#34;,
+            &#34;postal_code&#34;:&#34;94304&#34;,
+            &#34;peak_period_start_time&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+            &#34;peak_period_end_time&#34;:&#34;2016-10-31T23:59:59.000Z&#34;,
+            &#34;time_zone&#34;:&#34;America/Los_Angeles&#34;,
+            &#34;eta&#34;:{
+                &#34;trip_id&#34;:&#34;myTripHome1024&#34;,
+                &#34;estimated_arrival_window_begin&#34;:&#34;2016-10-31T22:42:59.000Z&#34;,
+                &#34;estimated_arrival_window_end&#34;:&#34;2016-10-31T23:59:59.000Z&#34;
+            },
+            &#34;eta_begin&#34;:&#34;2016-08-04T13:21:37-07:00&#34;,
+            &#34;co_alarm_state&#34;:&#34;ok&#34;,
+            &#34;smoke_alarm_state&#34;:&#34;ok&#34;,
+            &#34;rhr_enrollment&#34;:true,
+            &#34;wwn_security_state&#34;:&#34;ok&#34;,
+            &#34;wheres&#34;:{
+                &#34;Fqp6wJI...&#34;:{
+                    &#34;where_id&#34;:&#34;Fqp6wJI...&#34;,
+                    &#34;name&#34;:&#34;Bedroom&#34;
+                }
+            }
+        }
+    }
+}
+</code></pre><h2 id="代码">代码&nbsp;<a class="headline-hash no-text-decoration" href="#代码">#</a> </h2>
+<pre tabindex="0"><code>package wmdevice
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.streaming.OutputMode
+import org.apache.spark.sql.types._
+
+object CamerasStructedStreaming {
+  def main(args: Array[String]) {
+
+    val spark = SparkSession
+      .builder
+      .appName(&#34;Camelia&#34;)
+      .master(&#34;local[*]&#34;)
+      .getOrCreate()
+
+    val schema = new StructType()
+      .add(&#34;metadata&#34;, new StructType()
+        .add(&#34;access_token&#34;, StringType)
+        .add(&#34;client_version&#34;, IntegerType))
+      .add(&#34;devices&#34;, new StructType()
+        .add(&#34;thermostats&#34;, MapType(StringType, new StructType()
+          .add(&#34;device_id&#34;, StringType)
+          .add(&#34;locale&#34;, StringType)
+          .add(&#34;software_version&#34;, StringType)
+          .add(&#34;structure_id&#34;, StringType)
+          .add(&#34;name&#34;, StringType)
+          .add(&#34;name_long&#34;, StringType)
+          .add(&#34;last_connection&#34;, TimestampType)
+          .add(&#34;is_online&#34;, BooleanType)
+          .add(&#34;can_cool&#34;, BooleanType)
+          .add(&#34;can_heat&#34;, BooleanType)
+          .add(&#34;is_using_emergency_heat&#34;, BooleanType)
+          .add(&#34;has_fan&#34;, BooleanType)
+          .add(&#34;fan_timer_active&#34;, BooleanType)
+          .add(&#34;fan_timer_timeout&#34;, TimestampType)
+          .add(&#34;has_leaf&#34;, BooleanType)
+          .add(&#34;temperature_scale&#34;, StringType)
+          .add(&#34;target_temperature_f&#34;, StringType)
+          .add(&#34;target_temperature_c&#34;, StringType)
+          .add(&#34;target_temperature_high_f&#34;, StringType)
+          .add(&#34;target_temperature_high_c&#34;, StringType)
+          .add(&#34;target_temperature_low_f&#34;, StringType)
+          .add(&#34;target_temperature_low_c&#34;, StringType)
+          .add(&#34;eco_temperature_high_f&#34;, StringType)
+          .add(&#34;eco_temperature_high_c&#34;, StringType)
+          .add(&#34;eco_temperature_low_f&#34;, StringType)
+          .add(&#34;eco_temperature_low_c&#34;, StringType)
+          .add(&#34;away_temperature_high_f&#34;, StringType)
+          .add(&#34;away_temperature_high_c&#34;, StringType)
+          .add(&#34;away_temperature_low_f&#34;, StringType)
+          .add(&#34;away_temperature_low_c&#34;, StringType)
+          .add(&#34;hvac_mode&#34;, StringType)
+          .add(&#34;previous_hvac_mode&#34;, StringType)
+          .add(&#34;ambient_temperature_f&#34;, StringType)
+          .add(&#34;ambient_temperature_c&#34;, StringType)
+          .add(&#34;humidity&#34;, StringType)
+          .add(&#34;hvac_state&#34;, StringType)
+          .add(&#34;where_id&#34;, StringType)
+          .add(&#34;is_locked&#34;, BooleanType)
+          .add(&#34;locked_temp_min_f&#34;, StringType)
+          .add(&#34;locked_temp_max_f&#34;, StringType)
+          .add(&#34;locked_temp_min_c&#34;, StringType)
+          .add(&#34;locked_temp_max_c&#34;, StringType)
+          .add(&#34;label&#34;, StringType)
+          .add(&#34;where_name&#34;, StringType)
+          .add(&#34;sunlight_correction_enabled&#34;, BooleanType)
+          .add(&#34;sunlight_correction_active&#34;, BooleanType)
+          .add(&#34;fan_timer_duration&#34;, StringType)
+          .add(&#34;time_to_target&#34;, StringType)
+          .add(&#34;time_to_target_training&#34;, StringType))
+        )
+        .add(&#34;smoke_co_alarms&#34;, MapType(StringType, new StructType()
+          .add(&#34;device_id&#34;, StringType)
+          .add(&#34;locale&#34;, StringType)
+          .add(&#34;software_version&#34;, StringType)
+          .add(&#34;structure_id&#34;, StringType)
+          .add(&#34;name&#34;, StringType)
+          .add(&#34;name_long&#34;, StringType)
+          .add(&#34;last_connection&#34;, TimestampType)
+          .add(&#34;is_online&#34;, BooleanType)
+          .add(&#34;battery_health&#34;, StringType)
+          .add(&#34;co_alarm_state&#34;, StringType)
+          .add(&#34;smoke_alarm_state&#34;, StringType)
+          .add(&#34;is_manual_test_active&#34;, BooleanType)
+          .add(&#34;last_manual_test_time&#34;, TimestampType)
+          .add(&#34;ui_color_state&#34;, StringType)
+          .add(&#34;where_id&#34;, StringType)
+          .add(&#34;where_name&#34;, StringType))
+        )
+        .add(&#34;cameras&#34;, MapType(StringType, new StructType()
+          .add(&#34;device_id&#34;, StringType)
+          .add(&#34;software_version&#34;, StringType)
+          .add(&#34;structure_id&#34;, StringType)
+          .add(&#34;where_id&#34;, StringType)
+          .add(&#34;where_name&#34;, StringType)
+          .add(&#34;name&#34;, StringType)
+          .add(&#34;name_long&#34;, StringType)
+          .add(&#34;is_online&#34;, BooleanType)
+          .add(&#34;is_streaming&#34;, BooleanType)
+          .add(&#34;is_audio_input_enabled&#34;, BooleanType)
+          .add(&#34;last_is_online_change&#34;, TimestampType)
+          .add(&#34;is_video_history_enabled&#34;, BooleanType)
+          .add(&#34;web_url&#34;, StringType)
+          .add(&#34;app_url&#34;, StringType)
+          .add(&#34;is_public_share_enabled&#34;, BooleanType)
+          .add(&#34;activity_zones&#34;, ArrayType(new StructType().add(&#34;name&#34;, StringType).add(&#34;id&#34;, StringType), true))
+          .add(&#34;public_share_url&#34;, StringType)
+          .add(&#34;snapshot_url&#34;, StringType)
+            .add(&#34;last_event&#34;, new StructType()
+              .add(&#34;has_sound&#34;, BooleanType)
+              .add(&#34;has_motion&#34;, BooleanType)
+              .add(&#34;has_person&#34;, BooleanType)
+              .add(&#34;start_time&#34;, TimestampType)
+              .add(&#34;end_time&#34;, TimestampType)
+              .add(&#34;urls_expire_time&#34;, TimestampType)
+              .add(&#34;web_url&#34;, StringType)
+              .add(&#34;app_url&#34;, StringType)
+              .add(&#34;image_url&#34;, StringType)
+              .add(&#34;animated_image_url&#34;, StringType)
+              .add(&#34;activity_zone_ids&#34;, ArrayType(StringType, true))
+            )
+        )
+        )
+        )
+      .add(&#34;structures&#34;, MapType(StringType, new StructType()
+        .add(&#34;structure_id&#34;, StringType)
+        .add(&#34;thermostats&#34;, ArrayType(StringType, true))
+        .add(&#34;smoke_co_alarms&#34;, ArrayType(StringType, true))
+        .add(&#34;cameras&#34;, ArrayType(StringType, true))
+        .add(&#34;away&#34;, StringType)
+        .add(&#34;name&#34;, StringType)
+        .add(&#34;country_code&#34;, StringType)
+        .add(&#34;postal_code&#34;, StringType)
+        .add(&#34;peak_period_start_time&#34;, TimestampType)
+        .add(&#34;peak_period_end_time&#34;, TimestampType)
+        .add(&#34;time_zone&#34;, StringType)
+        .add(&#34;eta&#34;, new StructType()
+            .add(&#34;trip_id&#34;, StringType)
+            .add(&#34;estimated_arrival_window_begin&#34;, TimestampType)
+            .add(&#34;estimated_arrival_window_end&#34;, TimestampType)
+          )
+        .add(&#34;eta_begin&#34;, TimestampType)
+        .add(&#34;co_alarm_state&#34;, StringType)
+        .add(&#34;smoke_alarm_state&#34;, StringType)
+        .add(&#34;rhr_enrollment&#34;, BooleanType)
+        .add(&#34;wwn_security_state&#34;, StringType)
+        .add(&#34;wheres&#34;, MapType(StringType, new StructType()
+          .add(&#34;where_id&#34;, StringType)
+          .add(&#34;name&#34;, StringType))
+        ))
+      )
+
+    val nestTimestampFormat = &#34;yyyy-MM-dd&#39;T&#39;HH:mm:ss.sss&#39;Z&#39;&#34;
+    val jsonOptions =  Map(&#34;timestampFormat&#34; -&gt; nestTimestampFormat)
+
+    val parsed = spark.readStream
+      .format(&#34;kafka&#34;)
+      .option(&#34;kafka.bootstrap.servers&#34;, &#34;localhost:9092&#34;)
+      .option(&#34;subscribe&#34;, &#34;net-logs&#34;)
+      .option(&#34;startingOffsets&#34;, &#34;earliest&#34;)
+      .load()
+      .select(from_json(col(&#34;value&#34;).cast(&#34;string&#34;), schema, jsonOptions).alias(&#34;parsed_value&#34;))
+
+    import spark.implicits._
+    val camera = parsed
+      .select(explode($&#34;parsed_value.devices.cameras&#34;))
+      .select(&#34;value.*&#34;)
+
+    camera.printSchema()
+    val sightings = camera
+      .select(&#34;device_id&#34;, &#34;last_event.has_person&#34;, &#34;last_event.start_time&#34;)
+
+    val console = sightings.writeStream
+      .format(&#34;console&#34;)
+      .outputMode(OutputMode.Append())
+
+    val query = console.start()
+
+    query.awaitTermination()
+
+  }
+}
+</code></pre><h2 id="jdbcsink">JDBCSink&nbsp;<a class="headline-hash no-text-decoration" href="#jdbcsink">#</a> </h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">java.sql._</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">ForeachWriter</span><span class="o">,</span> <span class="nc">Row</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span>  <span class="nc">JDBCSink</span><span class="o">(</span><span class="n">url</span><span class="k">:</span><span class="kt">String</span><span class="o">,</span> <span class="n">user</span><span class="k">:</span><span class="kt">String</span><span class="o">,</span> <span class="n">pwd</span><span class="k">:</span><span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">ForeachWriter</span><span class="o">[</span><span class="kt">Row</span><span class="o">]</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">driver</span> <span class="k">=</span> <span class="s">&#34;com.mysql.jdbc.Driver&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">var</span> <span class="n">connection</span><span class="k">:</span><span class="kt">Connection</span> <span class="o">=</span> <span class="k">_</span>
+</span></span><span class="line"><span class="cl">  <span class="k">var</span> <span class="n">statement</span><span class="k">:</span><span class="kt">Statement</span> <span class="o">=</span> <span class="k">_</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">open</span><span class="o">(</span><span class="n">partitionId</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span><span class="n">version</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">Class</span><span class="o">.</span><span class="n">forName</span><span class="o">(</span><span class="n">driver</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">connection</span> <span class="k">=</span> <span class="nc">DriverManager</span><span class="o">.</span><span class="n">getConnection</span><span class="o">(</span><span class="n">url</span><span class="o">,</span> <span class="n">user</span><span class="o">,</span> <span class="n">pwd</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">statement</span> <span class="k">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">createStatement</span>
+</span></span><span class="line"><span class="cl">    <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">process</span><span class="o">(</span><span class="n">value</span><span class="k">:</span> <span class="kt">Row</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">statement</span><span class="o">.</span><span class="n">executeUpdate</span><span class="o">(</span><span class="s">&#34;INSERT INTO carema &#34;</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;VALUES (&#34;</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34;)&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">close</span><span class="o">(</span><span class="n">errorOrNull</span><span class="k">:</span> <span class="kt">Throwable</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">connection</span><span class="o">.</span><span class="n">close</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><h2 id="写数据库">写数据库&nbsp;<a class="headline-hash no-text-decoration" href="#写数据库">#</a> </h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl">    <span class="c1">// 写入数据库
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">val</span> <span class="n">url</span><span class="o">=</span><span class="s">&#34;jdbc:mysql://127.0.0.1:6606/test?useUnicode=true&amp;characterEncoding=utf-8&amp;autoReconnect=true&amp;failOverReadOnly=false&amp;useSSL=false&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">user</span> <span class="o">=</span><span class="s">&#34;root&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">pwd</span> <span class="k">=</span> <span class="s">&#34;111608&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">writer</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">JDBCSink</span><span class="o">(</span><span class="n">url</span><span class="o">,</span><span class="n">user</span><span class="o">,</span> <span class="n">pwd</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">query</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">      <span class="n">sightings</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">writer</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">trigger</span><span class="o">(</span><span class="nc">Trigger</span><span class="o">.</span><span class="nc">ProcessingTime</span><span class="o">(</span><span class="s">&#34;25 seconds&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">()</span>
+</span></span></code></pre></div><h2 id="one-more-example">one more example&nbsp;<a class="headline-hash no-text-decoration" href="#one-more-example">#</a> </h2>
+<h3 id="json">json&nbsp;<a class="headline-hash no-text-decoration" href="#json">#</a> </h3>
+<pre tabindex="0"><code>{
+   &#34;createTime&#34; : 1536571926,
+   &#34;event&#34; : {
+      &#34;frequency&#34; : -1,
+      &#34;info&#34; : {
+         &#34;VCU_VacmPumpSta&#34; : {
+            &#34;diff_time&#34; : [ 2, 11 ],
+            &#34;value&#34; : [ 1, 0 ]
+         }
+      },
+      &#34;startTime&#34; : -1
+   },
+   &#34;iccid&#34; : &#34;89860117750045560712&#34;,
+   &#34;signal1s&#34; : {
+      &#34;frequency&#34; : 1,
+      &#34;info&#34; : {
+         &#34;APA_DistToparkslot&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;APA_Process_bar&#34; : [ 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127 ],
+         &#34;BMS_ActlExchgCurnt&#34; : [
+            10016,
+            10016,
+            10021,
+            10021,
+            10021,
+            10021,
+            10012,
+            10012,
+            10012,
+            10012,
+            10012,
+            10007,
+            10007
+         ],
+         &#34;BMS_BatSOC_Actl&#34; : [ 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355 ],
+         &#34;BMS_BatSOC_Rpt&#34; : [ 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355, 355 ],
+         &#34;BMS_IsoResistance&#34; : [ 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120 ],
+         &#34;ESC_VehicleSpeed&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;HU_TargetSOC&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;ICU_DisplayVehicleSpeed&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;ICU_ICUTotalOdometer&#34; : [
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252,
+            3252
+         ],
+         &#34;LateralACC&#34; : [ 201, 202, 201, 201, 201, 201, 201, 202, 201, 201, 202, 200, 201 ],
+         &#34;LongitudeACC&#34; : [ 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124, 124 ],
+         &#34;SAS_Angle&#34; : [
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767
+         ],
+         &#34;SAS_RotSpeed&#34; : [
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767,
+            32767
+         ],
+         &#34;VCU_AcclPedalPos&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;VCU_ActlMotorRotateSpd&#34; : [
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000,
+            10000
+         ],
+         &#34;VCU_Actl_MotorRotateSpd&#34; : [
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384,
+            16384
+         ],
+         &#34;VCU_Actl_MotorTorque&#34; : [
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000
+         ],
+         &#34;VCU_BrkPedalPos&#34; : [ 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 1, 2 ],
+         &#34;VCU_DrvRangeDistEst&#34; : [ 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63 ],
+         &#34;VCU_DrvReq_MotorTorq&#34; : [
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000
+         ],
+         &#34;VCU_MotorActualPower&#34; : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+         &#34;VCU_VhclPwrCnsmpActl&#34; : [ 209, 209, 209, 209, 209, 209, 210, 210, 210, 210, 210, 210, 210 ],
+         &#34;YRS_YawRate&#34; : [
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18000,
+            18005,
+            18000,
+            18000
+         ]
+      },
+      &#34;startTime&#34; : 0
+   },
+   &#34;signal30s&#34; : {
+      &#34;frequency&#34; : 0.3333333432674408,
+      &#34;info&#34; : {
+         &#34;AC_ActTotalPower&#34; : [ 5 ],
+         &#34;AC_EnvirTemp&#34; : [ 136 ],
+         &#34;AC_HVHActlPwr_HVAC&#34; : [ 0 ],
+         &#34;AC_HVHDeviceInternTemp_HVAC&#34; : [ 63 ],
+         &#34;AC_InAirPM25Value&#34; : [ 36 ],
+         &#34;AC_IndoorTemp&#34; : [ 126 ],
+         &#34;AC_OutAirQualityLevel&#34; : [ 0 ],
+         &#34;AC_RefrgHiPressure&#34; : [ 8 ],
+         &#34;AC_SeatHeatTemp_FL_Rsrv&#34; : [ 0 ],
+         &#34;AC_SeatHeatTemp_FR_Rsrv&#34; : [ 0 ],
+         &#34;BAT_HVHActlPwr&#34; : [ -1 ],
+         &#34;BAT_HVHDeviceInternTemp&#34; : [ -1 ],
+         &#34;BAT_HighVolDCTolalPwr&#34; : [ -1 ],
+         &#34;BAT_PumpSpeedDutyRequest&#34; : [ -1 ],
+         &#34;BMS_AuxHeatReqPower_Reserved&#34; : [ 0 ],
+         &#34;BMS_BatCapacity&#34; : [ 198 ],
+         &#34;BMS_BatSOH&#34; : [ 1000 ],
+         &#34;BMS_BatteryDTC_Num&#34; : [ 1 ],
+         &#34;BMS_BatteryDTC_list&#34; : [
+            [ 13698951 ]
+         ],
+         &#34;BMS_BatterySubSysCod&#34; : [ 1 ],
+         &#34;BMS_BatterySubSysNum&#34; : [ 1 ],
+         &#34;BMS_BatteryType&#34; : [ 6 ],
+         &#34;BMS_CellVol&#34; : [
+            [
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3613,
+               3613,
+               3613,
+               3613,
+               3614,
+               3613,
+               3614,
+               3615,
+               3615,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3613,
+               3613,
+               3611,
+               3613,
+               3614,
+               3614,
+               3614,
+               3615,
+               3613,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3613,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3615,
+               3614,
+               3615,
+               3614,
+               3615,
+               3615,
+               3615,
+               3614,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3615,
+               3614,
+               3614,
+               3613,
+               3614,
+               3613,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614,
+               3614
+            ]
+         ],
+         &#34;BMS_CellVolAve&#34; : [ 3613 ],
+         &#34;BMS_CellVolMax&#34; : [ 3615 ],
+         &#34;BMS_CellVolMin&#34; : [ 3611 ],
+         &#34;BMS_ContactorTempAve_DCCharger&#34; : [ 70 ],
+         &#34;BMS_ContactorTempAve_Negative&#34; : [ 73 ],
+         &#34;BMS_ContactorTempAve_Positive&#34; : [ 72 ],
+         &#34;BMS_DCS_ActlChrgCurrent&#34; : [ 0 ],
+         &#34;BMS_DCS_ActlChrgPower&#34; : [ 0 ],
+         &#34;BMS_DCS_ActlChrgVoltage&#34; : [ 0 ],
+         &#34;BMS_DC_AC_RemChrgTime&#34; : [ 600 ],
+         &#34;BMS_ESS_InletColantActtemp&#34; : [ 69 ],
+         &#34;BMS_ESS_InletColanttargettemp&#34; : [ 70 ],
+         &#34;BMS_ESS_outletColantActtemp&#34; : [ 70 ],
+         &#34;BMS_HVBatActlVoltage&#34; : [ 3252 ],
+         &#34;BMS_HVBatCellTempAve&#34; : [ 68 ],
+         &#34;BMS_HVBatCellTempMax&#34; : [ 69 ],
+         &#34;BMS_HVBatCellTempMin&#34; : [ 68 ],
+         &#34;BMS_HVcppltnTempAve&#34; : [ 69 ],
+         &#34;BMS_HVcppltnTempMin&#34; : [ 68 ],
+         &#34;BMS_HVcppltnTempmax&#34; : [ 70 ],
+         &#34;BMS_MaxCellTemp&#34; : [ 100 ],
+         &#34;BMS_MaxCellVol&#34; : [ 4310 ],
+         &#34;BMS_MaxConDisCurnt&#34; : [ 2000 ],
+         &#34;BMS_MaxInstanDisCurnt&#34; : [ 3920 ],
+         &#34;BMS_MaxTempProbeCod&#34; : [ 0 ],
+         &#34;BMS_MaxVolCellCod&#34; : [ 14 ],
+         &#34;BMS_MinCellTemp&#34; : [ 15 ],
+         &#34;BMS_MinCellVol&#34; : [ 3050 ],
+         &#34;BMS_MinTempProbeCod&#34; : [ 4 ],
+         &#34;BMS_MinVolCellCod&#34; : [ 30 ],
+         &#34;BMS_NomCellCap&#34; : [ 62 ],
+         &#34;BMS_PwrRecupMaxConChrgCurnt&#34; : [ 1860 ],
+         &#34;BMS_PwrRecupMaxInstanChrgCurnt&#34; : [ 3000 ],
+         &#34;BMS_TempProbe&#34; : [
+            [
+               89,
+               89,
+               89,
+               89,
+               88,
+               89,
+               88,
+               89,
+               88,
+               89,
+               88,
+               89,
+               89,
+               89,
+               88,
+               89,
+               88,
+               89
+            ]
+         ],
+         &#34;BMS_TotalCellNo&#34; : [ 90 ],
+         &#34;BMS_TotalTempProbe&#34; : [ 18 ],
+         &#34;GPS_Heading&#34; : [ 0 ],
+         &#34;GPS_Latitude&#34; : [ 0 ],
+         &#34;GPS_Longitude&#34; : [ 0 ],
+         &#34;GPS_Speed&#34; : [ 0 ],
+         &#34;ICU_AverageVehicleSpeed&#34; : [ 0 ],
+         &#34;ICU_ICUTripAOdometer&#34; : [ 0 ],
+         &#34;ICU_ICUTripBOdometer&#34; : [ 0 ],
+         &#34;ICU_WashLiquidLevelWarn&#34; : [ 0 ],
+         &#34;ICU_drive_time&#34; : [ 0 ],
+         &#34;PTG_DoorOpenRatio&#34; : [ 0 ],
+         &#34;TPMS_PressureValue_FL&#34; : [ 255 ],
+         &#34;TPMS_PressureValue_FR&#34; : [ 255 ],
+         &#34;TPMS_PressureValue_RL&#34; : [ 255 ],
+         &#34;TPMS_PressureValue_RR&#34; : [ 255 ],
+         &#34;TPMS_TireTempValue_FL&#34; : [ 255 ],
+         &#34;TPMS_TireTempValue_FR&#34; : [ 255 ],
+         &#34;TPMS_TireTempValue_RL&#34; : [ 255 ],
+         &#34;TPMS_TireTempValue_RR&#34; : [ 255 ],
+         &#34;VCU_AtmosPressure&#34; : [ 204 ],
+         &#34;VCU_CruiseCtrTgtSpd&#34; : [ 0 ],
+         &#34;VCU_MCU_Input_Curr&#34; : [ 1024 ],
+         &#34;VCU_MCU_Input_Vol&#34; : [ 648 ],
+         &#34;VCU_MCU_Temp&#34; : [ 72 ],
+         &#34;VCU_MotorActualPower&#34; : [ 0 ],
+         &#34;VCU_MotorDTC_Num&#34; : [ 1 ],
+         &#34;VCU_MotorDTC_list&#34; : [
+            [ 134293412 ]
+         ],
+         &#34;VCU_MotorTemp&#34; : [ 74 ],
+         &#34;VCU_PCUInletCooltTemp&#34; : [ 72 ],
+         &#34;VCU_PwrCoolFanSpdDuty&#34; : [ 2 ],
+         &#34;VCU_VacuumPressure&#34; : [ 81 ],
+         &#34;VCU_VhclPwrCnsmpAvrg&#34; : [ 144 ]
+      },
+      &#34;startTime&#34; : 0
+   },
+   &#34;tboxSn&#34; : &#34;VE70045900-J7U0077&#34;,
+   &#34;version&#34; : &#34;0.1.0.0&#34;,
+   &#34;vin&#34; : &#34;XXXX000000000XXXX&#34;
+}
+</code></pre><h3 id="定义-schema">定义 schema&nbsp;<a class="headline-hash no-text-decoration" href="#定义-schema">#</a> </h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">ohmysummer.pipeline.schema</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.types._</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DcSaleData</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;createTime&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;iccid&#34;</span><span class="o">,</span>      <span class="nc">StringType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;tboxSn&#34;</span><span class="o">,</span>     <span class="nc">StringType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;version&#34;</span><span class="o">,</span>    <span class="nc">StringType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;vin&#34;</span><span class="o">,</span>        <span class="nc">StringType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;event&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;frequency&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;info&#34;</span><span class="o">,</span>      <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_VacmPumpSta&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;diff_time&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;value&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">        <span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;startTime&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;signal1s&#34;</span><span class="o">,</span><span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;frequency&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;info&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;APA_DistToparkslot&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;APA_Process_bar&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ActlExchgCurnt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatSOC_Actl&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatSOC_Rpt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_IsoResistance&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ESC_VehicleSpeed&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;HU_TargetSOC&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_DisplayVehicleSpeed&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_ICUTotalOdometer&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;LateralACC&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;LongitudeACC&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;SAS_Angle&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;SAS_RotSpeed&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_AcclPedalPos&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_ActlMotorRotateSpd&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_Actl_MotorRotateSpd&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_Actl_MotorTorque&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_BrkPedalPos&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_DrvRangeDistEst&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_DrvReq_MotorTorq&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MotorActualPower&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_VhclPwrCnsmpActl&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;YRS_YawRate&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;startTime&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;signal30s&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;frequency&#34;</span><span class="o">,</span> <span class="nc">FloatType</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;info&#34;</span><span class="o">,</span> <span class="k">new</span> <span class="nc">StructType</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_ActTotalPower&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_EnvirTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_HVHActlPwr_HVAC&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_HVHDeviceInternTemp_HVAC&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_InAirPM25Value&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_IndoorTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_OutAirQualityLevel&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_RefrgHiPressure&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_SeatHeatTemp_FL_Rsrv&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;AC_SeatHeatTemp_FR_Rsrv&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BAT_HVHActlPwr&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BAT_HVHDeviceInternTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BAT_HighVolDCTolalPwr&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BAT_PumpSpeedDutyRequest&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_AuxHeatReqPower_Reserved&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatCapacity&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatSOH&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatteryDTC_Num&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatteryDTC_list&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">),</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatterySubSysCod&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatterySubSysNum&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_BatteryType&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_CellVol&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">),</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_CellVolAve&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_CellVolMax&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_CellVolMin&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ContactorTempAve_DCCharger&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ContactorTempAve_Negative&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ContactorTempAve_Positive&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_DCS_ActlChrgCurrent&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_DCS_ActlChrgPower&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_DCS_ActlChrgVoltage&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_DC_AC_RemChrgTime&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ESS_InletColantActtemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ESS_InletColanttargettemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_ESS_outletColantActtemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVBatActlVoltage&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVBatCellTempAve&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVBatCellTempMax&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVBatCellTempMin&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVcppltnTempAve&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVcppltnTempMin&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_HVcppltnTempmax&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxCellTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxCellVol&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxConDisCurnt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxInstanDisCurnt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxTempProbeCod&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MaxVolCellCod&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MinCellTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MinCellVol&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MinTempProbeCod&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_MinVolCellCod&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_NomCellCap&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_PwrRecupMaxConChrgCurnt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_PwrRecupMaxInstanChrgCurnt&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_TempProbe&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">)</span> <span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_TotalCellNo&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;BMS_TotalTempProbe&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;GPS_Heading&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;GPS_Latitude&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;GPS_Longitude&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;GPS_Speed&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_AverageVehicleSpeed&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_ICUTripAOdometer&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_ICUTripBOdometer&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_WashLiquidLevelWarn&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;ICU_drive_time&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;PTG_DoorOpenRatio&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_PressureValue_FL&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_PressureValue_FR&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_PressureValue_RL&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_PressureValue_RR&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_TireTempValue_FL&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_TireTempValue_FR&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_TireTempValue_RL&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;TPMS_TireTempValue_RR&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_AtmosPressure&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_CruiseCtrTgtSpd&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MCU_Input_Curr&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MCU_Input_Vol&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MCU_Temp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MotorActualPower&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MotorDTC_Num&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MotorDTC_list&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">)</span> <span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_MotorTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_PCUInletCooltTemp&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_PwrCoolFanSpdDuty&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_VacuumPressure&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;VCU_VhclPwrCnsmpAvrg&#34;</span><span class="o">,</span> <span class="nc">ArrayType</span><span class="o">(</span><span class="nc">IntegerType</span><span class="o">,</span> <span class="kc">true</span><span class="o">),</span> <span class="kc">true</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="s">&#34;startTime&#34;</span><span class="o">,</span> <span class="nc">IntegerType</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">DcSaleData</span> <span class="o">{}</span>
+</span></span></code></pre></div><h3 id="explode">explode&nbsp;<a class="headline-hash no-text-decoration" href="#explode">#</a> </h3>
+<p><code>explode</code> 接收的参数是 Array 或 Map，如果是 Struct， 得先转换为 Array:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">ohmysummer</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">ohmysummer.pipeline.kafka.WmKafkaDeserializer</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">ohmysummer.pipeline.schema.DcSaleData</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">Dataset</span><span class="o">,</span> <span class="nc">SparkSession</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.streaming.OutputMode</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.functions._</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm">  * 从 Kafka 读取  JSON 数据
+</span></span></span><span class="line"><span class="cl"><span class="cm">  *  https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html
+</span></span></span><span class="line"><span class="cl"><span class="cm">  *  https://stackoverflow.com/questions/43297973/how-to-read-records-in-json-format-from-kafka-using-structured-streaming
+</span></span></span><span class="line"><span class="cl"><span class="cm">  *  https://stackoverflow.com/questions/48361177/spark-structured-streaming-kafka-convert-json-without-schema-infer-schema
+</span></span></span><span class="line"><span class="cl"><span class="cm">  *  https://databricks.com/blog/2017/04/26/processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2.html
+</span></span></span><span class="line"><span class="cl"><span class="cm">  *  https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html
+</span></span></span><span class="line"><span class="cl"><span class="cm">  */</span>
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">SparkStructuredStreaming</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">main</span><span class="o">(</span><span class="n">args</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">spark</span> <span class="k">=</span> <span class="nc">SparkSession</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">builder</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">appName</span><span class="o">(</span><span class="s">&#34;ReadFromKafka&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">&#34;local[*]&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOrCreate</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">object</span> <span class="nc">KafkaDeserializerWrapper</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">deser</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">WmKafkaDeserializer</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//      val deser = new WmJsonDeserializer
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">spark</span><span class="o">.</span><span class="n">udf</span><span class="o">.</span><span class="n">register</span><span class="o">(</span><span class="s">&#34;deserialize&#34;</span><span class="o">,</span> <span class="o">(</span><span class="n">topic</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">bytes</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">])</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">KafkaDeserializerWrapper</span><span class="o">.</span><span class="n">deser</span><span class="o">.</span><span class="n">deserialize</span><span class="o">(</span><span class="n">topic</span><span class="o">,</span> <span class="n">bytes</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">df</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;kafka&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;kafka.bootstrap.servers&#34;</span><span class="o">,</span> <span class="s">&#34;localhost:9092&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;subscribe&#34;</span><span class="o">,</span> <span class="s">&#34;dc-sale-data&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;startingOffsets&#34;</span><span class="o">,</span> <span class="s">&#34;earliest&#34;</span><span class="o">)</span> <span class="c1">// 测试环境使用最早的数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">import</span> <span class="nn">spark.implicits._</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 反序列化 value 中的字节数组, 得到原始 JSON
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">val</span> <span class="n">result</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">selectExpr</span><span class="o">(</span><span class="s">&#34;CAST(key AS STRING)&#34;</span><span class="o">,</span> <span class="s">&#34;&#34;&#34;deserialize(&#34;dc-sale-data&#34;, value) AS message&#34;&#34;&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">as</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="o">(</span><span class="k">new</span> <span class="nc">DcSaleData</span><span class="o">).</span><span class="n">schema</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">parsed</span> <span class="k">=</span> <span class="n">result</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;key&#34;</span><span class="o">,</span> <span class="n">from_json</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;message&#34;</span><span class="o">,</span> <span class="n">schema</span><span class="o">)</span> <span class="n">as</span> <span class="s">&#34;data&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">event</span> <span class="k">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">explode</span><span class="o">(</span><span class="n">array</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;data.signal1s.info&#34;</span><span class="o">))).</span><span class="n">select</span><span class="o">(</span><span class="s">&#34;col.*&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">event</span><span class="o">.</span><span class="n">printSchema</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">console</span> <span class="k">=</span> <span class="n">event</span><span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;console&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Append</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">console</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>如果解析出来是空的， 可能就是 schema 定义的问题，多半是字段的类型弄错了。</p>
+<h2 id="参考">参考&nbsp;<a class="headline-hash no-text-decoration" href="#参考">#</a> </h2>
+<ul>
+<li><a href="https://databricks.com/blog/2017/04/26/processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2.html">processing-data-in-apache-kafka-with-structured-streaming-in-apache-spark-2-2</a></li>
+<li><a href="https://juejin.im/entry/5902bbada0bb9f0065eb9262">用 Apache Spark 2.2 中的结构化流处理 API 处理 Kafka 数据</a></li>
+<li><a href="https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html">working-complex-data-formats-structured-streaming-apache-spark-2-1</a></li>
+</ul>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#producer">Producer</a></li>
+    <li><a href="#代码">代码</a></li>
+    <li><a href="#jdbcsink">JDBCSink</a></li>
+    <li><a href="#写数据库">写数据库</a></li>
+    <li><a href="#one-more-example">one more example</a>
+      <ul>
+        <li><a href="#json">json</a></li>
+        <li><a href="#定义-schema">定义 schema</a></li>
+        <li><a href="#explode">explode</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/spark-stuctured-streaming-%E8%A7%A3%E6%9E%90%E5%AD%97%E6%AE%B5%E4%B8%8D%E5%9B%BA%E5%AE%9A%E7%9A%84json/" class="nobr">« 使用 Spark Structured Streaming 解析字段不固定的 JSON</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/scalac--error--org-jetbrains-jps-incremental-scala-remote-serverexcept/" class="nobr">StackOverflowError »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

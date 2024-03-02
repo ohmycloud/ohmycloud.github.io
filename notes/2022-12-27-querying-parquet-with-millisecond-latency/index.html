@@ -1,10 +1,1155 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Querying Parquet With Millisecond Latency ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Querying Parquet With Millisecond Latency" />
+<meta property="og:description"
+      content="Querying Parquet With Millisecond Latency" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/" />
+
+
+    
+        <meta property="article:published_time" content="2022-12-27T00:00:00&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2022-12-27T00:00:00&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Querying Parquet With Millisecond Latency"/>
+<meta name="twitter:description" content="Querying Parquet With Millisecond Latency"/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__bigdata__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘bigdata’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/bigdata/">bigdata</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__parquet__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘parquet’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/parquet/">parquet</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Querying Parquet With Millisecond Latency</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/2022-12-27-querying-parquet-with-millisecond-latency/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2022-12-27T00:00:00+0000" class="dt-published">Tue Dec 27, 2022</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+    <div class="description p-summary">
+        
+        
+        
+        
+        
+            
+            
+        
+        <p>Querying Parquet With Millisecond Latency</p>
+    </div>
+
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>原文链接: <a href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/">https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/</a></p>
+<h1 id="以毫秒级的延迟查询-parquet">以毫秒级的延迟查询 Parquet</h1>
+<p>注：本文最初发表于 <a href="https://www.influxdata.com/blog/querying-parquet-millisecond-latency">InfluxData 博客</a>。</p>
+<p>我们相信，直接查询 <a href="https://parquet.apache.org/">Apache Parquet</a> 文件中的数据可以达到与大多数专门文件格式类似或更好的存储效率和查询性能。虽然这需要大量的工程努力，但 Parquet 的开放格式和广泛的生态系统支持的好处使它成为一类广泛的数据系统的明显选择。</p>
+<p>在这篇文章中，我们解释了快速查询以 Parquet 格式存储的数据所需的几种高级技术，我们在 <a href="https://docs.rs/parquet/27.0.0/parquet/">Apache Arrow Rust Parquet 阅读器</a>中实现了这些技术。这些技术结合在一起，使得 Rust 的实现成为查询 Parquet 文件的最快实现之一，即使不是最快的，也是最快的&ndash;无论是在本地磁盘还是远程对象存储。它能够在<a href="https://github.com/tustvold/access-log-bench">几毫秒</a>内查询到数 GB 的 Parquet 文件。</p>
+<p>我们要感谢 <a href="https://www.influxdata.com/">InfluxData</a> 对这项工作的支持。InfluxData 对开源软件有着深刻而持续的承诺，它赞助了我们撰写这篇博文的大部分时间，以及作为构建 <a href="https://www.influxdata.com/blog/influxdb-engine/">InfluxDB IOx 存储引擎</a>一部分的许多贡献。</p>
+<h1 id="背景介绍">背景介绍</h1>
+<p><a href="https://parquet.apache.org/">Apache Parquet</a> 是一种越来越流行的用于存储<a href="https://www.influxdata.com/glossary/olap/">分析数据集</a>的开放格式，并且已经成为低成本、与 DBMS 无关的数据存储的事实标准。Parquet 最初是为 Hadoop 生态系统创建的，现在由于其令人信服的组合，Parquet 的范围广泛地扩展到整个数据分析生态系统。</p>
+<ul>
+<li>高压缩率</li>
+<li>对 S3 等商品 blob 存储的适应性</li>
+<li>广泛的生态系统和工具支持</li>
+<li>可在许多不同的平台和工具上移植</li>
+<li>支持<a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">任意的结构化数据</a></li>
+</ul>
+<p>越来越多的其他系统，如 <a href="https://duckdb.org/2021/06/25/querying-parquet.html">DuckDB</a> 和 <a href="https://docs.aws.amazon.com/redshift/latest/dg/c-using-spectrum.html#c-spectrum-overview">Redshift</a>，允许直接查询存储在 Parquet 中的数据，但与他们的原生（自定义）文件格式相比，支持通常仍是次要考虑因素。这样的格式包括 DuckDB <code>.duckdb</code> 文件格式、Apache IOT <a href="https://github.com/apache/iotdb/blob/master/tsfile/README.md">TsFile</a>、<a href="https://www.vldb.org/pvldb/vol8/p1816-teller.pdf">Gorilla 格式</a>以及其他。</p>
+<p>这是第一次，访问同样复杂的查询技术，以前只在闭源的商业实现中可用，现在可以作为开放源码。所需的工程能力来自于具有全球贡献者社区的大型、运行良好的开源项目，如 <a href="https://arrow.apache.org/">Apache Arrow</a> 和 <a href="https://impala.apache.org/">Apache Impala</a>。</p>
+<h1 id="parquet-文件格式">Parquet 文件格式</h1>
+<p>在深入了解从 <a href="https://www.influxdata.com/glossary/apache-parquet/">Parquet</a> 中有效读取数据的细节之前，了解文件的布局很重要。该文件格式经过精心设计，可以快速定位所需信息，跳过不相关的部分，并有效解码剩下的部分。</p>
+<ul>
+<li>Parquet 文件中的数据被分成水平的切片，称为 <code>RowGroup</code>。</li>
+<li>每个 <code>RowGroup</code> 包含模式中每一列的单个 <code>ColumnChunk</code>。</li>
+</ul>
+<p>例如，下图说明了一个 Parquet 文件，其中有三列 &ldquo;A&rdquo;、&ldquo;B&rdquo; 和 &ldquo;C&rdquo; 存储在两个 <code>RowGroup</code> 中，总共有 6 个 <code>ColumnChunk</code>。</p>
+<pre tabindex="0"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┓          ┃
+┃┃┌ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ┐┌ ─ ─ ─ ─ ─ ─  ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃│             │             ││              ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃│             │             ││              ┃ RowGroup ┃
+┃┃             │                            │ ┃     1    ┃
+┃┃│             │             ││              ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃└ ─ ─ ─ ─ ─ ─ └ ─ ─ ─ ─ ─ ─ ┘└ ─ ─ ─ ─ ─ ─  ┃          ┃
+┃┃ColumnChunk 1  ColumnChunk 2 ColumnChunk 3  ┃          ┃
+┃┃ (Column &#34;A&#34;)   (Column &#34;B&#34;)  (Column &#34;C&#34;)  ┃          ┃
+┃┗━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┛          ┃
+┃┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┓          ┃
+┃┃┌ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ┐┌ ─ ─ ─ ─ ─ ─  ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃│             │             ││              ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃│             │             ││              ┃ RowGroup ┃
+┃┃             │                            │ ┃     2    ┃
+┃┃│             │             ││              ┃          ┃
+┃┃             │                            │ ┃          ┃
+┃┃└ ─ ─ ─ ─ ─ ─ └ ─ ─ ─ ─ ─ ─ ┘└ ─ ─ ─ ─ ─ ─  ┃          ┃
+┃┃ColumnChunk 4  ColumnChunk 5 ColumnChunk 6  ┃          ┃
+┃┃ (Column &#34;A&#34;)   (Column &#34;B&#34;)  (Column &#34;C&#34;)  ┃          ┃
+┃┗━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┛          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+</code></pre><p><code>ColumnChunk</code> 的逻辑值使用许多<a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/">可用的编码</a>之一写入一个或多个数据页，并按顺序附加在文件中。在 Parquet 文件的末尾有一个页脚，它包含了重要的元数据，如：。</p>
+<ul>
+<li>文件的模式信息，如列名和类型</li>
+<li>文件中的 <code>RowGroup</code> 和 <code>ColumnChunk</code> 的位置</li>
+</ul>
+<p>页脚也可能包含其他专门的数据结构。</p>
+<ul>
+<li>每个 <code>ColumnChunk</code> 的可选统计数据，包括最小/最大值和 null 值个数</li>
+<li>可选的指向 <a href="https://github.com/apache/parquet-format/blob/54e53e5d7794d383529dd30746378f19a12afd58/src/main/thrift/parquet.thrift#L926-L932">OffsetIndexes</a> 的指针，包含每个单独页面的位置</li>
+<li>可选的指向 <a href="https://github.com/apache/parquet-format/blob/54e53e5d7794d383529dd30746378f19a12afd58/src/main/thrift/parquet.thrift#L938">ColumnIndex</a> 的指针，包含每个页面的行数和汇总统计。</li>
+<li>可选的指向 <a href="https://github.com/apache/parquet-format/blob/54e53e5d7794d383529dd30746378f19a12afd58/src/main/thrift/parquet.thrift#L621-L630">BloomFilterData</a> 的指针，它可以快速检查一个值是否存在于 <code>ColumnChunk</code> 中。</li>
+</ul>
+<p>例如，上图中 2 个 Row Group 和 6 个 <code>ColumnChunk</code> 的逻辑结构可以存储在一个 Parquet 文件中，如下图所示（不按比例）。<code>ColumnChunk</code> 的页面在前面，后面是页脚。数据、编码方案的有效性以及 Parquet 编码器的设置决定了每个 <code>ColumnChunk</code> 所需的页面数量和大小。在本例中，<code>ColumnChunk</code> 1 需要 2 页，而 <code>ColumnChunk</code> 6 只需要 1 页。除了其他信息外，页脚还包含每个数据页的位置和列的类型。</p>
+<pre tabindex="0"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 1 (&#34;A&#34;)             ◀─┃─ ─ ─│
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃     │
+┃ Data Page for ColumnChunk 1 (&#34;A&#34;)               ┃
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃     │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 2 (&#34;B&#34;)               ┃     │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃     │
+┃ Data Page for ColumnChunk 3 (&#34;C&#34;)               ┃
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃     │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 3 (&#34;C&#34;)               ┃     │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃     │
+┃ Data Page for ColumnChunk 3 (&#34;C&#34;)               ┃
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃     │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 4 (&#34;A&#34;)             ◀─┃─ ─ ─│─ ┐
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃     │  │
+┃ Data Page for ColumnChunk 5 (&#34;B&#34;)               ┃
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃     │  │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 5 (&#34;B&#34;)               ┃     │  │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃     │  │
+┃ Data Page for ColumnChunk 5 (&#34;B&#34;)               ┃
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃     │  │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
+┃ Data Page for ColumnChunk 6 (&#34;C&#34;)               ┃     │  │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃     │  │
+┃┃Footer                                        ┃ ┃
+┃┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃ ┃     │  │
+┃┃ ┃File Metadata                             ┃ ┃ ┃
+┃┃ ┃ Schema, etc                              ┃ ┃ ┃     │  │
+┃┃ ┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     ┃ ┃ ┃
+┃┃ ┃ ┃Row Group 1 Metadata              ┃     ┃ ┃ ┃     │  │
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓             ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┃Column &#34;A&#34; Metadata┃ Location of ┃     ┃ ┃ ┃     │  │
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛ first Data  ┣ ─ ─ ╋ ╋ ╋ ─ ─
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓ Page, row   ┃     ┃ ┃ ┃        │
+┃┃ ┃ ┃┃Column &#34;B&#34; Metadata┃ counts,     ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛ sizes,      ┃     ┃ ┃ ┃        │
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓ min/max     ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┃Column &#34;C&#34; Metadata┃ values, etc ┃     ┃ ┃ ┃        │
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛             ┃     ┃ ┃ ┃
+┃┃ ┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛     ┃ ┃ ┃        │
+┃┃ ┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     ┃ ┃ ┃
+┃┃ ┃ ┃Row Group 2 Metadata              ┃     ┃ ┃ ┃        │
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓ Location of ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┃Column &#34;A&#34; Metadata┃ first Data  ┃     ┃ ┃ ┃        │
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛ Page, row   ┣ ─ ─ ╋ ╋ ╋ ─ ─ ─ ─
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓ counts,     ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┃Column &#34;B&#34; Metadata┃ sizes,      ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛ min/max     ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┏━━━━━━━━━━━━━━━━━━━┓ values, etc ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┃Column &#34;C&#34; Metadata┃             ┃     ┃ ┃ ┃
+┃┃ ┃ ┃┗━━━━━━━━━━━━━━━━━━━┛             ┃     ┃ ┃ ┃
+┃┃ ┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛     ┃ ┃ ┃
+┃┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃ ┃
+┃┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+</code></pre><p>在创建 Parquet 文件时，有许多重要的标准需要考虑，如如何优化数据的顺序/集群，并将其结构化为 <code>RowGroup</code> 和 Data Page。这种&quot;物理设计&quot;的考虑很复杂，值得自己写一系列的文章，在这篇博文中不涉及。相反，我们专注于如何使用可用的结构来使查询变得非常快。</p>
+<h1 id="优化查询">优化查询</h1>
+<p>在任何查询处理系统中，以下技术通常可以提高性能:</p>
+<ul>
+<li>
+<ol>
+<li>减少必须从二级存储中传输处理的数据（减少 I/O)</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>减少解码数据的计算负荷（减少 CPU）。</li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li>对数据的读取和解码进行交错/管道化处理（提高并行性）</li>
+</ol>
+</li>
+</ul>
+<p>同样的原则也适用于查询 Parquet 文件，我们将在下面介绍。</p>
+<h1 id="解码优化">解码优化</h1>
+<p>Parquet 通过使用<a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/">复杂的编码技术</a>，如运行长度压缩、字典编码、delta 编码等，实现了惊人的压缩率。因此，由 CPU 负责的解码任务可以主导查询延迟。Parquet 读取器可以使用一些技术来改善这一任务的延迟和吞吐量，正如我们在 Rust 实现中所做的那样。</p>
+<h1 id="矢量解码">矢量解码</h1>
+<p>大多数分析系统一次将多个值解码成列式内存格式，如 Apache Arrow，而不是逐行处理数据。这通常被称为矢量或列式处理，它是有益的，因为它:</p>
+<ul>
+<li>摊薄调度开销，以便在被解码的列的类型上进行切换</li>
+<li>通过从一个 <code>ColumnChunk</code> 中读取连续的值来提高缓存的位置性</li>
+<li>通常允许在一条指令中解码多个值</li>
+<li>用一个大的分配来避免许多小的堆分配，对于可变长度的类型，如字符串和字节数组，产生了显著的节省</li>
+</ul>
+<p>因此，Rust Parquet 阅读器实现了专门的解码器，用于将 Parquet 直接读成<a href="https://www.influxdata.com/glossary/column-database/">列式</a>内存格式（Arrow Arrays）。</p>
+<h1 id="流式解码">流式解码</h1>
+<p>在 <code>ColumnChunk</code> 之间，哪些行被存储在哪些 Pages 中没有关系。例如，第 10,000 行的逻辑值可能在 A 列的第一页和 B 列的第三页。</p>
+<p>矢量解码最简单的方法，也是最初在 Parquet 解码器中经常实现的方法，就是一次对整个 <code>RowGroup</code>（或 <code>ColumnChunk</code>）进行解码。</p>
+<p>然而，鉴于 Parquet 的高压缩率，一个 <code>RowGroup</code> 很可能包含数百万行。一次性解码这么多行是不理想的，因为它:</p>
+<ul>
+<li>需要大量的中间 RAM：典型的内存格式的优化处理，如 Apache Arrow，需要比其 Parquet 编码的形式多得多。</li>
+<li>增加了查询延迟。后续的处理步骤（如过滤或聚合）只有在整个 <code>RowGroup</code>（或 <code>ColumnChunk</code>）被解码后才能开始。</li>
+</ul>
+<p>因此，最好的 Parquet 读取器支持&quot;流式&quot;数据输出，按要求产生可配置大小的行批。批的大小必须足够大，以摊销解码的开销，但又要足够小，以便有效地使用内存，并允许下游处理在随后的批次解码时同时开始。</p>
+<pre tabindex="0"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃
+┃ Data Page for ColumnChunk 1 │◀┃─                   ┌── ─── ─── ─── ─── ┐
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │   ┏━━━━━━━┓        ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃     ┃       ┃      │                   │
+┃ Data Page for ColumnChunk 1 │ ┃ │   ┃       ┃   ─ ▶│ │   │ │   │ │   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃  ─ ─┃       ┃─ ┤   │  ─ ─   ─ ─   ─ ─  │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │   ┃       ┃           A    B     C   │
+┃ Data Page for ColumnChunk 2 │◀┃─    ┗━━━━━━━┛  │   └── ─── ─── ─── ─── ┘
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │    Parquet
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃      Decoder   │            ...
+┃ Data Page for ColumnChunk 3 │ ┃ │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                │   ┌── ─── ─── ─── ─── ┐
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │                    ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
+┃ Data Page for ColumnChunk 3 │◀┃─               │   │                   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                 ─ ▶│ │   │ │   │ │   │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                    │  ─ ─   ─ ─   ─ ─  │
+┃ Data Page for ColumnChunk 3 │ ┃                         A    B     C   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                    └── ─── ─── ─── ─── ┘
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+      Parquet file                                    Smaller in memory
+                                                         batches for
+                                                         processing
+</code></pre><p>虽然流媒体的解释并不复杂，但解码的有状态性，特别是跨多列和<a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">任意嵌套的数据</a>，其中行和值之间的关系并不固定，需要复杂的中间缓冲和大量的工程努力来正确处理。</p>
+<h1 id="字典保存">字典保存</h1>
+<p>字典编码，也被称为<a href="https://pandas.pydata.org/docs/user_guide/categorical.html">分类</a>编码，是一种技术，列中的每个值不直接存储，而是在一个单独的列表中存储一个索引，称为&quot;字典&quot;。这种技术对于有重复值的列来说，实现了<a href="https://en.wikipedia.org/wiki/Third_normal_form#:~:text=Third%20normal%20form%20(3NF)%20is,in%201971%20by%20Edgar%20F.">第三种正常形式</a>的许多好处（低<a href="https://www.influxdata.com/glossary/cardinality/">基数</a>），对于像 &ldquo;City&rdquo; 这样的字符串列特别有效。</p>
+<p><code>ColumnChunk</code> 中的第一页可以选择是一个字典页，包含一个列的类型的值列表。在这个 <code>ColumnChunk</code> 中的后续页面可以对这个字典的索引进行编码，而不是直接对值进行编码。</p>
+<p>考虑到这种编码的有效性，如果 Parquet 解码器只是简单地将字典数据解码为本地类型，那么它就会低效地反复复制相同的值，这对字符串数据来说尤其是灾难性的。为了有效地处理字典编码的数据，在解码时必须保留编码。方便的是，许多列式格式，如 Arrow <a href="https://docs.rs/arrow/27.0.0/arrow/array/struct.DictionaryArray.html">DictionaryArray</a>，支持这种兼容的编码。</p>
+<p>在向 Arrow 数组读取数据时，保留字典编码可以极大地提高性能，在某些情况下可以超过 <a href="https://github.com/apache/arrow-rs/pull/1180">60</a> 倍，而且使用的内存也大大减少。</p>
+<p>保存字典的主要复杂因素是，字典是按 <code>ColumnChunk</code> 存储的，因此字典在 <code>RowGroup</code> 之间发生变化。阅读器必须为跨越多个 <code>RowGroup</code> 的批次自动重新计算字典，同时还要优化批次大小均匀地划分为每个 <code>RowGroup</code> 的行数的情况。此外，一个列可能只有<a href="https://github.com/apache/parquet-format/blob/111dbdcf8eff2e9f8e0d4e958cecbc7e00028aca/README.md?plain=1#L194-L199">部分的字典编码</a>，这使得实现更加复杂。关于这种技术及其复杂性的更多信息可以在关于将这种技术应用于 C++ Parquet 阅读器的博文中找到。</p>
+<h1 id="投影下推">投影下推</h1>
+<p>最基本的 Parquet 优化，也是最常见的 Parquet 文件的优化，是投影下推，它可以减少 I/O 和 CPU 的需求。投影在这里意味着&quot;选择一些但不是所有的列&quot;。鉴于 Parquet 是如何组织数据的，只读取和解码被引用列所需的 <code>ColumnChunk</code> 是很简单的。</p>
+<p>例如，考虑一个 SQL 查询，其形式为</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">35</span><span class="w">
+</span></span></span></code></pre></div><p>这个查询只需要 A 列和 B 列的数据（而不是 C 列），而且这个投影可以&quot;向下推&quot;给 Parquet 阅读器。</p>
+<p>具体来说，使用页脚中的信息，Parquet 阅读器可以完全跳过获取（I/O）和解码（CPU）存储 C 列数据的数据页（在我们的例子中是 <code>ColumnChunk</code> 3 和 <code>ColumnChunk</code> 6）。</p>
+<pre tabindex="0"><code>                             ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                             ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ┌─────▶ Data Page for ColumnChunk 1 (&#34;A&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 1 (&#34;A&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 2 (&#34;B&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       │     ┃ Data Page for ColumnChunk 3 (&#34;C&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+   A query that        │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+  accesses only        │     ┃ Data Page for ColumnChunk 3 (&#34;C&#34;) ┃
+ columns A and B       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+can read only the      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+ relevant pages,  ─────┤     ┃ Data Page for ColumnChunk 3 (&#34;C&#34;) ┃
+skipping any Data      │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 4 (&#34;A&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 5 (&#34;B&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 5 (&#34;B&#34;) ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       └─────▶ Data Page for ColumnChunk 5 (&#34;B&#34;) ┃
+                             ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                             ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                             ┃ Data Page for ColumnChunk 6 (&#34;C&#34;) ┃
+                             ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+</code></pre><h1 id="谓词下推">谓词下推</h1>
+<p>与投影下推类似，谓词下推也避免了从 Parquet 文件中获取和解码数据，但它是使用过滤器表达式。这种技术通常需要与查询引擎（如 <a href="https://arrow.apache.org/datafusion/">DataFusion</a>）更紧密地结合，以确定有效的谓词并在扫描过程中评估它们。不幸的是，如果没有精心设计的 API，Parquet 解码器和查询引擎最终可能会紧密耦合，阻止重复使用（例如，在 <a href="https://docs.cloudera.com/documentation/enterprise/6/6.3/topics/cdh_ig_predicate_pushdown_parquet.html#concept_pgs_plb_mgb">Cloudera Parquet Predicate Pushdown 文档</a>中有不同的 Impala 和 Spark 实现）。Rust Parquet 阅读器使用 <a href="https://docs.rs/parquet/27.0.0/parquet/arrow/arrow_reader/struct.RowSelector.html">RowSelection</a> API 来避免这种耦合。</p>
+<h1 id="rowgroup-修剪">RowGroup 修剪</h1>
+<p>许多基于 Parquet 的查询引擎所支持的最简单形式的谓词下推，使用存储在页脚的统计数据来跳过整个 <code>RowGroup</code>。我们称这种操作为 <code>RowGroup</code> 修剪，它类似于许多经典的数据仓库系统中的<a href="https://docs.oracle.com/database/121/VLDBG/GUID-E677C85E-C5E3-4927-B3DF-684007A7B05D.htm#VLDBG00401">分区修剪</a>。</p>
+<p>对于上面的查询例子，如果某个特定的 <code>RowGroup</code> 中 A 的最大值小于 35，解码器可以跳过从整个 <code>RowGroup</code> 中获取和解码任何 <code>ColumnChunk</code>。</p>
+<pre tabindex="0"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃Row Group 1 Metadata                      ┃
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
+┃ ┃Column &#34;A&#34; Metadata    Min:0 Max:15   ┃◀╋ ┐
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃       Using the min
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃ │     and max values
+┃ ┃Column &#34;B&#34; Metadata                   ┃ ┃       from the
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃ │     metadata,
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃       RowGroup 1  can
+┃ ┃Column &#34;C&#34; Metadata                   ┃ ┃ ├ ─ ─ be entirely
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃       skipped
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ │     (pruned) when
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓       searching for
+┃Row Group 2 Metadata                      ┃ │     rows with A &gt;
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃       35,
+┃ ┃Column &#34;A&#34; Metadata   Min:10 Max:50   ┃◀╋ ┘
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
+┃ ┃Column &#34;B&#34; Metadata                   ┃ ┃
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
+┃ ┃Column &#34;C&#34; Metadata                   ┃ ┃
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+</code></pre><p>请注意，对最小值和最大值的修剪对许多数据布局和列类型是有效的，但不是所有的。具体来说，它对具有许多不同的伪随机值的列（如标识符或 uuid）并不有效。值得庆幸的是，对于这种用例，Parquet 也支持每一个 <code>ColumnChunk</code> <a href="https://github.com/apache/parquet-format/blob/master/BloomFilter.md">布隆过滤器</a>。我们正在积极努力，在 Apache Rust 的实现中<a href="https://github.com/apache/arrow-rs/issues/3023">增加对布隆过滤器</a>的支持。</p>
+<h1 id="页面修剪">页面修剪</h1>
+<p>一个更复杂的谓词下推形式使用页脚元数据中的可选页面索引来排除整个<a href="https://github.com/apache/parquet-format/blob/master/PageIndex.md">数据页</a>。解码器只对其他列的相应行进行解码，经常跳过整个页面。</p>
+<p>由于各种原因，不同 <code>ColumnChunk</code> 中的页面经常包含不同数量的行，这一事实使这种优化变得复杂。虽然页面索引可以从一列中识别出所需的页面，但从一列中修剪一个页面并不能立即排除其他列中的整个页面。</p>
+<p>页面修剪的过程如下:</p>
+<ul>
+<li>使用谓词与页面索引相结合来确定要跳过的页面</li>
+<li>使用偏移索引来确定哪些行的范围对应于未跳过的页面</li>
+<li>计算非跳过页的范围的交集，并只对这些行进行解码</li>
+</ul>
+<p>最后一点的实现是非常不容易的，特别是对于嵌套的列表来说，<a href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/">一行可能对应多个值</a>。幸运的是，Rust Parquet 阅读器在内部隐藏了这种复杂性，并且可以解码任意的 <a href="https://docs.rs/parquet/27.0.0/parquet/arrow/arrow_reader/struct.RowSelection.html">RowSelection</a>。</p>
+<p>例如，要扫描存储在 5 个数据页中的 A 列和 B 列，如下所示：</p>
+<p>如果谓词是 <code>A &gt; 35</code>:</p>
+<ul>
+<li>第1页使用页面索引（最大值为20）进行修剪，留下一个[200-&gt;起]的 <code>RowSelection</code>。</li>
+<li>Parquet 阅读器完全跳过第3页（因为它的最后一行索引是99）。</li>
+<li>(只）通过读取第 2、4、5 页来读取相关的行。</li>
+</ul>
+<p>如果谓词是 <code>A &gt; 35 AND B = &quot;F&quot;</code>，那么页面索引就更有效了:</p>
+<ul>
+<li>使用 <code>A &gt; 35</code>，产生的 <code>RowSelection</code> 为 [200-&gt;onwards]，如前所述。</li>
+<li>使用 <code>B = &quot;F&quot;</code>，在 B 的剩余的第4页和第5页，产生一个 [100-244] 的 <code>RowSelection</code>。</li>
+<li>将这两个 <code>RowSelection</code> 相交，得到一个合并的 <code>RowSelection</code> [200-244]。</li>
+<li>Parquet 阅读器只对第2页和第4页的这50行进行解码。</li>
+</ul>
+<pre tabindex="0"><code>┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━
+   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ┃
+┃     ┌──────────────┐  │     ┌──────────────┐  │  ┃
+┃  │  │              │     │  │              │     ┃
+┃     │              │  │     │     Page     │  │
+   │  │              │     │  │      3       │     ┃
+┃     │              │  │     │   min: &#34;A&#34;   │  │  ┃
+┃  │  │              │     │  │   max: &#34;C&#34;   │     ┃
+┃     │     Page     │  │     │ first_row: 0 │  │
+   │  │      1       │     │  │              │     ┃
+┃     │   min: 10    │  │     └──────────────┘  │  ┃
+┃  │  │   max: 20    │     │  ┌──────────────┐     ┃
+┃     │ first_row: 0 │  │     │              │  │
+   │  │              │     │  │     Page     │     ┃
+┃     │              │  │     │      4       │  │  ┃
+┃  │  │              │     │  │   min: &#34;D&#34;   │     ┃
+┃     │              │  │     │   max: &#34;G&#34;   │  │
+   │  │              │     │  │first_row: 100│     ┃
+┃     └──────────────┘  │     │              │  │  ┃
+┃  │  ┌──────────────┐     │  │              │     ┃
+┃     │              │  │     └──────────────┘  │
+   │  │     Page     │     │  ┌──────────────┐     ┃
+┃     │      2       │  │     │              │  │  ┃
+┃  │  │   min: 30    │     │  │     Page     │     ┃
+┃     │   max: 40    │  │     │      5       │  │
+   │  │first_row: 200│     │  │   min: &#34;H&#34;   │     ┃
+┃     │              │  │     │   max: &#34;Z&#34;   │  │  ┃
+┃  │  │              │     │  │first_row: 250│     ┃
+┃     └──────────────┘  │     │              │  │
+   │                       │  └──────────────┘     ┃
+┃   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
+┃       ColumnChunk            ColumnChunk         ┃
+┃            A                      B
+ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━┛
+</code></pre><p><a href="https://issues.apache.org/jira/browse/PARQUET-1404">PARQUET-1404</a> 中跟踪了从 Arrow C++ 以及扩展的 pyarrow/pandas 读取和写入这些索引的支持。</p>
+<h1 id="延迟物化">延迟物化</h1>
+<p>前面两种形式的谓词下推只在解码值之前对为 <code>RowGroup</code>、<code>ColumnChunk</code> 和 Data Pages 存储的元数据进行操作。然而，同样的技术也可以扩展到一个或多个列的值，在解码后但在解码其他列之前，这通常被称为&quot;延迟物化&quot;。</p>
+<p>这种技术在以下情况下特别有效。</p>
+<ul>
+<li>谓词是非常有选择性的，即过滤掉大量的行</li>
+<li>每一行都很大，要么是由于宽行（例如 JSON blobs），要么是许多列</li>
+<li>被选中的数据是聚在一起的</li>
+<li>谓词所需的列是相对便宜的解码，例如 PrimitiveArray/DictionaryArray</li>
+</ul>
+<p>在 <a href="https://issues.apache.org/jira/browse/SPARK-36527">SPARK-36527</a> 和 <a href="https://docs.cloudera.com/cdw-runtime/cloud/impala-reference/topics/impala-lazy-materialization.html">Impala</a> 中对这种技术的好处有更多讨论。</p>
+<p>例如，给定上面的谓词 <code>A &gt; 35 AND B = &quot;F&quot;</code>，其中引擎使用页面索引来确定在 [100-244] 的 <code>RowSelection</code> 中只有50行可以匹配，使用延迟物化，Parquet 解码器:</p>
+<ul>
+<li>对A列的50个值进行解码</li>
+<li>对这50个值进行 <code>A &gt; 35</code> 的评估</li>
+<li>在这种情况下，只有5行通过，结果是 <code>RowSelection</code>:</li>
+<li>RowSelection[205-206]</li>
+<li>RowSelection[238-240]</li>
+<li>对于这些选择，只对 B 列的5行进行解码</li>
+</ul>
+<pre tabindex="0"><code>  Row Index
+             ┌────────────────────┐            ┌────────────────────┐
+       200   │         30         │            │        &#34;F&#34;         │
+             └────────────────────┘            └────────────────────┘
+                      ...                               ...
+             ┌────────────────────┐            ┌────────────────────┐
+       205   │         37         │─ ─ ─ ─ ─ ─▶│        &#34;F&#34;         │
+             ├────────────────────┤            ├────────────────────┤
+       206   │         36         │─ ─ ─ ─ ─ ─▶│        &#34;G&#34;         │
+             └────────────────────┘            └────────────────────┘
+                      ...                               ...
+             ┌────────────────────┐            ┌────────────────────┐
+       238   │         36         │─ ─ ─ ─ ─ ─▶│        &#34;F&#34;         │
+             ├────────────────────┤            ├────────────────────┤
+       239   │         36         │─ ─ ─ ─ ─ ─▶│        &#34;G&#34;         │
+             ├────────────────────┤            ├────────────────────┤
+       240   │         40         │─ ─ ─ ─ ─ ─▶│        &#34;G&#34;         │
+             └────────────────────┘            └────────────────────┘
+                      ...                               ...
+             ┌────────────────────┐            ┌────────────────────┐
+      244    │         26         │            │        &#34;D&#34;         │
+             └────────────────────┘            └────────────────────┘
+
+
+                   Column A                          Column B
+                    Values                            Values
+</code></pre><p>在某些情况下，例如我们的例子，B 存储单字符值，延迟物化机械的成本可能超过解码的节省。然而，当上面列出的一些条件得到满足时，节省的费用就会很可观。查询引擎必须决定哪些谓词要下推，以何种顺序应用它们以获得最佳结果。</p>
+<p>虽然这不在本文的范围内，但同样的技术可以应用于多个谓词以及多列的谓词。更多信息请参见 Parquet 板块中的 <a href="https://docs.rs/parquet/latest/parquet/arrow/arrow_reader/struct.RowFilter.html">RowFilter</a> 接口，以及 DataFusion 中的 <a href="https://github.com/apache/arrow-datafusion/blob/58b43f5c0b629be49a3efa0e37052ec51d9ba3fe/datafusion/core/src/physical_plan/file_format/parquet/row_filter.rs#L40-L70">row_filter</a> 实现。</p>
+<h1 id="io下推">I/O下推</h1>
+<p>虽然 Parquet 是为在 <a href="https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html">HDFS 分布式文件系统</a>上的高效访问而设计的，但它与 AWS S3 等商品 blob 存储系统配合得非常好，因为它们具有非常相似的特性。</p>
+<ul>
+<li>相对较慢的&quot;随机访问&quot;读取：在每次请求中读取大的（MBs）数据段比为较小的部分发出许多请求要有效得多。</li>
+<li><strong>检索第一个字节之前有很大的延迟</strong>。</li>
+<li><strong>每个请求的成本很高</strong>。通常按请求收费，而不考虑读取的字节数，这激励了更少的请求，每次读取大的连续的数据部分。</li>
+</ul>
+<p>为了从这类系统中获得最佳的读取效果，Parquet 读取器必须:</p>
+<ul>
+<li>
+<ol>
+<li>尽量减少 I/O 请求的数量，同时应用各种下推技术以避免获取大量未使用的数据。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>与适当的任务调度机制相结合，对获取的数据进行交错的 I/O 和处理，以避免管道瓶颈。</li>
+</ol>
+</li>
+</ul>
+<p>由于这些都是工程和集成方面的重大挑战，许多 Parquet 阅读器仍然需要将文件完整地取到本地存储中。</p>
+<p>为了处理这些文件而获取整个文件并不理想，原因有以下几点:</p>
+<ul>
+<li>
+<ol>
+<li>高延时。在获取整个文件之前不能开始解码（Parquet 元数据在文件的末尾，所以解码器必须在解码其他部分之前看到末尾）。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>浪费的工作。取回整个文件可以获取所有必要的数据，但也可能有很多不必要的数据，这些数据在读取页脚后会被跳过。这不必要地增加了成本。</li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li>需要昂贵的&quot;本地附加&quot;存储（或内存）。许多云环境不提供具有本地附加存储的计算资源&ndash;它们要么依赖昂贵的网络块存储，如 AWS EBS，要么就是将本地存储限制在某些类别的虚拟机上。</li>
+</ol>
+</li>
+</ul>
+<p>为了避免缓冲整个文件，需要一个复杂的 Parquet 解码器，它与 I/O 子系统集成，可以在最初获取和解码元数据，然后对相关的数据块进行范围化的获取，与 Parquet 数据的解码交错进行。这种优化需要精心设计，以便从对象存储中获取足够大的数据块，使每个请求的开销不至于支配减少传输字节的收益。<a href="https://issues.apache.org/jira/browse/SPARK-36529">SPARK-36529</a> 更详细地描述了顺序处理的挑战。</p>
+<pre tabindex="0"><code>                       ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+                                                                │
+                       │
+               Step 1: Fetch                                    │
+ Parquet       Parquet metadata
+ file on ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━▼━━━━━━━┓
+ Remote  ┃      ▒▒▒▒▒▒▒▒▒▒          ▒▒▒▒▒▒▒▒▒▒               ░░░░░░░░░░ ┃
+ Object  ┃      ▒▒▒data▒▒▒          ▒▒▒data▒▒▒               ░metadata░ ┃
+  Store  ┃      ▒▒▒▒▒▒▒▒▒▒          ▒▒▒▒▒▒▒▒▒▒               ░░░░░░░░░░ ┃
+         ┗━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                     │                     └ ─ ─ ─
+                                                  │
+                     │                   Step 2: Fetch only
+                      ─ ─ ─ ─ ─ ─ ─ ─ ─ relevant data blocks
+</code></pre><p>这张图中没有包括凝聚请求和确保实际执行所需的最小请求量等细节。</p>
+<p>Rust Parquet crate 提供了一个异步 Parquet 阅读器，可以有效地从任何支持范围请求的 <a href="https://docs.rs/parquet/latest/parquet/arrow/async_reader/trait.AsyncFileReader.html">AsyncFileReader</a> 中读取数据。</p>
+<ul>
+<li>高效地从任何支持范围请求的存储介质中读取数据</li>
+<li>与 Rust 的 future 生态系统集成，以避免在网络 I/O 上等待的阻塞线程，并轻松地可以交错使用 CPU 和网络</li>
+<li>同时请求多个范围，以允许实现凝聚相邻的范围，并行获取范围，等等。</li>
+<li>使用前面描述的下推技术，尽可能地消除获取数据的现象</li>
+<li>与Apache Arrow <a href="https://docs.rs/object_store/latest/object_store/">object_store</a> crate 轻松集成，你可以在<a href="https://www.influxdata.com/blog/rust-object-store-donation/">这里</a>阅读更多信息</li>
+</ul>
+<p>为了给人一种可能的感觉，下图显示了从远程文件获取页脚元数据的时间线，使用该元数据来确定要读取哪些数据页，然后同时获取数据和解码。这个过程往往必须同时对多个文件进行，以匹配网络延迟、带宽和可用的 CPU。</p>
+<pre tabindex="0"><code>                           begin
+          metadata        read of   end read
+            read  ─ ─ ─ ┐   data    of data          │
+ begin    complete         block     block
+read of                 │   │        │               │
+metadata  ─ ─ ─ ┐                                       At any time, there are
+             │          │   │        │               │     multiple network
+             │  ▼       ▼   ▼        ▼                  requests outstanding to
+  file 1     │ ░░░░░░░░░░   ▒▒▒read▒▒▒   ▒▒▒read▒▒▒  │    hide the individual
+             │ ░░░read░░░   ▒▒▒data▒▒▒   ▒▒▒data▒▒▒        request latency
+             │ ░metadata░                         ▓▓decode▓▓
+             │ ░░░░░░░░░░                         ▓▓▓data▓▓▓
+             │                                       │
+             │
+             │ ░░░░░░░░░░  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒read▒▒▒▒│▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+   file 2    │ ░░░read░░░  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒data▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+             │ ░metadata░                            │              ▓▓▓▓▓decode▓▓▓▓▓▓
+             │ ░░░░░░░░░░                                           ▓▓▓▓▓▓data▓▓▓▓▓▓▓
+             │                                       │
+             │
+             │                                     ░░│░░░░░░░  ▒▒▒read▒▒▒  ▒▒▒▒read▒▒▒▒▒
+   file 3    │                                     ░░░read░░░  ▒▒▒data▒▒▒  ▒▒▒▒data▒▒▒▒▒      ...
+             │                                     ░m│tadata░            ▓▓decode▓▓
+             │                                     ░░░░░░░░░░            ▓▓▓data▓▓▓
+             └───────────────────────────────────────┼──────────────────────────────▶Time
+
+
+                                                     │
+</code></pre><h1 id="总结">总结</h1>
+<p>我们希望你喜欢阅读 Parquet 文件格式，以及用于快速查询 Parquet 文件的各种技术。</p>
+<p>我们相信，大多数 Parquet 的开源实现之所以不具备本帖所描述的功能的广度，是因为它需要付出巨大的努力，而这在以前只有资金雄厚的商业企业才可能做到，它们的实现是闭源的。</p>
+<p>然而，随着 Apache Arrow 社区的发展和质量的提高，无论是 Rust 的从业者还是更广泛的 Arrow 社区，我们能够合作并建立一个尖端的开源实现是令人振奋和无比满意的。本博客中描述的技术是许多工程师的贡献，他们分布在公司、业余爱好者和世界上的几个存储库中，特别是 <a href="https://github.com/apache/arrow-datafusion">Apache Arrow DataFusion</a>、<a href="https://github.com/apache/arrow-rs">Apache Arrow</a> 和 <a href="https://github.com/apache/arrow-ballista">Apache Arrow Ballista</a>。</p>
+<p>如果你有兴趣加入 DataFusion 社区，请<a href="https://arrow.apache.org/datafusion/contributor-guide/communication.html">与我们联系</a>。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents"></nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__bigdata__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘bigdata’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/bigdata/">bigdata</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__parquet__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘parquet’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/parquet/">parquet</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2022-06-19-roles-as-algebraic-data-types-in-raku/" class="nobr">Roles as Algebraic Data Types in Raku »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

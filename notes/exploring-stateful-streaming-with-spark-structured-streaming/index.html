@@ -1,10 +1,902 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            使用 Spark 结构化流探索状态流 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="使用 Spark 结构化流探索状态流" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/" />
+
+
+    
+        <meta property="article:published_time" content="2018-12-26T21:14:24&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2018-12-26T21:14:24&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Spark 结构化流探索状态流"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">使用 Spark 结构化流探索状态流</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-spark-structured-streaming/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2018-12-26T21:14:24+0000" class="dt-published">Wed Dec 26, 2018</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p><a href="https://blog.yuvalitzchakov.com/2016/07/31/exploring-stateful-streaming-with-apache-spark/">在之前的文章中</a>，我们探讨了如何使用带<code>DStream</code>抽象的Sparks Streaming API进行处理状态流。今天，我想和你一起探索Spark 2.2，它在Structured Streaming API下支持状态流。在这篇文章中，我们将看到API如何成熟和发展，看看两种方法（流与结构化流）之间的差异，并了解对API进行了哪些更改。我们将通过上一篇文章中的示例，并使其适应新的API来实现。</p>
+<h2 id="回顾-spark-streaming-状态管理">回顾 Spark Streaming 状态管理&nbsp;<a class="headline-hash no-text-decoration" href="#回顾-spark-streaming-状态管理">#</a> </h2>
+<p>如果你需要在Spark中使用状态流，你必须在两个抽象之间进行选择（直到Spark 2.2）。<code>updateStateByKey</code> 和 <code>mapWithState</code>后者或多或少是前者的改进（API和性能方面）版本（具有一些不同的语义）。为了利用微批次之间的状态，你提供了一个<code>StateSpec</code>函数，<code>mapWithState</code>对于到达当前微批次的每个键值对，将调用该函数。对于 <code>mapWithState</code>，主要优点是：</p>
+<ol>
+<li><strong>状态的初始RDD</strong> - 可以加载具有先前保存状态的RDD</li>
+<li><strong>超时</strong> - 超时管理由Spark处理。你可以<em>为所有</em>键值对设置单个超时。</li>
+<li><strong>部分更新</strong> - 仅迭代当前微批中“触摸”的键以进行更新</li>
+<li><strong>返回类型</strong> - 你可以选择任何返回类型。</li>
+</ol>
+<p>但事情并不总是完美的&hellip;&hellip;</p>
+<h2 id="mapwithstate-的痛点"><code>mapWithState</code> 的痛点&nbsp;<a class="headline-hash no-text-decoration" href="#mapwithstate-的痛点">#</a> </h2>
+<p><code>mapWithState </code>比以前的 <code>updateStateByKey</code> API 有了很大的改进。但是去年在我使用它的过程中，体验过一些缺点：</p>
+<h3 id="检查点">检查点&nbsp;<a class="headline-hash no-text-decoration" href="#检查点">#</a> </h3>
+<p>为了确保Spark可以从失败的任务中恢复，它必须将数据 checkpoint 到分布式文件系统中，它可以在失败时从中恢复。使用 <code>mapWithState</code> 时，每个 executor 在内存中保存已累积的所有状态的 HashMap。在每个检查点，Spark 每次都会<em>序列化整个状态</em>。如果你在内存中持有很多状态，这可能会导致严重的处理延迟。例如，以下设置：</p>
+<ul>
+<li>批处理间隔：4秒</li>
+<li>检查点间隔：40秒（4秒批次x 10 常量 spark 系数）</li>
+<li>每秒80,000条消息</li>
+<li>消息大小：500B - 2KB</li>
+<li>5 m4.2xlarge机器（8个vCPU，32GB RAM）</li>
+<li>每台机器2个 executor</li>
+<li>executor 存储大小~7GB（每个）</li>
+<li>将数据 checkpoint 到 HDFS</li>
+</ul>
+<p>我经历<strong>了长达4小时的</strong>累积延迟，因为高负荷下的每个检查点在整个状态下花费30秒-1分钟，我们每4秒产生一次批次。<a href="https://stackoverflow.com/questions/36042295/spark-streaming-mapwithstate-seems-to-rebuild-complete-state-periodically/36065778#36065778">我也看到人们在StackOverflow上对此感到困惑，</a>因为实际上并不明白为什么有些批次比其他批次花费的时间要长得多。</p>
+<p>如果你计划使用状态流来实现高吞吐量，则必须将此视为一个严重的警告。这个问题非常严重，以至于它让我找到了在Spark中使用内存状态的替代方法。但我们很快就会看到事情看起来很光明;）</p>
+<h3 id="在版本更新之间保存状态">在版本更新之间保存状态&nbsp;<a class="headline-hash no-text-decoration" href="#在版本更新之间保存状态">#</a> </h3>
+<p>软件是一个不断发展的过程，我们总是在改进，增强和实现新的功能要求。因此，我们需要能够从一个版本升级到另一个版本，最好不要影响现有数据。在内存数据中，这变得非常棘手。我们如何保持现状？我们如何确保从中断的地方继续？</p>
+<p>开箱即用，<code>mapWithState </code>不支持改进我们的数据结构。如果你已经修改了存储状态的数据结构，则必须*删除所有以前的检查点数据，*因为<code>serialVersionUID</code>对象版本之间会有所不同。此外，由于我们要从检查点恢复连接，因此对定义在 <code>StreamingContext</code> 上的执行图的任何更改都不会生效。</p>
+<p><code>mapWithState</code>确实提供了一种通过查看数据当前状态快照的方法<code>MapWithStateDStream.stateSnapshot()</code>。这使我们能够将状态存储在外部存储库中，并能够使用 <code>StateSpec.initialRDD</code> 让其从中恢复。但是，在外部存储数据会因检查点延迟而增加本就已经很大的延迟。</p>
+<h3 id="每个状态对象单独超时">每个状态对象单独超时&nbsp;<a class="headline-hash no-text-decoration" href="#每个状态对象单独超时">#</a> </h3>
+<p><code>mapWithState</code>允许我们通过设置所有状态的默认超时<code>StateSpec.timeout</code>。但是，有时可能希望每个状态对象具有单独的状态超时。例如，假设我们要求用户会话不超过30分钟。然后出现了一个新客户，希望看到用户会话每10分钟结束一次，我们该怎么办？好吧，我们无法处理这个问题，我们必须实现我们自己的超时机制。更大的问题是，<code>mapWithState</code>只接触我们在<em>当前批次中</em>有数据的键值对，它不会触及所有键。这意味着我们必须将角色返回到<code>updateStateByKey</code>默认情况下迭代整个状态，这可能对性能有害（当然，取决于使用情况）。</p>
+<h3 id="单个-executor-故障导致数据丢失">单个 executor 故障导致数据丢失&nbsp;<a class="headline-hash no-text-decoration" href="#单个-executor-故障导致数据丢失">#</a> </h3>
+<p>executor 是java进程，对于任何进程，它们都可能失败。我在生产中遇到了堆损坏导致单个 executor 死亡。这个问题是，一旦<code>Worker</code>进程创建了新的 executor，它就<em>不会从检查点恢复状态</em>。如果你看一下<a href="https://github.com/apache/spark/blob/master/streaming/src/test/scala/org/apache/spark/streaming/CheckpointSuite.scala#L209"><code>CheckpointSuite</code></a>测试，你会发现所有这些测试都涉及<code>StreamingContext</code>恢复，但是没有任何一个 executor 失败。</p>
+<h3 id="好的缺点很好你正在谈论的这个新api在哪里">好的，缺点，很好。你正在谈论的这个新API在哪里？&nbsp;<a class="headline-hash no-text-decoration" href="#好的缺点很好你正在谈论的这个新api在哪里">#</a> </h3>
+<p>不要着急，我们才刚刚开始&hellip;&hellip; :)</p>
+<h2 id="介绍结构化流">介绍结构化流&nbsp;<a class="headline-hash no-text-decoration" href="#介绍结构化流">#</a> </h2>
+<p>结构化流是Spark 的新的闪亮工具，用于推出流。</p>
+<p>来自<a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#overview">结构化流文档 - 概述</a>：</p>
+<blockquote>
+<p>结构化流是一种基于Spark SQL引擎的可扩展且容错的流处理引擎。你可以像**表达静态数据的批处理计算一样表达流式计算。**Spark SQL引擎将负责逐步和连续地运行它，并在流数据继续到达时更新最终结果。</p>
+</blockquote>
+<p>Spark 的作者意识到，关于分布式流应用程序的推理存在许多隐藏的问题，除了维护业务领域逻辑之外，他/她可能会或可能没有意识到他/她必须处理。他们不是要处理所有这些问题，而是希望我们以与使用静态SQL表格相同的方式推断我们的流处理，同时生成查询，同时在新数据进入流中时对其进行运行。把它想象成一个无限的数据表。</p>
+<p>有关结构化流和<code>Dataset[T]</code>抽象的更深入解释，请参阅<a href="https://databricks.com/blog/2016/07/28/structured-streaming-in-apache-spark.html">DataBricks的这篇精彩文章</a>。别担心，我等你..</p>
+<p>欢迎回来。让我们继续看看结构化流中的新状态流抽象是什么样的</p>
+<h2 id="通过一个例子学习">通过一个例子学习&nbsp;<a class="headline-hash no-text-decoration" href="#通过一个例子学习">#</a> </h2>
+<p>我将在这里使用的示例与我之前关于状态流的帖子中使用的示例相同。回顾一下（对于那些不熟悉上一篇文章的人），该示例讨论了一组传入的用户事件，我们希望在它们从流中进入时进行聚合。我们的活动在 <code>UserEvent</code> 类上建模：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">UserEvent</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">data</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">isLast</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">)</span>
+</span></span></code></pre></div><p>我们通过他的 id 唯一地识别用户。此 id 将用于将传入数据组合在一起，以便我们将所有用户事件都发送到处理状态的同一 executor 进程。用户事件还具有一个 <code>data</code> 字段以生成一些<code>String</code>内容, 还有一个额外的 <code>Boolean</code>字段以指示这是否是当前会话的最后一条消息。</p>
+<p>我们在流中汇总用户事件的方式是使用<code>UserSession</code>类：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">UserSession</span><span class="o">(</span><span class="n">userEvents</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">])</span>
+</span></span></code></pre></div><p>它将特定用户的所有事件保存在一起。</p>
+<h2 id="介绍mapgroupswithstate">介绍<code>mapGroupsWithState</code>：&nbsp;<a class="headline-hash no-text-decoration" href="#介绍mapgroupswithstate">#</a> </h2>
+<p>如果你认为“嗯，这个名字听起来很熟悉”，那你说对了，它几乎与我们在Spark Streaming中的 <code>mapWithState</code> 抽象相同，只是对面向用户的API进行了微小的改动。但首先，我们来谈谈两者之间的一些关键差异。</p>
+<h3 id="mapwithstate和mapgroupswithstate通用-spark-结构化流-vs-流-之间的差异"><code>mapWithState</code>和<code>mapGroupsWithState</code>（通用 Spark 结构化流 VS 流 ）之间的差异&nbsp;<a class="headline-hash no-text-decoration" href="#mapwithstate和mapgroupswithstate通用-spark-结构化流-vs-流-之间的差异">#</a> </h3>
+<ol>
+<li><strong>在应用程序更新之间保持状态</strong> - 最大的一个警告<code>mapWithState</code>是，除非你推出自己的状态簿记，否则你将被迫在升级之间删除内存数据。不仅如此，如果Spark DAG中的任何内容发生变化，你也必须删除该数据。从我的实验来看<code>mapGroupsWithState</code>，似乎使用Kryo编码器结合正确版本化数据结构（即使用新添加状态的默认值），允许你<strong>在应用程序升级之间保持数据并且还更改定义转换的Spark DAG并且仍然保持国家</strong>。对于任何使用这个人来说，这都是重<code>mapWithState</code>。我之所以谨慎说这是因为我没有看到任何来自结构化流开发者的官方文档或声明来支持这种说法。</li>
+<li><strong>微批处理执行</strong> - Spark Streaming 需要固定的批处理间隔，以便使用来自源的数据生成和执行微批处理。即使没有新数据到达，微批次仍将执行，这将导致整个图执行。结构化流是不同的，它有一个专用线程，不断检查源，看是否有新数据到达。如果没有可用的新数据，<strong>则不会执行查询</strong>。那是什么意思？例如，这意味着如果你将超时间隔设置为X秒但新数据尚未进入流中，则**任何状态都不会超时，**因为它不会运行查询。</li>
+<li><strong>状态的内部数据存储</strong> - <code>mapWithState</code>基于<code>OpenHashMapBasedStateMap[K, V]</code>存储内存状态的实现。<code>mapGroupsWithState</code>用途<code>java.util.ConcurrentHashMap[K, V]</code>。另外，后者使用一个名为<code>UnsafeRow</code>key和value 的底层结构，而不是普通的JVM对象。这些不安全的行是由编码器为键和值生成的数据字节周围的包装器，并且当需要将键值对传递给我们的状态函数时，在不安全表示与我们的JVM对象结构之间应用按需转换。</li>
+<li><strong>状态版本控制</strong> - 内存中不再有每个执行程序的单个状态存储。新实现使用<code>HDFSBackedStateStore</code>每个<em>版本</em>的状态，这意味着它只需要将最新版本的状态保留在内存中，同时让旧版本驻留在后备状态存储中，根据需要按需加载它们。</li>
+<li><strong>超时</strong> - <code>mapWithState</code>为所有状态对象设置一个超时。<code>mapGroupsWithState</code>启用每个组的状态超时，这意味着你可以为超时创建更复杂的配置。此外，还可以根据事件时间和水印进行超时。</li>
+<li><strong>检查点</strong> - <code>mapWithState</code>检查点每隔固定间隔发生一次。如果我们的批处理时间是4秒，则内存中的整个状态的检查点将每40秒发生一次。不仅如此，检查点是一个<em>阻塞操作</em>，这意味着在完成之前我们无法处理下一批的传入事件。对于更新的密钥，<code>mapGroupsWithState</code>检查点是<em>递增地</em>完成的，并且这被<code>FileSystem</code>用作状态存储的底层的实现抽象掉了。这意味着检查点开销应该<strong>显着减少</strong>。</li>
+<li><strong>偏移处理（对于可重放的源，例如Kafka）</strong> - 将<code>DStream</code>API与可<strong>重放的源（如Kafka）一起</strong>使用，需要我们在持久存储（例如ZooKeeper，S3或HDFS）中推断偏移存储。从特定偏移重放某个源意味着从持久存储中读取数据并<code>KafkaUtil.createDirectStream</code>在初始化流时将其传递给它。结构化流式传输在重新运行应用程序时代表我们存储和检索偏移，这意味着我们不再需要在外部存储它们。</li>
+</ol>
+<p>好吧，通过比较，让我们开展业务。</p>
+<h3 id="分析api">分析API&nbsp;<a class="headline-hash no-text-decoration" href="#分析api">#</a> </h3>
+<p>让我们看一下 <code>mapGroupsWithState</code> 的方法签名：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">mapGroupsWithState</span><span class="o">[</span><span class="kt">S:</span> <span class="kt">Encoder</span>, <span class="kt">U:</span> <span class="kt">Encoder</span><span class="o">](</span>
+</span></span><span class="line"><span class="cl">      <span class="n">timeoutConf</span><span class="k">:</span> <span class="kt">GroupStateTimeout</span><span class="o">)(</span>
+</span></span><span class="line"><span class="cl">      <span class="n">func</span><span class="k">:</span> <span class="o">(</span><span class="kt">K</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">V</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="n">U</span><span class="o">)</span>
+</span></span></code></pre></div><p>让我们分解每个参数，看看我们能用它做些什么。第一个参数包含一个<code>timeoutConf</code>, 它负责我们想选择哪个超时配置。我们有两种选择：</p>
+<ol>
+<li><strong>基于处理时间</strong>（<code>GroupStateTimeout.ProcessingTimeTimeout</code>） - 基于恒定间隔的超时（类似于在Spark Streaming中在 <code>StateSpec</code> 上调用的 <code>timeout</code>函数）</li>
+<li><strong>基于事件时间</strong>（<code>GroupStateTimeout.EventTimeTimeout</code>） - 基于用户定义的事件时间<em>和水印的</em>超时（<a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#handling-late-data-and-watermarking">有关使用水印处理迟到数据的更多信息</a>阅读<a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#handling-late-data-and-watermarking">此内容</a>）。</li>
+</ol>
+<p>在第二个参数列表中，我们有状态函数。让我们来看看每个参数及其含义：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">func</span><span class="k">:</span> <span class="o">(</span><span class="kt">K</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">V</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">S</span><span class="o">]</span> <span class="k">=&gt;</span> <span class="n">U</span><span class="o">)</span>
+</span></span></code></pre></div><p>有三种参数类型，<code>K</code>和<code>Iterator[V]</code>，以及<code>GroupState[S]</code>, 还有 <code>U</code> 类型的返回类型。让我们将这些参数映射到我们的示例并填写类型。</p>
+<p>正如我们所见，我们有一个  <code>UserEvent</code> 类型的传入消息流。该类有一个 <code>Int</code> 类型的字段, 叫 <code>id</code>，我们将其用作将用户事件组合在一起的键。这意味着我们用 <code>Int</code> 替换 <code>K</code>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="o">(</span><span class="nc">Int</span><span class="o">,</span> <span class="nc">Iterator</span><span class="o">[</span><span class="kt">V</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="n">U</span>
+</span></span></code></pre></div><p>接下来是<code>Iterator[V]</code>。<code>V</code>是我们将聚合的值的类型。我们将收到一个 <code>UserEvent</code> 流，这意味着我们需要用 UserEvent 替换<code>V</code>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="o">(</span><span class="nc">Int</span><span class="o">,</span> <span class="nc">Iterator</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="n">U</span>
+</span></span></code></pre></div><p>很好！哪个类描述了我们的状态？如果你向上滚动一下，你会发现我们已经定义了一个叫做<code>UserSession</code> 的类, 它勾勒出用户的整个会话，这就是我们用作状态类型的东西！让我们来用<code>UserSession</code> 替换 <code>S</code></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="o">(</span><span class="nc">Int</span><span class="o">,</span> <span class="nc">Iterator</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="n">U</span>
+</span></span></code></pre></div><p>太棒了，我们设法填写了参数的类型。返回类型，<code>U</code>是我们剩下的。我们只想在用户会话完成时才返回一个 <code>UserSession</code>, 要么通过用户会话超时要么接收到设置为 <code>ture</code> 的 <code>isLast</code> 标志。我们会把返回类型设置为 <code>Option[UserSession]</code>,  如果我们完成了会话，它会被填充。这意味着用 <code>Option[UserSession]</code> 替换 <code>U</code>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="o">(</span><span class="nc">Int</span><span class="o">,</span> <span class="nc">Iterator</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span>
+</span></span></code></pre></div><p>欢呼！</p>
+<h3 id="groupstateapi"><code>GroupState</code>API&nbsp;<a class="headline-hash no-text-decoration" href="#groupstateapi">#</a> </h3>
+<p>对于熟悉<code>mapWithState</code>API的人，<code>GroupState</code>应该对<code>State</code>类非常熟悉。让我们看看API是什么样的：</p>
+<ol>
+<li><code>def exists: Boolean</code> - 状态是否存在。</li>
+<li><code>def get: S</code> - 获取状态值（如果存在），或抛出 NoSuchElementException。</li>
+<li><code>def getOption: Option[S]</code> - 获取状态值作为 Scala Option[T]。</li>
+<li><code>def update(newState: S): Unit</code> - 更新状态值。请注意，<code>null</code>不是有效值，并抛出IllegalArgumentException。</li>
+<li><code>def remove(): Unit</code> - 删除状态。</li>
+<li><code>def hasTimedOut: Boolean</code> - 是否因为键已超时而调用了该函数。只有在<code>[map/flatmap]GroupsWithStates</code> 中启用超时时，才能返回 <code>true </code></li>
+<li><code>def setTimeoutDuration(durationMs: Long): Unit</code> - 设置此键的超时持续时间（以毫秒为单位）。注意必须在 <code>[map/flatmap]GroupsWithStates</code> 中启用 ProcessingTimeTimeout，否则抛出<code>UnsupportedOperationException</code></li>
+</ol>
+<p>状态API的最新成员是<code>setTimeoutDuration</code>方法。我只包含一个重载，但还有另外3个接收各种输入参数类型，如<code>String</code>和<code>java.util.Timestamp</code>。请注意，由于每个组状态都可以拥有自己的超时，因此我们必须在 <code>mapGroupsWithState</code> 内部为每个组状态设置超时。这意味着每次调用我们的方法时，我们都必须使用 <code>setTimeoutDuration</code> 再次设置超时，正如我们在该方法时所看到的那样。</p>
+<p>此外，调用<code>setTimeoutDuration</code> 有几个限制。如果我们没有在 <code>mapGroupsWithState</code> 中设置<code>timeoutConf</code>参数，当我们调用这个方法时它会抛出一个<code>UnsupportOperationException</code>，所以请确保你已经配置了超时。</p>
+<p>我在这里总结了API文档，但如果你想要完整的详细信息，<a href="https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.sql.streaming.GroupState">请参阅Scala文档</a>。</p>
+<h3 id="创建自定义编码器">创建自定义编码器&nbsp;<a class="headline-hash no-text-decoration" href="#创建自定义编码器">#</a> </h3>
+<p>对于读者之间的洞察力，你可能已经注意到以下对 <code>mapGroupsWithState</code> 的类型参数的约束</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">mapGroupsWithState</span><span class="o">[</span><span class="kt">S:</span> <span class="kt">Encoder</span>, <span class="kt">U:</span> <span class="kt">Encoder</span><span class="o">]</span>
+</span></span></code></pre></div><p>这个 Encoder 类要求什么, 通过在元素 <code>S</code> 和 <code>U</code> 上<a href="https://stackoverflow.com/questions/2982276/what-is-a-context-bound-in-scala">context bound</a>？类文档说：</p>
+<blockquote>
+<p>用于将 JVM 类型的对象转换为 Spark SQL 内部表示形式的  <code>T</code> 类型或从 Spark SQL 内部表示形式转换为 <code>T</code> 类型</p>
+</blockquote>
+<p>Spark SQL位于一个名为Catalyst Optimizer的优化器之上，该优化器是作为<a href="https://databricks.com/blog/2015/04/28/project-tungsten-bringing-spark-closer-to-bare-metal.html">Project Tungsten</a>的一部分创建的。Spark SQL（和Structured Streaming）负责处理原始字节而不是JVM对象，以优化空间和高效的数据访问。为此，我们必须告诉Spark如何将我们的JVM对象结构转换为二进制文件，这正是这些编码器所做的。</p>
+<p>没有关于编码器的长度，这里是特征的方法签名：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">trait</span> <span class="nc">Encoder</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Serializable</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="cm">/** Returns the schema of encoding this type of object as a Row. */</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">schema</span><span class="k">:</span> <span class="kt">StructType</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm">   * A ClassTag that can be used to construct an Array to contain a collection of `T`.
+</span></span></span><span class="line"><span class="cl"><span class="cm">   */</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">clsTag</span><span class="k">:</span> <span class="kt">ClassTag</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>任何编码器都必须提供两个东西，一个是通过 <code>StructType</code>  描述类的模式，它是一个递归数据结构，用于布置我们描述的对象中每个字段的模式，以及<code>ClassTag[T]</code>用于转换<code>T</code> 类型的集合。</p>
+<p>如果我们仔细查看 <code>mapGroupsWithState</code> 的签名，我们会看到我们需要提供两个编码器，一个用于由类型 <code>S</code> 表示的状态类，另一个用于由类型 <code>U</code> 表示的返回类型。在我们的例子中，这意味着以 <code>Encoder[UserSession]</code>  形式为  <code>UserSession</code> 提供隐式证据。但是我们如何生成这样的编码器呢？Spark通过<code>SQLImplicits</code>对象打包了基元的编码器，如果我们使用case类，我们必须有一个隐式的作用域。最简单的方法是使用 <code>Encoders.kryo[T]</code> 创建自定义编码器。我们这样使用它：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">StatefulStructuredSessionization</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">implicit</span> <span class="k">val</span> <span class="n">userEventEncoder</span><span class="k">:</span> <span class="kt">Encoder</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Encoders</span><span class="o">.</span><span class="n">kryo</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">]</span>
+</span></span><span class="line"><span class="cl">  <span class="k">implicit</span> <span class="k">val</span> <span class="n">userSessionEncoder</span><span class="k">:</span> <span class="kt">Encoder</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Encoders</span><span class="o">.</span><span class="n">kryo</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>有关自定义编码器的更多信息，请参阅此<a href="https://stackoverflow.com/a/39442829/1870803">StackOverflow答案</a>。</p>
+<h2 id="实现我们的状态方法">实现我们的状态方法&nbsp;<a class="headline-hash no-text-decoration" href="#实现我们的状态方法">#</a> </h2>
+<p>在弄清楚我们的状态方法的签名是什么之后，让我们继续实现它：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">updateSessionEvents</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">id</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">  <span class="n">userEvents</span><span class="k">:</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">UserEvent</span><span class="o">],</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="k">:</span> <span class="kt">GroupState</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="n">hasTimedOut</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// We&#39;ve timed out, lets extract the state and send it down the stream
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">state</span><span class="o">.</span><span class="n">remove</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="o">.</span><span class="n">getOption</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">    New data has come in for the given user id. We&#39;ll look up the current state
+</span></span></span><span class="line"><span class="cl"><span class="cm">    to see if we already have something stored. If not, we&#39;ll just take the current user events
+</span></span></span><span class="line"><span class="cl"><span class="cm">    and update the state, otherwise will concatenate the user events we already have with the
+</span></span></span><span class="line"><span class="cl"><span class="cm">    new incoming events.
+</span></span></span><span class="line"><span class="cl"><span class="cm">  */</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">currentState</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">updatedUserSession</span> <span class="k">=</span> <span class="n">currentState</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="nc">UserSession</span><span class="o">(</span><span class="n">userEvents</span><span class="o">.</span><span class="n">toSeq</span><span class="o">))(</span><span class="n">currentUserSession</span> <span class="k">=&gt;</span> <span class="nc">UserSession</span><span class="o">(</span><span class="n">currentUserSession</span><span class="o">.</span><span class="n">userEvents</span> <span class="o">++</span> <span class="n">userEvents</span><span class="o">.</span><span class="n">toSeq</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="o">(</span><span class="n">updatedUserSession</span><span class="o">.</span><span class="n">userEvents</span><span class="o">.</span><span class="n">exists</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">isLast</span><span class="o">))</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">    If we&#39;ve received a flag indicating this should be the last event batch, let&#39;s close
+</span></span></span><span class="line"><span class="cl"><span class="cm">    the state and send the user session downstream. 
+</span></span></span><span class="line"><span class="cl"><span class="cm">    */</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">remove</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">updatedUserSession</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>  
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">updatedUserSession</span><span class="o">)</span>   
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">setTimeoutDuration</span><span class="o">(</span><span class="s">&#34;1 minute&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">None</span>
+</span></span><span class="line"><span class="cl">   <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>我们的<code>updateUserEvents</code>方法必须处理几个流。我们检查我们的方法是否因为状态超时被调用，如果超时，则<code>state.hasTimedOut</code>方法将被设置为 <code>true</code>并且我们的<code>userEvents</code>迭代器将为空。我们所要做的就是删除状态并把我们的 <code>Option[UserSession]</code> 发送到下游的流。如果它没有超时，则意味着已经调用了该方法，因为新值已经到达。</p>
+<p>我们将当前状态提取到<code>currenState</code>值并通过 <code>Option.fold</code>处理以下两种情况：</p>
+<ol>
+<li><strong>状态为空</strong> - 这意味着这是给定键的第一批值，我们所要做的就是获取我们收到的用户事件并将它们提升到<code>UserSession</code>类中。</li>
+<li><strong>状态有一个值</strong> - 我们从<code>UserSession</code>对象中提取现有的用户事件（这是 <code>fold</code> 方法中参数列表的第二个参数）并将它们附加到我们刚收到的新值上。</li>
+</ol>
+<p><code>UserEvent</code>类包含一个名为 <code>isLast</code> 的字段，我们检查这个字段，看看它是不是会话中最后一个进入的事件。在聚合值之后，我们扫描用户事件序列以查看我们是否已收到该标志。如果我们确实收到了这个标志，那么我们从状态中删除会话并返回该会话，否则我们更新状态并设置超时持续时间并返回<code>None</code>以指示会话尚未完成。</p>
+<h2 id="将它们整合在一起">将它们整合在一起&nbsp;<a class="headline-hash no-text-decoration" href="#将它们整合在一起">#</a> </h2>
+<p>我们已经看到了如何定义状态方法，这意味着我们已经准备好创建执行图。在这个例子中，我将消费 socket 中的 JSON 结构的数据, 该 JSON 结构我们的 <code>UserEvent</code> 匹配。</p>
+<p>我提前道歉，我没在 gist 中包括所有代码和导入。在帖子的底部，你将找到一个指向 GitHub 上完整工作仓库的链接，其中包含你可以尝试的所有代码。</p>
+<p>首先，我们用带有 master URI 的详情和应用程序名创建了一个 <code>SparkSession</code> 实例：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">spark</span><span class="k">:</span> <span class="kt">SparkSession</span> <span class="o">=</span> <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">&#34;local[*]&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">appName</span><span class="o">(</span><span class="s">&#34;Stateful Structured Streaming&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOrCreate</span><span class="o">()</span>
+</span></span></code></pre></div><p><code>SparkSession</code>是我们与流图交互的网关，就像<code>StreamingContext</code>以前做的那样。在我们定义会话之后，我们表达了我们的源的格式用于消费数据，在这种情况下它是一个 Socket：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">spark.implicits._</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">val</span> <span class="n">userEventsStream</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;socket&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;host&#34;</span><span class="o">,</span> <span class="n">host</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;port&#34;</span><span class="o">,</span> <span class="n">port</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span></span></code></pre></div><p>导入<code>spark.implicits._</code>是为基元定义的编码器（我们在这里使用它<code>String</code>）。<code>host</code>和<code>port</code>变量来自于命令行参数。一旦我们调用该<code>load()</code>方法，我们就会返回<code>DataFrame</code>。可以将其视为包含行和列的数据的通用表示。为了将a转换<code>DataFrame</code>为a，<code>DataSet[String]</code>我们使用<code>as[T]</code>告诉我们想要使用的Spark 的方法获取一个类型化的数据集。</p>
+<p>在我们掌握了数据集之后，我们可以<code>map</code>通过它将我们的JSON反序列化为a <code>UserEvent</code>并将我们的状态方法应用于它：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">finishedUserSessionsStream</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[</span><span class="kt">UserSession</span><span class="o">]</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">  <span class="n">userEventsStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">deserializeUserEvent</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">id</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">ProcessingTimeTimeout</span><span class="o">())(</span><span class="n">updateSessionEvents</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">flatMap</span><span class="o">(</span><span class="n">userSession</span> <span class="k">=&gt;</span> <span class="n">userSession</span><span class="o">)</span>
+</span></span></code></pre></div><p>在映射数据集并反序列化所有事件之后，我们使用<code>groupByKey</code>它们的id对用户事件进行分组以返回a <code>KeyValueGroupedDataset[K, V]</code>。分组是在键值<code>mapGroupsWithState</code>数据集类型上定义的暴露的关键（没有双关语）。然后我们调用<code>mapGroupsWithState</code>并传递<code>GroupStateTimeout.ProcessingTimeTimeout</code>第一个参数来向Spark指示我们想要超时的状态，并传入我们<code>updateSessionEvents</code>事先定义的方法。在我们完成应用有状态转换之后，我们将完成的会话输出到图的其余部分，但是<code>None</code>如果会话未完成，我们也会输出。这意味着我们必须确保只保留<code>Option[T]</code>包含a的流动<code>Some[UserSession]</code>，这就是原因<code>flatMap</code>。</p>
+<p>我们留下来定义流的输出。在本例中，我选择了“console”格式，它只是将值打印到控制台，但你可以使用任何现有的<a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#output-sinks">输出接收器</a>。此外，我们必须指定我们选择哪个类型的<a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#output-modes">输出模式</a>（对于 <code>mapGroupsWithState</code> 我们只能用 <code>OutputMode.Update</code>）和检查点目录位置：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">finishedUserSessionsStream</span><span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;console&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;checkpointLocation&#34;</span><span class="o">,</span> <span class="s">&#34;hdfs:///path/to/checkpoint/location&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="o">.</span><span class="n">awaitTermination</span><span class="o">()</span>
+</span></span></code></pre></div><p>瞧，看着数据开始涌入流中！</p>
+<h2 id="包起来">包起来&nbsp;<a class="headline-hash no-text-decoration" href="#包起来">#</a> </h2>
+<p>结构化流带来了关于流的推理的新心智模型。对于 <code>mapGroupsWithState</code> 我最希望看到的功能是，由于处理状态聚合的方式，我们不再受到检查点的惩罚。此外，能够在版本升级之间保存状态并获得自动偏移管理也非常有吸引力。时间肯定会告诉我们这是否是我们一直在等待的状态管理框架，它看起来确实很有希望。</p>
+<p>有更多内部实现细节很有趣，我鼓励你在开始使用 Structured Streaming 时在评论中进行探索和分享。</p>
+<p>你可以在我的<a href="https://github.com/YuvalItzchakov/spark-stateful-example">GitHub 状态流式存储库中</a>找到完整的工作示例。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#回顾-spark-streaming-状态管理">回顾 Spark Streaming 状态管理</a></li>
+    <li><a href="#mapwithstate-的痛点"><code>mapWithState</code> 的痛点</a>
+      <ul>
+        <li><a href="#检查点">检查点</a></li>
+        <li><a href="#在版本更新之间保存状态">在版本更新之间保存状态</a></li>
+        <li><a href="#每个状态对象单独超时">每个状态对象单独超时</a></li>
+        <li><a href="#单个-executor-故障导致数据丢失">单个 executor 故障导致数据丢失</a></li>
+        <li><a href="#好的缺点很好你正在谈论的这个新api在哪里">好的，缺点，很好。你正在谈论的这个新API在哪里？</a></li>
+      </ul>
+    </li>
+    <li><a href="#介绍结构化流">介绍结构化流</a></li>
+    <li><a href="#通过一个例子学习">通过一个例子学习</a></li>
+    <li><a href="#介绍mapgroupswithstate">介绍<code>mapGroupsWithState</code>：</a>
+      <ul>
+        <li><a href="#mapwithstate和mapgroupswithstate通用-spark-结构化流-vs-流-之间的差异"><code>mapWithState</code>和<code>mapGroupsWithState</code>（通用 Spark 结构化流 VS 流 ）之间的差异</a></li>
+        <li><a href="#分析api">分析API</a></li>
+        <li><a href="#groupstateapi"><code>GroupState</code>API</a></li>
+        <li><a href="#创建自定义编码器">创建自定义编码器</a></li>
+      </ul>
+    </li>
+    <li><a href="#实现我们的状态方法">实现我们的状态方法</a></li>
+    <li><a href="#将它们整合在一起">将它们整合在一起</a></li>
+    <li><a href="#包起来">包起来</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/leap-seconds/" class="nobr">« 润秒</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/tips-and-ideas-for-the-raku-golf-code/" class="nobr">🎄 25/25. Raku Golf 代码的提示和想法 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

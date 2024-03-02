@@ -1,10 +1,1205 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            使用 Spark Structured Streaming 重构项目 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="使用 Spark Structured Streaming 重构项目" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/" />
+
+
+    
+        <meta property="article:published_time" content="2019-05-19T21:50:48&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-05-19T21:50:48&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Spark Structured Streaming 重构项目"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">使用 Spark Structured Streaming 重构项目</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/refactoring-with-spark-structured-streaming/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-05-19T21:50:48+0000" class="dt-published">Sun May 19, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>现在这个项目唯一的乐趣就是使用我学到的新技术重构之前的项目。今天完成了数据适配, 该项目目录结构如下:</p>
+<pre tabindex="0"><code>├── EnApplication.scala
+├── NaApplication.scala
+├── conf
+│   ├── HbaseConfiguration.scala
+│   ├── KafkaConfiguration.scala
+│   ├── MysqlConfiguration.scala
+│   └── SparkConfiguration.scala
+├── core
+│   ├── Adapter.scala
+│   └── impl
+│       ├── AdapterImpl.scala
+│       └── EnAdapterImpl.scala
+├── model
+│   ├── EnSourceData.scala
+│   └── SourceData.scala
+├── module
+│   ├── EnMainModule.scala
+│   └── MainModule.scala
+├── pipeline
+│   ├── NaSchema.scala
+│   ├── NaSparkSession.scala
+│   └── SourceDataFrame.scala
+└── util
+    └── XsUdfs.scala
+</code></pre><p>与之前的项目一样, 依旧使用了依赖注入:</p>
+<ul>
+<li>Kafka 配置</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">KafkaConfiguration</span> <span class="k">extends</span> <span class="nc">Serializable</span><span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">private</span> <span class="k">val</span> <span class="n">config</span><span class="k">:</span>                             <span class="kt">Config</span> <span class="o">=</span> <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaConfig</span><span class="k">:</span>                        <span class="kt">Config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">getConfig</span><span class="o">(</span><span class="s">&#34;kafka&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaZookeeperHost</span><span class="k">:</span>                 <span class="kt">String</span> <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;zookeeper.connect&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaBootstrapservers</span><span class="k">:</span>              <span class="kt">String</span> <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;bootstrap.servers&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaNaTopic</span><span class="k">:</span>                       <span class="kt">String</span> <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;nation.topic.name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaNaTopicPartitionNum</span><span class="k">:</span>           <span class="kt">Int</span>    <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;nation.topic.partition.num&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaNaTopicReplicationFactor</span><span class="k">:</span>      <span class="kt">Int</span>    <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;nation.topic.replication.factor&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaEnTopic</span><span class="k">:</span>                       <span class="kt">String</span> <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;enterprise.topic.name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaEnTopicPartitionNum</span><span class="k">:</span>           <span class="kt">Int</span>    <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;enterprise.topic.partition.num&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">kafkaEnTopicReplicationFactor</span><span class="k">:</span>      <span class="kt">Int</span>    <span class="o">=</span> <span class="n">kafkaConfig</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;enterprise.topic.replication.factor&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>使用 <code>lazy val</code> 声明的变量, 只有在需要的时候才被赋值, 没用到的时候就不会赋值, 因为 <code>lazy</code> 声明的是惰性的。</p>
+<ul>
+<li>Spark 配置</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SparkConfiguration</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">private</span> <span class="k">val</span> <span class="n">config</span><span class="k">:</span>                        <span class="kt">Config</span> <span class="o">=</span> <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">sparkConf</span><span class="k">:</span>                     <span class="kt">Config</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">getConfig</span><span class="o">(</span><span class="s">&#34;spark&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">sparkMasterNa</span><span class="k">:</span>                 <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;nation.master&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">sparkStreamingBatchDurationNa</span><span class="k">:</span> <span class="kt">Int</span>    <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;nation.streaming.batch.duration&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">checkPointPathNa</span><span class="k">:</span>              <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;nation.checkpoint.path&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">ttlNa</span><span class="k">:</span>                         <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;nation.spark.cleaner.ttl&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">sparkMasterEn</span><span class="k">:</span>                 <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;enterprise.master&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">sparkStreamingBatchDurationEn</span><span class="k">:</span> <span class="kt">Int</span>    <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getInt</span><span class="o">(</span><span class="s">&#34;enterprise.streaming.batch.duration&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">checkPointPathEn</span><span class="k">:</span>              <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;enterprise.checkpoint.path&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">lazy</span>    <span class="k">val</span> <span class="n">ttlEn</span><span class="k">:</span>                         <span class="kt">String</span> <span class="o">=</span> <span class="n">sparkConf</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;enterprise.spark.cleaner.ttl&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>配置分国标和企标两种配置, 都用 <code>lazy</code> 声明在同一个类中, 用到的时候才被赋值。</p>
+<ul>
+<li>SourceData</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">SourceData</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 整车数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">vin</span>                              <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 车架号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">vintype</span>                          <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 车辆类型
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">ts</span>                               <span class="k">:</span> <span class="kt">Long</span>    <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 信号发生时间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_st</span>                           <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 车辆状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_chargest</span>                     <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 充电状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_spd</span>                          <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 车速
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_odo</span>                          <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 累计里程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_volt</span>                         <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 总电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_curr</span>                         <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 总电流
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_soc</span>                          <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// SOC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_dcdcst</span>                       <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// DC-DC状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_gear</span>                         <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span>  <span class="o">,</span>    <span class="c1">// 档位
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_pedal_deep</span>                   <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 加速踏板状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">veh_pedalst</span>                      <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 制动踏板状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 驱动电机数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_cnt</span>                           <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机个数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_seq</span>                           <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_st</span>                            <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 驱动电机状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_ctl_temp</span>                      <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机控制器温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_spd</span>                           <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机转速
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_torq</span>                          <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机扭矩
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_temp</span>                          <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_ctl_volt</span>                      <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电机控制器输入电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">dm_ctl_dc_curr</span>                   <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电机控制器输入电流
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 车辆位置数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">loc_st</span>                           <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 定位状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">loc_lon84</span>                        <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 经度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">loc_lat84</span>                        <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 纬度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 极值数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_subsys_volt_highest_seq</span><span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 最高电压电池子系统号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_sc_volt_highest</span>        <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池最高电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_subsys_volt_lowest_seq</span> <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 最低电压电池子系统号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_sc_volt_highest_seq</span>    <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电压最高的电池单体代号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_sc_volt_lowest</span>         <span class="k">:</span> <span class="kt">Double</span>  <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池最低电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_sc_volt_lowest_seq</span>     <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电压最低的电池单体代号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_temp_highest</span>           <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池最高温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_temp_probe_highest_seq</span> <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 温度最高的电池探针序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_temp_lowestest</span>         <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池最低温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">data_batt_temp_probe_lowest_seq</span>  <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 温度最低的电池单体序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">maxTemp</span>                          <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 最高温度值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 可充电储能装置温度和电压数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">esd_temp_subsys_seq</span>              <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池探针序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">esd_temp_probe_list</span>              <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 电池探针温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">esd_volt_subsys_seq</span>              <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 单体电池序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">esd_frame_sc_list</span>                <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">,</span>      <span class="c1">// 单体电池电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">singleBatteryCount</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 单体电池总数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">                        <span class="c1">// 报警数据 - 故障 19 个
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_temp_diff</span>             <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 温度差异报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_temp_high</span>             <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池高温报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_esd_high</span>              <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 车载储能装置类型过压报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_esd_low</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 车载储能装置类型欠压报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_soc_low</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// SOC低报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_sc_high</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 单体电池过压报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_sc_low</span>                <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 单体电池欠压报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_soc_high</span>              <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// SOC过高报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_soc_hop</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// SOC跳变报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_esd_unmatch</span>           <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 可充电储能系统不匹配报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_sc_consistency</span>        <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 电池单体一致性差报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_insulation</span>            <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 绝缘报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_dcdc_temp</span>             <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// DC~DC温度报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_brk</span>                   <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 制动系统报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_dcdc_st</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// DC~DC状态报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_dmc_temp</span>              <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机控制器温度报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_hvil_st</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 高压互锁状态报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_dm_temp</span>               <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 驱动电机温度报警
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">alm_common_esd_charge_over</span>       <span class="k">:</span> <span class="kt">Integer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999999</span><span class="o">,</span> <span class="c1">// 车载储能装置类型过充
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                        <span class="k">var</span> <span class="n">malfunctionLevel</span>                 <span class="k">:</span> <span class="kt">String</span>  <span class="o">=</span> <span class="s">&#34; &#34;</span>      <span class="c1">// 故障等级 - 无故障,1级故障,2级故障,3级故障,异常,无效
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                      <span class="o">)</span>
+</span></span></code></pre></div><p><code>SourceData</code> 是用来适配源数据的, 后面会看到, 所有的计算逻辑都是基于适配后的数据。</p>
+<ul>
+<li>UDF 函数</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">com.gac.xs6.util</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.functions._</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.github.nscala_time.time.Imports._</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.alibaba.fastjson.</span><span class="o">{</span><span class="nc">JSON</span><span class="o">,</span> <span class="nc">JSONArray</span><span class="o">,</span> <span class="nc">JSONObject</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.model.</span><span class="o">{</span><span class="nc">EnSourceData</span><span class="o">,</span> <span class="nc">SourceData</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">XsUdfs</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span>   <span class="n">getSignals</span> <span class="k">=</span> <span class="n">udf</span><span class="o">((</span><span class="n">vin</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">vintype</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">jsonStr</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">var</span> <span class="n">raw_str</span> <span class="k">=</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(</span><span class="n">jsonStr</span><span class="o">.</span><span class="n">contains</span><span class="o">(</span><span class="s">&#34;实时信息上传&#34;</span><span class="o">))</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">raw_str</span> <span class="k">=</span> <span class="n">jsonStr</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">jsonStr</span><span class="o">.</span><span class="n">contains</span><span class="o">(</span><span class="s">&#34;补发信息上报&#34;</span><span class="o">))</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">raw_str</span> <span class="k">=</span> <span class="n">jsonStr</span><span class="o">.</span><span class="n">replaceAll</span><span class="o">(</span><span class="s">&#34;补发信息&#34;</span><span class="o">,</span> <span class="s">&#34;实时信息&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">try</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">s</span><span class="k">:</span> <span class="kt">SourceData</span>            <span class="o">=</span> <span class="nc">SourceData</span><span class="o">()</span>                        <span class="c1">// 初始化一个国标数据源
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">signals</span><span class="k">:</span>   <span class="kt">JSONObject</span>    <span class="o">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">raw_str</span><span class="o">)</span> <span class="c1">// 获取 signal 里面的 JSON 对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="o">(</span><span class="n">signals</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kc">null</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">header</span><span class="k">:</span>    <span class="kt">JSONObject</span>    <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">getJSONObject</span><span class="o">(</span><span class="s">&#34;数据头&#34;</span><span class="o">)</span>   <span class="c1">// 数据头
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">val</span> <span class="n">orderFlag</span><span class="k">:</span> <span class="kt">String</span>        <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;orderFlag&#34;</span><span class="o">)</span>    <span class="c1">// 获取 orderFlag 的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">val</span> <span class="n">time</span><span class="k">:</span>      <span class="kt">Long</span>          <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">getLong</span><span class="o">(</span><span class="s">&#34;时间&#34;</span><span class="o">)</span>           <span class="c1">// 获取时间 201904261023
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">var</span> <span class="n">ts</span><span class="k">:</span>        <span class="kt">Long</span>          <span class="o">=</span> <span class="mi">0L</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">realtime_information</span> <span class="k">=</span> <span class="n">orderFlag</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">          <span class="k">case</span> <span class="s">&#34;补发信息上报&#34;</span> <span class="k">=&gt;</span> <span class="n">signals</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;补发信息&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="k">case</span> <span class="s">&#34;实时信息上传&#34;</span> <span class="k">=&gt;</span> <span class="n">signals</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;实时信息&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="k">case</span> <span class="k">_</span>            <span class="k">=&gt;</span> <span class="kc">null</span>
+</span></span><span class="line"><span class="cl">        <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="o">(</span><span class="n">realtime_information</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">time</span> <span class="o">==</span> <span class="mi">0L</span> <span class="o">)</span> <span class="o">{</span> <span class="c1">// 除实时信息和补发信息之外, 其余都丢弃
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>          <span class="kc">null</span>
+</span></span><span class="line"><span class="cl">        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">          <span class="k">for</span><span class="o">(</span><span class="n">info_node</span> <span class="k">&lt;-</span> <span class="n">realtime_information</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">val</span> <span class="n">node_data</span><span class="k">:</span> <span class="kt">JSONObject</span> <span class="o">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">info_node</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">val</span> <span class="n">part</span><span class="k">:</span>      <span class="kt">String</span>     <span class="o">=</span> <span class="n">node_data</span><span class="o">.</span><span class="n">keySet</span><span class="o">().</span><span class="n">toArray</span><span class="o">.</span><span class="n">head</span><span class="o">.</span><span class="n">toString</span>
+</span></span><span class="line"><span class="cl">            <span class="k">val</span> <span class="n">data</span><span class="k">:</span>      <span class="kt">JSONObject</span> <span class="o">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">node_data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="n">part</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="n">part</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;整车数据&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">ts</span> <span class="k">=</span> <span class="nc">DateTime</span><span class="o">.</span><span class="n">parse</span><span class="o">(</span><span class="n">time</span><span class="o">.</span><span class="n">toString</span><span class="o">,</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&#34;yyyyMMddHHmmss&#34;</span><span class="o">)).</span><span class="n">getMillis</span> <span class="c1">// 转为时间戳
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">vin</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="kc">null</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="n">x</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">vin</span> <span class="k">=</span> <span class="n">x</span>
+</span></span><span class="line"><span class="cl">                <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">vintype</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="kc">null</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="n">x</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">vintype</span> <span class="k">=</span> <span class="n">x</span>
+</span></span><span class="line"><span class="cl">                <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">ts</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="mi">0</span>    <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="n">x</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">ts</span> <span class="k">=</span> <span class="n">x</span>
+</span></span><span class="line"><span class="cl">                <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">data</span><span class="o">.</span><span class="n">keySet</span><span class="o">().</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span> <span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;vehicleState&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_st</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;vehicleState&#34;</span><span class="o">)</span>     <span class="c1">// 车辆状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;chargeState&#34;</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_chargest</span>   <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;chargeState&#34;</span><span class="o">)</span>      <span class="c1">// 充电状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;vehicleSpeed&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_spd</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;vehicleSpeed&#34;</span><span class="o">)</span>     <span class="c1">// 车速
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;odometer&#34;</span>       <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_odo</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;odometer&#34;</span><span class="o">)</span>         <span class="c1">// 累计里程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;totalVoltage&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_volt</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;totalVoltage&#34;</span><span class="o">)</span>     <span class="c1">// 总电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;totalCurrent&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_curr</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;totalCurrent&#34;</span><span class="o">)</span>     <span class="c1">// 总电流
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;soc&#34;</span>            <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_soc</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;soc&#34;</span><span class="o">)</span>             <span class="c1">//  SOC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;dcdcState&#34;</span>      <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_dcdcst</span>     <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;dcdcState&#34;</span><span class="o">)</span>        <span class="c1">//  DC-DC状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;gear&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_gear</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;gear&#34;</span><span class="o">)</span>             <span class="c1">//  档位
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;accPedalStroke&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_pedal_deep</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;accPedalStroke&#34;</span><span class="o">)</span>  <span class="c1">//  加速踏板状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;brkPedalStroke&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">veh_pedalst</span>    <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;brkPedalStroke&#34;</span><span class="o">)</span>  <span class="c1">// 制动踏板状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;车辆位置数据&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;locationState&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">loc_st</span>    <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;locationState&#34;</span><span class="o">)</span> <span class="c1">// 定位状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;longitude&#34;</span>     <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">loc_lon84</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;longitude&#34;</span><span class="o">)</span>     <span class="c1">// 经度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;latitude&#34;</span>      <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">loc_lat84</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;latitude&#34;</span><span class="o">)</span>      <span class="c1">// 纬度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>               <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;极值数据&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;maxVolBatSysNum&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_subsys_volt_highest_seq</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;maxVolBatSysNum&#34;</span><span class="o">)</span>   <span class="c1">// 最高电压电池子系统号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;maxBatUnitVoltage&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_sc_volt_highest</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;maxBatUnitVoltage&#34;</span><span class="o">)</span>  <span class="c1">// 电池最高电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;minVolBatSysNum&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_subsys_volt_lowest_seq</span>  <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;minVolBatSysNum&#34;</span><span class="o">)</span>   <span class="c1">// 最低电压电池子系统号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;maxVolBatUnitNum&#34;</span>  <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_sc_volt_highest_seq</span>     <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;maxVolBatUnitNum&#34;</span><span class="o">)</span>  <span class="c1">// 电压最高的电池单体代号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;minBatUnitVoltage&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_sc_volt_lowest</span>          <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;minBatUnitVoltage&#34;</span><span class="o">)</span>  <span class="c1">// 电池最低电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;minVolBatUnitNum&#34;</span>  <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_sc_volt_lowest_seq</span>      <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;minVolBatUnitNum&#34;</span><span class="o">)</span>  <span class="c1">// 电压最低的电池单体代号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;maxTemp&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_temp_highest</span>            <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;maxTemp&#34;</span><span class="o">)</span>           <span class="c1">// 电池最高温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;maxTempProbeNum&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_temp_probe_highest_seq</span>  <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;maxTempProbeNum&#34;</span><span class="o">)</span>   <span class="c1">// 温度最高的电池探针序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;minTemp&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_temp_lowestest</span>          <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;minTemp&#34;</span><span class="o">)</span>           <span class="c1">// 电池最低温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;minTempProbeNum&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">data_batt_temp_probe_lowest_seq</span>   <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;minTempProbeNum&#34;</span><span class="o">)</span>   <span class="c1">// 温度最低的电池单体序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;maxTemp&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">maxTemp</span>                           <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;maxTemp&#34;</span><span class="o">)</span>           <span class="c1">// 温度最高值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                   <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;驱动电机数据&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="c1">// 驱动电机数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                <span class="k">val</span> <span class="n">d</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;driveMotorInfo&#34;</span><span class="o">).</span><span class="n">getJSONObject</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="n">toJSONString</span>
+</span></span><span class="line"><span class="cl">                <span class="k">val</span> <span class="n">dm_data</span> <span class="k">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">d</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;driveMotorNum&#34;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span> <span class="c1">// 驱动电机个数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="k">case</span> <span class="kc">null</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">case</span> <span class="n">x</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_cnt</span> <span class="k">=</span> <span class="n">x</span>
+</span></span><span class="line"><span class="cl">                <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">dm_data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;driveMotorSeq&#34;</span>                    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_seq</span>         <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;driveMotorSeq&#34;</span><span class="o">)</span>                    <span class="c1">// 驱动电机序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorState&#34;</span>                  <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_st</span>          <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;driveMotorState&#34;</span><span class="o">)</span>                   <span class="c1">// 驱动电机状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorControllerTemp&#34;</span>         <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_ctl_temp</span>    <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;driveMotorControllerTemp&#34;</span><span class="o">)</span>         <span class="c1">// 驱动电机控制器温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorRotationRate&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_spd</span>         <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;driveMotorRotationRate&#34;</span><span class="o">)</span>           <span class="c1">// 驱动电机转速
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorToque&#34;</span>                  <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_torq</span>        <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;driveMotorToque&#34;</span><span class="o">)</span>                   <span class="c1">// 驱动电机扭矩
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorTemp&#34;</span>                   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_temp</span>        <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;driveMotorTemp&#34;</span><span class="o">)</span>                   <span class="c1">// 驱动电机温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorControllerInputVoltage&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_ctl_volt</span>    <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;driveMotorControllerInputVoltage&#34;</span><span class="o">)</span>  <span class="c1">// 电机控制器输入电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;driveMotorControllerDCbusCurrent&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">dm_ctl_dc_curr</span> <span class="k">=</span> <span class="n">dm_data</span><span class="o">.</span><span class="n">getDouble</span><span class="o">(</span><span class="s">&#34;driveMotorControllerDCbusCurrent&#34;</span><span class="o">)</span>  <span class="c1">// 电机控制器输入电流
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                                  <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;报警数据&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;almCommonTempDiff&#34;</span>      <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_temp_diff</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonTempDiff&#34;</span><span class="o">)</span>       <span class="c1">//  温度差异报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonTempHigh&#34;</span>      <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_temp_high</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonTempHigh&#34;</span><span class="o">)</span>       <span class="c1">//  电池高温报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonEsdHigh&#34;</span>       <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_esd_high</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonEsdHigh&#34;</span><span class="o">)</span>        <span class="c1">//  车载储能装置类型过压报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonEsdLow&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_esd_low</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonEsdLow&#34;</span><span class="o">)</span>         <span class="c1">//  车载储能装置类型欠压报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonSocLow&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_soc_low</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonSocLow&#34;</span><span class="o">)</span>         <span class="c1">//  SOC低报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonScHigh&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_sc_high</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonScHigh&#34;</span><span class="o">)</span>         <span class="c1">//  单体电池过压报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonScLow&#34;</span>         <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_sc_low</span>          <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonScLow&#34;</span><span class="o">)</span>          <span class="c1">//  单体电池欠压报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonSocHigh&#34;</span>       <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_soc_high</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonSocHigh&#34;</span><span class="o">)</span>        <span class="c1">//  SOC过高报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonSocHop&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_soc_hop</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonSocHop&#34;</span><span class="o">)</span>         <span class="c1">//  SOC跳变报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonEsdUnmatch&#34;</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_esd_unmatch</span>     <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonEsdUnmatch&#34;</span><span class="o">)</span>     <span class="c1">//  可充电储能系统不匹配报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonScConsistency&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_sc_consistency</span>  <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonScConsistency&#34;</span><span class="o">)</span>  <span class="c1">//  电池单体一致性差报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonInsulation&#34;</span>    <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_insulation</span>      <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonInsulation&#34;</span><span class="o">)</span>     <span class="c1">//  绝缘报警 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonDcdcTemp&#34;</span>      <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_dcdc_temp</span>       <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonDcdcTemp&#34;</span><span class="o">)</span>       <span class="c1">//  DC-DC温度报警 DCDC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonBrk&#34;</span>           <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_brk</span>             <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonBrk&#34;</span><span class="o">)</span>            <span class="c1">//  制动系统报警 BCS/VCU
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonDcdcSt&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_dcdc_st</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonDcdcSt&#34;</span><span class="o">)</span>         <span class="c1">//  DC-DC状态报警 DCDC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonDmcTemp&#34;</span>       <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_dmc_temp</span>        <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonDmcTemp&#34;</span><span class="o">)</span>        <span class="c1">//  驱动电机控制器温度报警 DCU
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonHVILSt&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_hvil_st</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonHVILSt&#34;</span><span class="o">)</span>         <span class="c1">//  高压互锁状态报警 VCU
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonDmTemp&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_dm_temp</span>         <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonDmTemp&#34;</span><span class="o">)</span>         <span class="c1">//  驱动电机温度报警 DCU
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;almCommonEsdChargeOver&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">alm_common_esd_charge_over</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;almCommonEsdChargeOver&#34;</span><span class="o">)</span>  <span class="c1">//  车载储能装置类型过充 BMS
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;malfunctionLevel&#34;</span>       <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">malfunctionLevel</span>           <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getString</span><span class="o">(</span><span class="s">&#34;malfunctionLevel&#34;</span><span class="o">)</span>         <span class="c1">//  故障等级
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                        <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;电池电压&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="k">val</span> <span class="n">esd_volt_data_node</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;batteryUnitVoltage&#34;</span><span class="o">).</span><span class="n">getJSONObject</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="n">toJSONString</span>
+</span></span><span class="line"><span class="cl">                <span class="k">val</span> <span class="n">esd_volt_data</span> <span class="k">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">esd_volt_data_node</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">esd_volt_data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;batterySysSeq&#34;</span>        <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">esd_volt_subsys_seq</span> <span class="k">=</span> <span class="n">esd_volt_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;batterySysSeq&#34;</span><span class="o">)</span>                        <span class="c1">// 单体电池序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;singleBatteryVoltage&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">esd_frame_sc_list</span>   <span class="k">=</span> <span class="n">esd_volt_data</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;singleBatteryVoltage&#34;</span><span class="o">).</span><span class="n">toJSONString</span>  <span class="c1">// 单体电池电压
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;singleBatteryCount&#34;</span>   <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">singleBatteryCount</span>  <span class="k">=</span> <span class="n">esd_volt_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;singleBatteryCount&#34;</span><span class="o">)</span>                   <span class="c1">// 单体电池总数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                      <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="s">&#34;电池温度&#34;</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                <span class="k">val</span> <span class="n">esd_temp_data_node</span> <span class="k">=</span> <span class="n">data</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;batteryUnitTemperature&#34;</span><span class="o">).</span><span class="n">getJSONObject</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="n">toJSONString</span>
+</span></span><span class="line"><span class="cl">                <span class="k">val</span> <span class="n">esd_temp_data</span> <span class="k">=</span> <span class="nc">JSON</span><span class="o">.</span><span class="n">parseObject</span><span class="o">(</span><span class="n">esd_temp_data_node</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">esd_temp_data</span><span class="o">.</span><span class="n">keySet</span><span class="o">.</span><span class="n">toArray</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">f</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">f</span><span class="o">.</span><span class="n">toString</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">case</span> <span class="s">&#34;batterySysSeq&#34;</span>     <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">esd_temp_subsys_seq</span> <span class="k">=</span> <span class="n">esd_temp_data</span><span class="o">.</span><span class="n">getInteger</span><span class="o">(</span><span class="s">&#34;batterySysSeq&#34;</span><span class="o">)</span>                    <span class="c1">// 电池探针序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="s">&#34;probeTemperatures&#34;</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="o">.</span><span class="n">esd_temp_probe_list</span> <span class="k">=</span> <span class="n">esd_temp_data</span><span class="o">.</span><span class="n">getJSONArray</span><span class="o">(</span><span class="s">&#34;probeTemperatures&#34;</span><span class="o">).</span><span class="n">toJSONString</span> <span class="c1">// 电池探针温度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                    <span class="k">case</span> <span class="k">_</span>                   <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">                <span class="o">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">            <span class="o">}</span>
+</span></span><span class="line"><span class="cl">          <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">          <span class="n">s</span>
+</span></span><span class="line"><span class="cl">        <span class="o">}</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="n">e</span><span class="k">:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="n">e</span><span class="o">,</span><span class="n">jsonStr</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="kc">null</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">})</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>这个 UDF 函数 <code>getSignals</code> 接收三个函数, <strong>vin</strong>, <strong>vintype</strong>, <strong>jsonStr</strong>, 其中 jsonStr 是 Kafka 中的 *<em>value＊</em> 值。该 UDF 函数的作用是将解析每一个 Kafka 的 value, 并将其适配为 <strong>SoureData</strong> 对象。</p>
+<ul>
+<li>MainModule</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">com.gac.xs6.module</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.conf.</span><span class="o">{</span><span class="nc">HbaseConfiguration</span><span class="o">,</span> <span class="nc">KafkaConfiguration</span><span class="o">,</span> <span class="nc">SparkConfiguration</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.NaApplication</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.core.Adapter</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.core.impl.AdapterImpl</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.pipeline.</span><span class="o">{</span><span class="nc">NaSchema</span><span class="o">,</span> <span class="nc">NaSparkSession</span><span class="o">,</span> <span class="nc">SourceDataFrame</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.google.inject.</span><span class="o">{</span><span class="nc">AbstractModule</span><span class="o">,</span> <span class="nc">Provides</span><span class="o">,</span> <span class="nc">Singleton</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">DataFrame</span><span class="o">,</span> <span class="nc">Dataset</span><span class="o">,</span> <span class="nc">SparkSession</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.functions._</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">MainModule</span> <span class="k">extends</span> <span class="nc">AbstractModule</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">override</span> <span class="k">def</span> <span class="n">configure</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">bind</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">KafkaConfiguration</span><span class="o">]).</span><span class="n">asEagerSingleton</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">bind</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">HbaseConfiguration</span><span class="o">]).</span><span class="n">asEagerSingleton</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">bind</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">Adapter</span><span class="o">]).</span><span class="n">toInstance</span><span class="o">(</span><span class="nc">AdapterImpl</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">bind</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">NaApplication</span><span class="o">])</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nd">@Provides</span>
+</span></span><span class="line"><span class="cl">  <span class="nd">@Singleton</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">sparkSession</span><span class="o">(</span><span class="n">sparkConf</span><span class="k">:</span> <span class="kt">SparkConfiguration</span><span class="o">)</span><span class="k">:</span> <span class="kt">NaSparkSession</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">new</span> <span class="nc">NaSparkSession</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">override</span> <span class="k">def</span> <span class="n">session</span><span class="o">()</span><span class="k">:</span> <span class="kt">SparkSession</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="n">sparkConf</span><span class="o">.</span><span class="n">sparkMasterNa</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">appName</span><span class="o">(</span><span class="s">&#34;Stateful Structured Streaming&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">getOrCreate</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nd">@Provides</span>
+</span></span><span class="line"><span class="cl">  <span class="nd">@Singleton</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">kafkaDataSource</span><span class="o">(</span><span class="n">kafkaConf</span><span class="k">:</span> <span class="kt">KafkaConfiguration</span><span class="o">,</span> <span class="n">sparkConf</span><span class="k">:</span> <span class="kt">SparkConfiguration</span><span class="o">)</span><span class="k">:</span> <span class="kt">SourceDataFrame</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">new</span> <span class="nc">SourceDataFrame</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">override</span> <span class="k">def</span> <span class="n">stream</span><span class="o">()</span><span class="k">:</span> <span class="kt">DataFrame</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">spark</span> <span class="k">=</span> <span class="n">sparkSession</span><span class="o">(</span><span class="n">sparkConf</span><span class="o">).</span><span class="n">session</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">df</span><span class="k">:</span> <span class="kt">DataFrame</span> <span class="o">=</span> <span class="n">spark</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;kafka&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;kafka.bootstrap.servers&#34;</span><span class="o">,</span> <span class="n">kafkaConf</span><span class="o">.</span><span class="n">kafkaBootstrapservers</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;subscribe&#34;</span><span class="o">,</span> <span class="n">kafkaConf</span><span class="o">.</span><span class="n">kafkaNaTopic</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;startingOffsets&#34;</span><span class="o">,</span> <span class="s">&#34;earliest&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">import</span> <span class="nn">spark.implicits._</span>
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">source</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span> <span class="k">=</span> <span class="n">df</span><span class="o">.</span><span class="n">selectExpr</span><span class="o">(</span><span class="s">&#34;CAST(key AS STRING)&#34;</span><span class="o">,</span> <span class="s">&#34;CAST(value AS STRING)&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">          <span class="o">.</span><span class="n">as</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">naSchema</span> <span class="k">=</span> <span class="o">(</span><span class="k">new</span> <span class="nc">NaSchema</span><span class="o">).</span><span class="n">schema</span>
+</span></span><span class="line"><span class="cl">        <span class="k">val</span> <span class="n">parsed</span><span class="k">:</span> <span class="kt">DataFrame</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;key&#34;</span><span class="o">,</span> <span class="n">from_json</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;value&#34;</span><span class="o">,</span> <span class="n">naSchema</span><span class="o">)</span> <span class="n">as</span> <span class="s">&#34;data&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parsed</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p><strong>MainModule</strong> 是真正读取 Kafka 数据的地方, 我们提供一个 <strong>kafkaDataSource</strong> 函数, 这个函数返回 <strong>SourceDataFrame</strong>  trait 类型, 为了返回这个类型, 我们 new 一个 SourceDataFrame：</p>
+<pre tabindex="0"><code>new SourceDataFrame
+</code></pre><p>实现 stream 函数, stream 函数返回一个 DataFrame.</p>
+<ul>
+<li>Adapter Impl</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">com.gac.xs6.core.impl</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.core.Adapter</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.model.SourceData</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.util.XsUdfs.getSignals</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">DataFrame</span><span class="o">,</span> <span class="nc">Dataset</span><span class="o">,</span> <span class="nc">SparkSession</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">scala.language.postfixOps</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">AdapterImpl</span> <span class="k">extends</span> <span class="nc">Adapter</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">override</span> <span class="k">def</span> <span class="n">extract</span><span class="o">(</span><span class="n">spark</span><span class="k">:</span> <span class="kt">SparkSession</span><span class="o">,</span> <span class="n">df</span><span class="k">:</span> <span class="kt">DataFrame</span><span class="o">)</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[</span><span class="kt">SourceData</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">import</span> <span class="nn">spark.implicits._</span>
+</span></span><span class="line"><span class="cl">    <span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">getSignals</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;data.vin&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;data.vintype&#34;</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;data.signals&#34;</span><span class="o">)</span> <span class="n">as</span> <span class="s">&#34;signals&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;signals&#34;</span> <span class="n">isNotNull</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">select</span><span class="o">(</span><span class="n">$</span><span class="s">&#34;signals.*&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">SourceData</span><span class="o">]</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>这个 Adapter 返回 <code>Dataset[SourceData]</code>。</p>
+<ul>
+<li>Adapter trait</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">trait</span> <span class="nc">Adapter</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">extract</span><span class="o">(</span><span class="n">spark</span><span class="k">:</span> <span class="kt">SparkSession</span><span class="o">,</span> <span class="n">df</span><span class="k">:</span> <span class="kt">DataFrame</span><span class="o">)</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[</span><span class="kt">SourceData</span><span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><ul>
+<li>NaApplication</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">package</span> <span class="nn">com.gac.xs6</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.NaApplication.Params</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.conf.</span><span class="o">{</span><span class="nc">KafkaConfiguration</span><span class="o">,</span> <span class="nc">SparkConfiguration</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.core.Adapter</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.model.SourceData</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.module.MainModule</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.gac.xs6.pipeline.</span><span class="o">{</span><span class="nc">NaSparkSession</span><span class="o">,</span> <span class="nc">SourceDataFrame</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.google.inject.</span><span class="o">{</span><span class="nc">Guice</span><span class="o">,</span> <span class="nc">Inject</span><span class="o">,</span> <span class="nc">Singleton</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">com.typesafe.config.ConfigFactory</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">DataFrame</span><span class="o">,</span> <span class="nc">Dataset</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.streaming.</span><span class="o">{</span><span class="nc">OutputMode</span><span class="o">,</span> <span class="nc">StreamingQuery</span><span class="o">,</span> <span class="nc">Trigger</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">scopt.OptionParser</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">object</span> <span class="nc">NaApplication</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">parser</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">OptionParser</span><span class="o">[</span><span class="kt">Params</span><span class="o">](</span><span class="s">&#34;NaApplication&#34;</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">head</span><span class="o">(</span><span class="s">&#34;Spark Structured Streaming from kafka&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">opt</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="sc">&#39;c&#39;</span><span class="o">,</span> <span class="s">&#34;conf&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">text</span><span class="o">(</span><span class="s">&#34;config.resource for xs6-gac&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">action</span><span class="o">((</span><span class="n">x</span><span class="o">,</span> <span class="n">c</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="o">(</span><span class="n">conf</span> <span class="k">=</span> <span class="n">x</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">help</span><span class="o">(</span><span class="s">&#34;help&#34;</span><span class="o">).</span><span class="n">text</span><span class="o">(</span><span class="s">&#34;prints this usage text&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="o">(</span><span class="n">args</span><span class="o">,</span> <span class="nc">Params</span><span class="o">())</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">params</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">injector</span> <span class="k">=</span> <span class="nc">Guice</span><span class="o">.</span><span class="n">createInjector</span><span class="o">(</span><span class="nc">MainModule</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">runner</span> <span class="k">=</span> <span class="n">injector</span><span class="o">.</span><span class="n">getInstance</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">NaApplication</span><span class="o">])</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">invalidateCaches</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">      <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="o">(</span><span class="n">params</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">//  case class Params(conf: String = &#34;application.conf&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Params</span><span class="o">(</span><span class="n">conf</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nd">@Singleton</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">NaApplication</span> <span class="nd">@Inject</span><span class="o">()</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">                                <span class="n">source</span><span class="k">:</span> <span class="kt">SourceDataFrame</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                                <span class="n">adapter</span><span class="k">:</span> <span class="kt">Adapter</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                                <span class="n">sparkConf</span><span class="k">:</span> <span class="kt">SparkConfiguration</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                                <span class="n">kafkaConf</span><span class="k">:</span> <span class="kt">KafkaConfiguration</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">                                <span class="n">sparkSession</span><span class="k">:</span> <span class="kt">NaSparkSession</span>
+</span></span><span class="line"><span class="cl">                              <span class="o">)</span> <span class="k">extends</span> <span class="nc">Serializable</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">private</span> <span class="k">def</span> <span class="n">createNewStreamingQuery</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">spark</span> <span class="k">=</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">session</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">sourceDf</span><span class="k">:</span> <span class="kt">DataFrame</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">stream</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">adapterData</span><span class="k">:</span> <span class="kt">Dataset</span><span class="o">[</span><span class="kt">SourceData</span><span class="o">]</span> <span class="k">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">extract</span><span class="o">(</span><span class="n">spark</span><span class="o">,</span> <span class="n">sourceDf</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">adapterDf</span><span class="k">:</span> <span class="kt">StreamingQuery</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">      <span class="n">adapterData</span><span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">trigger</span><span class="o">(</span><span class="nc">Trigger</span><span class="o">.</span><span class="nc">Once</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">//.trigger(Trigger.ProcessingTime(&#34;1 seconds&#34;))
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;console&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;truncate&#34;</span><span class="o">,</span> <span class="s">&#34;false&#34;</span><span class="o">)</span> <span class="c1">// 不截断显示
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">    val query: StreamingQuery =
+</span></span></span><span class="line"><span class="cl"><span class="cm">      subTripData.writeStream
+</span></span></span><span class="line"><span class="cl"><span class="cm">        .outputMode(OutputMode.Update())
+</span></span></span><span class="line"><span class="cl"><span class="cm">        .trigger(Trigger.Once) //
+</span></span></span><span class="line"><span class="cl"><span class="cm">        //.trigger(Trigger.ProcessingTime(&#34;1 seconds&#34;))
+</span></span></span><span class="line"><span class="cl"><span class="cm">        .format(&#34;console&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="cm">        .option(&#34;truncate&#34;, &#34;false&#34;) // 不截断显示
+</span></span></span><span class="line"><span class="cl"><span class="cm">        .start()
+</span></span></span><span class="line"><span class="cl"><span class="cm">    */</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">spark</span><span class="o">.</span><span class="n">streams</span><span class="o">.</span><span class="n">awaitAnyTermination</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="n">run</span><span class="o">(</span><span class="n">params</span><span class="k">:</span> <span class="kt">Params</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">createNewStreamingQuery</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p><code>NaApplication</code> 类接收 5 个参数：</p>
+<pre tabindex="0"><code>source: SourceDataFrame,
+adapter: Adapter,
+sparkConf: SparkConfiguration,
+kafkaConf: KafkaConfiguration,
+sparkSession: NaSparkSession
+</code></pre><p>我们又见到了依赖注入的强大之处。其中 <strong>source</strong> 是 DataFrame 源, <strong>adapter</strong> 是适配后的 DataFrame。</p>
+<p><code>spark.streams.awaitAnyTermination()</code> 不会阻塞其它 StreamingQuery 的执行, 而是会执行所有 StreamingQuery。</p>
+<p>代码在 <a href="https://github.com/ohmycloud/sub-trip-with-spark-structured-streaming">github</a>, 仅供参考。Kafka 中的数据不便给出。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents"></nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/reference-and-borrow-in-rust/" class="nobr">« Rust 中的所有权</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/apache-flink-built-in-deserialization-schemas-md/" class="nobr">Flink-Kafka 内置的反序列化 schemas »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

@@ -1,10 +1,916 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/</title>
-    <link rel="canonical" href="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            用于外部数据访问的异步 I/O ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="用于外部数据访问的异步 I/O" />
+<meta property="og:description"
+      content="Asynchronous Io for External Data Access" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/" />
+
+
+    
+        <meta property="article:published_time" content="2020-08-22T00:00:00&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2020-08-22T00:00:00&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="用于外部数据访问的异步 I/O"/>
+<meta name="twitter:description" content="Asynchronous Io for External Data Access"/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/flink/">Flink</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__datastream-api__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘DataStream API’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/datastream-api/">DataStream API</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__operators__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Operators’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/operators/">Operators</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__io__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘IO’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/io/">IO</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">用于外部数据访问的异步 I/O</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/2020-08-22-asynchronous-io-for-external-data-access/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2020-08-22T00:00:00+0000" class="dt-published">Sat Aug 22, 2020</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+    <div class="description p-summary">
+        
+        
+        
+        
+        
+            
+            
+        
+        <p>Asynchronous Io for External Data Access</p>
+    </div>
+
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>本页解释了如何使用 Flink 的 API 与外部数据存储进行异步 I/O。对于不熟悉异步或事件驱动编程的用户来说，一篇关于 Futures 和事件驱动编程的文章可能是有用的准备。</p>
+<p>注：关于异步 I/O 实用程序的设计和实现的细节可以在提案和设计文件 <a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=65870673">FLIP-12：异步I/O设计和实现中找到</a>。</p>
+<h2 id="异步io操作的必要性">异步I/O操作的必要性&nbsp;<a class="headline-hash no-text-decoration" href="#异步io操作的必要性">#</a> </h2>
+<p>在与外部系统交互时（例如用存储在数据库中的数据来丰富流事件时），需要注意与外部系统的通信延迟不会主导流应用的总工作。</p>
+<p>奈何访问外部数据库中的数据，例如在 <code>MapFunction</code> 中，通常意味着同步交互。一个请求被发送到数据库，<code>MapFunction</code> 等待直到收到响应。在许多情况下，这种等待占据了函数的绝大部分时间。</p>
+<p>与数据库的异步交互意味着一个并行函数实例可以同时处理许多请求，并同时接收响应。这样一来，等待时间就可以与发送其他请求和接收响应叠加起来。最起码，等待时间可以摊在多个请求上。这在大多数情况下会导致更高的流吞吐量。</p>
+<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.11/fig/async_io.svg" alt="img"></p>
+<p>注意：通过仅仅将 <code>MapFunction</code> 扩展到很高的并行度来提高吞吐量，在某些情况下也是可行的，但通常要付出很高的资源代价：拥有更多的并行 <code>MapFunction</code> 实例意味着更多的任务、线程、Flink 内部网络连接、与数据库的网络连接、缓冲区以及一般的内部记账开销。</p>
+<h2 id="前提条件">前提条件&nbsp;<a class="headline-hash no-text-decoration" href="#前提条件">#</a> </h2>
+<p>如上节所述，要实现对数据库（或键/值存储）的适当异步 I/O，需要向该数据库提供一个支持异步请求的客户端。许多流行的数据库都提供了这样的客户端。</p>
+<p>在没有这样的客户端的情况下，可以尝试通过创建多个客户端，并用线程池处理同步调用，将同步客户端变成有限的并发客户端。然而，这种方法通常比一个合适的异步客户端效率低。</p>
+<h2 id="异步-io-api">异步 I/O API&nbsp;<a class="headline-hash no-text-decoration" href="#异步-io-api">#</a> </h2>
+<p>Flink 的 Async I/O API 允许用户使用异步请求客户端与数据流。该 API 处理与数据流的集成，以及处理顺序、事件时间、容错等。</p>
+<p>假设自己有一个目标数据库的异步客户端，需要三个部分来实现对数据库的异步 I/O 的流转换。</p>
+<ul>
+<li>一个 AsyncFunction 的实现，用来调度请求。</li>
+<li>一个回调，获取操作结果并将其交给 <code>ResultFuture</code>。</li>
+<li>在 DataStream 上应用异步 I/O 操作作为转换。</li>
+</ul>
+<p>下面的代码示例说明了基本模式。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm"> * An implementation of the &#39;AsyncFunction&#39; that sends requests and sets the callback.
+</span></span></span><span class="line"><span class="cl"><span class="cm"> */</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">AsyncDatabaseRequest</span> <span class="k">extends</span> <span class="nc">AsyncFunction</span><span class="o">[</span><span class="kt">String</span>, <span class="o">(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cm">/** The database specific client that can issue concurrent requests with callbacks */</span>
+</span></span><span class="line"><span class="cl">    <span class="k">lazy</span> <span class="k">val</span> <span class="n">client</span><span class="k">:</span> <span class="kt">DatabaseClient</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatabaseClient</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">post</span><span class="o">,</span> <span class="n">credentials</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cm">/** The context used for the future callbacks */</span>
+</span></span><span class="line"><span class="cl">    <span class="k">implicit</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">executor</span><span class="k">:</span> <span class="kt">ExecutionContext</span> <span class="o">=</span> <span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">fromExecutor</span><span class="o">(</span><span class="nc">Executors</span><span class="o">.</span><span class="n">directExecutor</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">asyncInvoke</span><span class="o">(</span><span class="n">str</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">resultFuture</span><span class="k">:</span> <span class="kt">ResultFuture</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)])</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="c1">// issue the asynchronous request, receive a future for the result
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">val</span> <span class="n">resultFutureRequested</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query</span><span class="o">(</span><span class="n">str</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="c1">// set the callback to be executed once the request by the client is complete
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// the callback simply forwards the result to the result future
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">resultFutureRequested</span><span class="o">.</span><span class="n">onSuccess</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">case</span> <span class="n">result</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="n">resultFuture</span><span class="o">.</span><span class="n">complete</span><span class="o">(</span><span class="nc">Iterable</span><span class="o">((</span><span class="n">str</span><span class="o">,</span> <span class="n">result</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">        <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// create the original stream
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">val</span> <span class="n">stream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// apply the async I/O transformation
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">val</span> <span class="n">resultStream</span><span class="k">:</span> <span class="kt">DataStream</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span> <span class="k">=</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">AsyncDataStream</span><span class="o">.</span><span class="n">unorderedWait</span><span class="o">(</span><span class="n">stream</span><span class="o">,</span> <span class="k">new</span> <span class="nc">AsyncDatabaseRequest</span><span class="o">(),</span> <span class="mi">1000</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="nc">MILLISECONDS</span><span class="o">,</span> <span class="mi">100</span><span class="o">)</span>
+</span></span></code></pre></div><p>重要提示：<code>ResultFuture.complete</code> 的第一次调用就完成了。所有后续的完成调用将被忽略。</p>
+<p>以下两个参数控制异步操作。</p>
+<ul>
+<li>
+<p>超时: 超时定义了异步请求在被认为失败之前可能需要的时间。这个参数可以防范死机/失败的请求。</p>
+</li>
+<li>
+<p>Capacity（容量）：该参数定义了异步请求在被认为失败之前可能需要的时间。这个参数定义了多少个异步请求可以同时进行。尽管异步I/O方法通常会带来更好的吞吐量，但操作者仍然可以成为流应用的瓶颈。限制并发请求的数量可以确保操作者不会积累越来越多的待处理请求的积压，但一旦容量耗尽，就会触发背压。</p>
+</li>
+</ul>
+<h3 id="超时处理">超时处理&nbsp;<a class="headline-hash no-text-decoration" href="#超时处理">#</a> </h3>
+<p>当一个异步 I/O 请求超时时，默认情况下会抛出一个异常并重新启动作业。如果你想处理超时，你可以重写 <code>AsyncFunction#timeout</code> 方法。</p>
+<h3 id="结果的顺序">结果的顺序&nbsp;<a class="headline-hash no-text-decoration" href="#结果的顺序">#</a> </h3>
+<p><code>AsyncFunction</code> 发出的并发请求经常以某种未定义的顺序完成，基于哪个请求先完成。为了控制结果记录以何种顺序发出，Flink 提供了两种模式。</p>
+<ul>
+<li>
+<p>Unordered: 异步请求一结束，结果记录就会被发出。在异步 I/O 操作符之后，流中记录的顺序与之前不同。这种模式以处理时间为基本时间特性时，延迟最低，开销最小。使用 <code>AsyncDataStream.unorderedWait(...)</code> 来实现这种模式。</p>
+</li>
+<li>
+<p>Ordered: 在这种情况下，流的顺序被保留下来。结果记录的发出顺序与异步请求被触发的顺序相同（运算符输入记录的顺序）。为了达到这个目的，操作符会缓冲一个结果记录，直到它前面的所有记录都被发出来（或定时发出来）。这通常会在检查点中引入一些额外的延迟和一些开销，因为与无序模式相比，记录或结果在检查点状态下维持的时间更长。使用 <code>AsyncDataStream.orderedWait(...)</code> 来处理这种模式。</p>
+</li>
+</ul>
+<h2 id="事件时间">事件时间&nbsp;<a class="headline-hash no-text-decoration" href="#事件时间">#</a> </h2>
+<p>当流媒体应用程序使用<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/event_time.html">事件时间</a>工作时，水印将由异步 I/O 操作符正确处理。具体来说，这意味着两种顺序模式的以下内容。</p>
+<ul>
+<li>无序的：水印不会超越记录，反之亦然，这意味着水印会建立一个顺序边界。只有在水印之间才会发出无序的记录。发生在某一水印之后的记录，只有在该水印被发射之后才会被发射。而水印则只有在该水印之前的所有输入的结果记录被发出之后才会被发出。</li>
+</ul>
+<p>这意味着在有水印的情况下，无序模式会引入一些与有序模式相同的延迟和管理开销。该开销的数量取决于水印的频率。</p>
+<ul>
+<li>有序的: 水印和记录的顺序被保留下来 就像记录之间的顺序被保留一样 与处理时间相比，开销没有明显变化。</li>
+</ul>
+<p>请记住，摄取时间是事件时间的一种特殊情况，其自动生成的水印是基于源处理时间的。</p>
+<h2 id="容错保证">容错保证&nbsp;<a class="headline-hash no-text-decoration" href="#容错保证">#</a> </h2>
+<p>异步 I/O 操作符提供了完全精确的一次容错保证，它将飞行中的异步请求记录存储在检查点中，并在故障恢复时恢复/重新触发请求。它将飞行中的异步请求记录存储在检查点中，并在从故障中恢复时恢复/重新触发请求。</p>
+<h2 id="实现技巧">实现技巧&nbsp;<a class="headline-hash no-text-decoration" href="#实现技巧">#</a> </h2>
+<p>对于有 Executor（或 Scala 中的 ExecutionContext）用于回调的 Futures 实现，我们建议使用  DirectExecutor，因为回调通常只做最少的工作，而且DirectExecutor 避免了额外的线程间交接开销。回调通常只将结果交给 <code>ResultFuture</code>，后者将其添加到输出缓冲区。从那里开始，包括记录排放和与检查点记账的交互在内的繁重逻辑无论如何都发生在一个专用线程池中。</p>
+<p>可以通过 <code>org.apache.flink.runtime.concurrent.Executors.directExecutor()</code> 或 <code>com.google.common.util.concurrent.MoreExecutors.directExecutor()</code> 获得 DirectExecutor。</p>
+<h2 id="注意事项">注意事项&nbsp;<a class="headline-hash no-text-decoration" href="#注意事项">#</a> </h2>
+<p>AsyncFunction 不叫多线程。</p>
+<p>我们在这里要明确指出的一个常见的困惑是，AsyncFunction 不是以多线程的方式调用的。AsyncFunction 只存在一个实例，并且对于流的各个分区中的每一条记录，它都会被依次调用。除非 <code>asyncInvoke(...)</code> 方法快速返回并依赖于回调（由客户端），否则不会导致正确的异步 I/O。</p>
+<p>例如，以下模式会导致阻塞 <code>asyncInvoke(...)</code> 函数，从而使异步行为无效。</p>
+<ul>
+<li>
+<p>使用一个数据库客户端，其查找/查询方法的调用会被阻塞，直到结果被接收回来为止</p>
+</li>
+<li>
+<p>在 <code>asyncInvoke(...)</code> 方法中阻止/等待异步客户端返回的未来型对象。</p>
+</li>
+</ul>
+<p>出于一致性的考虑，AsyncFunction 的操作符（AsyncWaitOperator）目前必须位于操作符链的头部。</p>
+<p>由于在 FLINK-13063 问题中给出的原因，我们目前必须打破 AsyncWaitOperator 的操作符链，以防止潜在的一致性问题。这是对以前支持链的行为的改变。需要旧行为并接受潜在的违反一致性保证的用户可以手动实例化并将 AsyncWaitOperator 添加到作业图中，并通过 AsyncWaitOperator#setChainingStrategy(ChainingStrategy.ALWAYS) 将链式策略设置回链式。</p>
+<p>原文链接: <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html">https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/stream/operators/asyncio.html</a></p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#异步io操作的必要性">异步I/O操作的必要性</a></li>
+    <li><a href="#前提条件">前提条件</a></li>
+    <li><a href="#异步-io-api">异步 I/O API</a>
+      <ul>
+        <li><a href="#超时处理">超时处理</a></li>
+        <li><a href="#结果的顺序">结果的顺序</a></li>
+      </ul>
+    </li>
+    <li><a href="#事件时间">事件时间</a></li>
+    <li><a href="#容错保证">容错保证</a></li>
+    <li><a href="#实现技巧">实现技巧</a></li>
+    <li><a href="#注意事项">注意事项</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/flink/">Flink</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__flink__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Flink’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/flink/">Flink</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__datastream-api__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘DataStream API’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/datastream-api/">DataStream API</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__operators__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘Operators’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/operators/">Operators</a>
+                            </li>
+                        
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__io__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘IO’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/io/">IO</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2020-08-22-state-schema-evolution/" class="nobr">« 状态模式的演变</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/2020-08-22-table-api-user-defined-functions/" class="nobr">用户定义函数 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>
