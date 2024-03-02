@@ -1,10 +1,730 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmycloud.github.io/notes/bucket-pruning/</title>
-    <link rel="canonical" href="https://ohmycloud.github.io/notes/bucket-pruning/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmycloud.github.io/notes/bucket-pruning/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Apache Spark 2.4.0 特性 - bucket pruning ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Apache Spark 2.4.0 特性 - bucket pruning" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/notes/bucket-pruning/" />
+
+
+    
+        <meta property="article:published_time" content="2019-09-30T11:06:42&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-09-30T11:06:42&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Apache Spark 2.4.0 特性 - bucket pruning"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmycloud.github.io/notes/bucket-pruning/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmycloud.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Apache Spark 2.4.0 特性 - bucket pruning</h1>
+
+        
+        <data class="u-url" value="https://ohmycloud.github.io/notes/bucket-pruning/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-09-30T11:06:42+0000" class="dt-published">Mon Sep 30, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmycloud.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p><a href="https://www.waitingforcode.com/apache-spark-sql/apache-spark-2.4.0-features-bucket-pruning/read">https://www.waitingforcode.com/apache-spark-sql/apache-spark-2.4.0-features-bucket-pruning/read</a></p>
+<h2 id="桶定义">桶定义&nbsp;<a class="headline-hash no-text-decoration" href="#桶定义">#</a> </h2>
+<p>均衡的分区让我们更快地处理数据。例如，我们可以收集物联网事件，并把它们按照日期分区并存储在树一样的结构中：</p>
+<pre tabindex="0"><code>/events/2018/10/29
+/events/2018/10/30
+/events/2018/10/31
+</code></pre><p>如果我们想按物联网设备号划分相同的数据，我们该怎么办？ 从技术上讲，这是可行的，但从概念上讲，它可能不如基于日期的分区有效。 设备密钥是具有非常高的基数（可能的唯一值的数量）的值，我们最终将得到一棵具有数百或数千个子目录的树。 对于不是分区的最佳选择的值问题，解决方案之一是桶存储，也称为群集。</p>
+<p>桶是“分区内的分区”。 区别在于桶的数量是固定的。 在大多数情况下，这些值会使用基于哈希的简单策略分配给存储桶。 您可以在下面找到 Apache Spark 中存储桶的示例：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="s">&#34;Spark&#34;</span> <span class="n">should</span> <span class="s">&#34;create buckets in partitions for orders Dataset&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">tableName</span> <span class="k">=</span> <span class="s">s&#34;orders</span><span class="si">${</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">orders</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;user1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;user2&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;user3&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">4L</span><span class="o">,</span> <span class="s">&#34;user1&#34;</span><span class="o">)).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;order_id&#34;</span><span class="o">,</span> <span class="s">&#34;user_id&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">orders</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">bucketBy</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span> <span class="s">&#34;user_id&#34;</span><span class="o">).</span><span class="n">saveAsTable</span><span class="o">(</span><span class="n">tableName</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">metadata</span> <span class="k">=</span> <span class="nc">TestedSparkSession</span><span class="o">.</span><span class="n">sessionState</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">getTableMetadata</span><span class="o">(</span><span class="nc">TableIdentifier</span><span class="o">(</span><span class="n">tableName</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">metadata</span><span class="o">.</span><span class="n">bucketSpec</span> <span class="n">shouldBe</span> <span class="n">defined</span>
+</span></span><span class="line"><span class="cl">  <span class="n">metadata</span><span class="o">.</span><span class="n">bucketSpec</span><span class="o">.</span><span class="n">get</span><span class="o">.</span><span class="n">numBuckets</span> <span class="n">shouldEqual</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="n">metadata</span><span class="o">.</span><span class="n">bucketSpec</span><span class="o">.</span><span class="n">get</span><span class="o">.</span><span class="n">bucketColumnNames</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span> <span class="n">shouldEqual</span> <span class="s">&#34;user_id&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>在分布式数据处理框架中，这种方法往往有助于避免洗牌阶段。例如，当桶用于2个数据集与 <a href="https://www.waitingforcode.com/apache-spark-sql/sort-merge-join-spark-sql/read#sort-merge_join_explained">Spark SQL 中排序合并</a>连接时，因为这两个数据集已经可以位于同一个分区中, 因此洗牌可能没有必要。当然，这两个数据集必须具有相同的分区数并使用哈希分区算法。</p>
+<h2 id="桶剪枝实现">桶剪枝实现&nbsp;<a class="headline-hash no-text-decoration" href="#桶剪枝实现">#</a> </h2>
+<p>在 Apache Spark 2.4.0 之前，当桶列之一参与查询时，Spark 引擎并没有作出任何优化。毕竟，由于桶存储是确定性的，引擎只能读取桶文件存储筛选值。</p>
+<p>该特性作为新的私有方法被加入 <code>FileSourceStrategy</code> 中 ，只有当给定的数据集仅具有1个桶列并且至少具有2个桶时才调用该方法：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">private</span> <span class="k">def</span> <span class="n">genBucketSet</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">normalizedFilters</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Expression</span><span class="o">],</span>
+</span></span><span class="line"><span class="cl">    <span class="n">bucketSpec</span><span class="k">:</span> <span class="kt">BucketSpec</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">BitSet</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span></code></pre></div><p>在方法中，Apache Spark 通过调用这两个方法之一来判断查询执行中所涉及到的桶：<code>getBucketSetFromIterable</code> 或 <code>getBucketSetFromValue</code>。他们根据所定义的过滤方法，可以是相等或 &ldquo;is in&rdquo; 约束使用。桶 id 编号内置于 <code>BucketingUtils.getBucketIdFromValue(bucketColumn: Attribute, numBuckets: Int, value: Any)</code> 方法中，并返回之前方法的结果。</p>
+<p>过滤后的的桶作为位集传递给 <code>FileSourceScanExec</code>， 使用它们来过滤掉不存储该查询数据的桶文件：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">prunedFilesGroupedToBuckets</span> <span class="k">=</span> <span class="k">if</span> <span class="o">(</span><span class="n">optionalBucketSet</span><span class="o">.</span><span class="n">isDefined</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">bucketSet</span> <span class="k">=</span> <span class="n">optionalBucketSet</span><span class="o">.</span><span class="n">get</span>
+</span></span><span class="line"><span class="cl">      <span class="n">filesGroupedToBuckets</span><span class="o">.</span><span class="n">filter</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">f</span> <span class="k">=&gt;</span> <span class="n">bucketSet</span><span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="n">_1</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">filesGroupedToBuckets</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">filePartitions</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">.</span><span class="n">tabulate</span><span class="o">(</span><span class="n">bucketSpec</span><span class="o">.</span><span class="n">numBuckets</span><span class="o">)</span> <span class="o">{</span> <span class="n">bucketId</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">FilePartition</span><span class="o">(</span><span class="n">bucketId</span><span class="o">,</span> <span class="n">prunedFilesGroupedToBuckets</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="n">bucketId</span><span class="o">,</span> <span class="nc">Nil</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span></code></pre></div><h2 id="桶剪枝例子">桶剪枝例子&nbsp;<a class="headline-hash no-text-decoration" href="#桶剪枝例子">#</a> </h2>
+<p>为了在实战中看到优化，我们将使用与这篇文章中的第一节相同的例子，即订单表：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="s">&#34;Spark 2.4.0&#34;</span> <span class="n">should</span> <span class="s">&#34;not read buckets filtered out&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">tableName</span> <span class="k">=</span> <span class="s">s&#34;orders</span><span class="si">${</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">orders</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;user1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;user2&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;user3&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">4L</span><span class="o">,</span> <span class="s">&#34;user1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">5L</span><span class="o">,</span> <span class="s">&#34;user4&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">6L</span><span class="o">,</span> <span class="s">&#34;user5&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;order_id&#34;</span><span class="o">,</span> <span class="s">&#34;user_id&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">orders</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">bucketBy</span><span class="o">(</span><span class="mi">3</span><span class="o">,</span> <span class="s">&#34;user_id&#34;</span><span class="o">).</span><span class="n">saveAsTable</span><span class="o">(</span><span class="n">tableName</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">filteredBuckets</span> <span class="k">=</span> <span class="nc">TestedSparkSession</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">s&#34;SELECT * FROM </span><span class="si">${</span><span class="n">tableName</span><span class="si">}</span><span class="s"> WHERE user_id = &#39;user1&#39;&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">filteredBuckets</span><span class="o">.</span><span class="n">queryExecution</span><span class="o">.</span><span class="n">executedPlan</span><span class="o">.</span><span class="n">toString</span><span class="o">()</span> <span class="n">should</span> <span class="n">include</span><span class="o">(</span><span class="s">&#34;SelectedBucketsCount: 1 out of 3&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>正如你看到的，这些断言检查物理计划中是否包含“SelectedBucketsCount”文本。它在释放的 2.4.0 版本中加入，以指示桶修剪功能。</p>
+<p>桶剪枝只是 Apache Spark 2.4.0 的新功能之一。它有助于仅处理带有过滤条目的桶，并且因此减少处理的分区的数目。实现由传递一个持有的所有可处理桶ID以负责扫描文件集合的操作的位集组成。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#桶定义">桶定义</a></li>
+    <li><a href="#桶剪枝实现">桶剪枝实现</a></li>
+    <li><a href="#桶剪枝例子">桶剪枝例子</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/custom-session-windows/" class="nobr">« 自定义会话窗口</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/" class="nobr">使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

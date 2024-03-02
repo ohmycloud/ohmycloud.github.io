@@ -1,10 +1,926 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/</title>
-    <link rel="canonical" href="https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/" />
+
+
+    
+        <meta property="article:published_time" content="2019-09-30T09:50:04&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-09-30T09:50:04&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmycloud.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</h1>
+
+        
+        <data class="u-url" value="https://ohmycloud.github.io/notes/stateful-transformations-with-mapgroupswithstate/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-09-30T09:50:04+0000" class="dt-published">Mon Sep 30, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmycloud.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<h2 id="mapgroupswithstate-解释">mapGroupsWithState 解释&nbsp;<a class="headline-hash no-text-decoration" href="#mapgroupswithstate-解释">#</a> </h2>
+<p><code>mapGroupsWithState(timeoutConf: GroupStateTimeout)(func: (K, Iterator[V], GroupState[S]) =&gt; U)</code> 是一个应用到数据组上的转换。由于它要求数据分组, 所以可能会引入 shuffling 的风险。通过调用 <code>func</code> 参数来计算 state。这个转换可以用在有界数据源和无界数据源上。对于有界数据源, 最终状态会立即被计算出来, 对于无界数据源, 每次触发处理后, 状态都可能会改变。</p>
+<h3 id="mapgroupswithstate-的参数">mapGroupsWithState 的参数&nbsp;<a class="headline-hash no-text-decoration" href="#mapgroupswithstate-的参数">#</a> </h3>
+<ul>
+<li><code>timeoutConf</code>: GroupStateTimeout 这个参数负责处理超时。</li>
+</ul>
+<p>mapGroupsWithState 转换接收 3 个不同的超时值:  <code>NoTimeout</code>, <code>ProcessingTimeTimeout</code> 和 <code>EventTimeTimeout</code>(只在设置了水位时才有效)。状态过期时间定义在作为 <code>func</code> 参数值的函数里面, 它要么是 <code>org.apache.spark.sql.streaming.GroupState#setTimeoutDuration</code> (processing time), 要么是 <code>org.apache.spark.sql.streaming.GroupState#setTimeoutTimestamp</code> (event time)。</p>
+<p>每次至少有一条记录被发送到组里时, 就更新超时时间。状态只有在给定组在指定阈值时间内未接收到任何数据时才被认为过期。</p>
+<p>超时时间是在指定 GroupState 对象里面定义的, 所以根据处理的组指定不同的超时配置也是完全可行的。</p>
+<ul>
+<li><code>func</code>: (K, Iterator[V], GroupState[S]) =&gt; U - 该函数定义如何处理组里的值以生成状态。</li>
+</ul>
+<p>如你所见, 它完全是类型无关的, 例如, 值(<code>[V]</code>) 和状态 <code>[S]</code> 都不影响所返回的数据集(<code>[U]</code>)的类型。</p>
+<p>当两个条件之一满足时, 该函数就会被调用: 要么组里有要处理的新值, 要么状态已经过期。在状态过期这种情况下, 会使用一个空列表的值作为第二个参数来调用该函数。</p>
+<h3 id="groupstate">GroupState&nbsp;<a class="headline-hash no-text-decoration" href="#groupstate">#</a> </h3>
+<p>另一个重要的与状态管理有关的对象是 <code>org.apache.spark.sql.streaming.GroupState[T]</code> 实例。它代表由 Spark 保存的给定组的状态(每组一个实例)。它定义了处理状态生命周期的方法:</p>
+<ul>
+<li><code>exists</code> - 告知给定组的状态是否被设置。显然, 每当状态正好过期或给定组被第一次处理时, 它返回 false。</li>
+<li><code>get</code> - 获取所关联的给定组的状态。然而, 用的时候必须小心, 因为当状态不存在时, 它会抛出 <code>NoSuchElementException</code> 异常。另一个更安全的获取状态的方式是使用 <code>getOption</code> 方法。如果状态存在则返回可选的状态, 如果给定组的状态不存在, 则返回 <code>None</code>。</li>
+<li><code>update(newState: S)</code> - 该方法使用定义在参数中的 <code>newState</code> 覆盖现有状态。</li>
+<li><code>remove()</code> - 移除给定组所关联的状态。</li>
+<li><code>hasTimeOut</code> - 如果状态正好过期, 则返回 true。</li>
+<li><code>setTimeoutDuration(...)</code> - 该方法定义 processing-time 配置的超时时间的值。它接收一个 <code>Long(ms)</code> 类型的时间或字符串话的时间。</li>
+<li><code>setTimeoutTimestamp(...)</code> - 以纪元时间定义超时时间的毫秒数</li>
+</ul>
+<h3 id="mapgroupswithstate-例子">mapGroupsWithState 例子&nbsp;<a class="headline-hash no-text-decoration" href="#mapgroupswithstate-例子">#</a> </h3>
+<p>下面的例子尝试解释 mapGroupsWithState 的特征:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">private</span> <span class="k">val</span> <span class="nc">MappingFunction</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="k">private</span> <span class="k">val</span> <span class="nc">MappingExpirationFunc</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">&amp;&amp;</span> <span class="n">state</span><span class="o">.</span><span class="n">hasTimedOut</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">Seq</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="si">}</span><span class="s">: timed-out&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">setTimeoutDuration</span><span class="o">(</span><span class="mi">3000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;expire after event time&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">eventTimeExpirationFunc</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">&amp;&amp;</span> <span class="n">state</span><span class="o">.</span><span class="n">hasTimedOut</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Seq</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="si">}</span><span class="s">: timed-out&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">isEmpty</span><span class="o">)</span> <span class="n">state</span><span class="o">.</span><span class="n">setTimeoutTimestamp</span><span class="o">(</span><span class="mi">3000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">now</span> <span class="k">=</span> <span class="mi">5000L</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;mapGroupWithState-state-expired-event-time&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Timestamp</span>, <span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;created&#34;</span><span class="o">,</span> <span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">withWatermark</span><span class="o">(</span><span class="s">&#34;created&#34;</span><span class="o">,</span> <span class="s">&#34;3 seconds&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">EventTimeTimeout</span><span class="o">())(</span><span class="n">eventTimeExpirationFunc</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">    <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">    <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">+</span><span class="n">now</span><span class="o">),</span> <span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">while</span> <span class="o">(!</span><span class="n">query</span><span class="o">.</span><span class="n">isActive</span><span class="o">)</span> <span class="o">{}</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">5000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Now the watermark is about 7000 (10000 - 3000 ms)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// So not only the values for the id=1 will be rejected but also its state
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// will expire
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test12&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">        <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">+</span><span class="n">now</span><span class="o">),</span> <span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test31&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">30000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">savedValues</span> <span class="k">=</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">6</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;test30&#34;</span><span class="o">,</span> <span class="s">&#34;test10,test11&#34;</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">,</span> <span class="s">&#34;List(test10, test11): timed-out&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;test30,test31&#34;</span><span class="o">,</span> <span class="s">&#34;List(test20): timed-out&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the event-time state expiration&#34;</span> <span class="n">should</span> <span class="s">&#34;fail when the set timeout timestamp is earlier than the watermark&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">eventTimeExpirationFunc</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">&amp;&amp;</span> <span class="n">state</span><span class="o">.</span><span class="n">hasTimedOut</span><span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Seq</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="si">}</span><span class="s">: timed-out&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span><span class="o">.</span><span class="n">setTimeoutTimestamp</span><span class="o">(</span><span class="mi">2000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">now</span> <span class="k">=</span> <span class="mi">5000L</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;mapGroupWithState-event-time-state-expiration-failure&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Timestamp</span>, <span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;created&#34;</span><span class="o">,</span> <span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">withWatermark</span><span class="o">(</span><span class="s">&#34;created&#34;</span><span class="o">,</span> <span class="s">&#34;2 seconds&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">EventTimeTimeout</span><span class="o">())(</span><span class="n">eventTimeExpirationFunc</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">      <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">      <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">+</span><span class="n">now</span><span class="o">),</span> <span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">exception</span> <span class="k">=</span> <span class="n">intercept</span><span class="o">[</span><span class="kt">StreamingQueryException</span><span class="o">]</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">    <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="o">(!</span><span class="n">query</span><span class="o">.</span><span class="n">isActive</span><span class="o">)</span> <span class="o">{}</span>
+</span></span><span class="line"><span class="cl">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">5000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// The watermark here is 8000. But in the eventTimeExpirationFunc we define the expiration timeout
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// to 3000. So obviously it makes the watermark condition from
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// org.apache.spark.sql.execution.streaming.GroupStateImpl.setTimeoutTimestamp fail
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span><span class="o">),</span> <span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test12&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">          <span class="o">(</span><span class="k">new</span> <span class="nc">Timestamp</span><span class="o">(</span><span class="n">now</span> <span class="o">+</span> <span class="n">now</span><span class="o">),</span> <span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test31&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">    <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">30000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">exception</span><span class="o">.</span><span class="n">getMessage</span> <span class="n">should</span> <span class="n">include</span><span class="o">(</span><span class="s">&#34;Timeout timestamp (2000) cannot be earlier than the current watermark (8000)&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;an event time expiration&#34;</span> <span class="n">should</span> <span class="s">&#34;not be executed when the watermark is not defined&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">EventTimeTimeout</span><span class="o">())(</span><span class="nc">MappingExpirationFunc</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">exception</span> <span class="k">=</span> <span class="n">intercept</span><span class="o">[</span><span class="kt">AnalysisException</span><span class="o">]</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">NoopForeachWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]]()).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">exception</span><span class="o">.</span><span class="n">getMessage</span><span class="o">()</span> <span class="n">should</span> <span class="n">include</span><span class="o">(</span><span class="s">&#34;Watermark must be specified in the query using &#34;</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;&#39;[Dataset/DataFrame].withWatermark()&#39; for using event-time timeout in a [map|flatMap]GroupsWithState. &#34;</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;Event-time timeout not supported without watermark&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;a different state&#34;</span> <span class="n">should</span> <span class="s">&#34;be returned after the state expiration&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;mapGroupWithState-state-returned-after-expiration&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">ProcessingTimeTimeout</span><span class="o">)(</span><span class="nc">MappingExpirationFunc</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">while</span> <span class="o">(!</span><span class="n">query</span><span class="o">.</span><span class="n">isActive</span><span class="o">)</span> <span class="o">{}</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">5000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// In this batch we don&#39;t have the values for keys 1 and 3, thus both will
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// be returned as expired when this micro-batch will be processed
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// It&#39;s because the processing time timeout is of 3000 ms and here we wait 5000 ms
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// before restarting the processing
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test21&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">30000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">savedValues</span> <span class="k">=</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">6</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;test10,test11&#34;</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">,</span> <span class="s">&#34;List(test10, test11): timed-out&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;List(test30): timed-out&#34;</span><span class="o">,</span> <span class="s">&#34;test20,test21&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;not be discarded when there is no new data to process&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;mapGroupWithState-state-not-returned-after-expiration&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">ProcessingTimeTimeout</span><span class="o">)(</span><span class="nc">MappingExpirationFunc</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">30000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">savedValues</span> <span class="k">=</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// Here, unlike in the above test, only 3 values are returned. Since there is no new
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// micro-batch, the expired entries won&#39;t be detected as expired
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// It shows that the state execution depends on the data arrival
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;test10,test11&#34;</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;append mode&#34;</span> <span class="n">should</span> <span class="s">&#34;be disallowed in mapGroupWithState&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">ProcessingTimeTimeout</span><span class="o">)(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">exception</span> <span class="k">=</span> <span class="n">intercept</span><span class="o">[</span><span class="kt">AnalysisException</span><span class="o">]</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;append&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">NoopForeachWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]]).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">exception</span><span class="o">.</span><span class="n">getMessage</span><span class="o">()</span> <span class="n">should</span> <span class="n">include</span><span class="o">(</span><span class="s">&#34;mapGroupsWithState is not supported with Append output mode on a &#34;</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;streaming DataFrame/Dataset&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;update mode&#34;</span> <span class="n">should</span> <span class="s">&#34;work for mapGroupWithState&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;mapGroupWithState-update-output-mode&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span><span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="n">timeoutConf</span> <span class="k">=</span> <span class="nc">GroupStateTimeout</span><span class="o">.</span><span class="nc">ProcessingTimeTimeout</span><span class="o">)(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test10&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test11&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">3L</span><span class="o">,</span> <span class="s">&#34;test30&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nc">Runnable</span><span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">override</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">while</span> <span class="o">(!</span><span class="n">query</span><span class="o">.</span><span class="n">isActive</span><span class="o">)</span> <span class="o">{}</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">5000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test12&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;test13&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;test21&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">30000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">savedValues</span> <span class="k">=</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">5</span>
+</span></span><span class="line"><span class="cl">  <span class="n">savedValues</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;test30&#34;</span><span class="o">,</span> <span class="s">&#34;test10,test11&#34;</span><span class="o">,</span> <span class="s">&#34;test20&#34;</span><span class="o">,</span> <span class="s">&#34;test10,test11,test12,test13&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;test20,test21&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div>
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#mapgroupswithstate-解释">mapGroupsWithState 解释</a>
+      <ul>
+        <li><a href="#mapgroupswithstate-的参数">mapGroupsWithState 的参数</a></li>
+        <li><a href="#groupstate">GroupState</a></li>
+        <li><a href="#mapgroupswithstate-例子">mapGroupsWithState 例子</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/bucket-pruning/" class="nobr">« Apache Spark 2.4.0 特性 - bucket pruning</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/add-for-else-branch/" class="nobr">给 for 添加 else 分支 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>
