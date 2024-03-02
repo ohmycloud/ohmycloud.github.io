@@ -301,6 +301,570 @@
     
         <article class="summary h-entry notes">
     <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/sub-trip-using-flink/'> 使用 Flink 进行行程划分</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-02-27T17:25:58+0800" class="dt-published">Wed Feb 27, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>准备 ① 启动 Flink 本地模式
+/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/start-cluster.sh Starting cluster. Starting standalonesession daemon on host summer. Starting taskexecutor daemon on host summer. ② 模拟实时流数据
+raku fake-streaming.pl6 该脚本每隔秒打印一行数据, 每隔 15 秒暂停打印, 然后在继续每隔一秒打印一行, 然后在 sleep 15 秒, 模拟行程间隔。
+sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJA0000000000091&#39;; my $last_meter = 0; react { whenever IO::Socket::Async.listen($host, $port) -&gt; $conn { react { my Bool:D $ignore = True; whenever Supply.interval(15).rotor(1, 1 =&gt; 1) { $ignore = !</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/notes/sub-trip-using-flink/'
+               title="Read more about 使用 Flink 进行行程划分">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 使用 Flink 进行行程划分</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry posts">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/posts/2019-02-03-threading-nqp-through-a-channel/'> Threading Nqp Through a Channel</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-02-03T11:07:23+0800" class="dt-published">Sun Feb 3, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>categories: [&ldquo;Raku&rdquo;] 考虑到 nqp 比普通 Perl 6 和线程快，两者结合起来应该会给我们带来不错的速度。在上一篇文章中承诺的使用 Supply 并没有真正的帮助。emit 会阻塞，直到 Supply 的内部队列被清空。如果我们想递归处理文件，文件系统可能会在递归线程被解除阻塞后停滞。如果我们在消费者中对文件系统施加压力，我们最好使用一个能迅速填满文件路径的 Channel。
+让我们先模拟一个每时每刻都会停滞的消费者，并以 $c 为 Channel。
+my @files; react { whenever $c -&gt; $path { @files.push: $path; sleep 1 if rand &lt; 0.00001; } } 如果我们尽可能快地抽出路径，我们可以填满相当多的 RAM，并给 CPU 缓存带来很大的压力。经过一些试验和错误，我发现当有超过64个工作线程等待被放到机器线程上时，在通道上的 .send 之前 sleep 会有帮助。这些信息可以通过 Telemetry::Instrument::ThreadPool::Snap.new&lt;gtq&gt; 访问。
+my $c = Channel.new; start { my @dirs = &#39;/snapshots/home-2019-01-29&#39;; while @dirs.shift -&gt; str $dir { my Mu $dirh := nqp::opendir(nqp::unbox_s($dir)); while my str $name = nqp::nextfiledir($dirh) { next if $name eq &#39;.</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/posts/2019-02-03-threading-nqp-through-a-channel/'
+               title="Read more about Threading Nqp Through a Channel">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about Threading Nqp Through a Channel</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/extract-section-block/'> 提取文本块儿的 5 种方法</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-01-19T23:53:38+0000" class="dt-published">Sat Jan 19, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>假设有一段文本, =begin code 和 =end code 把文本分割为一个一个的 section, 我想提取每一个 section 之间的内容。 Grammar 来拯救！
+my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code block is what we&#39;re after. We&#39;ll use &#39;ff&#39; to get it. =end code More unimportant text. =begin code I want this line. and this line as well. HaHa =end code More unimport text. =begin code Let&#39;s to go home. =end code END Grammar #use Grammar::Tracer; #use Grammar::Debugger; grammar ExtractSection { rule TOP { ^ &lt;section&gt;+ %% &lt;.</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/notes/extract-section-block/'
+               title="Read more about 提取文本块儿的 5 种方法">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 提取文本块儿的 5 种方法</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/toggle/'> 开关</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-01-19T10:56:07+0000" class="dt-published">Sat Jan 19, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>toggle 字面意思是开关, 函数签名如下：
+method toggle(Any:D: *@conditions where .all ~~ Callable:D, Bool :$off --&gt; Seq:D) 它接收一个数组, 数组中的每个元素都是一个 Callable。
+它迭代调用者, 产生一个 Seq, 根据开关是开还是关把接收到的值填充到结果中, 开关是开还是关取决于 @conditions 数组里面调用 Callables 的结果:
+say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 13 14)␤» say (1..15).toggle(:off, * &gt; 2, * &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(3 4 11 12 13 14)␤» 想象一下开关是打开还是关闭（True或False），如果它打开则产生值。默认情况下，该开关的初始状态处于 &ldquo;on&rdquo; 位置，除非 :$off 设置为 true 值，在这种情况下，初始状态将为&quot;off&quot;。</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/notes/toggle/'
+               title="Read more about 开关">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 开关</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/using-raku-grammars-to-decompressing-zelda3-gfx/'> 使用 Raku Grammars 解压缩 Zelda 3 GFX</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-01-15T10:37:24+0000" class="dt-published">Tue Jan 15, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>grammars
+Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西。如果说任何压缩后的数据遵循可能由相应的解压缩算法“解析”的结构，那就不足为奇了。
+那么为什么不使用 Raku Grammar 进行这类工作呢？特别是我熟悉的压缩。
+深入研究任天堂压缩 任天堂在他们的 SNES 游戏中使用了相同的基本压缩格式，并根据游戏使用了一些变体。这非常简单，在 ~2Mhz 的 SNES CPU 上很容易。
+它是这样的：
+&lt;a byte that contains an header&gt; the header is split into 2 parts : the 3 left most bits form a command number The 5 other bits code the lenght associated with the command &lt;An arbitrary number of bytes associated with the command&gt; &lt;repeat until the header is \xFF&gt; 命令取决于游戏，但是 Zelda 3 的命令非常简单</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/notes/using-raku-grammars-to-decompressing-zelda3-gfx/'
+               title="Read more about 使用 Raku Grammars 解压缩 Zelda 3 GFX">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 使用 Raku Grammars 解压缩 Zelda 3 GFX</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/'> 使用rotor操作列表</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-01-10T15:23:11+0000" class="dt-published">Thu Jan 10, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>假设有一个 0..100 的数字区间, 需要分成下面这样的区间：
+0..5 5..10 10..15 15..20 20..25 25..30 30..35 35..40 40..45 45..50 50..55 55..60 60..65 65..70 70..75 75..80 80..85 85..90 90..95 95..100 rotor 来拯救：
+.minmax.say for (0..100).rotor(6 =&gt; -1) 我想偷懒用程序生成下面的代码：
+if (current &gt;=0 &amp;&amp; current &lt; 5) &#34;0&#34; if (current &gt;=5 &amp;&amp; current &lt; 10) &#34;1&#34; if (current &gt;=10 &amp;&amp; current &lt; 15) &#34;2&#34; if (current &gt;=15 &amp;&amp; current &lt; 20) &#34;3&#34; if (current &gt;=20 &amp;&amp; current &lt; 25) &#34;4&#34; if (current &gt;=25 &amp;&amp; current &lt; 30) &#34;5&#34; if (current &gt;=30 &amp;&amp; current &lt; 35) &#34;6&#34; if (current &gt;=35 &amp;&amp; current &lt; 40) &#34;7&#34; if (current &gt;=40 &amp;&amp; current &lt; 45) &#34;8&#34; if (current &gt;=45 &amp;&amp; current &lt; 50) &#34;9&#34; if (current &gt;=50 &amp;&amp; current &lt; 55) &#34;10&#34; if (current &gt;=55 &amp;&amp; current &lt; 60) &#34;11&#34; if (current &gt;=60 &amp;&amp; current &lt; 65) &#34;12&#34; if (current &gt;=65 &amp;&amp; current &lt; 70) &#34;13&#34; if (current &gt;=70 &amp;&amp; current &lt; 75) &#34;14&#34; if (current &gt;=75 &amp;&amp; current &lt; 80) &#34;15&#34; if (current &gt;=80 &amp;&amp; current &lt; 85) &#34;16&#34; if (current &gt;=85 &amp;&amp; current &lt; 90) &#34;17&#34; if (current &gt;=90 &amp;&amp; current &lt; 95) &#34;18&#34; if (current &gt;=95 &amp;&amp; current &lt; 100) &#34;19&#34; for (0.</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmycloud.github.io/notes/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/'
+               title="Read more about 使用rotor操作列表">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 使用rotor操作列表</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
         <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/sub-trip-with-structured-spark-streaming/'> 使用 Spark Structured Streaming 进行行程划分</a> </h2>
         
     <div class="taxo no-text-decoration">
@@ -689,566 +1253,6 @@ if ($x &gt; 0) {say $x;exit} if $x &gt; 0 {say $x;exit} 有时，你也希望省
                 <span class="screen-readers-only" > about 🎄 25/25. Raku Golf 代码的提示和想法</span>
             </a>
         </div>
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/summary-for-2018/'> 2018 总结</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-24T14:49:44+0000" class="dt-published">Mon Dec 24, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>总结个 🍉。</p>
-
-    </div>
-
-    
-    
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/reading-files-with-argfiles-in-raku/'> 🎄 24/25. 在 Raku 中用 $*ARGFILES 读取文件</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-24T10:06:06+0000" class="dt-published">Mon Dec 24, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>欢迎来到Raku One-Liner Advent Calendar的第24天！
-在前几天，我们正在读取文本文件，因此讨论 $*ARGFILES是合乎逻辑的，这是一个内置的动态变量，在处理多个输入文件时可能很方便。
-如何读取命令行中传递的两个或多个文件？
-$ raku work.pl a.txt b.txt 如果您需要将所有文件一起处理，就像它们是单个数据源一样，您可以要求我们今天的变量以单行方式完成工作：
-.say for $*ARGFILES.lines 在程序内部，您不必考虑循环文件; $*ARGFILES将自动为您做到这一点。
-如果命令行中没有文件，则该变量将附加到 STDIN：
-$ cat a.txt b.txt | raku work.pl 确实很方便，不是吗？
-6.d和MAIN 如果你想在更大的程序中使用它，我也必须警告你。考虑以下程序：
-sub MAIN(*@files) { .say for $*ARGFILES.lines; } 在 Perl 6.d 中, $*ARGFILES 在MAIN子例程内部和它之外的工作方式不同。
-这个程序将完全适用于 Raku.c，但不适用于Raku.d. 换句话说，在Rakudo Star中，包括版本2018.10，$*ARGFILES 在命令行中处理文件名，但从 Rakudo Star 2018.12 开始，如果在 MAIN 中使用它，它将始终连接到 $*IN。
-这就是今天的 advent 文章的结束，几乎是今年整个日历的结束。不过，明天再来！</p>
-
-    </div>
-
-    
-    
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/about-translation-of-raku-one-liner/'> 🎄 About Translation of Raku One-Liner Advent Calendar</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-23T11:10:28+0000" class="dt-published">Sun Dec 23, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>Thanks so much to Andrew Shitov, for writing so much nice articles, for allowing me to translate these posts to Chinese.
-If you are fluent in english, please read the source posts:
-Day 1 - https://raku.online/2018/12/01/generating-random-password/ Day 2 - https://raku.online/2018/12/02/grep-dividable-numbers/ Day 3 - https://raku.online/2018/12/03/generating-random-integers-in-perl-6/ Day 4 - https://raku.online/2018/12/04/working-with-big-numbers-in-perl-6/ Day 5 - https://raku.online/2018/12/05/what-is-the-date-today-in-raku/ Day 6 - https://raku.online/2018/12/06/palindrom-testing-in-perl-6/ Day 7 - https://raku.online/2018/12/07/the-joy-of-unicode-in-perl-6/ Day 8 - https://raku.online/2018/12/08/adding-up-even-fibonacci-numbers-in-perl-6/ Day 9 - https://raku.online/2018/12/09/more-on-x-in-perl-6/ Day 10 - https://raku.</p>
-
-    </div>
-
-    
-    
-    
-        <div class="readmore no-text-decoration">
-            <a href='https://ohmycloud.github.io/notes/about-translation-of-raku-one-liner/'
-               title="Read more about 🎄 About Translation of Raku One-Liner Advent Calendar">
-                read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 🎄 About Translation of Raku One-Liner Advent Calendar</span>
-            </a>
-        </div>
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/calculating-totals-with-perl6/'> 🎄 23/25. 用 Raku 计算总数</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-23T08:44:56+0000" class="dt-published">Sun Dec 23, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>欢迎来到Raku One-Liner Advent Calendar的第23天！今年年底是人们计算年度结果的时间，Raku 也可以帮助解决这个问题。
-今天，我们将看到一个单行程序，用于计算表格列的总数。
-这是文件中的一些示例数据：
-100.20 303.50 150.25 130.44 1505.12 36.41 200.12 305.60 78.12 这里是为每列打印三个数字总和的代码：
-put [Z+] lines.map: *.words 该程序打印我们需要的数字：
-430.76 2114.22 264.78 从昨天的帖子的更新中，我们知道，裸lines 和 $*IN.lines 是一样的，所以lines.map在输入流中迭代所有行。然后将每一行拆分成由空格分隔的单词子串。
-解析输入数据的作业部分已完成。我们得到了许多与输入数据行相对应的序列。对于我们的示例文件，有如下内容：
-((&#34;100.20&#34;, &#34;303.50&#34;, &#34;150.25&#34;).Seq, (&#34;130.44&#34;, &#34;1505.12&#34;, &#34;36.41&#34;).Seq, (&#34;200.12&#34;, &#34;305.60&#34;, &#34;78.12&#34;).Seq).Seq 现在，将每个序列的第一个元素，每个序列的第二个元素等相加起来。化简运算符和zip元运算符的组合只需要四个代码字符即可完成所有工作：[Z+]。
-此时，我们有一个化简后的序列：
-（430.76,2114.22,264.78）.Seq 最后一个简单的步骤是使用 put 例程打印值。如果你昨天做了功课，你会知道say使用gist方法（在序列周围添加括号）来显示结果，而put只是使用Str方法打印值。
-还有 让我们在脚本中添加一些字符来演示如何跳过第一列，例如，跳过包含月份名称的列：
-Jan 100.20 303.50 150.25 Feb 130.44 1505.12 36.41 Mar 200.12 305.60 78.12 您只需要创建一个切片并选择除第一列之外的所有列：
-put &#39;Total &#39;, [Z+] lines.map: *.words[1..*] 如您所见，我们甚至不需要自己计算列数。1..* 范围可以完成这样的工作。
-这就是今天的 advent 文章的结尾，所以明天再来吧！</p>
-
-    </div>
-
-    
-    
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/use-carton-for-your-mojolicious-app-deployment/'> 第二十二天 - 使用 Carton 进行 Mojolicious 应用程序部署</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-22T14:29:15+0000" class="dt-published">Sat Dec 22, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>你有一个可爱的Mojolicious应用程序，它是时候部署它了！
-但是&hellip;&hellip;它不能在生产服务器上运行！到底是怎么回事？哦，不，您所依赖的模块与开发服务器上的版本不同。你能做什么？
-实际上，一些模块发展得很快（Hello Mojolicious！），这没有毛病，但可能会导致不兼容的变化。
-还有一些可以在版本中解决或引入的错误，如果您的版本错误，则会遇到这些错误。
-Cpanfile来救援 Cpanfile是一种用于描述Perl应用程序的CPAN依赖关系的格式。
-有了cpanfile，我们可以列出我们需要的模块，但我们也可以强制模块的最小版本，它们的最大版本&hellip;&hellip;或者说“我想要那个模块的确切版本”。
-但我们也可以列出可选模块：您可以支持不同的数据库，但如果用户想要使用PostgreSQL，则不必安装与MySQL相关的模块。
-这是一个例子cpanfile：
-# Do not ask for a specific version requires &#39;DateTime&#39;; # Ask a specific version requires &#39;Plack&#39;, &#39;== 1.0&#39;; # Ask a minimal version requires &#39;Net::DNS&#39;, &#39;&gt;= 1.12&#39;; # Or requires &#39;Net::DNS&#39;, &#39;1.12&#39;; # Ask a maximal version requires &#39;Locale::Maketext&#39;, &#39;&lt; 1.28&#39;; # Give a range requires &#39;Mojolicious&#39;, &#39;&gt;= 7.0, &lt; 8.0&#39;; # Optional modules feature &#39;postgresql&#39;, &#39;PostgreSQL support&#39; =&gt; sub { requires &#39;Mojo::Pg&#39;; }; feature &#39;mysql&#39;, &#39;MySQL support&#39; =&gt; sub { requires &#39;Mojo::mysql&#39;; }; feature &#39;ldap&#39;, &#39;LDAP authentication support&#39; =&gt; sub { requires &#39;Net::LDAP&#39;; }; Cpanfile格式可以做更多（推荐模块，用于特定阶段（需求configure，test&hellip;），使用没有公布关于CPAN &hellip;模块），但是这是一个关于 Carton 的文章：我让你读cpanfile文档🙂</p>
-
-    </div>
-
-    
-    
-    
-        <div class="readmore no-text-decoration">
-            <a href='https://ohmycloud.github.io/notes/use-carton-for-your-mojolicious-app-deployment/'
-               title="Read more about 第二十二天 - 使用 Carton 进行 Mojolicious 应用程序部署">
-                read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第二十二天 - 使用 Carton 进行 Mojolicious 应用程序部署</span>
-            </a>
-        </div>
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmycloud.github.io/notes/reversing-a-file-with-raku/'> 🎄 22/25. 使用 Raku 反转文件</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-22T10:10:35+0000" class="dt-published">Sat Dec 22, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>欢迎来到Raku One-Liner Advent Calendar的第22天！今天，我们将继续使用文件，今天的目标是创建一个单行程序以相反的顺序打印文本文件的行（如tail -r那样）。
-第一个单行程序使用 STDIN 流完成工作：
-.say for $*IN.lines.reverse 运行程序为：
-$ raku reverse.pl &lt; text.txt 如果要直接从Raku读取文件，请稍微修改程序以从命令行参数创建文件句柄：
-.say for @*ARGS[0].IO.open.lines.reverse 现在运行如下：
-$ raku reverse.pl text.txt 重要的是要记住，lines方法的默认行为是从最后的行序列中排除换行符（该方法返回Seq对象，而不是数组或列表）。它可能与你在使用Perl 5时习惯的方式相反。使用chomp是一种常见的做法。
-在Raku中，lines方法根据IO::Handle对象的nl-in 属性中存储的值来拆分行。
-您可以使用以下小脚本查看行分隔符的当前值：
-dd $_ for @*ARGS[0].IO.open.nl-in 这是您默认找到的内容：
-$[&#34;\n&#34;, &#34;\r\n&#34;] 有趣的是，你可以控制的 lines 的行为，并告诉 Perl 不排除换行符：
-@*ARGS[0].IO.open(chomp =&gt; False).lines.reverse.put 该 chomp 属性由默认设置为 True。您还可以更改默认分隔符：
-@*ARGS[0].IO.open( nl-in =&gt; &#34;\r&#34;, chomp =&gt; False ).lines.reverse.put 请注意，如果没有 chomping，则不需要对行进行显式的for循环：在最后两个单行中，直接在序列对象上调用.put方法。在早期版本中，字符串不包含换行符，因此它们将打印为单个长行。
-今天我将给你留一些小功课：告诉 say 和 put 之间的差异。
-明天见！</p>
-
-    </div>
-
-    
-    
     
 </article>
       
