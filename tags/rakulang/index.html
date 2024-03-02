@@ -342,7 +342,7 @@
 
 </div>
             
-            <h1 class="p-name">Posts tagged with ‘rakulang’ (311)</h1>
+            <h1 class="p-name">Posts tagged with ‘rakulang’ (310)</h1>
         
     </header>
 
@@ -525,98 +525,6 @@
                title="Read more about Raku and Rust Ffi">
                 read <span class="more"> more</span>
                 <span class="screen-readers-only" > about Raku and Rust Ffi</span>
-            </a>
-        </div>
-    
-</article>
-
-    
-        
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/2022-05-30-my-explanation-of-the-main-concepts-in-rust/'> My Explanation of the Main Concepts in Rust</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="active"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="active"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2022-05-30T00:00:00+0000" class="dt-published">Mon May 30, 2022</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>My Explanation of the Main Concepts in Rust</p>
-
-    </div>
-
-    
-    
-    
-        <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/2022-05-30-my-explanation-of-the-main-concepts-in-rust/'
-               title="Read more about My Explanation of the Main Concepts in Rust">
-                read <span class="more"> more</span>
-                <span class="screen-readers-only" > about My Explanation of the Main Concepts in Rust</span>
             </a>
         </div>
     
@@ -973,20 +881,7 @@
     </header>
 
     <div class="post p-summary" >
-        <p>利用流处理检测离线滑板车 在 Bird，一些最有趣的挑战涉及处理无桩物理硬件。不仅滑板车硬件可能出现故障，滑板车也可能被坏人偷走或破坏。我们从滑板车上收集遥测数据，但分析这些流水数据可能是一个挑战。
-流处理自然适合从这些遥测数据中提取洞察力。我们使用 Flink 来处理来自 Kafka（我们的消息总线）的数据，运行寻找数据中不同信号的作业。Flink 提供了内置的工具来简化从 Kafka 的读取，并以容错的分布式方式处理数据流。Flink 还提供了大量内置的处理功能，以及用于自定义逻辑的各种构建块。
-作为一家企业，Bird 需要跟踪我们硬件的健康状况。不健康的滑板车的一个症状是当它停止发送遥测记录。滑板车下线可能是由于电池问题、软件问题或硬件问题。我们需要知道何时发生这种情况，这样我们就可以尽快跟进。
-我们写了一个 Flink 作业来检测滑板车何时离线，并很快遇到了一系列棘手的问题，涉及到 Kafka、事件时间、水印和排序。
-Flink 的解决方法 Bird 将滑板车发送给我们的每条遥测记录称为轨迹。我们使用 Flink 作业来记录特定滑板车的每条轨迹的时间戳，并设置一个定时器，在一定的时间过后启动。如果我们在定时器启动之前看到另一条轨迹，我们就重置定时器以反映这个新轨迹的时间戳。如果我们没有看到另一条轨迹，定时器就会启动，我们就会输出一个事件，反映出这辆滑板车已经下线了。
-遥测监测是一个自然的适合 keyed 的 process 函数，Flink 使得这项工作可以直接启动和运行。process 函数保持对滑板车 ID 的 keyed 状态，以跟踪当前的在线/离线状态，并通过事件时间定时器来处理离线检测。我们选择这条路线是因为我们想在以后用轨迹做更复杂的事情，并且想练习一下 process 函数，而不是仅仅使用一个会话窗口。
-看上去很简单。但是，当我们测试这项工作对旧数据的表现时，我们遇到了一个障碍。当重放 Kafka 中的旧数据时，该作业同时输出了假阳性（它检测到虚假的离线事件）和假阴性（它错过了一些真正的离线事件）。
-对这个问题的调查变得非常复杂，我们找到了一些有趣的解决办法，并将其应用于其他工作。我们了解到，关键是要理解。
-为什么在回填(backfill)中排序是不可靠的
-如何使用 Kafka 正确地提取时间戳和水印
-以及定时器和 processElement 如何互动
-从 Kafka 回填和数据排序 让我们从排序开始。我们有一个 Kafka 主题，有几个分区，没有特定的分区键。我们发现，在回填过程中，作业往往不会以相同的速度读取这些分区。我们最终会得到一个逻辑 Flink 流，其中的记录严重失序 - 几个小时甚至更久 请看下面的图表。
-这张图代表了一个 job 的时间快照，它从一个有四个分区的 Kafka 主题中读取了6个多小时的数据。该作业的并行度为2，所以每个任务实例从两个分区读取数据。由于网络条件和每个实例与 broker 连接之间的其他差异，我们以极大的不同速率获得记录(例如，3点的记录在6点的记录之后出现，以此类推)。
-水印 我们发现的第一件事是，我们没有正确提取我们的水印。Flink 的水印是解决这些问题的主要基石，所以我们必须首先解决这个问题。它们就像一个逻辑时钟，告诉 job 中的每一个 operator 我们在时间上走了多远。更多信息可以在这里阅读，在Flink 的文档中。幸运的是，这是一个简单的问题 - 但在我们看到这个失序的数据并开始调查如何解决它之前，我们已经错过了这里的文档中关于每个分区提取水印的全部意义。</p>
+        <p>可重播的 Process Functions</p>
 
     </div>
 
@@ -2052,10 +1947,7 @@ Flink 的解决方法 Bird 将滑板车发送给我们的每条遥测记录称�
     </header>
 
     <div class="post p-summary" >
-        <p>Vadim 不同意我的观点。他也不应该同意。我几乎从不同意自己的观点。另外，我很高兴他的不同意，因为这让我可以写一个我已经排了很久的题目。
-基本的说法是，强制类型允许在编译时，甚至可能更早 - 在大脑时 - 对接口进行推理。在静态类型的语言中，这是一件合理的事情。当涉及到对象时，Raku 会在运行时进行大量的思考。让我们来看看两个例子。
-class Foo { submethod shift-right($i) { } } sub foo(Foo() $handle) { $handle.shift-right(4); } foo(Foo.new); class Bar is Foo { } foo(Bar.new); # OUTPUT: No such method &#39;shift-right&#39; for invocant of type &#39;Bar&#39; 我们要求编译器对 Foo 进行类型检查，使 Bar 满足。然后，我们继续对一个只由 Foo 提供的 Bar 实例调用一个方法。编译器试图帮助我们，但不能。在这个例子中，我们的接口不是 Foo 及其方法，而只是 Foo - 不包括它的子类 - 及其方法。这是一个微妙的差异，会在运行时伤害我们。通过另一个例子，我可以很清楚地说明原因。
-class Catchall { has $.the-object; method FALLBACK($name, |c) { self.the-object.&#34;$name&#34;(|c) } } sub foo(Catchall $c) { $c.</p>
+        <p>assumed predictability</p>
 
     </div>
 
@@ -2147,9 +2039,7 @@ class Catchall { has $.the-object; method FALLBACK($name, |c) { self.the-object.
     </header>
 
     <div class="post p-summary" >
-        <p>我最后一个简单的圣诞愿望，结果却相当复杂。在实际代码中测试一个想法，可以发现很多改变 CORE 概念所产生的问题。幸运的是，我们可以在 Raku 中调整很多东西，而不需要改变 Rakudo 中的代码。有一件事一直困扰着我，那就是复合类型的 Mixins。当混入一个值时，这个值会被一个与值的类型对象名称相同的方法暴露出来。
-my $a = &#34;foo&#34; but %{ bar =&gt; 42 }; say $a.Hash&lt;bar&gt;; # OUTPUT: 42 这是对的，但不是很 DWIMy。事实证明，我们不需要做太多改变。
-multi sub infix:&lt;but&gt;(Mu \l, Associative \h) { constant &amp;BUT = &amp;infix:&lt;but&gt;; role MixinAssociative[%h, \v] does Associative { has $.the-value = v; has %.the-hash handles&lt;AT-KEY EXISTS-KEY DELETE-KEY push iterator list kv keys values&gt; = %h; } BUT(l, MixinAssociative[h, l]); } my $a = &#34;foo&#34; but %{ bar =&gt; 42 }; say $a&lt;bar&gt;; # OUTPUT: 42 我需要把原来的 &amp;infix:&lt;but&gt; 藏起来，避免无限递归。在 Mixin 上对 raku 的任何调用都不能真正说明全部问题。</p>
+        <p>making myself a present</p>
 
     </div>
 
@@ -2241,9 +2131,7 @@ multi sub infix:&lt;but&gt;(Mu \l, Associative \h) { constant &amp;BUT = &amp;in
     </header>
 
     <div class="post p-summary" >
-        <p>许多 API 都有一两个例程可以接受一个文件作为参数。在 Raku 中，我们可以很容易地把 Str 变成 IO::Path，随后再变成 IO::Handle。作为模块作者，提供 MMD 变体是一种礼貌的举动，所以用户可以提供他们喜欢的东西。
-sub s($file is copy where { $_ ~~ Str|IO::Path|IO::Handle or fail(&amp;?ROUTINE.name ~ &#39; likes Str, IO::Path and IO::Handle.&#39;) } ) { given $file { when Str { $file = .IO.open; } when IO::Path { $file = .open; } when IO::Handle { } } say ?$file; } 这是个模板. 在 Raku 之国几乎是被禁止的. 使用新的强转协议，我们可以实现一个角色，从此快乐地节省时间。
-role Filish[*%mode] is IO::Handle { proto method COERCE($) {*} multi method COERCE(Str:D $s) { my $handle = self.</p>
+        <p>coercive files</p>
 
     </div>
 
@@ -2335,15 +2223,7 @@ role Filish[*%mode] is IO::Handle { proto method COERCE($) {*} multi method COER
     </header>
 
     <div class="post p-summary" >
-        <p>Wenzel P.P. Peppmeyer 继续着他关于 Raku 的精彩博文，他涉及了一些非常有趣的主题。他的最后一篇文章是关于在一个模块中实现 DWIM 原则，以使用户减少对模板代码的关心。单单这一点就不会让我写这篇文章，但 Wenzel 提出了一个我以为会引起困惑的问题。而显然我没有看错。
-以下是帖子中的一段话。
-新的强转协议非常有用，但有一个缺陷：它强迫我返回包含 COERCE-method 的类型。在一个没有太大意义的角色中，它迫使我与 IO::Handle 打交道。
-基本上，这个要求归结为下面的片段。
-role Foo { multi method COERCE(Str:D $s) { $s.IO.open: :r } } sub foo(Foo() $v) { say $v.WHICH; } foo($?FILE); 试图运行它，会得到。
-Impossible coercion from &lsquo;Str&rsquo; into &lsquo;Foo&rsquo;: method COERCE returned an instance of IO::Handle.
-我们来看看为什么这里的错误是合法的。
-简短的答案是：强转，虽然在某种程度上是放松的，但最上是一种类型约束。
-较长的答案是：用户期望 Foo 在 $v 中的 sub foo。我提议做一个小的思想实验，就是在 Foo 这个角色中加入一个方法。例如，我们想在文件中用空格来填充文本。为此，我们在角色 Foo 中实现 method shift-right(Int:D $columns) {...}。然后我们在 sub foo 中使用该方法。</p>
+        <p>on coercion method return value</p>
 
     </div>
 
@@ -2538,15 +2418,7 @@ role Foo { has $.foo = 42; method bar { say &#34;hello!&#34; } } class Bar does 
     </header>
 
     <div class="post p-summary" >
-        <p>RFC 28&ndash;Perl 应该留在 Perl 中 最初由 Simon Cozens 提交，RFC 28于2020年8月4日，这个 RFC 要求社区确保无论做什么更新，Perl 6 仍然绝对可以被识别为 Perl。经过20年的设计、概念验证、实现、两个发布的语言版本，我们最终得到了一个绝对是 Perlish 的东西，即使我们不再是一个 Perl。
-在提交 RFC 的时候，我们认为这个语言会是下一个 Perl，Perl 6。随着时间的推移，在正式发布语言之前，Perl 5 的开发又有了起色，而那个团队&amp;社区也想继续走自己的路。几个月前，Perl 6 正式更名为 Raku&ndash;不是为了摆脱我们 Perl 的传统，而是为了解放 Perl 5 社区，让他们也继续走自己的路。走向 Raku 的道路是艰难的，但我们对我们所运载的语言很满意，即使我们确实怀念锡纸上的 Perl 名字。
-&ldquo;吸引人的滋扰&rdquo; 让我们来研究一下 Simon 在他的 RFC 中提到的一些细节。
-我们有一个黄金机会，可以把 Perl 变成我们喜欢的任何东西。我们不要错过这个机会。
-这是一条很好的线，我们最终还是越过了这条线，甚至在重命名之前。具体的设计决定被改变了，我们从一个新的实现开始（如果你算上 Pugs &amp; Parrot &amp; Niecza&hellip;&hellip;的话，不止一次）。我们是 Perlish，受到 Perl 的启发，但 Raku 绝对是不同的。
-如果我们把 Perl 语言弄得面目全非，没有人会赢，因为它不再是 Perl 了。
-我认为，最终大家都赢了&ndash;我们得到了一个新的、经过改进的 Perl 5 (很快就会有7)，我们在 Raku 中得到了一种全新的语言。20年前的道路并不清晰，但我们最终还是走到了一个好地方。
-有些东西就是不需要沉重的面向对象。
-Raku 的 OO 无处不在：但它不是必需的。虽然你可以把所有的东西都当做一个对象。</p>
+        <p>Perl Should Stay Perl</p>
 
     </div>
 
@@ -2638,14 +2510,7 @@ Raku 的 OO 无处不在：但它不是必需的。虽然你可以把所有的�
     </header>
 
     <div class="post p-summary" >
-        <p>又是一个来自 Damian 的好东西，真的是你所期待的对话者和解释者的好东西。
-胖逗号运算符，=&gt;，最初是用来分隔值的&ndash;但有一个变化。它的行为就像 , 运算符一样，但修改了解析，将左操作数字符串化。
-它为你节省了一些字符串的引号，所以这个哈希初始化的代码。
-my %h = ( &#39;a&#39;, 1, &#39;b&#39;, 2, ); 可以被写为:
-my %h = ( a =&gt; 1, b =&gt; 2, ); 在这里，裸a和b的解析是正确的，不需要把它们引用成字符串。不过，通常的哈希赋值语义还是一样的：一对对的值会被逐一处理，鉴于 =&gt; 只是一个 &ldquo;左侧字符串化&quot;的逗号运算符，有趣的是，上面的代码就相当于这一块:
-my %h = ( a =&gt; 1 =&gt; b =&gt; 2 =&gt; ); 该提案建议改变这个&quot;特殊&quot;操作符的含义，使其成为一个新数据类型的构造函数, Pair:
-一个 Pair 是由一个键和一个值构成的:
-my @pairs = a =&gt; 42, 1 =&gt; 2; say @pairs[0]; # a =&gt; 42 say @pairs[1]; # 1 =&gt; 2; say @pairs[1].</p>
+        <p>Pair Constructor</p>
 
     </div>
 
@@ -2838,12 +2703,7 @@ class VerboseFetcher is Array { # subclass core&#39;s Array class method AT-POS(
     </header>
 
     <div class="post p-summary" >
-        <p>关于多态性 RFC159 引入了真正的多态对象的概念。
-对象可以按需变形为数字、字符串、布尔值和更多其它的东西。因此，对象可以自由地传递和操作，而不必关心它们包含的内容（甚至不必关心它们是对象）。
-当我们看看 42，&quot;foo&quot;，now 在 Raku 中是如何工作的，我们只能看到这种设想已经实现的差不多了。因为大多数时候，人们并不关心 42 真的是一个 Int 对象，&ldquo;foo&rdquo; 真的是一个 Str 对象，而每次调用 now 的时候，它都代表一个新的 Instant 对象。人们唯一关心的，是它们可以在表达式中使用。
-say &#34;foo&#34; ~ &#34;bar&#34;; # foobar say 42 + 666; # 708 say now - INIT now; # 0.0005243 RFC159 列出了一些方法名称，用于指示对象在某些情况下应该如何行事，如果对象的类没有提供该方法，则系统会提供一个回退方法。在大多数情况下，这些方法没有进入 Raku，但其中一些方法用不同的名字进入了 Raku。
-Name in RFC Name in Raku When STRING Str 在字符串上下文中调用 NUMBER Numeric 在数值上下文中调用 BOOLEAN Bool 在布尔上下文中调用 而他们中的一些甚至还保留了自己的名字:
-Name in RFC When BUILD 在对象祝福中调用 STORE 在 lvalue = 上下文中调用 FETCH 在 rvalue = 上下文中调用 DESTROY 在对象销毁时调用 但有时与 RFC 的语义有微妙的不同。</p>
+        <p>true polymorphic objects</p>
 
     </div>
 
@@ -2935,10 +2795,7 @@ Name in RFC When BUILD 在对象祝福中调用 STORE 在 lvalue = 上下文中�
     </header>
 
     <div class="post p-summary" >
-        <p>问题 今天想试一下 Raku 中的一个终端框架, 名字为 Vikna。但是这个模块在标准的 Rakudo 中还不能运行(截至 2020.07 月版)。只能安装特定分支的 Rakudo, 但是安装 Rakudo 的时候, 由于众所周知的网络原因, 在终端中克隆代码仓库特别慢, 十几k的速度, 下载不到一半就被服务器中断了, 特别耗费时间。无奈在 ~/.zshrc 中开启代理:
-function proxy_on() { export no_proxy=&#34;localhost,127.0.0.1,localaddress,localdomain.com&#34; export http_proxy=&#34;http://127.0.0.1:1089&#34; export https_proxy=$http_proxy echo -e &#34;已开启代理&#34; } proxy_on() function socks_on() { # SOCKS5 代理设置 export no_proxy=&#34;localhost,127.0.0.1,localaddress,localdomain.com&#34; export http_proxy=&#34;socks5://127.0.0.1:1080&#34; export https_proxy=&#34;socks5://127.0.0.1:1080&#34; echo -e &#34;SOCKS5 代理已开启&#34; } socks_on() 试了一下速度还行。不知道是哪个配置起的作用。
-接下来安装 Vikna 模块的时候, 爆出了如下错误:
-Failed to find dependencies: sqlite:from&lt;native&gt; 在 modules.raku.org 上搜索 sqlite, 发现是名为 DB::SQLite 的模块。</p>
+        <p>Failed to find dependencies</p>
 
     </div>
 
@@ -3030,10 +2887,7 @@ Failed to find dependencies: sqlite:from&lt;native&gt; 在 modules.raku.org 上�
     </header>
 
     <div class="post p-summary" >
-        <p>这是我对 Perl 每周挑战 #071 的回应。
-Challenge #071.1: 峰值元素 给出正整数 `$N (&gt;1)`。 写一个脚本来创建一个大小为 `$N` 的数组，其随机元素在1到50之间。 如果找到的话，最后应该打印出数组中的峰值元素。 如果一个数组中的元素比它的邻元素大，则称为峰值。 例子 1 Array: [ 18, 45, 38, 25, 10, 7, 21, 6, 28, 48 ] Peak: [ 48, 45, 21 ] 例子 2 Array: [ 47, 11, 32, 8, 1, 9, 39, 14, 36, 23 ] Peak: [ 47, 32, 39, 36 ] 第一部分是处理输入($N)，并生成一个随机数组。其实挑战赛并没有说数组中的值应该是整数，但我们可以从例子中推断出这一点。
-文件: peak-element-if (部分)
-#! /usr/bin/env raku subset VeryPosInt of Int where * &gt;= 1; # [1] unit sub MAIN (VeryPosInt $N, :$v, :$verbose = $v); # [2] my @array = (1.</p>
+        <p>peaked trim with raku</p>
 
     </div>
 
@@ -3125,12 +2979,7 @@ Challenge #071.1: 峰值元素 给出正整数 `$N (&gt;1)`。 写一个脚本�
     </header>
 
     <div class="post p-summary" >
-        <p>RFC 145，作者 Eric J. Roode：Perl 正则表达式的括号匹配。 问题和建议 RFC 145 呼吁建立一个新的 regex 机制，以协助匹配像括号这样的配对字符，确保它们是平衡的。日常使用中或多或少都有很多“配对字符”。 ()、[]、{}、&lt;&gt;、«»、&quot;&quot;、''，根据你的本地情况甚至还有 »«，或者在 Unicode 的花哨世界里还有 ⟦⟧ 以及很多很多。在本文中，我将采用 RFC 的标题，并将它们全部称为“括号”。
-例如考虑字符串 ([b - (a + 1)] * 7)。我们可能希望提取所有的子公式。
-[b - (a + 1)] * 7, b - (a + 1), a + 1 中的内容，并使用全局匹配的方式用一对大括号包围。请读者现在就尝试编写这样的 regex。
-RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的。这个任务分为两部分。
-确定一个开头的括号和结尾的括号的对应关系。 追踪嵌套层次和每个层次上的匹配括号。 当开口括号有多个选项时，第一个子任务在 regex 中变得很棘手。第二个子任务很难，有一个更深刻的原因，这个原因叫做 &ldquo;Dyck语言&rdquo;。Dyck 语言是所有正确配对的小括号字符串的集合（它们之间的假设内容被抹去）。它是计算机科学意义上的语言的原型例子，它不是有规律的，但仍然是无上下文的，这意味着它以某种方式需要一个堆栈来跟踪嵌套级别。当然，regex 比计算机科学意义上的正则表达式更强大，但这一事实可能仍然证明了为什么这是一件困难的事情。Eric Roode 认识到了这个在解析结构化数据中非常常见的任务应该有多容易，与它之间的差距，于是写了一个 RFC。
-他提出了一个 use matchpairs 编译指令来解决子任务 №1，提供一个从开括号到收括号的映射。编译指令在词法作用域中被激活，并影响其中所有的 regex 匹配。对于子任务 №2，我们提出了两个新的 regex 元字符，\m 和 \M 用于匹配和记忆相应的括号。使用这些钩子，嵌套层的业务被卸载到 regex 引擎上。</p>
+        <p>brace matching</p>
 
     </div>
 
@@ -3222,16 +3071,7 @@ RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的
     </header>
 
     <div class="post p-summary" >
-        <p>Richard 想&hellip;
-提供一种简单的方法来命名和从 regex 中挑选信息，而不必计算括号。
-我可以毫不犹豫地说，Raku（以及在其改名之前的Perl 6）已经实现了这个目标-但所有的细节都与提议的不同。
-原因有二。
-首先，Richard 假设了 Perl 5 的 regex 语法的一个相当直接的扩展，他提出的语法，(?$hours=..) 的命名捕捉是有意义的。相反，Raku regex 语法是一个相当新的东西，所有非字母数字字符都是潜在的元字符，因此要么被使用，要么为某一目的保留。这使得比 (?$name=regex) 更容易的语法可用于命名捕捉。
-第二种情况更为深刻。Raku 的设计者们意识到，只有当重用从头开始时，regex 才能真正强大起来。而实现这一点的最好方法就是让 regex 成为一等公民。
-我想在这一点上多说几句：考虑一下函数（和闭包）作为现代编程语言中一等公民的力量。Lisp 已经向我们展示了你可以用它们做什么，现在基本上每个编程语言都得到了它们。像 Perl、Ruby、Javascript 和 Python 这样的动态语言是相当早的适配者，像 C# 和 F# 这样的现代静态类型语言也得到了它们；甚至 Java 最终也赶上了。Java 甚至没有函数，只有方法，而现在它有了闭包，你可以到处传递。
-依我的愚见，将 regex 提高到一级公民的水平，并引入简洁的调用语法，给 regex 带来了类似的提升。
-在以前，人们的常识是不能用 regex 来解析 XML（或其他任意嵌套的语言），因为它们不是计算机科学意义上的常规语言。Perl 5 对此有一些变通方法，但它们太笨拙和啰嗦了，我甚至没有看到它们被多次推荐，我的一般印象是，如果你使用它们，只是因为缺乏好的替代品。
-在 Raku 中就不一样了：regex 中的 &lt;subrule&gt; 会调用另一个叫做 subrule 的 regex，所以你就有了递归（以及与 RFC 112 的讨论相关的，命名捕获）。这种递归使 regex 从常规语言进入 Chomsky Hierarchy 中的无上下文语言领域。但比起递归，命名的 regex 更允许更容易的重用、隔离测试以及其他所有一类公民赋予函数的美妙东西。它也让人们对用 regex 解析 XML 和其他语言的感情从 &ldquo;你是认真的吗&rdquo;?</p>
+        <p>assignment within regex</p>
 
     </div>
 
@@ -3323,16 +3163,7 @@ RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的
     </header>
 
     <div class="post p-summary" >
-        <p>RFC 5，作者：Michael J. Mathews。多行注释 这是第一个与文档有关的 RFC 提案。它要求在大多数现代编程语言中提供一个共同的功能：多行注释。
-没有多行注释的问题非常明显：如果你需要注释一大段代码，你需要在每一行的开头手动插入一个 # 符号（在 Raku 中）。如果你没有一个文本编辑器来完成这个工作，这可能会非常的乏味，比如说，一个快捷键或类似的工具。这种做法在大型代码库中非常常见。出于这个原因，Michael 将 C++ 和 Java 称为:
-流行的语言，从一开始就被设计为对大型项目有用，实现了单行和多行注释。
-在这些语言中，你可以输入如下注释:
-// single line of code /* Several lines of code */ 但是，除此之外，在 Java 中，你还有一种特殊的多行注释语法1来编写文档。
-/** * Here you can write the doc! * */ 很多人提出 POD 是解决这个问题的方法，但是 Michael 列出了一些不便之处:
-&ldquo;它不直观&rdquo;：鉴于 POD 只用于 Perl，来自不同语言的人学习全新的语法将面临一些困难。 在我看来，这并不是一个大问题，因为 POD6 的语法很简单，而且它有很好的文档。此外，对于新手来说，它是相当直观的：如果你想要一个标头，你用 =head1，如果你想要斜体，你用 I&lt;&gt; 等等。
-&ldquo;这不是文档&rdquo;：这个还是对的。主要问题是，当你想注释一大段代码时，那很可能不是文档，所以使用 =begin pod ... =end pod 就有点奇怪了。
-&ldquo;它不鼓励一致性&rdquo;：POD 的另一个问题是，你可以在它的语法中使用任意项。
-=begin ARBITRARYTEXT ... =end ARBITRARYTEXT 虽然这种行为给了我们很大的自由度，但也使不同项目和用户的一致性变得复杂。</p>
+        <p>multiline comments</p>
 
     </div>
 
@@ -3424,15 +3255,7 @@ RFC 作者 Eric Roode 指出，在2000年的 Perl 中，这还是相当困难的
     </header>
 
     <div class="post p-summary" >
-        <p>RFC 25, 作者：Damian Conway。运算符: 多路比较 这个 RFC 最初是在8月4日提出的, 一个月后被冻结。
-它描述了一个简单直观的功能, 使代码服从我的意思规则:
-if ( 0 &lt;= $x &lt;= 10 ) { print &#34;digit&#34; } 二十年前, 不指望能如愿以偿, 这并不是一个很大的惊喜。
-现在我们可以称之为&quot;运算符链&quot;, 现在它在编程语言中并不常见。人们可以想到很多原因, 其中包括没有把它当作一个重要的功能, 需要打破向后的兼容性, 有时只是没有想到。
-然而, 在 Raku 编程语言设计过程中, 各种智者提出自己的想法成为可能。
-虽然有人可能会认为这是一个太小的值得努力的功能, 但 Raku 是在 &ldquo;修复语言, 而不是修复用户&quot;的旗帜下设计的, 因此, 即使是这样的改变也是想要的。
-虽然这个功能原本在 Perl 中是缺失的, 但自 v5.32 版本发布后, 它最终得到了这样的逻辑链式支持。
-RFC 76, 作者：Damian Conway。内置函数: reduce 这个 RFC 提出了一个内置的 reduce 函数, 灵感来自于 Graham Barr 编写的 List::Utils 模块。
-对于那些对诸如 fold 或 reduce 函数式编程感兴趣的人来说, 这个函数很熟悉, 因为它是帮助数据处理的工具之一。</p>
+        <p>多路比较</p>
 
     </div>
 
@@ -11836,10 +11659,7 @@ PDF, 版离线版, ePub, Azw, Mobi
     </header>
 
     <div class="post p-summary" >
-        <p>继brian d foy 从第5天开始使用Mojo::DOM选择器的精彩文章后，我认为谈论我最近使用Mojo::UserAgent和Mojo::DOM构建的一些网站迁移脚本会很有趣，以便展示这些模块的一些基本实际用法。我之前从未真正使用过Mojo，但最近我需要迁移一个大约15年没有重新设计的网站，这似乎非常适合我的内容修改需求。在过去，我会使用正则表达式，并且可能花费至少与我编写代码时手动按摩输入或输出到正确形状的时间。Mojo::DOM让我很容易，一个 Mojolicious 初学者，很快就能得到我想要的结果。
-从静态站点到静态站点生成器 我打算解决的问题是使用曾经在SourceForge.net上托管的旧静态网站，并将其迁移到令人兴奋的新&hellip;嗯&hellip;静态网站。但是，这一次，它将成为静态网站的现代版本。而不是手动编辑HTML并使用自制的页面munging脚本来执行诸如使用正则表达式在内容div顶部插入新闻项目或更改日志条目，我将使用现代静态网站生成器。有几个可供选择，包括用Ruby编写的着名的Jekyll，用Go构建的Hugo，以及在Perl中运行此站点的Statocles。对于我的项目，我选择了Hugo，因为它的速度和成熟度。
-与大多数现代静态站点生成器一样，Hugo希望内容采用Markdown格式，文件顶部有一些元数据。我想把我们硬梆梆的旧HTML转换成下面的例子，看起来有点像这样：
---- title: &#34;Frobnitz 3.141593 released&#34; date: 2016-10-10 description: &#34;This release includes a fog-flavored bauble of three equal sides, providing the restless...&#34; categories: [] aliases: [] toc: false draft: false --- This release includes a fog-flavored bauble of three equal sides, providing the restless digital spirits a brief respite from their painful awareness of impermanence. You can find the new version under the usual shadowy bridge.</p>
+        <p>Mojo</p>
 
     </div>
 
@@ -16738,13 +16558,20 @@ Note: this artifact it located at Hortonworks repository
     </header>
 
     <div class="post p-summary" >
-        <p>在 https://www.lfd.uci.edu/~gohlke/pythonlibs/#mysql-python 下载对应的 whl 包，然后：
-pip install MySQL_python-1.2.5-cp27-none-win_amd64.whl </p>
+        <p>pip install .whl</p>
 
     </div>
 
     
     
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/%E7%AC%AC%E4%B8%89%E6%96%B9-python-%E5%BA%93/'
+               title="Read more about Python 第三方库">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about Python 第三方库</span>
+            </a>
+        </div>
     
 </article>
 
@@ -16823,10 +16650,7 @@ pip install MySQL_python-1.2.5-cp27-none-win_amd64.whl </p>
     </header>
 
     <div class="post p-summary" >
-        <p>通过一个例子一步一步学习 Python 爬虫。
-img/@src 提取 img 元素中属性名为 src 的对应的 属性值 通过 Chrome 的审查元素得到的 Xpath 路径和网页源代码中的路径有所不同 post 请求中的可变字段一般先通过登录前的一次 get 请求获取 比较疑惑的一个地方是, 使用 Chrome 右键菜单中的 检查, 所找到的 tbody 元素在网页源文件中并不存在。把 tbody 去掉也没有影响。于是决定不使用 tbody 标签了。
-//tbody/tr/td[@id=&#34;main&#34;]/div[@id=&#34;content&#34;]/div[@id=&#34;stream&#34;]/ol[@class=&#34;wa solo&#34;]/li 完整代码如下:
-# -*-coding: utf-8 -*- import requests from lxml import etree class FanFou(object): def getDataForm(self): base_url = &#34;http://fanfou.com&#34; token = etree.HTML(requests.get(base_url).text).xpath(&#39;//form/p[@class=&#34;act&#34;]/input[@name=&#34;token&#34;]/@value&#39;)[0] dataform = { &#39;loginname&#39; : &#39;qiangyuebing@ali.com&#39;, &#39;loginpass&#39; : &#39;sanxingnote7&#39;, &#39;action&#39; : &#39;login&#39;, &#39;token&#39; : token } return dataform def getInfo(self, data): login_url = &#34;http://fanfou.</p>
+        <p>饭否</p>
 
     </div>
 
@@ -16918,10 +16742,7 @@ img/@src 提取 img 元素中属性名为 src 的对应的 属性值 通过 Chro
     </header>
 
     <div class="post p-summary" >
-        <p>要解析下面的 HTML, 提取到 div 中的文本:
-&lt;div id=&#34;post_content_91765531755&#34; class=&#34;d_post_content j_d_post_content clearfix&#34;&gt; 楼主现在iOS10么&lt;/div&gt; 定位到 @id 以 post_content 开头并且 @class为 d_post_content j_d_post_content clearfix 的 div。
-&gt;&gt;&gt; import lxml &gt;&gt; html = requests.get(&#39;http://tieba.baidu.com/p/4609646212&#39;) &gt;&gt;&gt; content = etree.HTML(html.text) &gt;&gt;&gt; content = content.xpath(&#39;//div[starts-with(@id, &#34;post_content&#34;) and contains(@class,&#34;d_post_content j_d_post_content clearfix&#34;)]&#39;) starts-with(@attr, &quot;xxxx&quot;) 函数, 以 xxxx 开头的 attr 属性。 contains(@attr, &quot;xxxx&quot;) 函数, 精确含有值为 xxxx 的属性。 and, 两个函数都为真时, 则返回过滤后的元素。 爬取百度贴吧里面的帖子, 爬取字段为 「回帖日期」、「回帖人」、「回帖内容」:
-# -*- coding:utf-8 -*- from lxml import etree from multiprocessing.</p>
+        <p>百度贴吧</p>
 
     </div>
 
@@ -17192,17 +17013,20 @@ from lxml import etree html = &#39;&#39;&#39; &lt;html&gt; &lt;table&gt; &lt;tr 
     </header>
 
     <div class="post p-summary" >
-        <p>系统 Mac os 10.12.6
-安装 edm
-下载 edm 安装器: https://www.enthought.com/products/edm/installers
-安装模块 % edm install numpy % edm install pandas % edm install ipython % edm list # 查看安装了哪些模块 % edm shell # 进入 edm 环境 % ipython % jupyter notebook 然后你还可以玩 Raku:
-进入 edm shell 后:
-jupyter notebook --generate-config jupyter console --generate-config p6-jupyter-kernel</p>
+        <p>环境搭建</p>
 
     </div>
 
     
     
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/%E5%88%A9%E7%94%A8-python-%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90%E4%B9%8B%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/'
+               title="Read more about 使用 Python 进行数据分析之环境搭建">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 使用 Python 进行数据分析之环境搭建</span>
+            </a>
+        </div>
     
 </article>
 
@@ -20302,17 +20126,20 @@ telnet 10.0.201.83 2181 Trying 10.0.201.83... Connected to 10.0.201.83. Escape c
     </header>
 
     <div class="post p-summary" >
-        <p>变量住在哪里？换句话说，它们储存在哪里？最重要的是，程序需要时如何找到它们？ 这些问题说明需要一套设计良好的规则来存储变量，并且之后可以方便地找到这些变量。 这套规则被称为作用域。
-在传统编译语言的流程中，程序中的一段源代码在执行之前会经历三个步骤，统称为“编译”。
-分词/词法分析（Tokenizing/Lexing） 这个过程会将由字符组成的字符串分解成（对编程语言来说）有意义的代码块，这些代 码块被称为词法单元（token）。例如，考虑程序 var a = 2; 。这段程序通常会被分解成 为下面这些词法单元： var 、 a 、 = 、 2、; 。空格是否会被当作词法单元，取决于空格在这门语言中是否具有意义。
-解析/语法分析（Parsing） 这个过程是将词法单元流（数组）转换成一个由元素逐级嵌套所组成的代表了程序语法 结构的树。这个树被称为“抽象语法树”（Abstract Syntax Tree，AST）。 var a = 2; 的抽象语法树中可能会有一个叫作 VariableDeclaration 的顶级节点，接下 来是一个叫作 Identifier （它的值是 a ）的子节点，以及一个叫作 AssignmentExpression 的子节点。 AssignmentExpression 节点有一个叫作 NumericLiteral （它的值是 2 ）的子节点。
-代码生成 将 AST 转换为可执行代码的过程称被称为代码生成。这个过程与语言、目标平台等息 息相关。抛开具体细节，简单来说就是有某种方法可以将 var a = 2; 的 AST 转化为一组机器指令，用来创建一个叫作 a 的变量（包括分配内存等），并将一个值储存在 a 中。
-对于 JavaScript 来说，大部分情况下编译发生在代码执行前的几微秒（甚至更短！）的时间内。简单地说，任何 JavaScript 代码片段在执行前都要进行编译（通常就在执行前）。因此，JavaScript 编译器首先会对 var a = 2; 这段程序进行编译，然后做好执行它的准备，并且通常马上就会执行它。</p>
+        <p>你不知道的 JavaScript</p>
 
     </div>
 
     
     
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/%E4%BD%A0%E4%B8%8D%E7%9F%A5%E9%81%93%E7%9A%84-javascript%E7%AC%94%E8%AE%B0%E4%B8%80/'
+               title="Read more about 你不知道的 JavaScript（笔记）">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 你不知道的 JavaScript（笔记）</span>
+            </a>
+        </div>
     
 </article>
 
@@ -20663,9 +20490,7 @@ import ohmysummer.conf.{KafkaConfiguration, UriConfiguration} import ohmysummer.
     </header>
 
     <div class="post p-summary" >
-        <p>vim /etc/profile
-export HADOOP_HOME=/opt/hadoop-2.6.5 export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar export SCALA_HOME=/opt/scala-2.11.8 export SPARK_HOME=/opt/spark-2.1.0-bin-hadoop2.6 export HIVE_HOME=/opt/apache-hive-2.1.1-bin export ZOOKEEPER_HOME=/opt/zookeeper-3.4.9 export PYTHONPATH=$SPARK_HOME/python/:$SPARK_HOME/python/lib:SPYTHONPATH export FLUME_HOME=/opt/apache-flume-1.7.0-bin export PATH=$PATH:$HADOOP_HOME/bin:$HIVE_HOME/bin:$HADOOP_HOME/sbin:$JAVA_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$SCALA_HOME/bin:$ZOOKEEPER_HOME/bin:$FLUME_HOME/bin Master 上：
-drwxr-xr-x 10 root root 4096 May 31 10:17 ./ drwxr-xr-x 25 root root 4096 May 24 14:22 ../ drwxr-xr-x 7 root root 4096 May 23 14:11 apache-flume-1.7.0-bin/ drwxr-xr-x 10 root root 4096 Apr 13 20:54 apache-hive-2.1.1-bin/ -rw-r--r-- 1 root root 650 Apr 16 18:46 derby.</p>
+        <p>环境变量</p>
 
     </div>
 
@@ -20849,10 +20674,7 @@ drwxr-xr-x 10 root root 4096 May 31 10:17 ./ drwxr-xr-x 25 root root 4096 May 24
     </header>
 
     <div class="post p-summary" >
-        <p># 启动 zookeeper ~/opt/zookeeper-3.4.10/bin/zkServer.sh start # 创建 topic ~/opt/kafka_2.11-0.11.0.1/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 3 --topic ohmyfish # 创建生产者 ~/opt/kafka_2.11-0.11.0.1/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic ohmyfish 安装 openresty brew install openresty/brew/openresty 安装的路径应该在:
-/usr/local/Cellar/openresty/1.13.6.1/nginx/sbin/ 需要把这个路径添加到 PATH 路径中.
-然后用 nginx -V 查看 nginx 是否正常:
-nginx version: openresty/1.13.6.1 built by clang 9.0.0 (clang-900.0.39.2) built with OpenSSL 1.0.2k 26 Jan 2017 TLS SNI support enabled configure arguments: --prefix=/usr/local/Cellar/openresty/1.13.6.1/nginx --with-cc-opt=&#39;-O2 -I/usr/local/include -I/usr/local/opt/pcre/include -I/usr/local/opt/openresty-openssl/include&#39; --add-module=../ngx_devel_kit-0.3.0 --add-module=../echo-nginx-module-0.61 --add-module=../xss-nginx-module-0.05 --add-module=.</p>
+        <p>Kafka Test Environment</p>
 
     </div>
 
@@ -20944,11 +20766,7 @@ nginx version: openresty/1.13.6.1 built by clang 9.0.0 (clang-900.0.39.2) built 
     </header>
 
     <div class="post p-summary" >
-        <p>反向代理的配置 在服务器中做如下配置:
-server { listen 80; server_name test.aldwx.com; location /app.launch.php { proxy_pass http://127.0.0.1:3000; } } 然后在服务器中的终端中输入
-plackup -E deployment -s Starman --workers=1 -p 3000 -a app.pl 或者:
-nohup plackup -E deployment -s Starman --workers=10 -p 3000 -a app.pl &amp; app.pl 是用 dancer 写的一个 demo 程序, 其中的内容如下:
-#!/usr/bin/perl use Digest::MD5 qw(md5_hex); use Dancer; use JSON qw(encode_json); # return the json format data get &#34;/app.launch.info.php&#34; =&gt; sub { my $data = `date`; my $token = md5_hex($data); my $r = { &#39;error&#39; =&gt; &#39;0&#39;, &#39;data&#39; =&gt; { &#39;access_token&#39; =&gt; $token }, }; return encode_json($r); }; get &#39;/hello&#39; =&gt; sub { return &#34;Hello 小程序&#34;; }; get &#39;/l.</p>
+        <p>PySpark</p>
 
     </div>
 
@@ -23521,12 +23339,7 @@ val emailFromJohn = Email(&#34;john.doe@mail.com&#34;, &#34;Greetings From John!
     </header>
 
     <div class="post p-summary" >
-        <p>本文是一篇笔记, 内容经过一些修改, 很抱歉原文链接找不到了。如有侵权请告知删除。这是其中一处链接 一个客户端设置多个github账号 和 如何同一台电脑配置多个git或github账号
-一个客户端设置两个 github 账号 需求 需要在一台电脑上同时使用两个不同的 github 账号，负责不同的用途。(例如一个用于技术, 一个用于非技术)
-前期工作 至少有两个 github 账号 (假设有两个账号 一个为 ohmyone ，另一个为 ohmytwo ) 取消 git 全局设置
-git config --global --unset user.name git config --global --unset user.email SSH 配置 生成 id_rsa 私钥 和 id_rsa.pub 公钥。 ohmyone 可以直接回车，默认生成 id_rsa 和 id_rsa.pub。
-ssh-keygen -t rsa -C &#34;ohmyone@sina.com&#34; 但是 ohmytwo 会出现提示输入文件名，输入与默认配置不一样的文件名，比如: id_rsa_ohmytwo。
-cd ~/.ssh ssh-keygen -t rsa -C &#34;ohmytwo@outlook.com&#34; # 输入文件名, 但是别输密码 github 添加公钥 id_rsa.</p>
+        <p>github</p>
 
     </div>
 
@@ -23618,14 +23431,7 @@ cd ~/.ssh ssh-keygen -t rsa -C &#34;ohmytwo@outlook.com&#34; # 输入文件名, 
     </header>
 
     <div class="post p-summary" >
-        <p>请求对象包含客户端发出的所有请求信息。其中 request.form 能获取 POST 请求中提交的表单数据。
-我们在 Flask 中使用 Flask-WTF 扩展来处理 Web 表单。WTF 中的 F 就是 Form 而不是 Fuck。这个扩展对独立的 WTForms 包进行了包装, 方便集成到 Flask 程序中。
-# 安装 pip install flask-wtf 跨站请求伪造保护 默认情况下，Flask-WTF 能保护所有表单免受跨站请求伪造（Cross-Site Request Forgery，CSRF）的攻击。恶意网站把请求发送到被攻击者已登录的其他网站时就会引发 CSRF 攻击。
-为了实现 CSRF 保护，Flask-WTF 需要程序设置一个密钥。Flask-WTF 使用这个密钥生成加密令牌，再用令牌验证请求中表单数据的真伪。设置密钥的方法如示例 4-1 所示。
-示例 4-1 hello.py: 设置 Flask-WTF
-app = Flask(__name__) app.config[&#39;SECRET_KEY&#39;] = &#39;难猜的字符串&#39; app.config 字典可用来存储框架、扩展和 app 本身的配置变量。使用标准的字典句法就能把配置值添加到 app.config 对象中。这个对象还提供了一些方法, 可以从文件或环境中导入配置值。
-SECRET_KEY 配置变量是通用密钥，可在 Flask 和多个第三方扩展中使用。如其名所示，加密的强度取决于变量值的机密程度。不同的程序要使用不同的密钥，而且要保证其他人不知道你所用的字符串。
-表单类 使用 Flask-WTF 时, 每一个 Web 表单都由一个继承自 Form 的类表示。这个类定义表单中的一组字段, 每个字段都用对象表示。字段对象可附属一个或多个验证函数。验证函数用来验证用户提交的输入值是否符合要求。</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -23717,11 +23523,7 @@ SECRET_KEY 配置变量是通用密钥，可在 Flask 和多个第三方扩展�
     </header>
 
     <div class="post p-summary" >
-        <p>很多类型的应用程序都需要在特定事件发生时(例如注册)提醒用户, 而常用的通信方法是电子邮件。
-使用 Flask-Mail 提供电子邮件支持 pip install flask-mail Flask-Mail SMTP服务器的配置
-配　置 默认值 说　明 MAIL_SERVER localhost 电子邮件服务器的主机名或 IP 地址 MAIL_PORT 25 电子邮件服务器的端口 MAIL_USE_TLS False 启用传输层安全（Transport Layer Security，TLS）协议 MAIL_USE_SSL False 启用安全套接层（Secure Sockets Layer，SSL）协议 MAIL_USERNAME None 邮件账户的用户名 MAIL_PASSWORD None 邮件账户的密码 在开发过程中, 如果连接到外部 SMTP 服务器, 则可能更方便。下面使用新浪邮箱账户发送电子邮件:
-示例 6-1　hello.py：配置 Flask-Mail 使用新浪邮箱
-import os # ... app.config[&#39;MAIL_SERVER&#39;] = &#39;smtp.sina.com&#39; app.config[&#39;MAIL_PORT&#39;] = 25 app.config[&#39;MAIL_USE_TLS&#39;] = True app.config[&#39;MAIL_USERNAME&#39;] = os.environ.get(&#39;MAIL_USERNAME&#39;) app.config[&#39;MAIL_PASSWORD&#39;] = os.environ.get(&#39;MAIL_PASSWORD&#39;) 千万不要把账户密码直接写入脚本, 特别是你计划开源自己的作品时。为了保护账户信息, 你需要让脚本从环境中导入敏感信息。</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -23813,14 +23615,7 @@ import os # ... app.config[&#39;MAIL_SERVER&#39;] = &#39;smtp.sina.com&#39; app.
     </header>
 
     <div class="post p-summary" >
-        <p>文档数据库和键值对数据库这两种数据库合称 NoSQL 数据库。
-SQL 数据库 表中有个特殊的列，称为主键，其值为表中各行的唯一标识符。表中还可以有称为外键的列，引用同一个表或不同表中某行的主键。行之间的这种联系称为关系，这是关系型数据库模型的基础。
-NoSQL 数据库 NoSQL 数据库一般使用集合代替表，使用文档代替记录。NoSQL 数据库采用的设计方式使联结变得困难，所以大多数数据库根本不支持这种操作。
-使用SQL还是NoSQL SQL 数据库擅于用高效且紧凑的形式存储结构化数据。这种数据库需要花费大量精力保证数据的一致性。NoSQL 数据库放宽了对这种一致性的要求，从而获得性能上的优势。
-Python 数据库框架 Flask-SQLAlchemy Flask-SQLAlchemy 是一个 Flask 扩展，简化了在 Flask 程序中使用 SQLAlchemy 的操作。SQLAlchemy 是一个很强大的关系型数据库框架，支持多种数据库后台。SQLAlchemy 提供了高层 ORM（Object-Relational Mapper，对象关系映射），也提供了使用数据库原生 SQL 的低层功能。
-(venv) $ pip install flask-sqlalchemy 在 Flask-SQLAlchemy 中, 数据库使用 URL 指定。 表 5-1 Flask-SQLAlchemy 数据库 URL
-数据库引擎 URL MySQL mysql://username:password@hostname/database Postgres postgresql://username:password@hostname/database SQLite（Unix） sqlite:////absolute/path/to/database SQLite（Windows） sqlite:///c:/absolute/path/to/database 在这些 URL 中，hostname 表示 MySQL 服务所在的主机，可以是本地主机（localhost），也可以是远程服务器。数据库服务器上可以托管多个数据库，因此 database 表示要使用的数据库名。如果数据库需要进行认证，username 和 password 表示数据库用户密令。
-SQLite 数据库不需要使用服务器，因此不用指定 hostname、username 和 password。URL 中的 database 是硬盘上文件的文件名。</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -23912,12 +23707,7 @@ SQLite 数据库不需要使用服务器，因此不用指定 hostname、usernam
     </header>
 
     <div class="post p-summary" >
-        <p>初始化 所有 Flask 程序都必须创建一个 app 实例。Web 服务器使用 Web 服务器网关接口协议(Web Server Gateway Interface, WSGI)把接收自客户端的所有请求都转交给这个对象处理。 app 实例是 Flask 类的对象:
-from flask import Flask app = Flask(__name__) Flask 类的构造函数自有一个必须指定的参数, 即 app 主模块或包的名字。
-Flask 用 name　这个参数决定程序的根目录, 以便稍后能够找到相对于程序根目录的资源文件位置。
-路由和视图函数 客户端(例如 Web 浏览器)把请求发送给 Web 服务器， Web 服务器再把请求发送给 Flask app 实例。 app 实例需要知道对每个 URL 请求运行哪些代码, 所以 app 实例保存了一个 URL 到 Python 函数的映射关系。处理 URL 和函数之间关系的程序称为路由。
-在 Flask 中使用 app 实例提供的 app.route 装饰器把所装饰的函数注册为路由:
-@app.route(&#39;/&#39;) def index(): return &#39;&lt;h1&gt;Hello, 世界!</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -24009,11 +23799,7 @@ Flask 用 name　这个参数决定程序的根目录, 以便稍后能够找到�
     </header>
 
     <div class="post p-summary" >
-        <p>渲染模板 模板文件后缀名是 .html， 这些文件就是普通的 html 文件加上一些占位符变量, 它们都默认存放在 templates 文件夹中。
-from flask import Flask, render_template # ... @app.route(&#39;/&#39;) def index(): return render_template(&#39;index.html&#39;) @app.route(&#39;/user/&lt;name&gt;&#39;) def user(name): return render_template(&#39;user.html&#39;, name=name) render_template 函数的第一个参数是模板的文件名, 第二个参数是关键字参数, 在 name=name 中, 左侧的 name 代表模板文件(.html)中的占位符变量, 右侧的 name 表示 Python 函数中当前作用域中的名为 name 的变量。
-模板文件中的变量 在模板文件中一般使用 {{ name }} 结构表示一个变量, 它是一种特殊的占位符, 在渲染时会使用等号右侧的那个值替换掉该占位符(变量插值)。
-Jinja2 能识别所有类型的变量, 如列表、字典、对象。例如：
-&lt;p&gt;A value from a dictionary: {{ mydict[&#39;key&#39;] }}.&lt;/p&gt; &lt;p&gt;A value from a list: {{ mylist[3] }}.&lt;/p&gt; &lt;p&gt;A value from a list, with a variable index: {{ mylist[myintvar] }}.</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -24203,16 +23989,7 @@ Jinja2 能识别所有类型的变量, 如列表、字典、对象。例如：
     </header>
 
     <div class="post p-summary" >
-        <p>简介 Flask 是小型框架, 它只包含基本服务的核心功能, 其它功能比如数据库访问、Web表单验证和用户认证等都需要以扩展的形式实现。
-Flask 有两个主要依赖:
-路由 调试和Web服务器网关接口 其子系统由 Werkzeug 提供; 模板系统由 Jinja2 提供。
-使用 virtualenv 虚拟环境 虚拟环境是 Python 解释器的一个私有副本, 在这个环境中可以安装私有包, 而不会影响系统中安装的全局 Python 解释器。
-虚拟环境可以在系统的 Python 解释器中避免包的混乱的版本的冲突。为每个程序创建虚拟环境可以保证程序只能访问虚拟环境中的包, 从而保证全局解释器的干净整洁, 创建虚拟环境也不需要管理员权限。
-Ubuntu 下虚拟环境的安装:
-sudo apt-get install python-virtualenv Windows/CentOS 下虚拟环境的安装:
-pip install virtualenv 如何使用本书的示例代码
-git clone https://github.com/miguelgrinberg/flasky.git cd flasky git checkout 1a 创建 Python 虚拟环境 virtualenv venv venv 是虚拟环境的名字。在使用这个虚拟环境之前需要先激活这个虚拟环境:
-# Linux source venv/bin/activate # Windows venv\Scripts\activate 激活后命令提示符的前面就有了一个 (venv) 的提示, 说明现在处于虚拟环境下。如果还想回到全局的 Python 解释器中, 则使用 deactivate 命令。</p>
+        <p>Learning Flask</p>
 
     </div>
 
@@ -24392,12 +24169,7 @@ sudo mysql -h127.0.0.1 -P6606 -uroot -p000608 </p>
     </header>
 
     <div class="post p-summary" >
-        <p>小红帽系统比较不优秀的地方就是自带的 yum 是收费的，不注册就不让装软件！
-This system is not registered with an entitlement server. You can use subscription-manager to register. 所以要删掉自带的 yum：
-rpm -qa|grep yum|xargs rpm -e --nodeps 下载这三个文件：wget -i url.txt:
-http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-3.4.3-158.el7.centos.noarch.rpm http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-plugin-fastestmirror-1.1.31-45.el7.noarch.rpm http://mirrors.163.com/centos/7/os/x86_64/Packages/yum-metadata-parser-1.1.4-10.el7.x86_64.rpm 安装：
-rpm -ivh yum-* 从 mirrors.163.com 下载对应版本的 repo 文件, repo 文件的内容如下：
-# CentOS-Base.repo # # The mirror system uses the connecting IP address of the client and the # update status of each mirror to pick mirrors that are updated to and # geographically close to the client.</p>
+        <p>yum 源</p>
 
     </div>
 
@@ -24913,12 +24685,20 @@ wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz 编译安装 tar -zxvf
     </header>
 
     <div class="post p-summary" >
-        <p>遍历日期 #!/bin/bash beg_date=`date -d &#34;$1&#34; +%s` end_date=`date -d &#34;$2&#34; +%s` echo ${beg_date}, ${end_date} for (( i=${beg_date};i&lt;=${end_date};i=i+86400)) do day=`date -d @${i} &#34;+%Y-%m-%d&#34;` echo ${day} ./diyiqi.sh $3 $4 $5 -d ${day} sleep 360 done Argument list too long find . -name &#34;spark-*&#34; | xargs rm -rf &#34;spark-*&#34; Argument list too long</p>
+        <p>Iterate date in Shell</p>
 
     </div>
 
     
     
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/%E9%81%8D%E5%8E%86%E6%97%A5%E6%9C%9F/'
+               title="Read more about 使用 shell 遍历日期">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 使用 shell 遍历日期</span>
+            </a>
+        </div>
     
 </article>
 
@@ -24997,15 +24777,7 @@ wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz 编译安装 tar -zxvf
     </header>
 
     <div class="post p-summary" >
-        <p>动画(Animation) 是属性随着时间的可变变化。变化中的属性可以是位置的: 物体移动或者改变尺寸。但是其它种类的属性也能 Animate。例如, 视图的背景色能从红色变为绿色, 不是马上的, 但是能感觉到从一种颜色渐变到另外一种颜色。或者一个视图可以从不透明变为透明, 不是立即的, 但是肉眼可以看到褪色。
-动画花费很多计算和时间, 幸运的是你不是自己来执行动画: 你描述它, 整理它, 它会为你执行。你根据需要来获取动画。
-要求一个动画能够像设置属性值那样简单; 有时一行代码就能设置动画:
-myLayer.backgroundColor = UIColor.redColor().CGColor // animate to red 选择模拟器的 Debug -&gt; Slow Animations 菜单可以让动画运行的更慢以帮助你检测动画的执行。
-Drawing, Animation, and Threading ​
-当你改变一个可见的视图属性, 那个改变不会立即可见。而是, 系统记录你想做的这个变化(change), 并把这个视图标记成需要重绘(redrawn)。然后, 当你的所有代码都完成而且系统有空闲时, 那么它就会重绘所有需要重绘的视图, 应用它们新的可见属性外貌(features)。我们把这叫做重绘时刻。
-// 视图从绿色开始 view.backgroundColor = UIColor.redColor() // 耗时代码放在这儿 view.backgroundColor = UIColor.greenColor() // 代码结束, 重绘时刻 系统累计所有想要的变化直到重绘时刻的到来, 并且重绘时刻不会发生直到你的代码完成了, 所以, 当重绘时刻确实发生了, 视图中最后一个积累的颜色变为绿色 — 它已经是它的 color 了。因此, 不管颜色变化之间有多少耗时代码, 用户一点也看不到任何颜色变化。
-动画的工作原理也是这样, 处理过程也部分相同。当你要执行一个动画时, 动画不会出现在屏幕上直到下一个重绘时刻来临。(你可以强制动画立刻开始, 但这不常用)。
-动画就像一种电影和卡通。所以, 当你让一个视图从位置 1 动画到位置 2, 通常有一个事件序列:</p>
+        <p>Learning Animation</p>
 
     </div>
 
@@ -25097,10 +24869,7 @@ Drawing, Animation, and Threading ​
     </header>
 
     <div class="post p-summary" >
-        <p>view (UIView 对象或 UIView 的子类)知道怎么把自己绘制到界面的矩形区域中。由于 views 你的 app 才有一个可见的界面。创建和配置一个 view 可以极其简单, 例如你可以拖拽一个界面对象, 比如一个 UIButton 到 nib 编辑器的 view 中; 当 app 运行时, 按钮出现, 没什么问题。但是你也可以以强大的方式操作 views, 实时地。你的代码可以做某些或全部的描绘视图自己, 并展示其它物理变化, 还可以带有动画。
-view 也是一个响应器(responder)(UIView 是 UIResponder 的子类)。这意味着 view 能经受用户交互, 例如轻敲和重击(taps and swipes)。因此, views 不仅是用户看见的界面的基础, 还是用户触摸的界面的基础。组织好你的 views 以使正确的视图对给定的触摸有反应。
-视图层级(view hierarchy)是视图组织的主要模式。 视图可以有子视图; 子视图只有一个直接的父视图。因此会形成一个视图树。这个层级允许视图可以一块儿出现和消失。如果从界面中移除一个 view, 那么这个 view 的子视图也会被移除; 如果隐藏一个 view(使不可见), 那么它的子视图也是隐藏的; 如果移除一个 view, 那么它的子视图也随之移除; 并且 view 中的变化同样也被子视图共享。视图层级也是响应链的基础。
-view 可能来自一个 xib, 也可以用代码创建。 为了平衡, 任何一种方法也不会比另一种更好; 它取决于你的需要和喜好, 还有你的 app 的总体架构。</p>
+        <p>Views</p>
 
     </div>
 
@@ -25192,18 +24961,7 @@ view 可能来自一个 xib, 也可以用代码创建。 为了平衡, 任何一
     </header>
 
     <div class="post p-summary" >
-        <p>第二章 我们的类型选择 在大多数面向对象的编程语言中我们创建的类是引用类型，它作为我们对象的蓝图。不像其它面向对象的编程语言，在 Swift 中，结构体拥有类的大部分相同功能；然而结构体是值类型。苹果已经说了相比于引用类型我们应该更倾向于使用值类型，例如结构体，但是实际的优点是什么？ Swift 实际上有若干我们能使用的类型选择，在这一章中，我们会查看这些类型中的每一个来看看每个类型的优点和缺点。知道怎样使用和何时使用每个类型对于在你的工程中合理地实现面向协议编程很重要。
-在这一章中，你会学到：
-什么是类，怎么使用它？ 什么是结构体，怎么使用它？ 什么是枚举，怎么使用它？ 什么是元组，怎么使用它？ 值类型和引用类型的区别是什么？ Swift 要么把类型归为具名类型要么把类型归为组合类型。具名类型是在定义时能给定一个名字的类型。这些具名类型包括类、结构体、枚举和协议。除了用户定义的具名类型以外，Swift 还在 Swift 标准库中定义了很多常用的具名类型，包括数组、集合跟字典。
-其它语言中的很多原始类型在 Swift 中实际上是具名类型并且在 Swift 标准库中使用结构体来实现。这些包括代表着数字、字符串、字符和布尔值的类型。因为这些类型被实现为具名类型，我们可以像我们使用任何其它具名类型一样使用扩展来扩展它们的默认行为。我们会在这一章和之后的章节中看到，扩展具名类型的能力，包括那些传统上被当做原始类型和协议的类型，是 Swift 语言的一种非常强大的特性也是面向协议编程的顶梁柱之一。
-混合类型是在定义时没有给定名字的类型。 在 Swift 中，我们有两个混合类型：函数类型和元组类型。函数类型代表闭包，函数和方法，而元组类型是包围在圆括号中的用逗号分隔的列表。
-我们可以使用 typealias 声明给我们的混合类型起别名。这允许我们在代码中使用别名而非类型自身。
-还有两个类别的类型：引用类型和值类型。当我们传递引用类型的实例时，我们传递的是对原实例的引用，这意味着那两个引用共享着同一个实例。类是引用类型。当我们传递值类型的实例时，我们传递的是实例的一份新的拷贝，这意味着每个实例获得一个唯一的拷贝。值类型包括结构体、枚举和元组。
-在 Swift 中类型要么是具名类型要么是混合类型，并且除了协议这种情况之外它们要么是引用类型要么是值类型。因为我们不能创建一个协议的实例，它既不是引用类型又不是值类型。听起来有点困惑？真得没有。当我们看到所有的类型选择还有怎么去使用它们时，我们会看到这有多么容易理解。
-现在我们开始查看 Swift 中拥有的类型选择。我们从面向对象编程的支柱,类, 开始：
-类 在面向对象编程语言中，我们不能在没有蓝图的情况下创建一个对象来告诉应用程序期望从对象中获取什么属性和方法。在大部分面向对象语言中，这个蓝图就是类。类是一种允许我们把对象的属性、方法和构造函数封装到单个类型中的数据结构。类也可以包括其它条目，例如脚本(subscripts)；然而我们将着力于不光在 Swift 中也在其它语言中的组成类的基本条目。
-我们来看怎么在 Swift 中使用类。下面的代码展示了在第一章，面向对象编程和面向协议编程中我们是怎么定义 Drink 类的:
-class Drink { var volume: Double var caffeine: Double var temperature: Double var drinkSize: DrinkSize var description: String init(volume: Double, caffeine: Double, temperature: Double, drinkSize: DrinkSize) { self.</p>
+        <p>Learning Swift</p>
 
     </div>
 
@@ -25295,10 +25053,7 @@ class Drink { var volume: Double var caffeine: Double var temperature: Double va
     </header>
 
     <div class="post p-summary" >
-        <p>Swift 中的类型 Swift 中的类型可以分为 3 组, 结构体、类和枚举。这三个都有:
-属性: 和类型关联的值 初始化函数: 初始化类型的实例的代码 实例方法: 在该类型的实例上调用的指定函数 类方法或静态方法: 在类型自身上调用的指定函数 // Structs struct myStruct { // properties // initializers // methods } // Enumerations enum MyEnum { // properties // initializers // methods } // Classes class Myclass: SuperClass { // properties // initializers // methods } Swift 的结构体和枚举比其它语言中的都要强大, 还能遵守协议并且能被扩展。
-集合类型 数组类型写作 Array&lt;T&gt;, T是数组将会包含的元素的类型。数组能包含任意类型的元素: 标准类型、结构体或类。
-var hasPet: Bool var arrayOfInts: Array&lt;Int&gt; // 声明一个整数数组 var arrayOfInts: [Int] // 简写语法 字典的键可以是任意类型, 但是必须是唯一的。也就是说键必须是可哈希的。基本 Swift 类型例如 Int、Float、Character 和 String 都是可哈希的。键值可以是任意类型。</p>
+        <p>Learning Swift</p>
 
     </div>
 
@@ -25390,10 +25145,7 @@ var hasPet: Bool var arrayOfInts: Array&lt;Int&gt; // 声明一个整数数组 v
     </header>
 
     <div class="post p-summary" >
-        <p>第三章 捕获错误 我们会在这一章中学到
-使用返回值来处理错误 使用 NSError 来处理错误 使用 Swift 2 的错误处理 怎么使用 guard 语句 怎么使用 defer 关键字 何时使用每个错误处理模式 使用 guard 语句 var x = 9 if x &gt; 10 { // Functional code here } else { // Do error condition } 换成 guard 语句就是这样：
-var x = 9 guard x &gt; 10 else { // 做错误处理 return } // 这儿放功能性代码 我们创建一个含有 3 个可选属性的结构体来解释 guard：
-struct Blog { var author: String?</p>
+        <p>Learning Swift</p>
 
     </div>
 
@@ -25485,20 +25237,7 @@ struct Blog { var author: String?</p>
     </header>
 
     <div class="post p-summary" >
-        <p>第一章 面向对象编程和面向协议编程 这本书是关于面向协议编程的。当苹果在 2015 年世界开发者大会上宣布 Swift 2 时,
-他们也声明 Swift 是世界上第一个面向协议编程的语言。通过它的名字, 我们可能认为面向协议编程都是跟协议相关的; 然而, 这可能是一个错误的假定。面向协议编程不仅仅是关于协议; 实际上它不仅是编写程序的新方式, 也是我们思考编程的新方式。
-在这一章, 你会学到:
-Swift 是怎么用作面向对象的编程的。 Swift 是怎么用作面向协议的编程语言的。 面向对象编程和面向协议编程的区别。 面向协议编程相对于面向对象编程的优点。 虽然这本书是关于面向协议编程的，我们将通过讨论 Swift 是怎么用作面向对象的编程语言开始。理解好面向对象的编程会有助于理解面向协议的编程并一窥面向协议编程设计所解决的问题。
-作为面向对象编程语言的 Swift 面向对象编程是一种设计哲学。使用面向对象的编程语言写程序和使用老旧的诸如 C 和 Pascal 等过程式编程语言编写程序从根本上是不同的。过程式语言通过依靠过程(或程序)使用一系列说明来告诉计算机每一步该怎么做。然而， 面向对象的编程全部是关于对象的。这似乎是一个非常明显的声明。但是本质上，当我们谈论面向对象编程的时候，我们需要考虑对象。
-对象是包含属性和方法的数据结构。对象可以是一个东西，在英语中，它们通常被当做名词。这些对象可以是真实世界中的对象或者虚拟的对象。如果你四处看看，你会发现很多真实世界中的对象，并且，实际上，它们中的所有一切都能以一种带有属性和动作的面向对象的方式被模型化。
-当我开始写这一章时，我看着外面，我看到了湖泊、很多树、草地、我的狗、还有我家后院中的篱笆。所有这些物品都可以被模型化为含有属性和动作的对象。
-当我写这一章的时候，我也想起了我最喜欢的能量饮料。那种能量饮料叫做 Jolt（姑且叫它加多宝）。 不知道还有多少人记得 Jolt 碳酸水或 Jolt 能量饮料，但是我整个大学期间都在喝它。一罐加多宝(Jolt)可以被模型化为带有属性(容量、咖啡因量、温度和尺寸)和动作(喝和温度变化)的对象。
-我们可以把加多宝保存在冷藏器中来使它们保持冷却。这个冷藏器也可以被模型化为对象因为它拥有属性(温度、加多宝罐数、最大存储罐数)和动作(添加和移除罐子)。
-正是对象让面向对象编程那样强大。使用对象，我们可以模型化真实世界中的对象， 例如加多宝的罐子、或视频游戏中的诸如字符的虚拟对象。这些对象之后可以在我们的应用程序中交互以模型化真实世界中的行为或我们想要的虚拟世界中的行为。
-在计算机程序中，我们不能在没有能告知程序期望什么样的属性和动作的蓝图的情况下创建对象。在大部分面向对象的编程语言中，这个蓝图以类的形式出现。类是一种允许我们把对象的属性和动作封装到单个类型中的结构。
-我们在类中使用构造函数(initializers)来创建类的实例。我们通常使用这些构造函数来为对象设置属性的初始值或执行我们的类需要的其它初始化。一旦我们创建了类的实例，之后就能在代码中使用它了。
-关于面向对象编程的所有解释都很好，但是没有什么比实际的代码更能解释这个概念了。我们来看看在 Swift 中是怎么使用类来模型化加多宝和冷藏器的。下面我们会从模型化一罐加多宝开始:
-class Jolt { var volume: Double var caffeine: Double var temperature: Double var canSize: Double var description: String init(volume: Double, caffeine: Double, temperature: Double) { self.</p>
+        <p>Protocol</p>
 
     </div>
 
@@ -26649,10 +26388,7 @@ CGRect 包含成员 origin 和 size。origin 是类型为 CGPoint 的结构体, 
     </header>
 
     <div class="post p-summary" >
-        <p>【练习-01】文本最末列数值乘一个数 #!/usr/bin/perl use strict; use warnings; while (&lt;DATA&gt;) { chomp; $_=~s/(\d+(?:\.\d+)?)#+\s*#?$/$1*7/e; print &#34;$_\n&#34;; } __DATA__ 1##4072.0###52.19### #50## # 2#38705.8# # # 51.73## #5# # 372###389.0##51.80##19.77# # 4##### 4##59.71#3715.45##7.5###### ##【练习-02】按要求将字符串分段输出
-#!/usr/bin/perl use strict; use warnings; my $string=&#39;xh45q3ma+remgofm54sevhrna4g5r8pl9cjardezqjwj3m8itamh0a4itzd6jz8cmrfmibmhr0wmccyb8qnp2qh4rvlwff6yr2ez4eo063u6viy7ppw+nzxaxe8vrm190eei_0dwx5e2kxbds-ae6e96c9_i9glw8mz+uf6uienx9od8bktfnjlwlqu-e1rcj33_+4bz&#39;; my @s=$string=~m/.{10}/g; print join &#34;\n&#34;,@s; 【练习-03】实现一行内容分行输出 方法一：
-#!/usr/bin/perl use strict; use warnings; $&#34;=&#34;&#34;; my $_=&#39;aA1一bB2二cC3三dD4四eE5五fF6六gG7七hH8八iI9九&#39;; my @lower=/[a-z]/g; my @upper=/[A-Z]/g; my @num=/[0-9]/g; my @hz=/[^a-zA-Z0-9]/g; print &#34;@lower\n@upper\n@num\n@hz\n&#34;; 方法二：
-#!/usr/bin/perl use strict; use warnings; my $string=&#39;aA1一bB2二cC3三dD4四eE5五fF6六gG7七hH8八iI9九&#39;; my $lower=$string=~tr/a-z/ /cr; print &#34;$lower\n&#34;; my $upper=$string=~tr/A-Z/ /cr; print &#34;$upper\n&#34;; my $digit=$string=~tr/0-9/ /cr; print &#34;$digit\n&#34;; my $hz=$string=~tr/a-zA-Z0-9//d; print &#34;$string\n&#34;; ##【练习-04】根据输入列出组合</p>
+        <p>练习</p>
 
     </div>
 
@@ -26744,7 +26480,7 @@ CGRect 包含成员 origin 和 size。origin 是类型为 CGPoint 的结构体, 
     </header>
 
     <div class="post p-summary" >
-        <p>use strict &#39;vars&#39;; # 声明全局变量不会报错 use warnings; # 补全到 61000000 use List::MoreUtils qw/all/; use Spreadsheet::XLSX; use Excel::Writer::XLSX; use MyExcelFormatter; use Encode; use v5.10; use Data::Dumper; my %match; while(&lt;DATA&gt;){ chomp; my ($product_code,$product_name)=split(/\s+/,$_,2); # say $product_code; $product_name=~s{/}{}g; # say $product_name; $match{$product_code}=$product_name; } sub H{ my $text = shift; return decode(&#39;utf8&#39;,$text); # 进行转码 } my $workbook = Excel::Writer::XLSX-&gt;new( &#34;模板.xlsx&#34; ); my $excel = Spreadsheet::XLSX -&gt; new (&#39;产品匹配维护.xlsx&#39;); my $n=2; our $encode_name; # 声明一个全局变量 sub is{ all {$encode_name =~ /$_/i} @_; } my @ID_5300000 = qw( 百多邦 喷雾 70ml ); my @ID_5300000_2 = qw( 百多邦 70ml ); my @ID_5000000 = qw( 莫匹罗星 10g ); my @ID_5000000_2 = qw( 百多邦 10g ); my @ID_02251 = qw( 莫匹罗星 5g ); my @ID_02251_2 = qw( 莫匹罗星软膏 ); my @ID_02251_3 = qw( 莫匹罗星 5克 ); my @ID_02251_4 = qw( 百多邦膏 5克 ); my @ID_5100000 = qw( 丁酸氯倍他松乳膏 ); my @ID_9090012 = qw( 保丽净 假牙 局部 赠 24T ); my @ID_9090013 = qw( 保丽净 假牙 赠 25g ); my @ID_9020001 = qw( 保丽净 假牙 6片 ); my @ID_9090005 = qw( 保丽净 新年 促销 48T ); my @ID_9090003 = qw( 保丽净 促销装 假牙清洁盒 24T ); my @ID_9090019 = qw( 保丽净 假牙 清洁 6片 促销 ); my @ID_9090021 = qw( 保丽净 假牙 清洁 60片 赠 6片 促销装 ); my @ID_9090023 = qw( 保丽净 局部 假牙 24片 赠购物袋 ); my @ID_9090201 = qw( 保丽净 假牙 清洁片 24片 赠放大镜 ); my @ID_9090202 = qw( 保丽净 局部 24片 赠手电筒 ); my @ID_9020405 = qw( 保丽净 假牙 黏合剂 60g 台湾再包装 ); my @ID_9020404 = qw( 保丽净 假牙 黏合剂 40g 台湾再包装 ); my @ID_9020401 = qw( 保丽净 假牙 稳固剂 70g ); my @ID_9020102 = qw( 保丽净 假牙 清洁片 30片 药店专供 ); my @ID_9020102_2 = qw( 保丽净 全 半口 30 ); my @ID_9020102_3 = qw( 保丽净 全 半口 30 24 盒 ); my @ID_9020302 = qw( 假牙清洁片 局部 30 ); my @ID_9020101 = qw( 假牙清洁片 24 ); my @ID_9020103 = qw( 保丽净 假牙 清洁片 60 ); my @ID_9020301 = qw( 假牙清洁片 局部 24 ); my @ID_9090205 = qw( 保丽净 假牙 清洁片 24片 赠6片 ); my @ID_9090206 = qw( 保丽净局部24片赠6片 ); my @ID_9090207 = qw( 保丽净假牙清洁片60片赠24片 ); my @ID_26151 = qw( 必理通 对乙酰氨基酚片 10 ); my @ID_26151_2 = qw( 对乙酰氨基酚片 ); my @ID_44351 = qw( 肠虫清 ); my @ID_44351_2 = qw( 阿苯达唑片 ); my @ID_10152 = qw( 布洛芬缓释胶囊 0.</p>
+        <p>AnyEvent</p>
 
     </div>
 
@@ -27469,14 +27205,7 @@ for /f &#34;delims=&#34; %%t in (&#39;identify -format %%wx%%h demo.jpg&#39;) se
     </header>
 
     <div class="post p-summary" >
-        <p>利用ImageMagick给图片加水印 水印可能是文字，也可能是网站的logo等。图片水印比较简单，就是把自己水印图标合成到原始图片上；文字水印中如果字符包含中文，处理就稍微麻烦一些。
-图片水印处理 假设把名为logo.gif的水印图标添加在原始图片（src.jpg）右下角，且水印的下边缘距原始图片10像素、右边缘距原始图片5像素。使用如下命令即可：
-convert src.jpg logo.gif -gravity southeast -geometry +5+10 -composite dest.jpg 文字水印处理 如果不含中文字符，可以直接通过convert draw text的方式将文字添加到图片，否则就需要使用其它的办法。命令行中不能包括中文字符，但是能通过读取文件的方式来操作，即先把中文信息保存到文本文件中。注意：文本文件的编码最好用UTF-8，同时也需要选取一个支持中文的字体。直接把文本文本中的信息输出到图片上使用命令mogrify，不过也可以使用convert命令把文本文件中的信息生成一个图片，然后再把图片合成到原始图片中。下面分别介绍这几种方法。
-不含中文字符：例如把www.netingcn.com作为水印加上图片上，命令如下
-convert src.jpg -gravity southeast -fill black -pointsize 16 -draw &#34;text 5,5 &#39;http://www.netingcn.com&#39;&#34; dest-c.jpg mogrify -pointsize 16 -fill black -weight bolder -gravity southeast -annotate +5+5 &#34;http://www.netingcn.com&#34; src.jpg 说明：上述两条命令达到同样的结果，但是第一次命令可以保留原始图片，第二条是直接在原始图片上打上水印。
-存在中文的情况：假设存有信息的文件叫t.txt，字体文件是msyh.ttf。
-方法1：
-//把文件t.txt中的信息生成图片txt.png, -transparent white让图片的背景透明，-size x30设置图片的高度 convert -transparent white -font msyh.ttf -fill black -pointsize 24 label:@t.txt txt.png //把txt.png合成到src.jpg上 convert src.jpg txt.png -gravity southeast -geometry +10+5 -composite dest.</p>
+        <p>ImageMagick</p>
 
     </div>
 

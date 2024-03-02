@@ -301,97 +301,6 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/2016-09-18-feed-operator/'> Feed 运算符</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__feed__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘feed’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/tags/feed/">feed</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2021-07-18T00:00:00+0000" class="dt-published">Sun Jul 18, 2021</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>Feed Operator</p>
-
-    </div>
-
-    
-    
-    
-        <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/2016-09-18-feed-operator/'
-               title="Read more about Feed 运算符">
-                read <span class="more"> more</span>
-                <span class="screen-readers-only" > about Feed 运算符</span>
-            </a>
-        </div>
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
         <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/2016-08-31-raku-shortcuts-part-one/'> Raku 快捷方式(第一部分)</a> </h2>
         
     <div class="taxo no-text-decoration">
@@ -827,20 +736,7 @@
     </header>
 
     <div class="post p-summary" >
-        <p>利用流处理检测离线滑板车 在 Bird，一些最有趣的挑战涉及处理无桩物理硬件。不仅滑板车硬件可能出现故障，滑板车也可能被坏人偷走或破坏。我们从滑板车上收集遥测数据，但分析这些流水数据可能是一个挑战。
-流处理自然适合从这些遥测数据中提取洞察力。我们使用 Flink 来处理来自 Kafka（我们的消息总线）的数据，运行寻找数据中不同信号的作业。Flink 提供了内置的工具来简化从 Kafka 的读取，并以容错的分布式方式处理数据流。Flink 还提供了大量内置的处理功能，以及用于自定义逻辑的各种构建块。
-作为一家企业，Bird 需要跟踪我们硬件的健康状况。不健康的滑板车的一个症状是当它停止发送遥测记录。滑板车下线可能是由于电池问题、软件问题或硬件问题。我们需要知道何时发生这种情况，这样我们就可以尽快跟进。
-我们写了一个 Flink 作业来检测滑板车何时离线，并很快遇到了一系列棘手的问题，涉及到 Kafka、事件时间、水印和排序。
-Flink 的解决方法 Bird 将滑板车发送给我们的每条遥测记录称为轨迹。我们使用 Flink 作业来记录特定滑板车的每条轨迹的时间戳，并设置一个定时器，在一定的时间过后启动。如果我们在定时器启动之前看到另一条轨迹，我们就重置定时器以反映这个新轨迹的时间戳。如果我们没有看到另一条轨迹，定时器就会启动，我们就会输出一个事件，反映出这辆滑板车已经下线了。
-遥测监测是一个自然的适合 keyed 的 process 函数，Flink 使得这项工作可以直接启动和运行。process 函数保持对滑板车 ID 的 keyed 状态，以跟踪当前的在线/离线状态，并通过事件时间定时器来处理离线检测。我们选择这条路线是因为我们想在以后用轨迹做更复杂的事情，并且想练习一下 process 函数，而不是仅仅使用一个会话窗口。
-看上去很简单。但是，当我们测试这项工作对旧数据的表现时，我们遇到了一个障碍。当重放 Kafka 中的旧数据时，该作业同时输出了假阳性（它检测到虚假的离线事件）和假阴性（它错过了一些真正的离线事件）。
-对这个问题的调查变得非常复杂，我们找到了一些有趣的解决办法，并将其应用于其他工作。我们了解到，关键是要理解。
-为什么在回填(backfill)中排序是不可靠的
-如何使用 Kafka 正确地提取时间戳和水印
-以及定时器和 processElement 如何互动
-从 Kafka 回填和数据排序 让我们从排序开始。我们有一个 Kafka 主题，有几个分区，没有特定的分区键。我们发现，在回填过程中，作业往往不会以相同的速度读取这些分区。我们最终会得到一个逻辑 Flink 流，其中的记录严重失序 - 几个小时甚至更久 请看下面的图表。
-这张图代表了一个 job 的时间快照，它从一个有四个分区的 Kafka 主题中读取了6个多小时的数据。该作业的并行度为2，所以每个任务实例从两个分区读取数据。由于网络条件和每个实例与 broker 连接之间的其他差异，我们以极大的不同速率获得记录(例如，3点的记录在6点的记录之后出现，以此类推)。
-水印 我们发现的第一件事是，我们没有正确提取我们的水印。Flink 的水印是解决这些问题的主要基石，所以我们必须首先解决这个问题。它们就像一个逻辑时钟，告诉 job 中的每一个 operator 我们在时间上走了多远。更多信息可以在这里阅读，在Flink 的文档中。幸运的是，这是一个简单的问题 - 但在我们看到这个失序的数据并开始调查如何解决它之前，我们已经错过了这里的文档中关于每个分区提取水印的全部意义。</p>
+        <p>可重播的 Process Functions</p>
 
     </div>
 
@@ -1234,6 +1130,97 @@ Flink 的解决方法 Bird 将滑板车发送给我们的每条遥测记录称�
                title="Read more about 列表解析">
                 read <span class="more"> more</span>
                 <span class="screen-readers-only" > about 列表解析</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/2016-02-29-dynamic-variables-in-raku/'> Raku 中的动态变量</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__dynamic-variable__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘dynamic variable’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/dynamic-variable/">dynamic variable</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2021-07-12T00:00:00+0000" class="dt-published">Mon Jul 12, 2021</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>Dynamic Variables in Raku</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/2016-02-29-dynamic-variables-in-raku/'
+               title="Read more about Raku 中的动态变量">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about Raku 中的动态变量</span>
             </a>
         </div>
     
