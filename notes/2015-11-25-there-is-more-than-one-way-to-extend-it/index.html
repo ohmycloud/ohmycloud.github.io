@@ -553,46 +553,46 @@
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl"><span class="c1"># test.p6</span>
 </span></span><span class="line"><span class="cl"><span class="k">use</span> <span class="nn">Foo</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">use</span> <span class="nn">Bar</span><span class="p">;</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">say 72.even;
-</span></span></span><span class="line"><span class="cl"><span class="err">fob;
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"># OUTPUT:
-</span></span></span><span class="line"><span class="cl"><span class="err"># True
-</span></span></span><span class="line"><span class="cl"><span class="err"># True
-</span></span></span></code></pre></div><p>所有的行为都发生在 <em>Bar.pm6</em> 中。首先，我们写了一行 <em>use MONKEY-TYPING</em> 声明，它告诉我们正在做一些危险的行为。然后我们在类 <strong>class Int</strong> 的前面使用了 <em>augment</em> 关键字以扩充这个已经存在的类。我们的扩充添加了一个叫 <em>even</em> 的方法以告诉我们那个 Int 是否是偶数。</p>
+</span></span><span class="line"><span class="cl"><span class="k">use</span> <span class="nn">Bar</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">say</span> <span class="mi">72</span><span class="o">.</span><span class="nf">even</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">fob</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># OUTPUT:</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># True</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># True</span>
+</span></span></code></pre></div><p>所有的行为都发生在 <em>Bar.pm6</em> 中。首先，我们写了一行 <em>use MONKEY-TYPING</em> 声明，它告诉我们正在做一些危险的行为。然后我们在类 <strong>class Int</strong> 的前面使用了 <em>augment</em> 关键字以扩充这个已经存在的类。我们的扩充添加了一个叫 <em>even</em> 的方法以告诉我们那个 Int 是否是偶数。</p>
 <p>所有的整数都可以使用 <em>even</em> 方法了，这虽然达到了我们的要求但是有点危险。</p>
 <h2 id="我邪恶了">我邪恶了&nbsp;<a class="headline-hash no-text-decoration" href="#我邪恶了">#</a> </h2>
 <p>我们来扩充 <a href="http://docs.raku.org/type/Cool">Cool 类型</a>以涵盖所有的西文排版行长单位：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="line"><span class="cl"><span class="k">use</span> <span class="kt">MONKEY-TYPING</span><span class="p">;</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">augment class Cool {
-</span></span></span><span class="line"><span class="cl"><span class="err">    method even { self %% 2 }
-</span></span></span><span class="line"><span class="cl"><span class="err">}
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">.say for 72.even, &#39;72&#39;.even, pi.even, ½.even;
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"># OUTPUT:
-</span></span></span><span class="line"><span class="cl"><span class="err"># Method &#39;even&#39; not found for invocant of class &#39;Int&#39;
-</span></span></span><span class="line"><span class="cl"><span class="err"># in block &lt;unit&gt; at test.p6 line 8
-</span></span></span></code></pre></div><p>糟糕，程序奔溃了！原因是在我们扩充 <strong>Cool</strong> 类型的时候，派生自 <strong>Cool</strong> 的所有类型已经成型了(composed)。所以为了让它能工作，我们必须使用 <code>.^compose</code> 元对象协议方法来重新构成它们：</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="line"><span class="cl"><span class="k">use</span> <span class="kt">MONKEY-TYPING</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl"><span class="k">augment</span> <span class="k">class</span> <span class="kt">Cool</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">    <span class="k">method</span> <span class="nf">even</span> <span class="p">{</span> <span class="nb">self</span> <span class="nv">%%</span> <span class="mi">2</span> <span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="o">.^</span><span class="nb">compose</span> <span class="k">for</span> <span class="kt">Int</span><span class="o">,</span> <span class="kt">Num</span><span class="o">,</span> <span class="kt">Rat</span><span class="o">,</span> <span class="kt">Str</span><span class="o">,</span> <span class="kt">IntStr</span><span class="o">,</span> <span class="kt">NumStr</span><span class="o">,</span> <span class="kt">RatStr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl"><span class="o">.</span><span class="nb">say</span> <span class="k">for</span> <span class="mi">72</span><span class="o">.</span><span class="nf">even</span><span class="o">,</span> <span class="p">&#39;</span><span class="s1">72</span><span class="p">&#39;</span><span class="o">.</span><span class="nf">even</span><span class="o">,</span> <span class="no">pi</span><span class="o">.</span><span class="nf">even</span><span class="o">,</span> ½<span class="o">.</span><span class="nf">even</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl"><span class="c1"># OUTPUT:</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># True</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># True</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># False</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># False</span>
-</span></span></code></pre></div><p>它现在能工作了！Int, Num, Rat, Str, IntStr, NumStr, RatStr 类型拥有了 <code>.even</code> 方法(注意：这些不是继承自 Cool 的仅有的类型)! 这既邪恶又让人吃惊。</p>
+</span></span><span class="line"><span class="cl"><span class="c1"># Method &#39;even&#39; not found for invocant of class &#39;Int&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># in block &lt;unit&gt; at test.p6 line 8</span>
+</span></span></code></pre></div><p>糟糕，程序奔溃了！原因是在我们扩充 <strong>Cool</strong> 类型的时候，派生自 <strong>Cool</strong> 的所有类型已经成型了(composed)。所以为了让它能工作，我们必须使用 <code>.^compose</code> 元对象协议方法来重新构成它们：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="line"><span class="cl"><span class="k">use</span> <span class="kt">MONKEY-TYPING</span><span class="p">;</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">augment class Cool {
+</span></span></span><span class="line"><span class="cl"><span class="err">    method even { self %% 2 }
+</span></span></span><span class="line"><span class="cl"><span class="err">}
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">.^compose for Int, Num, Rat, Str, IntStr, NumStr, RatStr;
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">.say for 72.even, &#39;72&#39;.even, pi.even, ½.even;
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"># OUTPUT:
+</span></span></span><span class="line"><span class="cl"><span class="err"># True
+</span></span></span><span class="line"><span class="cl"><span class="err"># True
+</span></span></span><span class="line"><span class="cl"><span class="err"># False
+</span></span></span><span class="line"><span class="cl"><span class="err"># False
+</span></span></span></code></pre></div><p>它现在能工作了！Int, Num, Rat, Str, IntStr, NumStr, RatStr 类型拥有了 <code>.even</code> 方法(注意：这些不是继承自 Cool 的仅有的类型)! 这既邪恶又让人吃惊。</p>
 <h2 id="结论">结论&nbsp;<a class="headline-hash no-text-decoration" href="#结论">#</a> </h2>
 <p>当扩充 Raku 的核心类型或其它任意类的功能时，你有几种选择。</p>
 <ul>
