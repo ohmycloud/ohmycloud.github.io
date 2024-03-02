@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
-    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[PySpark on 焉知非鱼]]></title>
+    <generator uri="https://gohugo.io/" version="0.92.0">Hugo</generator><title type="html"><![CDATA[PySpark on 焉知非鱼]]></title>
     
         <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
     
@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/pyspark/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/pyspark/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/pyspark/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-07-15T22:25:29+08:00</updated>
+    <updated>2022-01-23T16:05:49+08:00</updated>
     
     
     
@@ -29,8 +29,8 @@
                     <author>
                         <name>焉知非鱼</name>
                     </author>
-            <published>2020-10-04T00:00:00+08:00</published>
-            <updated>2020-10-04T00:00:00+08:00</updated>
+            <published>2020-10-04T00:00:00+00:00</published>
+            <updated>2020-10-04T00:00:00+00:00</updated>
             
             
             <content type="html"><![CDATA[<blockquote>How PySpark users effectively work with Koalas</blockquote><p>Koalas 是一个开源项目，它为 pandas 提供了一个 drop-in 的替代品，可以高效地扩展到数百个工人节点，用于日常的数据科学和机器学习。自去年首次推出以来，<a href="https://databricks.com/session/official-announcement-of-koalas-open-source-project">经过一年多的开发</a>，<a href="https://databricks.com/blog/2020/06/24/introducing-koalas-1-0.html">Koalas 1.0 已经发布</a>。</p>
@@ -46,7 +46,7 @@
 <li>使用了默认索引。构建默认索引的开销取决于数据大小、集群组成等。因此，总是希望避免使用默认索引。关于这一点将在下面的其他章节中详细讨论。</li>
 <li>PySpark 和 pandas 中的一些 API 名称相同，但语义不同。例如，Koalas DataFrame 和 PySpark DataFrame 都有 count API。前者统计每列/行的非 NA/null 条目数，后者统计检索到的行数，包括包含 null 的行。</li>
 </ul>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
 <span class="n">a</span>    <span class="mi">3</span>
 <span class="n">b</span>    <span class="mi">3</span>
 
@@ -60,7 +60,7 @@
 </ul>
 <p>当导入 Koalas 包时，它会自动将 to_koalas()方法附加到 PySpark DataFrames 中。你可以简单地使用这个方法将 PySpark DataFrames 转换为 Koalas DataFrames。</p>
 <p>假设你有一个 PySpark DataFrame。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)],</span><span class="n">schema</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">])</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)],</span><span class="n">schema</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">])</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <span class="o">+---+----+---+</span>
 <span class="o">|</span>  <span class="n">x</span><span class="o">|</span>   <span class="n">y</span><span class="o">|</span>  <span class="n">z</span><span class="o">|</span>
@@ -70,9 +70,9 @@
 <span class="o">|</span>  <span class="mi">3</span><span class="o">|</span><span class="mf">30.0</span><span class="o">|</span>  <span class="n">c</span><span class="o">|</span>
 <span class="o">+---+----+---+</span> 
 </code></pre></div><p>首先，导入 Koalas 包。传统上使用 ks 作为包的别名。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">databricks.koalas</span> <span class="k">as</span> <span class="nn">ks</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">databricks.koalas</span> <span class="k">as</span> <span class="nn">ks</span>
 </code></pre></div><p>如上所述，用 to_koalas()方法将 Spark DataFrame 转换为 Koalas DataFrame。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span> <span class="o">=</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span> <span class="o">=</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span>
     <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
 <span class="mi">0</span>  <span class="mi">1</span>  <span class="mf">10.0</span>  <span class="n">a</span>
@@ -83,7 +83,7 @@
 <li>to_spark()</li>
 </ul>
 <p>接下来，你还应该知道如何从 Koalas 回到 PySpark DataFrame。你可以在 Koalas DataFrame 上使用 to_spark()方法。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf_from_kdf</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_spark</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf_from_kdf</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_spark</span><span class="p">()</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">sdf_from_kdf</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <span class="o">+---+----+---+</span>
 <span class="o">|</span>  <span class="n">x</span><span class="o">|</span>   <span class="n">y</span><span class="o">|</span>  <span class="n">z</span><span class="o">|</span>
@@ -96,7 +96,7 @@
 <h3 id="索引和-index_col">索引和 index_col</h3>
 <p>如上图所示，Koalas 内部管理了几列作为 &ldquo;索引 &ldquo;列，以表示 pandas 的索引。这些 &ldquo;索引 &ldquo;列用于通过 loc/iloc 索引器访问行，或者用于 sort_index()方法中，而不指定排序键列，甚至用于结合两个以上 DataFrame 或 Series 的操作时匹配相应的行，例如 df1+df2，等等。</p>
 <p>如果 PySpark DataFrame 中已经有这样的列，可以使用 index_col 参数来指定索引列。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span> <span class="o">=</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>  <span class="c1"># or index_col=[&#39;x&#39;]</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span> <span class="o">=</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>  <span class="c1"># or index_col=[&#39;x&#39;]</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span>
         <span class="n">y</span>  <span class="n">z</span>
 <span class="n">x</span>
@@ -105,14 +105,14 @@
 <span class="mi">3</span>  <span class="mf">30.0</span>  <span class="n">c</span>    
 </code></pre></div><p>这时，列 x 不被视为常规列之一，而是索引。</p>
 <p>如果你有多个列作为索引，你可以传递列名列表。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">])</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">])</span>
     <span class="n">z</span>
 <span class="n">x</span> <span class="n">y</span>
 <span class="mi">1</span> <span class="mf">10.0</span>  <span class="n">a</span>
 <span class="mi">2</span> <span class="mf">20.0</span>  <span class="n">b</span>
 <span class="mi">3</span> <span class="mf">30.0</span>  <span class="n">c</span>
 </code></pre></div><p>当回到 PySpark DataFrame 时，你还可以使用 index_col 参数来保存索引列。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">to_spark</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>  <span class="c1"># or index_col=[&#39;index&#39;]</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">to_spark</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>  <span class="c1"># or index_col=[&#39;index&#39;]</span>
 <span class="o">+-----+----+---+</span>
 <span class="o">|</span><span class="n">index</span><span class="o">|</span>   <span class="n">y</span><span class="o">|</span>  <span class="n">z</span><span class="o">|</span>
 <span class="o">+-----+----+---+</span>
@@ -121,7 +121,7 @@
 <span class="o">|</span>    <span class="mi">3</span><span class="o">|</span><span class="mf">30.0</span><span class="o">|</span>  <span class="n">c</span><span class="o">|</span>
 <span class="o">+-----+----+---+</span>
 </code></pre></div><p>否则，就会失去指数，如下图。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">to_spark</span><span class="p">()</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">to_spark</span><span class="p">()</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <span class="o">+----+---+</span>
 <span class="o">|</span>   <span class="n">y</span><span class="o">|</span>  <span class="n">z</span><span class="o">|</span>
 <span class="o">+----+---+</span>
@@ -130,13 +130,13 @@
 <span class="o">|</span><span class="mf">30.0</span><span class="o">|</span>  <span class="n">c</span><span class="o">|</span>
 <span class="o">+----+---+</span>
 </code></pre></div><p>列名的数量应与索引列的数量一致。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_spark</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;index1&#39;</span><span class="p">,</span> <span class="s1">&#39;index2&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_spark</span><span class="p">(</span><span class="n">index_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;index1&#39;</span><span class="p">,</span> <span class="s1">&#39;index2&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
 <span class="o">...</span>
 <span class="ne">ValueError</span><span class="p">:</span> <span class="n">length</span> <span class="n">of</span> <span class="n">index</span> <span class="n">columns</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">;</span> <span class="n">however</span><span class="p">,</span> <span class="n">the</span> <span class="n">length</span> <span class="n">of</span> <span class="n">the</span> <span class="n">given</span> <span class="s1">&#39;index_col&#39;</span> <span class="ow">is</span> <span class="mf">2.</span>  
 </code></pre></div><h3 id="默认索引">默认索引</h3>
 <p>正如你所看到的，如果你不指定 index_col 参数，就会创建一个新的列作为索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">sdf</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
     <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mf">10.0</span>  <span class="n">a</span>
  <span class="mi">1</span>  <span class="mi">2</span>  <span class="mf">20.0</span>  <span class="n">b</span>
@@ -144,18 +144,18 @@
 </code></pre></div><p>列从哪里来？</p>
 <p>答案是 &ldquo;默认索引&rdquo;。如果没有指定 index_col 参数，Koalas 会自动将一列作为索引附加到 DataFrame 中。有三种类型的默认索引。&ldquo;sequence&rdquo;、&ldquo;distributed-sequence &ldquo;和 &ldquo;distributed&rdquo;。每种类型都有其独特的特点和局限性，比如性能惩罚。为了减少性能开销，强烈建议在从 PySpark DataFrame 转换时通过 index_col 指定索引列。</p>
 <p>当 Koalas 不知道哪一列是用来做索引时，也会使用默认索引。例如，reset_index()没有任何参数，它试图将所有的索引数据转换为常规列，并重新创建一个索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_with_index_col</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
     <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mf">10.0</span>  <span class="n">a</span>
  <span class="mi">1</span>  <span class="mi">2</span>  <span class="mf">20.0</span>  <span class="n">b</span>
  <span class="mi">2</span>  <span class="mi">3</span>  <span class="mf">30.0</span>  <span class="n">c</span>
 </code></pre></div><p>你可以通过设置 Koalas 选项 &ldquo;compute.default_index_type&rdquo; 来改变默认的索引类型。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;sequence&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;sequence&#39;</span><span class="p">)</span>
 </code></pre></div><p>或</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="n">ks</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">default_index_type</span> <span class="o">=</span> <span class="s1">&#39;sequence&#39;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="n">ks</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">default_index_type</span> <span class="o">=</span> <span class="s1">&#39;sequence&#39;</span>
 </code></pre></div><p>顺序型
 目前 Koalas 中默认使用 &ldquo;序列 &ldquo;类型，因为它像 pandas 一样保证了索引的连续递增。但是，它内部使用了一个非分区窗口函数，这意味着所有的数据都需要收集到一个节点中。如果节点的内存不足，性能会明显下降，或者出现 OutOfMemoryError。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;sequence&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;sequence&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">spark</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
     <span class="nb">id</span>
 <span class="mi">0</span>   <span class="mi">0</span>
@@ -165,7 +165,7 @@
 <span class="mi">4</span>   <span class="mi">4</span>
 </code></pre></div><p>分散式
 当使用 &ldquo;分布式-序列 &ldquo;索引时，性能惩罚没有 &ldquo;序列 &ldquo;类型那么显著。它以分布式的方式计算和生成索引，但它需要另一个额外的 Spark Job 来内部生成全局序列。它也不能保证结果的自然顺序。一般来说，它会变成一个不断增加的数字。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;distributed-sequence&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;distributed-sequence&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">spark</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
     <span class="nb">id</span>
 <span class="mi">3</span>   <span class="mi">3</span>
@@ -175,7 +175,7 @@
 <span class="mi">0</span>   <span class="mi">0</span>
 </code></pre></div><p>分散型
 &ldquo;分布式 &ldquo;索引几乎没有性能上的惩罚，而且总是创建单调增加的数字。如果索引只是需要作为每行的唯一数字，或行的顺序，这种索引类型将是最佳选择。但是，这些数字有一个不确定的间隙。这意味着这种索引类型不太可能被用作结合两个以上 DataFrames 或 Series 的操作的索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;distributed&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;compute.default_index_type&#39;</span><span class="p">,</span> <span class="s1">&#39;distributed&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">spark</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to_koalas</span><span class="p">()</span>
                 <span class="nb">id</span>
 <span class="mi">17179869184</span>   <span class="mi">0</span>
@@ -229,7 +229,7 @@
 <p>API 和它们的参数沿用了 pandas 对应的 API。不过，目前在行为上有细微的差别。例如，pandas 的 read_csv 可以通过 http 协议读取文件，但 Koalas 仍然不支持，因为底层的 Spark 引擎本身并不支持。</p>
 <p>这些 Koalas 函数还有 index_col 参数，用来指定哪些列应该被用作索引，或者索引列名应该是什么，类似于上面介绍的 to_koalas()或 to_spark()函数。如果你不指定，就会附加默认的索引，或者索引列丢失。</p>
 <p>例如，如果你不指定 index_col 参数，默认索引就会被附加，如下图所示&ndash;为了简单起见，使用了分布式默认索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_csv</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_csv</span>
                 <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
@@ -237,7 +237,7 @@
 <span class="mi">8589934592</span>   <span class="mi">3</span>  <span class="mf">30.0</span>  <span class="n">c</span>
 <span class="mi">17179869184</span>  <span class="mi">1</span>  <span class="mf">10.0</span>  <span class="n">a</span>
 </code></pre></div><p>而如果指定 index_col 参数，指定的列就会变成一个索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_csv_with_index_col</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&#34;/path/to/test.csv&#34;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_csv_with_index_col</span>
         <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
@@ -246,7 +246,7 @@
 <span class="mi">1</span>      <span class="mi">2</span>  <span class="mf">20.0</span>  <span class="n">b</span>
 <span class="mi">0</span>      <span class="mi">1</span>  <span class="mf">10.0</span>  <span class="n">a</span>
 </code></pre></div><p>此外，每个函数都需要关键字参数来设置 Spark 中 DataFrameWriter 和 DataFrameReader 的选项。给定的键直接传递给它们的选项并配置行为。当 pandas-origin 参数不足以操作你的数据，但 PySpark 支持缺失的功能时，这很有用。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># nullValue is the option specific to Spark’s CSV I/O.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># nullValue is the option specific to Spark’s CSV I/O.</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">ks</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;/path/to/test.csv&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">nullValue</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
         <span class="n">x</span>     <span class="n">y</span>     <span class="n">z</span>
 <span class="n">index</span>
@@ -262,7 +262,7 @@
 </ul>
 <p>首先，DataFrame.to_table 和 ks.read_table 是只需指定表名就可以写入和读取 Spark 表。这分别类似于 Spark 中的 DataFrameWriter.saveAsTable 和 DataFrameReader.table。</p>
 <p>其次，DataFrame.to_spark_io 和 ks.read_spark_io 是用于一般的 Spark I/O。为了方便使用，有几个可选的参数，其他都是关键字参数。你可以自由设置 Spark 中 DataFrameWriter.save 和 DataFrameReader.load 使用的选项。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># &#39;compression&#39; is a Spark specific option.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># &#39;compression&#39; is a Spark specific option.</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_spark_io</span><span class="p">(</span><span class="s1">&#39;/path/to/test.orc&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;orc&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&#34;snappy&#34;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_spark_io</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">read_spark_io</span><span class="p">(</span><span class="s1">&#39;/path/to/test.orc&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;orc&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_spark_io</span>
@@ -275,7 +275,7 @@
 <p>最后，如果你<a href="https://docs.delta.io/latest/quick-start.html#set-up-apache-spark-with-delta-lake">安装</a>了 Delta Lake，Koalas 也可以写和读 Delta 表。</p>
 <p><a href="https://docs.delta.io/latest/delta-intro.html">Delta Lake</a> 是一个开源的存储层，为数据湖带来了可靠性。Delta Lake 提供了 ACID 事务、可扩展的元数据处理，并统一了流式和批处理数据。</p>
 <p>与其他文件源不同的是，read_delta 函数可以让用户指定表的版本来进行时间旅行。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_delta</span><span class="p">(</span><span class="s1">&#39;/path/to/test.delta&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">to_delta</span><span class="p">(</span><span class="s1">&#39;/path/to/test.delta&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_delta</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">read_delta</span><span class="p">(</span><span class="s1">&#39;/path/to/test.delta&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf_read_delta</span>
         <span class="n">x</span>     <span class="n">y</span>  <span class="n">z</span>
@@ -311,7 +311,7 @@
 <h4 id="seriessparktransform-和-seriessparkapply">Series.spark.transform 和 Series.spark.apply</h4>
 <p>Series.spark accessor 有变换和应用函数来处理底层的 Spark Column 对象。</p>
 <p>例如，假设你有以下 Koalas DataFrame。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]})</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]})</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span>
     <span class="n">a</span>
 <span class="mi">0</span>  <span class="mi">1</span>
@@ -319,7 +319,7 @@
 <span class="mi">2</span>  <span class="mi">3</span>
 <span class="mi">3</span>  <span class="mi">4</span>
 </code></pre></div><p>你可以使用 astype 函数来铸造类型，但如果你还不习惯，你可以使用 Series.spark.transform 函数来铸造 Spark 列。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">DoubleType</span>
 <span class="o">&gt;&gt;&gt;</span> 
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="p">[</span><span class="s1">&#39;a_astype_double&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -332,7 +332,7 @@
 <span class="mi">3</span>  <span class="mi">4</span>              <span class="mf">4.0</span>            <span class="mf">4.0</span>
 </code></pre></div><p>传递给 Series.spark.transform 函数的用户函数取用 Spark 的 Column 对象，可以使用 PySpark 函数对其进行操作。</p>
 <p>也可以在 transform/apply 函数中使用 pyspark.sql.function 的函数。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">F</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">F</span>
 <span class="o">&gt;&gt;&gt;</span> 
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="p">[</span><span class="s1">&#39;a_sqrt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="k">lambda</span> <span class="n">scol</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">scol</span><span class="p">))</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="p">[</span><span class="s1">&#39;a_log&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="k">lambda</span> <span class="n">scol</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">scol</span><span class="p">))</span>
@@ -343,12 +343,12 @@
 <span class="mi">2</span>  <span class="mi">3</span>  <span class="mf">1.732051</span>  <span class="mf">1.098612</span>
 <span class="mi">3</span>  <span class="mi">4</span>  <span class="mf">2.000000</span>  <span class="mf">1.386294</span>
 </code></pre></div><p>Series.spark.transform 的用户函数应该返回与其输入相同长度的 Spark 列，而 Series.spark.apply 的用户函数可以返回不同长度的 Spark 列，比如调用聚合函数。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">scol</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">collect_list</span><span class="p">(</span><span class="n">scol</span><span class="p">))</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">scol</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">collect_list</span><span class="p">(</span><span class="n">scol</span><span class="p">))</span>
 <span class="mi">0</span>    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
 <span class="n">Name</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="n">dtype</span><span class="p">:</span> <span class="nb">object</span>
 </code></pre></div><h4 id="dataframesparkapply">DataFrame.spark.apply</h4>
 <p>同样，DataFrame.spark accessor 也有一个 apply 函数。用户函数接受并返回一个 Spark DataFrame，并可以应用任何转换。如果你想在 Spark DataFrame 中保留索引列，你可以设置 index_col 参数。在这种情况下，用户函数必须在返回的 Spark DataFrame 中包含一个同名的列。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sdf</span><span class="p">:</span> <span class="n">sdf</span><span class="o">.</span><span class="n">selectExpr</span><span class="p">(</span><span class="s2">&#34;index * 10 as index&#34;</span><span class="p">,</span> <span class="s2">&#34;a + 1 as a&#34;</span><span class="p">),</span> <span class="n">index_col</span><span class="o">=</span><span class="s2">&#34;index&#34;</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sdf</span><span class="p">:</span> <span class="n">sdf</span><span class="o">.</span><span class="n">selectExpr</span><span class="p">(</span><span class="s2">&#34;index * 10 as index&#34;</span><span class="p">,</span> <span class="s2">&#34;a + 1 as a&#34;</span><span class="p">),</span> <span class="n">index_col</span><span class="o">=</span><span class="s2">&#34;index&#34;</span><span class="p">)</span>
     <span class="n">a</span>
 <span class="n">index</span>
 <span class="mi">0</span>      <span class="mi">2</span>
@@ -356,7 +356,7 @@
 <span class="mi">20</span>     <span class="mi">4</span>
 <span class="mi">30</span>     <span class="mi">5</span>
 </code></pre></div><p>如果你省略 index_col，它将使用默认的索引。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sdf</span><span class="p">:</span> <span class="n">sdf</span><span class="o">.</span><span class="n">selectExpr</span><span class="p">(</span><span class="s2">&#34;a + 1 as a&#34;</span><span class="p">))</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sdf</span><span class="p">:</span> <span class="n">sdf</span><span class="o">.</span><span class="n">selectExpr</span><span class="p">(</span><span class="s2">&#34;a + 1 as a&#34;</span><span class="p">))</span>
     <span class="n">a</span>
 <span class="mi">17179869184</span>  <span class="mi">2</span>
 <span class="mi">42949672960</span>  <span class="mi">3</span>
@@ -364,7 +364,7 @@
 <span class="mi">94489280512</span>  <span class="mi">5</span>
 </code></pre></div><h4 id="spark-schema">Spark schema</h4>
 <p>你可以通过 DataFrame.spark.schema 和 DataFrame.spark.print_schema 查看当前的底层 Spark 模式。如果你想知道包括索引列在内的模式，它们都需要 index_col 参数。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="o">&gt;&gt;&gt;</span> 
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="s1">&#39;abc&#39;</span><span class="p">),</span>
@@ -402,7 +402,7 @@
     <span class="o">|--</span> <span class="n">f</span><span class="p">:</span> <span class="n">timestamp</span> <span class="p">(</span><span class="n">nullable</span> <span class="o">=</span> <span class="n">false</span><span class="p">)</span>
 </code></pre></div><h4 id="解释-spark-计划">解释 Spark 计划</h4>
 <p>如果你想知道当前的 Spark 计划，你可以使用 DataFrame.spark.explain()。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># Same as Spark’s DataFrame.explain()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="c1"># Same as Spark’s DataFrame.explain()</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
 <span class="o">==</span> <span class="n">Physical</span> <span class="n">Plan</span> <span class="o">==</span>
 <span class="n">Scan</span> <span class="n">ExistingRDD</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
@@ -435,7 +435,7 @@
 <span class="n">Scan</span> <span class="n">ExistingRDD</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
 </code></pre></div><h4 id="缓存">缓存</h4>
 <p>spark 访问器还提供了缓存相关的函数，cache、persist、unpersist 和 store_level 属性。你可以使用 cache 函数作为上下文管理器来解除缓存的 persist。让我们看一个例子。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">StorageLevel</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">StorageLevel</span>
 <span class="o">&gt;&gt;&gt;</span> 
 <span class="o">&gt;&gt;&gt;</span> <span class="k">with</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span> <span class="k">as</span> <span class="n">cached</span><span class="p">:</span>
 <span class="o">...</span>   <span class="nb">print</span><span class="p">(</span><span class="n">cached</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">storage_level</span><span class="p">)</span>
@@ -447,14 +447,14 @@
 <span class="o">...</span>
 <span class="n">Memory</span> <span class="n">Serialized</span> <span class="mi">1</span><span class="n">x</span> <span class="n">Replicated</span>
 </code></pre></div><p>当上下文完成后，缓存会自动清除。如果你想保留它的缓存，你可以按照下面的方法来做。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">cached</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">cached</span> <span class="o">=</span> <span class="n">kdf</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="nb">print</span><span class="p">(</span><span class="n">cached</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">storage_level</span><span class="p">)</span>
 <span class="n">Disk</span> <span class="n">Memory</span> <span class="n">Deserialized</span> <span class="mi">1</span><span class="n">x</span> <span class="n">Replicated</span>
 </code></pre></div><p>当不再需要它时，你必须显式调用 DataFrame.spark.unpersist()来从缓存中删除它。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">cached</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">cached</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
 </code></pre></div><h4 id="提示">提示</h4>
 <p>在 Koalas 中，有一些类似于 join 的操作，比如合并、加入和更新。虽然实际的 join 方法取决于底层的 Spark 计划器，但你仍然可以用 ks.broadcast()函数或 DataFrame.spark.hint()方法指定一个提示。</p>
-<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf1</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;key&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="s1">&#39;foo&#39;</span><span class="p">],</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">kdf1</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;key&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="s1">&#39;foo&#39;</span><span class="p">],</span>
 <span class="o">...</span>                      <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]},</span>
 <span class="o">...</span>                     <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">])</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">kdf2</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;key&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="s1">&#39;foo&#39;</span><span class="p">],</span>

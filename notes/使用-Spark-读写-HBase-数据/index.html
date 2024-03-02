@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
+    <meta charset="utf-8">
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Use Spark to read and write HBase data ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Use Spark to read and write HBase data" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-spark-%E8%AF%BB%E5%86%99-hbase-%E6%95%B0%E6%8D%AE/" />
+
+
+    
+        <meta property="article:published_time" content="2018-07-25T16:16:21&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2018-07-25T16:16:21&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Use Spark to read and write HBase data"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-spark-%E8%AF%BB%E5%86%99-hbase-%E6%95%B0%E6%8D%AE/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmyweekly.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmyweekly.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        rakulang, dartlang, nimlang, golang, rustlang, lang lang no see
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Use Spark to read and write HBase data</h1>
+
+        
+        <data class="u-url" value="https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-spark-%E8%AF%BB%E5%86%99-hbase-%E6%95%B0%E6%8D%AE/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2018-07-25T16:16:21+0000" class="dt-published">Wed Jul 25, 2018</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmyweekly.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<h1 id="use-spark-to-read-and-write-hbase-datahttpsdocsmicrosoftcomen-usazurehdinsighthdinsight-using-spark-query-hbase"><a href="https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-using-spark-query-hbase">Use Spark to read and write HBase data</a></h1>
+<h2 id="启动-hbase">启动 hbase&nbsp;<a class="headline-hash no-text-decoration" href="#启动-hbase">#</a> </h2>
+<pre tabindex="0"><code>start-hbase.sh
+</code></pre><h2 id="在-hbase-中准备-sample-数据">在 HBase 中准备 sample 数据&nbsp;<a class="headline-hash no-text-decoration" href="#在-hbase-中准备-sample-数据">#</a> </h2>
+<ul>
+<li>1、运行 HBase shell</li>
+</ul>
+<pre tabindex="0"><code>hbase shell
+</code></pre><ul>
+<li>2、创建一个含有 <code>Personal</code> 和 <code>Office</code> 列簇的 <code>Contacts</code> 表</li>
+</ul>
+<pre tabindex="0"><code>create &#39;Contacts&#39;, &#39;Personal&#39;, &#39;Office&#39;
+</code></pre><ul>
+<li>3、加载一些样例数据</li>
+</ul>
+<pre tabindex="0"><code>put &#39;Contacts&#39;, &#39;1000&#39;, &#39;Personal:Name&#39;, &#39;John Dole&#39;
+put &#39;Contacts&#39;, &#39;1000&#39;, &#39;Personal:Phone&#39;, &#39;1-425-000-0001&#39;
+put &#39;Contacts&#39;, &#39;1000&#39;, &#39;Office:Phone&#39;, &#39;1-425-000-0002&#39;
+put &#39;Contacts&#39;, &#39;1000&#39;, &#39;Office:Address&#39;, &#39;1111 San Gabriel Dr.&#39;
+put &#39;Contacts&#39;, &#39;8396&#39;, &#39;Personal:Name&#39;, &#39;Calvin Raji&#39;
+put &#39;Contacts&#39;, &#39;8396&#39;, &#39;Personal:Phone&#39;, &#39;230-555-0191&#39;
+put &#39;Contacts&#39;, &#39;8396&#39;, &#39;Office:Phone&#39;, &#39;230-555-0191&#39;
+put &#39;Contacts&#39;, &#39;8396&#39;, &#39;Office:Address&#39;, &#39;5415 San Gabriel Dr.&#39;
+</code></pre><h2 id="运行-spark-shell-引用-spark-hbase-connector">运行 Spark Shell 引用 Spark HBase Connector&nbsp;<a class="headline-hash no-text-decoration" href="#运行-spark-shell-引用-spark-hbase-connector">#</a> </h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">spark-shell --packages com.hortonworks:shc-core:1.1.1-2.1-s_2.11 --repositories http://repo.hortonworks.com/content/repositories/releases
+</span></span></code></pre></div><p>这会下载很多 jar 包, 完成后会进入 spark shell 界面, 继续下面的步骤。</p>
+<h2 id="定义一个-catalog-并查询">定义一个 Catalog 并查询&nbsp;<a class="headline-hash no-text-decoration" href="#定义一个-catalog-并查询">#</a> </h2>
+<ul>
+<li>1）在你的 Spark Shell 中, 运行下面的 <code>import</code> 语句：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.</span><span class="o">{</span><span class="nc">SQLContext</span><span class="o">,</span> <span class="k">_</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.sql.execution.datasources.hbase._</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">org.apache.spark.</span><span class="o">{</span><span class="nc">SparkConf</span><span class="o">,</span> <span class="nc">SparkContext</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">import</span> <span class="nn">spark.sqlContext.implicits._</span>
+</span></span></code></pre></div><ul>
+<li>2）给 HBase 表中的 Contacts 表定义一个 catalog</li>
+</ul>
+<p>a. 给名为 <code>Contacts</code> 的 HBase 表定义一个 catalog
+b. 将 rowkey 标识为 <code>key</code>，并将 Spark 中使用的列名映射到 HBase 中使用的列族，列名和列类型
+c. 还必须将 r​​owkey 详细定义为命名列（<code>rowkey</code>），其具有 <code>rowkey</code> 的特定列族 <code>cf</code>。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">catalog</span> <span class="k">=</span> <span class="s">s&#34;&#34;&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;table&#34;:{&#34;namespace&#34;:&#34;default&#34;, &#34;name&#34;:&#34;Contacts&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;rowkey&#34;:&#34;key&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;columns&#34;:{
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;rowkey&#34;:{&#34;cf&#34;:&#34;rowkey&#34;, &#34;col&#34;:&#34;key&#34;, &#34;type&#34;:&#34;string&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;officeAddress&#34;:{&#34;cf&#34;:&#34;Office&#34;, &#34;col&#34;:&#34;Address&#34;, &#34;type&#34;:&#34;string&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;officePhone&#34;:{&#34;cf&#34;:&#34;Office&#34;, &#34;col&#34;:&#34;Phone&#34;, &#34;type&#34;:&#34;string&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;personalName&#34;:{&#34;cf&#34;:&#34;Personal&#34;, &#34;col&#34;:&#34;Name&#34;, &#34;type&#34;:&#34;string&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s">     |&#34;personalPhone&#34;:{&#34;cf&#34;:&#34;Personal&#34;, &#34;col&#34;:&#34;Phone&#34;, &#34;type&#34;:&#34;string&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s">     |}
+</span></span></span><span class="line"><span class="cl"><span class="s"> |}&#34;&#34;&#34;</span><span class="o">.</span><span class="n">stripMargin</span>
+</span></span></code></pre></div><ul>
+<li>
+<ol start="3">
+<li>定义一个方法，在 HBase 中的 <code>Contacts</code> 表周围提供 <code>DataFrame</code>：</li>
+</ol>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">def</span> <span class="n">withCatalog</span><span class="o">(</span><span class="n">cat</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">DataFrame</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">         <span class="n">spark</span><span class="o">.</span><span class="n">sqlContext</span>
+</span></span><span class="line"><span class="cl">         <span class="o">.</span><span class="n">read</span>
+</span></span><span class="line"><span class="cl">         <span class="o">.</span><span class="n">options</span><span class="o">(</span><span class="nc">Map</span><span class="o">(</span><span class="nc">HBaseTableCatalog</span><span class="o">.</span><span class="n">tableCatalog</span><span class="o">-&gt;</span><span class="n">cat</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">         <span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;org.apache.spark.sql.execution.datasources.hbase&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">         <span class="o">.</span><span class="n">load</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">     <span class="o">}</span>
+</span></span></code></pre></div><ul>
+<li>
+<ol start="4">
+<li>创建一个 DataFrame 的实例</li>
+</ol>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">df</span> <span class="k">=</span> <span class="n">withCatalog</span><span class="o">(</span><span class="n">catalog</span><span class="o">)</span>
+</span></span></code></pre></div><ul>
+<li>5）查询这个 DataFrame</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">df</span><span class="o">.</span><span class="n">show</span><span class="o">()</span>
+</span></span></code></pre></div><ul>
+<li>6）你应该看到两行数据：</li>
+</ul>
+<pre tabindex="0"><code>+------+--------------------+--------------+-------------+--------------+
+|rowkey|       officeAddress|   officePhone| personalName| personalPhone|
++------+--------------------+--------------+-------------+--------------+
+|  1000|1111 San Gabriel Dr.|1-425-000-0002|    John Dole|1-425-000-0001|
+|  8396|5415 San Gabriel Dr.|  230-555-0191|  Calvin Raji|  230-555-0191|
++------+--------------------+--------------+-------------+--------------+
+</code></pre><ul>
+<li>7）注册临时表，以便使用 Spark SQL 查询 HBase 表</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">df</span><span class="o">.</span><span class="n">registerTempTable</span><span class="o">(</span><span class="s">&#34;contacts&#34;</span><span class="o">)</span>
+</span></span></code></pre></div><ul>
+<li>8）针对 contacts 表发出 SQL 查询：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">.</span><span class="n">sql</span><span class="o">(</span><span class="s">&#34;select personalName, officeAddress from contacts&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">query</span><span class="o">.</span><span class="n">show</span><span class="o">()</span>
+</span></span></code></pre></div><ul>
+<li>9）你应该看到这样的结果：</li>
+</ul>
+<pre tabindex="0"><code>+-------------+--------------------+
+| personalName|       officeAddress|
++-------------+--------------------+
+|    John Dole|1111 San Gabriel Dr.|
+|  Calvin Raji|5415 San Gabriel Dr.|
++-------------+--------------------+
+</code></pre><h2 id="插入新数据">插入新数据&nbsp;<a class="headline-hash no-text-decoration" href="#插入新数据">#</a> </h2>
+<ul>
+<li>1）要插入新的 Contact 联系人记录，请定义 <code>ContactRecord</code> 类：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">case</span> <span class="k">class</span> <span class="nc">ContactRecord</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">     <span class="n">rowkey</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">     <span class="n">officeAddress</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">     <span class="n">officePhone</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">     <span class="n">personalName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">     <span class="n">personalPhone</span><span class="k">:</span> <span class="kt">String</span>
+</span></span><span class="line"><span class="cl">     <span class="o">)</span>
+</span></span></code></pre></div><ul>
+<li>2）创建 <code>ContactRecord</code> 的实例并将其放在一个数组中：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">val</span> <span class="n">newContact</span> <span class="k">=</span> <span class="nc">ContactRecord</span><span class="o">(</span><span class="s">&#34;16891&#34;</span><span class="o">,</span> <span class="s">&#34;40 Ellis St.&#34;</span><span class="o">,</span> <span class="s">&#34;674-555-0110&#34;</span><span class="o">,</span> <span class="s">&#34;John Jackson&#34;</span><span class="o">,</span><span class="s">&#34;230-555-0194&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">var</span> <span class="n">newData</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Array</span><span class="o">[</span><span class="kt">ContactRecord</span><span class="o">](</span><span class="mi">1</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">newData</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span> <span class="k">=</span> <span class="n">newContact</span>
+</span></span></code></pre></div><ul>
+<li>3）将新数据数组保存到 HBase：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">sc</span><span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="n">newData</span><span class="o">).</span><span class="n">toDF</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">options</span><span class="o">(</span><span class="nc">Map</span><span class="o">(</span><span class="nc">HBaseTableCatalog</span><span class="o">.</span><span class="n">tableCatalog</span> <span class="o">-&gt;</span> <span class="n">catalog</span><span class="o">,</span><span class="nc">HBaseTableCatalog</span><span class="o">.</span><span class="n">newTable</span> <span class="o">-&gt;</span> <span class="s">&#34;5&#34;</span><span class="o">)).</span><span class="n">format</span><span class="o">(</span><span class="s">&#34;org.apache.spark.sql.execution.datasources.hbase&#34;</span><span class="o">).</span><span class="n">save</span><span class="o">()</span>
+</span></span></code></pre></div><ul>
+<li>4）检查结果：</li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="n">df</span><span class="o">.</span><span class="n">show</span><span class="o">()</span>
+</span></span></code></pre></div><ul>
+<li>
+<ol start="5">
+<li>你应该看到这样的输出：</li>
+</ol>
+</li>
+</ul>
+<pre tabindex="0"><code>+------+--------------------+--------------+------------+--------------+
+|rowkey|       officeAddress|   officePhone|personalName| personalPhone|
++------+--------------------+--------------+------------+--------------+
+|  1000|1111 San Gabriel Dr.|1-425-000-0002|   John Dole|1-425-000-0001|
+| 16891|        40 Ellis St.|  674-555-0110|John Jackson|  230-555-0194|
+|  8396|5415 San Gabriel Dr.|  230-555-0191| Calvin Raji|  230-555-0191|
++------+--------------------+--------------+------------+--------------+
+</code></pre><h2 id="参考文献">参考文献&nbsp;<a class="headline-hash no-text-decoration" href="#参考文献">#</a> </h2>
+<ul>
+<li><a href="https://github.com/hortonworks-spark/shc">Apache Spark - Apache HBase Connector</a></li>
+</ul>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#启动-hbase">启动 hbase</a></li>
+    <li><a href="#在-hbase-中准备-sample-数据">在 HBase 中准备 sample 数据</a></li>
+    <li><a href="#运行-spark-shell-引用-spark-hbase-connector">运行 Spark Shell 引用 Spark HBase Connector</a></li>
+    <li><a href="#定义一个-catalog-并查询">定义一个 Catalog 并查询</a></li>
+    <li><a href="#插入新数据">插入新数据</a></li>
+    <li><a href="#参考文献">参考文献</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/send-data-to-socket/" class="nobr">« 使用 Raku 发送数据到 Socket</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmyweekly.github.io/notes/%E5%83%8F%E6%88%91%E8%BF%99%E6%A0%B7%E7%9A%84-jar-%E5%8C%85/" class="nobr">添加第三方 pom 仓库 »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
+</html>

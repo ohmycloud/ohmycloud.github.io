@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-us">
-    <generator uri="https://gohugo.io/" version="0.85.0">Hugo</generator><title type="html"><![CDATA[introspection on 焉知非鱼]]></title>
+    <generator uri="https://gohugo.io/" version="0.92.0">Hugo</generator><title type="html"><![CDATA[introspection on 焉知非鱼]]></title>
     
         <subtitle type="html"><![CDATA[rakulang, dartlang, nimlang, golang, rustlang, lang lang no see]]></subtitle>
     
@@ -10,7 +10,7 @@
             <link href="https://ohmyweekly.github.io/tags/introspection/index.xml" rel="alternate" type="application/rss+xml" title="RSS" />
             <link href="https://ohmyweekly.github.io/tags/introspection/atom.xml" rel="self" type="application/atom+xml" title="Atom" />
             <link href="https://ohmyweekly.github.io/tags/introspection/jf2feed.json" rel="alternate" type="application/jf2feed+json" title="jf2feed" />
-    <updated>2021-07-15T22:25:29+08:00</updated>
+    <updated>2022-01-23T16:05:49+08:00</updated>
     
     
     
@@ -29,8 +29,8 @@
                     <author>
                         <name>焉知非鱼</name>
                     </author>
-            <published>2021-07-11T00:00:00+08:00</published>
-            <updated>2021-07-11T00:00:00+08:00</updated>
+            <published>2021-07-11T00:00:00+00:00</published>
+            <updated>2021-07-11T00:00:00+00:00</updated>
             
             
             <content type="html"><![CDATA[<blockquote>Introspection in Raku</blockquote><p>Raku 支持&quot;泛型, roles 和 多重分发&quot;, 它们都是很好的特点, 并且已经在其它 advent calendar 中发布过了。</p>
@@ -39,9 +39,9 @@
 <p>但是今天, 我们首先看一下第一部分: 自省。在类型创建完之后查看它的类型, 了解它, 并使用这些信息。</p>
 <p>我们将要创建的模块是基于 <a href="https://github.com/vendethiel/sixcheck">Sixcheck</a> 模块(一个 <a href="https://en.wikipedia.org/wiki/QuickCheck">QuickCheck-like</a> 模块)的需求: 为某个类型生成一些随机数据, 然后把数据喂给我们正测试的函数, 并检查某些后置条件(post-condition)。</p>
 <p>所以, 我们先写出第一个版本:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%special-cases</span><span class="p">{</span><span class="nb">Mu</span><span class="p">}</span> <span class="o">=</span>
-  <span class="p">(</span><span class="nb">Int</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="p">{</span> <span class="p">(</span><span class="mi">1</span><span class="o">..</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="nb">pick</span> <span class="p">}</span>,
-  <span class="p">(</span><span class="nb">Str</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="p">{</span> <span class="p">(&#39;</span><span class="s1">a</span><span class="p">&#39;</span><span class="o">..</span><span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;)</span><span class="o">.</span><span class="nb">pick</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="nb">join</span><span class="p">(&#39;&#39;)</span> <span class="p">}</span>,
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%special-cases</span><span class="p">{</span><span class="nb">Mu</span><span class="p">}</span> <span class="o">=</span>
+  <span class="p">(</span><span class="nb">Int</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="p">{</span> <span class="p">(</span><span class="mi">1</span><span class="o">..</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="nb">pick</span> <span class="p">}</span><span class="o">,</span>
+  <span class="p">(</span><span class="nb">Str</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">-&gt;</span> <span class="p">{</span> <span class="p">(&#39;</span><span class="s1">a</span><span class="p">&#39;</span><span class="o">..</span><span class="p">&#39;</span><span class="s1">z</span><span class="p">&#39;)</span><span class="o">.</span><span class="nb">pick</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="nb">join</span><span class="p">(&#39;&#39;)</span> <span class="p">}</span><span class="o">,</span>
 <span class="p">;</span>
 
 <span class="k">sub</span> <span class="nf">generate-data</span><span class="p">(</span><span class="nb">Mu:U</span> \<span class="nb">t</span><span class="p">)</span> <span class="p">{</span>
@@ -61,50 +61,50 @@
 <p>我们用代码生成数据, 公平且公正。但是我们需要生成更多那样简单的数据。</p>
 <p>我们至少需要支持带有属性的类: 我们想查看属性列表, 为它们的类型生成数据, 并把它们喂给构造器。</p>
 <p>我们要能够看到类的内部。用 Raku 的术语来说, 我们将要到达的是元对象协议(<a href="https://rakuadvent.wordpress.com/2010/12/22/day-22-the-meta-object-protocol/">Meta-Object Protocol</a>)。首先我们定义一个类:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Article</span> <span class="p">{</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="k">class</span> <span class="nc">Article</span> <span class="p">{</span>
     <span class="k">has</span> <span class="nb">Str</span> <span class="nv">$.title</span><span class="p">;</span>
     <span class="k">has</span> <span class="nb">Str</span> <span class="nv">$.content</span><span class="p">;</span>
     <span class="k">has</span> <span class="nb">Int</span> <span class="nv">$.view-count</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="c1"># 我们可以这样手动创建一个实例</span>
-<span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">title</span>      <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Raku Advent</span>, <span class="n">第</span> <span class="mi">19</span> <span class="n">天</span><span class="p">&#34;</span><span class="s2">,
-</span><span class="s2">            content    =&gt; </span><span class="p">&#34;</span><span class="n">Magic</span><span class="o">!</span><span class="p">&#34;</span><span class="s2">,
-</span><span class="s2">            view-count =&gt; 0
-</span><span class="s2">            );
-</span></code></pre></div><p>但是我们不想亲手创建那个文章 (article)。我们想把那个 <strong>class</strong> Article 传递给我们的 <em>generate-data</em> 函数, 并返回一个 Article(里面带有随机数据)。让我们回到我们的 <em>REPL</em>&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="n">Article</span><span class="o">.^</span><span class="nb">attributes</span><span class="p">;</span>         <span class="c1"># (Str $!title Str $!content Int $!view-count)</span>
+<span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">title</span>      <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Raku Advent, 第 19 天</span><span class="p">&#34;</span><span class="o">,</span>
+            <span class="s">content</span>    <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">Magic!</span><span class="p">&#34;</span><span class="o">,</span>
+            <span class="s">view-count</span> <span class="o">=&gt;</span> <span class="mi">0</span>
+            <span class="p">);</span>
+</code></pre></div><p>但是我们不想亲手创建那个文章 (article)。我们想把那个 <strong>class</strong> Article 传递给我们的 <em>generate-data</em> 函数, 并返回一个 Article(里面带有随机数据)。让我们回到我们的 <em>REPL</em>&hellip;</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="n">Article</span><span class="o">.^</span><span class="nb">attributes</span><span class="p">;</span>         <span class="c1"># (Str $!title Str $!content Int $!view-count)</span>
 <span class="nb">say</span> <span class="n">Article</span><span class="o">.^</span><span class="nb">attributes</span><span class="o">[</span><span class="mi">0</span><span class="o">].</span><span class="nb">WHAT</span><span class="p">;</span> <span class="c1"># (Attribute)</span>
 </code></pre></div><p>如果你点击了 MOP 链接, 你不会对我们得到一个含有 3 个元素的数组感到惊讶。如果你仍旧对该语法感到惊讶, 那么 <code>.^</code> 是元方法调用。意思是 <code>a.^b</code> 会被转换为 <code>a.HOW.b(a)</code>。</p>
 <p>如果我们想知道我们可以访问到什么, 我们问它就是了(移除了匿名的那些):</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">Attribute</span><span class="o">.^</span><span class="nb">methods</span><span class="o">.</span><span class="nb">grep</span><span class="p">(</span><span class="o">*.</span><span class="nb">name</span> <span class="ow">ne</span> <span class="p">&#39;</span><span class="s1">&lt;anon&gt;</span><span class="p">&#39;);</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">Attribute</span><span class="o">.^</span><span class="nb">methods</span><span class="o">.</span><span class="nb">grep</span><span class="p">(</span><span class="o">*.</span><span class="nb">name</span> <span class="ow">ne</span> <span class="p">&#39;</span><span class="s1">&lt;anon&gt;</span><span class="p">&#39;);</span>
 <span class="c1"># (compose apply_handles get_value set_value</span>
 <span class="c1">#      container readonly package inlined WHY set_why Str gist)</span>
 
 <span class="nb">Attribute</span><span class="o">.^</span><span class="nb">attributes</span> <span class="c1"># Method &#39;gist&#39; not found for invocant of class &#39;BOOTSTRAPATTR&#39;</span>
 </code></pre></div><p>哎吆… 看起来这有点太 meta 了。幸好, 我们能使用 Rakudo 的一个非常好的属性: 它的大部分都是用 Raku 写的! 要查看我们可以得到什么, 我们查看<a href="https://github.com/rakudo/rakudo/blob/nom/src/core/Attribute.pm">源代码</a>就好了:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># has Str $!name;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="c1"># has Str $!name;</span>
 <span class="o">...</span>
 <span class="c1"># has Mu $!type;</span>
 </code></pre></div><p>我们得到了键的名字, 还有去生成值的类型。让我们看看&hellip;</p>
-<pre><code>&gt; say Article.^attributes.map(*.name)
+<pre tabindex="0"><code>&gt; say Article.^attributes.map(*.name)
 ($!title $!content $!view-count)
 &gt; say Article.^attributes.map(*.type)
 ((Str) (Str) (Int))
 </code></pre><p>天才! 看起来是正确的。(如果你想知道为什么我们得到 <code>$!</code>（私有的） twigils, 那是因为 <code>$.</code> 只意味着将会生成的一个 getter 方法)。属性本身仍然是私有的, 并且在类中是可访问的。</p>
 <p>现在, 我们唯一要做的事情就是创建一个循环&hellip;</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%args</span><span class="p">;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="k">my</span> <span class="nv">%args</span><span class="p">;</span>
 
 <span class="k">for</span> <span class="n">Article</span><span class="o">.^</span><span class="nb">attributes</span> <span class="k">-&gt;</span> <span class="nv">$attr</span> <span class="p">{</span>
     <span class="nv">%args</span><span class="p">{</span><span class="nv">$attr</span><span class="o">.</span><span class="nb">name</span><span class="o">.</span><span class="nb">substr</span><span class="p">(</span><span class="mi">2</span><span class="p">)}</span> <span class="o">=</span> <span class="nf">generate-data</span><span class="p">(</span><span class="nv">$attr</span><span class="o">.</span><span class="nb">type</span><span class="p">);</span>
 <span class="p">}</span>
 <span class="nb">say</span> <span class="nv">%args</span><span class="o">.</span><span class="nb">perl</span><span class="p">;</span>
 </code></pre></div><p>这是一个将会打印什么的例子:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="p">{:</span><span class="s">content</span><span class="p">(&#34;</span><span class="s2">muenglhaxrvykfdjzopqbtwisc</span><span class="p">&#34;)</span><span class="o">,</span> <span class="p">:</span><span class="s">title</span><span class="p">(&#34;</span><span class="s2">rfpjndgohmasuwkyzebixqtvcl</span><span class="p">&#34;)</span><span class="o">,</span> <span class="p">:</span><span class="s">view-count</span><span class="p">(</span><span class="mi">45</span><span class="p">)}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="p">{:</span><span class="s">content</span><span class="p">(&#34;</span><span class="s2">muenglhaxrvykfdjzopqbtwisc</span><span class="p">&#34;)</span><span class="o">,</span> <span class="p">:</span><span class="s">title</span><span class="p">(&#34;</span><span class="s2">rfpjndgohmasuwkyzebixqtvcl</span><span class="p">&#34;)</span><span class="o">,</span> <span class="p">:</span><span class="s">view-count</span><span class="p">(</span><span class="mi">45</span><span class="p">)}</span>
 </code></pre></div><p>每次你运行你的代码你都会得到不同的结果(然而我不认为它会创建一篇值得阅读的文章…)。剩下唯一要做的就是把它们传递给 Article 的构造函数:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="o">|</span><span class="nv">%args</span><span class="p">);</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="nb">say</span> <span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="o">|</span><span class="nv">%args</span><span class="p">);</span>
 </code></pre></div><p>(前缀 <code>|</code> 允许我们把 <em>%args</em> 作为具名参数传递, 而不是单个位置参数)。再次, 你应该会打印这些东西:</p>
-<div class="highlight"><pre class="chroma"><code class="language-raku" data-lang="raku"><span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">title</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">kyvphxqmejtuicrbsnfoldgzaw</span><span class="p">&#34;</span>, <span class="s">content</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">jqbtcyovxlngpwikdszfmeuahr</span><span class="p">&#34;</span>, <span class="s">view-count</span> <span class="o">=&gt;</span> <span class="mi">26</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="n">Article</span><span class="o">.</span><span class="nb">new</span><span class="p">(</span><span class="s">title</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">kyvphxqmejtuicrbsnfoldgzaw</span><span class="p">&#34;</span><span class="o">,</span> <span class="s">content</span> <span class="o">=&gt;</span> <span class="p">&#34;</span><span class="s2">jqbtcyovxlngpwikdszfmeuahr</span><span class="p">&#34;</span><span class="o">,</span> <span class="s">view-count</span> <span class="o">=&gt;</span> <span class="mi">26</span><span class="p">)</span>
 </code></pre></div><p>呀! 我们设法在不了解 Article 的情况下胡乱地(blindly)创建了一个 Article 实例。 我们的代码能够用于为任何期望传递它的类属性的构造函数生成数据。好了!</p>
 <p>PS: 留个作业! 移动到 generate-data 函数, 以至于我们能给 Article 添加一个 User <code>$.author</code> 属性, 并且构建好这个函数。祝你好运!</p>
 ]]></content>
