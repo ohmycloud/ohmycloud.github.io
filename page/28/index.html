@@ -301,7 +301,7 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/write-to-elasticsearch/'> 写入到 Elasticsearch</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/examples-for-buiding-stateful-streaming-applications-with-apache-flink/'> 用 Apache Flink 创建带状态的流式应用</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -363,7 +363,7 @@
     
     <div class="post-date">
         
-        <time datetime="2019-10-01T16:40:54+0000" class="dt-published">Tue Oct 1, 2019</time>
+        <time datetime="2020-02-16T20:06:04+0000" class="dt-published">Sun Feb 16, 2020</time>
         
         
     </div>
@@ -372,11 +372,96 @@
     </header>
 
     <div class="post p-summary" >
-        <p>如果你使用 Elasticsearch 6.x 或者更高版本, 那么用 Spark Structured Streaming 写入到 Elasticsearch 就很直截了当。
-不像 5.x 之前的版本那样, 为了写入到 Elasticsearch, 你必须实现一个自定义的 sink, 6.x 版本在 Spark Structured Streaming 里面开箱即用。
-依赖如下:
-&lt;dependency&gt; &lt;groupId&gt;org.elasticsearch&lt;/groupId&gt; &lt;artifactId&gt;elasticsearch-spark-20_2.11&lt;/artifactId&gt; &lt;version&gt;6.2.4&lt;/version&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.spark&lt;/groupId&gt; &lt;artifactId&gt;spark-core_${scala.main}&lt;/artifactId&gt; &lt;version&gt;2.3.1&lt;/version&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.spark&lt;/groupId&gt; &lt;artifactId&gt;spark-sql_${scala.main}&lt;/artifactId&gt; &lt;version&gt;2.3.1&lt;/version&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.spark&lt;/groupId&gt; &lt;artifactId&gt;spark-streaming_${scala.main}&lt;/artifactId&gt; &lt;version&gt;2.3.1&lt;/version&gt; &lt;/dependency&gt; 然后写入到 Elasticsearch 就相当简单了。
-1、创建带有 Elasticsearch 配置的 SparkSession val spark = SparkSession .builder // run app locally utilizing all cores .master(&#34;local[*]&#34;) .appName(getClass.getName) .config(&#34;es.nodes&#34;, &#34;localhost&#34;) .config(&#34;es.port&#34;, &#34;9200&#34;) .</p>
+        <p>首先创建项目框架 在终端中执行如下命令:
+curl https://flink.apache.org/q/quickstart-scala-SNAPSHOT.sh | bash -s 1.10.0 此例子中使用了 flink-table 依赖, 我们在 pom 文件中加入它:
+&lt;dependency&gt; &lt;groupId&gt;org.apache.flink&lt;/groupId&gt; &lt;artifactId&gt;flink-table&lt;/artifactId&gt; &lt;version&gt;${flink.version}&lt;/version&gt; &lt;type&gt;pom&lt;/type&gt; &lt;scope&gt;provided&lt;/scope&gt; &lt;/dependency&gt; &lt;!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-common --&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.flink&lt;/groupId&gt; &lt;artifactId&gt;flink-table-common&lt;/artifactId&gt; &lt;version&gt;${flink.version}&lt;/version&gt; &lt;scope&gt;provided&lt;/scope&gt; &lt;/dependency&gt; </p>
+
+    </div>
+
+    
+    
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/why-you-might-be-misusing-spark-streaming-api/'> 为什么你可能会误用 Spark Streaming API</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-11-22T19:34:09+0000" class="dt-published">Fri Nov 22, 2019</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>免责声明：是的，我知道这个话题有些争议，而且我知道大多数信息都在 Spark 文档中针对其 Streaming API 进行了介绍，但是当我看到这个错误发生了很多遍之后，我感到写这篇博客的冲动很强烈。
+我经常会看到来自 Spark Streaming 的新手在 StackOverflow 上提问，大致如下所示：
+问题：“我正在尝试执行 XYZ，但无法正常工作，该怎么办？ 这是我的代码：”
+val sparkContext = new SparkContext(&#34;MyApp&#34;) val streamingContext = new StreamingContext(sparkContext, Seconds(4)) val dataStream = streamingContext.socketTextStream(&#34;127.0.0.1&#34;, 1337) dataStream.foreachRDD { rdd =&gt; // Process RDD Here } 嗯，好吧，这是怎么了？ 当我开始学习 Spark 时，我的第一个着陆点是有关 RDD（弹性分布式数据集）如何工作的解释。通常的例子是单词统计，其中所有操作都在 RDD 上执行。我认为可以肯定的是，这是许多其他学习 Spark 的人的切入点（尽管如今 DataFrame\Sets 已成为初学者的首选方法）。
+当人们飞跃使用 Spark Streaming 时，可能有点不清楚 DStream 的附加抽象意味着什么。这导致许多人寻求他们可以掌握的东西，他们遇到的最熟悉的方法是 foreachRDD，该方法将 RDD 作为输入并产生 Unit（典型的副作用方法的结果）。然后，他们可以再次在他们已经感到满意和理解的 RDD 级别上工作。这完全遗漏了 DStreams 的要点，这就是为什么我想简要了解一下我们可以在 DStream 本身上做些什么而无需探究底层 RDD 的原因。</p>
 
     </div>
 
@@ -384,10 +469,10 @@
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/write-to-elasticsearch/'
-               title="Read more about 写入到 Elasticsearch">
+            <a href='https://ohmyweekly.github.io/notes/why-you-might-be-misusing-spark-streaming-api/'
+               title="Read more about 为什么你可能会误用 Spark Streaming API">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 写入到 Elasticsearch</span>
+                <span class="screen-readers-only" > about 为什么你可能会误用 Spark Streaming API</span>
             </a>
         </div>
     
@@ -396,7 +481,7 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/custom-session-windows/'> 自定义会话窗口</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/'> 探索 Apache Spark 中的状态流</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -458,7 +543,7 @@
     
     <div class="post-date">
         
-        <time datetime="2019-10-01T16:22:19+0000" class="dt-published">Tue Oct 1, 2019</time>
+        <time datetime="2019-11-22T17:51:31+0000" class="dt-published">Fri Nov 22, 2019</time>
         
         
     </div>
@@ -467,12 +552,16 @@
     </header>
 
     <div class="post p-summary" >
-        <p>Spark Structured Streaming 允许我们以一种直接了当的方式在滑动事件时间窗口上执行聚合。
-Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作和水位。
-用例 在会话持续时间内求用户收益的总和，当流中有存款事件时，存入当前余额并关闭会话。
-窗口和水位 默认情况下，窗口和水位与基于时间的窗口一起使用。在我们的用例中，这不起作用，因为当我们收到一个存放当前余额的信号时，我们想关闭会话。
-结果 我们可以通过基于 mapGroupsWithState 函数实现自定义会话窗口来实现.
-定义自定义会话类 case class Transaction(sessionId: String, winAmount: Double, deposit: Boolean) case class SessionTrackingValue(totalSum: Double) case class SessionUpdate(sessionId: String, currentBalance: Double, depositCurrentBalance: Boolean) 创建本地 SparkSession val spark: SparkSession = SparkSession .builder .master(&#34;local[*]&#34;) .appName(getClass.getName) .getOrCreate() 创建 socket 流 val socketStream: DataFrame = spark.readStream // socket as stream input .format(&#34;socket&#34;) // connect to socket port localhost:9999 waiting for incoming stream .</p>
+        <p>更新(2017.08.01): Spark v2.2 最近推出了一个叫做 mapGroupsWithState 的有状态流的新抽象, 我最近有一篇博客也是关于它的。我强烈建议你检查一下。
+介绍 Apache Spark 由几个模块组成，每个模块都有不同的用途。 它的功能强大的模块之一是 Streaming API，它使开发人员能够在称为 Discretized Stream 或 DStream 的抽象下使用连续流（或准确地说是微批次）。
+在这篇文章中，我将深入探讨 Spark Streaming 的一个特殊属性，它是有状态的 Streaming API。 有状态流使我们能够维护微批之间的状态，从而使我们能够形成数据的会话化。
+免责声明-为了遵循本文的流程，应该对 Spark 的工作原理有基本的了解，并对 DStream 抽象具有一般的了解。 如果没有，请继续阅读，不用担心，我会等你&hellip;
+欢迎回来！ 让我们继续。
+通过例子理解 为了了解如何使用 API​​，让我们创建一个简单的传入数据示例，该示例要求我们进行会话化。我们的输入数据流将是 UserEvent 类型：
+case class UserEvent(id: Int, data: String, isLast: Boolean) 每个事件描述一个唯一的用户。我们通过用户 ID 标识用户，并用 String 表示发生的事件的内容。我们还想知道用户何时结束会话，因此我们提供了一个 isLast 标志来指示会话结束。
+我们负责汇总所有用户事件的状态将是 UserSession 类型的状态：
+case class UserSession(userEvents: Seq[UserEvent]) 其中包含特定用户发生的事件序列。在此示例中，我们假设数据源是来自于 Kafka 使用的 JSON 编码数据流。
+我们的 Id 属性将用作键，而 UserEvent 将是我们的值。两个放在一块，我们得到一个 DStream[(Int, UserEvent)]。</p>
 
     </div>
 
@@ -480,10 +569,10 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/custom-session-windows/'
-               title="Read more about 自定义会话窗口">
+            <a href='https://ohmyweekly.github.io/notes/exploring-stateful-streaming-with-apache-spark/'
+               title="Read more about 探索 Apache Spark 中的状态流">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 自定义会话窗口</span>
+                <span class="screen-readers-only" > about 探索 Apache Spark 中的状态流</span>
             </a>
         </div>
     
@@ -492,7 +581,7 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/bucket-pruning/'> Apache Spark 2.4.0 特性 - bucket pruning</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/a-closer-look-at-ownership-in-rust/'> 细究 Rust 中的所有权</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -554,7 +643,7 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
     <div class="post-date">
         
-        <time datetime="2019-09-30T11:06:42+0000" class="dt-published">Mon Sep 30, 2019</time>
+        <time datetime="2019-11-03T10:58:17+0000" class="dt-published">Sun Nov 3, 2019</time>
         
         
     </div>
@@ -563,12 +652,17 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     </header>
 
     <div class="post p-summary" >
-        <p>https://www.waitingforcode.com/apache-spark-sql/apache-spark-2.4.0-features-bucket-pruning/read
-桶定义 均衡的分区让我们更快地处理数据。例如，我们可以收集物联网事件，并把它们按照日期分区并存储在树一样的结构中：
-/events/2018/10/29 /events/2018/10/30 /events/2018/10/31 如果我们想按物联网设备号划分相同的数据，我们该怎么办？ 从技术上讲，这是可行的，但从概念上讲，它可能不如基于日期的分区有效。 设备密钥是具有非常高的基数（可能的唯一值的数量）的值，我们最终将得到一棵具有数百或数千个子目录的树。 对于不是分区的最佳选择的值问题，解决方案之一是桶存储，也称为群集。
-桶是“分区内的分区”。 区别在于桶的数量是固定的。 在大多数情况下，这些值会使用基于哈希的简单策略分配给存储桶。 您可以在下面找到 Apache Spark 中存储桶的示例：
-&#34;Spark&#34; should &#34;create buckets in partitions for orders Dataset&#34; in { val tableName = s&#34;orders${System.currentTimeMillis()}&#34; val orders = Seq((1L, &#34;user1&#34;), (2L, &#34;user2&#34;), (3L, &#34;user3&#34;), (4L, &#34;user1&#34;)).toDF(&#34;order_id&#34;, &#34;user_id&#34;) orders.write.mode(SaveMode.Overwrite).bucketBy(2, &#34;user_id&#34;).saveAsTable(tableName) val metadata = TestedSparkSession.sessionState.catalog.getTableMetadata(TableIdentifier(tableName)) metadata.bucketSpec shouldBe defined metadata.bucketSpec.get.numBuckets shouldEqual 2 metadata.bucketSpec.get.bucketColumnNames(0) shouldEqual &#34;user_id&#34; } 在分布式数据处理框架中，这种方法往往有助于避免洗牌阶段。例如，当桶用于2个数据集与 Spark SQL 中排序合并连接时，因为这两个数据集已经可以位于同一个分区中, 因此洗牌可能没有必要。当然，这两个数据集必须具有相同的分区数并使用哈希分区算法。
-桶剪枝实现 在 Apache Spark 2.4.0 之前，当桶列之一参与查询时，Spark 引擎并没有作出任何优化。毕竟，由于桶存储是确定性的，引擎只能读取桶文件存储筛选值。</p>
+        <p>所以，您想学习 Rust，并不断了解所有权和借用的概念，但不能完全了解它的含义。所有权至关重要，因此在学习 Rust 的过程中尽早理解它是很好的，而且还可以避免遇到导致您无法实现程序的编译器错误。
+在上一篇文章中，我们已经从 JavaScript 开发人员的角度讨论了所有权模型。在本文中，我们将仔细研究 Rust 如何管理内存，以及为什么这最终会影响我们在 Rust 中编写代码并保持内存安全的方式。
+那么什么是内存安全？ 首先，最重要的是要了解在讨论什么使 Rust 成为一种编程语言时，内存安全实际上意味着什么。特别是当来自非系统编程背景，或者主要具有垃圾回收语言的经验时，可能很难理解 Rust 的这一基本功能。
+正如威尔·克里顿（Will Crichton）在他的伟大文章《Rust 的内存安全：C 语言案例研究》中所述：
+“内存安全性是程序的属性，其中所使用的内存指针始终指向有效内存，即已分配的内存和正确的类型/大小。内存安全是一个正确性问题-内存不安全程序可能会崩溃，或者会由于错误而产生不确定的输出。”
+实际上，这意味着存在允许我们编写“内存不安全”代码的语言，从某种意义上来说，引入错误非常容易。其中一些错误是：
+悬空指针：指向无效数据的指针（一旦我们查看数据在内存中的存储方式，这将更有意义）。您可以在此处阅读有关悬空指针的更多信息。
+两次释放：尝试两次释放相同的内存位置，这可能导致“未定义的行为”。在这里查看更多信息。
+为了说明悬空指针的概念，让我们看一下下面的 C++ 代码及其在内存中的表示方式：
+std::string s = &#34;Have a nice day&#34;; 初始化的字符串在内存中通常使用如下的栈和堆表示：
+buffer / capacity / / length / / / +–––+––––+––––+ stack frame │ • │ 16 │ 15 │ &lt;– s +–│–+––––+––––+ │ [–│––––––––––––––––––––––––– capacity ––––––––––––––––––––––––––] │ +–V–+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+ heap │ H │ a │ v │ e │ │ a │ │ n │ i │ c │ e │ │ d │ a │ y │ │ +–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+–––+ [––––––––––––––––––––––––– length ––––––––––––––––––––––––––] 我们将在一秒钟之内介绍一下栈和堆的内容，但是现在很重要的一点是，要知道存储在栈中的是 std::string 对象本身，它的长度为三个字，固定大小。这些字段是指向堆分配缓冲区的指针，该缓冲区保存实际数据，缓冲区容量和文本长度。换句话说，std::string 拥有其缓冲区。程序销毁该字符串时，也会通过该字符串的析构函数释放相应的缓冲区。</p>
 
     </div>
 
@@ -576,10 +670,10 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/bucket-pruning/'
-               title="Read more about Apache Spark 2.4.0 特性 - bucket pruning">
+            <a href='https://ohmyweekly.github.io/notes/a-closer-look-at-ownership-in-rust/'
+               title="Read more about 细究 Rust 中的所有权">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about Apache Spark 2.4.0 特性 - bucket pruning</span>
+                <span class="screen-readers-only" > about 细究 Rust 中的所有权</span>
             </a>
         </div>
     
@@ -588,7 +682,7 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/stateful-transformations-with-mapgroupswithstate/'> 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/execute-shell-command-in-spark-streaming-application/'> 在 Spark Streaming 程序中执行 shell 命令</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -650,7 +744,7 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     
     <div class="post-date">
         
-        <time datetime="2019-09-30T09:50:04+0000" class="dt-published">Mon Sep 30, 2019</time>
+        <time datetime="2019-10-21T16:16:38+0000" class="dt-published">Mon Oct 21, 2019</time>
         
         
     </div>
@@ -659,13 +753,8 @@ Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作�
     </header>
 
     <div class="post p-summary" >
-        <p>mapGroupsWithState 解释 mapGroupsWithState(timeoutConf: GroupStateTimeout)(func: (K, Iterator[V], GroupState[S]) =&gt; U) 是一个应用到数据组上的转换。由于它要求数据分组, 所以可能会引入 shuffling 的风险。通过调用 func 参数来计算 state。这个转换可以用在有界数据源和无界数据源上。对于有界数据源, 最终状态会立即被计算出来, 对于无界数据源, 每次触发处理后, 状态都可能会改变。
-mapGroupsWithState 的参数 timeoutConf: GroupStateTimeout 这个参数负责处理超时。 mapGroupsWithState 转换接收 3 个不同的超时值: NoTimeout, ProcessingTimeTimeout 和 EventTimeTimeout(只在设置了水位时才有效)。状态过期时间定义在作为 func 参数值的函数里面, 它要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutDuration (processing time), 要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutTimestamp (event time)。
-每次至少有一条记录被发送到组里时, 就更新超时时间。状态只有在给定组在指定阈值时间内未接收到任何数据时才被认为过期。
-超时时间是在指定 GroupState 对象里面定义的, 所以根据处理的组指定不同的超时配置也是完全可行的。
-func: (K, Iterator[V], GroupState[S]) =&gt; U - 该函数定义如何处理组里的值以生成状态。 如你所见, 它完全是类型无关的, 例如, 值([V]) 和状态 [S] 都不影响所返回的数据集([U])的类型。
-当两个条件之一满足时, 该函数就会被调用: 要么组里有要处理的新值, 要么状态已经过期。在状态过期这种情况下, 会使用一个空列表的值作为第二个参数来调用该函数。
-GroupState 另一个重要的与状态管理有关的对象是 org.</p>
+        <p>我有个 Spark FileStreaming 程序，当监控到一个批次完成后，就执行 hdfs 的 mv 命令：
+import scala.sys.process._ import org.apache.spark.streaming.StreamingContext import org.apache.spark.streaming.scheduler.{StreamingListener, StreamingListenerBatchCompleted} class StreamingMonitor(ssc: StreamingContext) extends StreamingListener { override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted): Unit = { try { val day = Seq(&#34;sh&#34;, &#34;-c&#34;, &#34;hdfs dfs -cat /tmp/apps/days.txt | head -1&#34;).!!.trim // 取日期文本文件的第一行 Seq(&#34;sh&#34;, &#34;-c&#34;, s&#34;&#34;&#34; if hdfs dfs -test -e /a26_adapter_data/nation/vintype=A26/d=${day}; then hdfs dfs -mv /a26_adapter_data/nation/vintype=A26/d=${day} /daily_parquet/nation/vintype=A26 fi &#34;&#34;&#34;).!! Seq(&#34;sh&#34;, &#34;-c&#34;, s&#34;&#34;&#34; if hdfs dfs -test -e /a26_adapter_data/enterprise/vintype=A26/dt=${day}; then hdfs dfs -mv /a26_adapter_data/enterprise/vintype=A26/dt=${day} /daily_parquet/enterprise/vintype=A26 fi &#34;&#34;&#34;).</p>
 
     </div>
 
@@ -673,10 +762,10 @@ GroupState 另一个重要的与状态管理有关的对象是 org.</p>
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/stateful-transformations-with-mapgroupswithstate/'
-               title="Read more about 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换">
+            <a href='https://ohmyweekly.github.io/notes/execute-shell-command-in-spark-streaming-application/'
+               title="Read more about 在 Spark Streaming 程序中执行 shell 命令">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</span>
+                <span class="screen-readers-only" > about 在 Spark Streaming 程序中执行 shell 命令</span>
             </a>
         </div>
     
@@ -685,7 +774,7 @@ GroupState 另一个重要的与状态管理有关的对象是 org.</p>
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/add-for-else-branch/'> 给 for 添加 else 分支</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/triggers-in-spark-structured-streaming/'> Spark Structured Streaming 中的触发器</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -747,7 +836,7 @@ GroupState 另一个重要的与状态管理有关的对象是 org.</p>
     
     <div class="post-date">
         
-        <time datetime="2019-09-24T12:25:09+0000" class="dt-published">Tue Sep 24, 2019</time>
+        <time datetime="2019-10-04T12:55:38+0000" class="dt-published">Fri Oct 4, 2019</time>
         
         
     </div>
@@ -756,9 +845,17 @@ GroupState 另一个重要的与状态管理有关的对象是 org.</p>
     </header>
 
     <div class="post p-summary" >
-        <p>标准 Raku 中, for 关键字是没有 else 分支的, 但是 Raku 可以实现 for...else 方言, 新建一个模块, 命名为 Slang::ForElse, 其目录结构如下:
-Slang/ForElse.pm6 其中 ForElse.pm6 的内容如下:
-role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.kok&gt; {} &lt;.vetPerl5Syntax&gt; &lt;xblock(2)&gt; {} [ &#39;else&#39; &lt;elseblock=pblock&gt; ]? } rule vetPerl5Syntax { [ &lt;?before &#39;my&#39;? &#39;$&#39;\w+\s+&#39;(&#39; &gt; &lt;.typed_panic: &#39;X::Syntax::P5&#39;&gt; ]? [ &lt;?before &#39;(&#39; &lt;.EXPR&gt;? &#39;;&#39; &lt;.EXPR&gt;? &#39;;&#39; &lt;.EXPR&gt;? &#39;)&#39; &gt; &lt;.obs(&#39;C-style &#34;for (;;)&#34; loop&#39;, &#39;&#34;loop (;;)&#34;&#39;)&gt; ]? } } role ForElse::Actions { use nqp; use QAST:from&lt;NQP&gt;; sub lookup(Mu \match, \key) { nqp::atkey( nqp::findmethod(match, &#39;hash&#39;)(match), key ).</p>
+        <p>最近几周，我专注于 Apache Beam 项目。经过一番阅读之后，我发现了 Beam 和 Spark 结构化流之间的许多相似概念（或反之？）。相似之处之一就是触发器。
+经过数月的休息后，本文介绍了另一个 Apache Spark 功能，即触发器。第一部分介绍了 Apache Spark 结构化流项目的上下文中的触发器。第二个显示了一些实现细节。最后一部分包含一些学习测试，显示了触发器如何工作。
+触发器角色 Spark 触发器与 Apache Beam 中的触发器具有相似的作用，即，它们确定何时开始对累积数据进行处理。该处理的执行显然会向结果表发出新数据。关于 Apache Spark 中基于流的先前版本（基于 DStream），触发器的概念类似于批处理间隔属性。
+在描述的版本（2.2.1）中，Spark 中有2种不同的触发器类型。第一种类型基于处理时间。它根据处理时间按固定间隔执行流查询。可以以任何单位时间（ms，s，min，&hellip;）定义此间隔。第二种类型称为once，因为它仅执行一次查询。执行后，查询终止，即使有新数据到达，查询也不会再次开始。
+默认情况下，Apache Spark 结构化流以 0 ms的基于处理时间的触发器执行查询。这意味着 Spark 将在处理完之前的查询后尽快启动新查询。仅当存在新数据时，才会执行新的执行。
+触发器内部 在内部，触发器分组在 org.apache.spark.sql.streaming.Trigger 类中，其中每种触发器类型都由一个或多个工厂方法表示。在处理时间的情况下，我们可以使用以下方法创建触发器：ProcessingTime（长间隔Ms），ProcessingTime（长间隔，TimeUnit timeUnit），ProcessingTime（持续时间间隔）或 ProcessingTime（字符串间隔）。它们全部都从 org.apache.spark.sql.streaming.ProcessingTime 对象调用幕后创建或应用方法。一次触发器由返回 OneTimeTrigger 案例对象的 Once() 表示。
+如此创建的触发器实例稍后将在流查询中用作 org.apache.spark.sql.execution.streaming.StreamExecution 属性的一部分。在此实例中，触发器用于构建org.apache.spark.sql.execution.streaming.TriggerExecutor 实现的正确实例，该实现将是 ProcessingTimeExecutor 来处理基于时间的触发器，或者是 OneTimeExecutor 来执行一次触发器。
+稍后，流查询由 TriggerExecutor的execute(triggerHandler: ()=&gt; Boolean) 方法执行。此方法的实现取决于触发器类型。对于一次执行的触发器，execute 方法仅启动一次 TriggerHandler 函数。对于ProcessingTimeExecutor，execute 方法是一个长时间运行的过程（while(true)循环），其中触发器在执行查询之前等待间隔时间。
+触发器还与 org.apache.spark.sql.execution.streaming.ProgressReporter#finishTrigger(hasNewData: Boolean) 方法中定义的统计信息有关。
+触发器范例 下面的学习测试显示了一些触发特性：
+&#34;once trigger&#34; should &#34;execute the query only once&#34; in { val inputStream = new MemoryStream[Int](1, sparkSession.</p>
 
     </div>
 
@@ -766,10 +863,10 @@ role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/add-for-else-branch/'
-               title="Read more about 给 for 添加 else 分支">
+            <a href='https://ohmyweekly.github.io/notes/triggers-in-spark-structured-streaming/'
+               title="Read more about Spark Structured Streaming 中的触发器">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 给 for 添加 else 分支</span>
+                <span class="screen-readers-only" > about Spark Structured Streaming 中的触发器</span>
             </a>
         </div>
     
@@ -778,7 +875,7 @@ role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/chopping-substrings/'> chopping-substrings</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/output-modes-in-spark-structured-streaming/'> Spark Structured Streaming 中的输出模式</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -840,7 +937,7 @@ role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.
     
     <div class="post-date">
         
-        <time datetime="2019-09-18T23:22:26+0000" class="dt-published">Wed Sep 18, 2019</time>
+        <time datetime="2019-10-04T12:05:27+0000" class="dt-published">Fri Oct 4, 2019</time>
         
         
     </div>
@@ -849,18 +946,14 @@ role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.
     </header>
 
     <div class="post p-summary" >
-        <p>第18周挑战赛的第一个任务是在一组字符串中找出最长的共同子串，即给定一组字符串如 &ldquo;ABABC&rdquo;、&ldquo;BABCA &ldquo;和 &ldquo;ABCBA&rdquo;，打印出 &ldquo;ABC&rdquo;。
-&ldquo;最佳实践&quot;解决方案是一种被称为后缀树的技术，它需要一些中等复杂的编码。然而，我们可以使用一种简单得多的方法，对长达几十万字符的字符串获得非常合理的性能。
-让我们从一个非常简洁，但次优的解决方案开始。如果我们有一个每个字符串的所有可能的子串的列表:
-ABABC: ABABC, ABAB, BABC, ABA, BAB, ABC, AB, BA, BC, A, B, C BABCA: BABCA, BABC, ABCA, BAB, ABC, BCA, BA, AB, BC, CA, B, A, C ABCBA: ABCBA, ABCB, BCBA, ABC, BCB, CBA, AB, BC, CB, BA, A, B, C
-&hellip;那么我们可以把每个列表当作一个集合，取这些集合的交集:
-ABC, AB, BA, BC, A, B, C
-&hellip;然后只需找到最长的元素: ABC
-当然，有时所有可能的子串的交集会有一个以上的最长元素:
-SHAMELESSLY NAMELESS LAMENESS
-&hellip;所以我们需要确保我们的算法能够找到所有的子串。
-鉴于 Raku 语言中内置了集合和集合操作，这里唯一的挑战就是为每个字符串生成所有可能的子串的完整集合。而且，鉴于 Raku 有非常复杂的正则表达式匹配，这也不是什么真正的挑战。
-在普通的 regex 匹配中:</p>
+        <p>结构化流引入了许多有关基于 DStream 的流的新概念。其中之一是输出模式。
+这篇文章介绍了 Spark 2.0.0 中引入的用于处理流数据输出的输出模式。第一部分通过简短的理论部分向他们展示。第二部分介绍了它们的 API。最后一部分显示了它们在某些学习测试中的工作方式。
+输出模式定义 输出模式指定将数据写入结果表的方式。在可用的输出模式中，我们可以区分:
+追加(append)-这里仅将新行写入输出接收器。此模式保留给处理，不进行任何汇总，非常适合不可变的结果。 需要注意的重要一点是与水位的关系。如果在聚合中定义了水位，则它控制何时将附加数据发送到结果表。它仅在“中间”状态（=处理期间更改的状态）完成之后才发生。仅当水位的新值在给定组中的最新条目之前通过时，才会发生这种情况。例如，假设水位设置为19:00:00，并且组“A”的记录的最新值来自 19:00:05。现在，当水位传递到 19:00:06时，组“A”的结果将被发送到结果表。引擎认为不会传递任何新的事件，因此可以安全地将结果发送到输出表。 完成(compelete)-在这种模式下，所有行每次都被写入输出接收器。当流有一些更新时，将进行写入。此模式专用于具有聚合的处理。 更新(update)-与上一个相似，不同之处在于仅将更新的行写入输出接收器。 输出模式 API 输出模式定义发生在 DataStreamWriter#outputMode（outputMode: String）方法中。因此，传递的名称稍后会从 InternalOutputModes 对象转换为相应的 case 对象。
+解析的实例主要在 DataStreamWriter 类中使用。它从那里传递到 StreamingQueryManager#startQuery(userSpecifiedName: Option[String], userSpecifiedCheckpointLocation: Option[String], df: DataFrame, sink: Sink, outputMode: OutputMode, useTempCheckpointLocation: Boolean = false, recoverFromCheckpointLocation: Boolean = true, trigger: Trigger = ProcessingTime(0), triggerClock: Clock = new SystemClock()).。顾名思义，此方法开始执行流查询。
+在物理执行方面，我们可以在 StateStoreSaveExec 中找到输出模式的轨迹。在那里存储中间状态结果。顺便说一下，我们可以找到许多有关水位的参考，有助于消除过时的结果。如果您想了解更多信息，请转到 Apache Spark 结构化流中有关 StateStore 的文章。
+输出模式示例 下表总结了可用于给定类型的处理的模式。在每个测试之后，编写一些测试以显示使用情况和未使用情况:
+带水位的聚合 附加模式: 受支持-但结果仅在超过水位后才发出（=输出完成）。如果未将汇总应用于水位的列，则该查询将不起作用。 完整模式: 受支持-与更新不同，不使用水位 更新模式: 支持-水位用于删除太旧的聚合 测试:</p>
 
     </div>
 
@@ -868,10 +961,10 @@ SHAMELESSLY NAMELESS LAMENESS
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/chopping-substrings/'
-               title="Read more about chopping-substrings">
+            <a href='https://ohmyweekly.github.io/notes/output-modes-in-spark-structured-streaming/'
+               title="Read more about Spark Structured Streaming 中的输出模式">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about chopping-substrings</span>
+                <span class="screen-readers-only" > about Spark Structured Streaming 中的输出模式</span>
             </a>
         </div>
     
@@ -880,7 +973,7 @@ SHAMELESSLY NAMELESS LAMENESS
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/beauty-is-best/'> beauty-is-best</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/fault-tolerance-inspark-structured-streaming/'> Spark Structured Streaming 中的容错</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -942,7 +1035,7 @@ SHAMELESSLY NAMELESS LAMENESS
     
     <div class="post-date">
         
-        <time datetime="2019-09-18T23:20:11+0000" class="dt-published">Wed Sep 18, 2019</time>
+        <time datetime="2019-10-04T11:34:28+0000" class="dt-published">Fri Oct 4, 2019</time>
         
         
     </div>
@@ -951,11 +1044,12 @@ SHAMELESSLY NAMELESS LAMENESS
     </header>
 
     <div class="post p-summary" >
-        <p>狂热的，贪婪的本性是太少
-20 年前，我首次涉足 Perl 编程的工作之一是使用一种纯文本工具，分析其结构并为给定的线宽整齐地设置其格式的工具。 这是一个中等复杂的换行应用程序，我每天都使用它来整理电子邮件通信，软件文档和博客条目。
-因此，第 19 届 Perl 每周挑战赛的第二项任务-实现&quot;贪婪的&quot;换行算法-在许多方面对我来说是一个老朋友。
-贪婪的换行只是将输入文本中的每个单词都添加到输出的当前行中，除非这样做会导致输出行超出所需的最大行宽，在这种情况下，它会在该点断开行并继续填充第二行，等等。 因此，一个 45 列的贪婪包装的段落如下所示：
-It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.</p>
+        <p>结构化流可通过应用于状态管理，数据源和数据接收器的语义来保证端到端的一次精确交付（以微批处理模式）。关于状态的帖子更详细地介绍了状态，但还有2个其他部分尚待发现。
+这篇文章分为2个主要部分。第一部分着眼于数据源，并说明了在微批量处理的情况下，一旦交付，它们将如何对端到端做出贡献。第二部分是关于接收器的部分，而最后一部分则是在一个示例中总结了所有理论要点。
+数据源 就正好一次处理而言，源必须是可重播的。也就是说，它必须允许跟踪当前的读取位置，还必须从上一个故障位置开始重新处理。这两个属性都有助于在任意失败（包括 driver 或 executor）后恢复处理状态。可重播源的一个很好的例子是 Apache Kafka 或其基于云的同事 Amazon Kinesis。两者都能够跟踪当前读取的元素-带偏移量的 Kafka 和带序列号的 Kinesis。不可重播源的一个很好的例子是 org.apache.spark.sql.execution.streaming.MemoryStream，在关闭应用程序后由于数据存储在易失性内存中而无法恢复。
+借助检查点机制，可以跟踪已处理的偏移量。在结构化流中，检查点文件中存储的项主要是有关当前批次中处理的偏移量的元数据。检查点存储在 checkpointLocation 选项或 spark.sql.streaming.checkpointLocation 配置条目中指定的位置。
+对于微批量执行，检查点将集成在以下架构中：
+检查点位置通过 StreamingQueryManager的startQuery 和 createQuery 方法从 DataStreamWriter#startQuery() 方法传递到 StreamExecution 抽象类。 StreamExecution 初始化对象 org.apache.spark.sql.execution.streaming.OffsetSeqLog。该对象表示 WAL日志，该日志记录每个已处理批次中存在的偏移量。 该字段表示处理数据源中偏移量的逻辑。当前微批处理的偏移量（我们称其为 N）始终在处理完成之前写入。该事实还假定来自先前微批处理（N-1）的所有数据均已正确写入输出接收器。在以下来自 org.apache.spark.sql.execution.streaming.MicroBatchExecution#constructNextBatch() 的代码段中进行了表示： updateStatusMessage(&#34;Writing offsets to log&#34;) reportTimeTaken(&#34;walCommit&#34;) { assert(offsetLog.add( currentBatchId, availableOffsets.toOffsetSeq(sources, offsetSeqMetadata)), s&#34;Concurrent update to the log. Multiple streaming jobs detected for $currentBatchId&#34;) logInfo(s&#34;Committed offsets for batch $currentBatchId. &#34; + s&#34;Metadata ${offsetSeqMetadata.toString}&#34;) // NOTE: The following code is correct because runStream() processes exactly one // batch at a time.</p>
 
     </div>
 
@@ -963,10 +1057,10 @@ It is a truth universally acknowledged, that a single man in possession of a goo
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/beauty-is-best/'
-               title="Read more about beauty-is-best">
+            <a href='https://ohmyweekly.github.io/notes/fault-tolerance-inspark-structured-streaming/'
+               title="Read more about Spark Structured Streaming 中的容错">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about beauty-is-best</span>
+                <span class="screen-readers-only" > about Spark Structured Streaming 中的容错</span>
             </a>
         </div>
     
@@ -975,7 +1069,7 @@ It is a truth universally acknowledged, that a single man in possession of a goo
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/with-friends-like-these/'> with friends like these</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/inner-joins-between-streams-in-spark-structured-streaming/'> Spark Structured Streaming 中流之间的内连接</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1037,7 +1131,7 @@ It is a truth universally acknowledged, that a single man in possession of a goo
     
     <div class="post-date">
         
-        <time datetime="2019-09-18T23:15:48+0000" class="dt-published">Wed Sep 18, 2019</time>
+        <time datetime="2019-10-04T10:53:37+0000" class="dt-published">Fri Oct 4, 2019</time>
         
         
     </div>
@@ -1046,13 +1140,14 @@ It is a truth universally acknowledged, that a single man in possession of a goo
     </header>
 
     <div class="post p-summary" >
-        <p>http://blogs.perl.org/users/damian_conway/2019/08/with-friends-like-these.html
-C-o-rr-a-ll-i-n-g d-i-tt-o-e-d l-e-tt-e-r-s
-我本打算本周重点关注第20周挑战的第一个任务&hellip;&hellip;但我能说什么呢？这个任务是把一个在命令行中指定的字符串分解成相同的字符:
-&quot;toolless&quot; → t oo ll e ss &quot;subbookkeeper&quot; → s u bb oo kk ee p e r &quot;committee&quot; → c o mm i tt ee 但是这在 Raku 中就是小菜一碟:
-use v6.d; sub MAIN (\str) { .say for str.comb: /(.) $0*/ } 或者使用更优雅的方式：
-.say for $str.comb: /\w+ % &lt;same&gt;/ 而在 Perl 中也几乎一样简单:
-use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&amp; while $str =~ /(.</p>
+        <p>Apache Kafka Streams 支持流之间的连接，社区对 Apache Spark 期望相同。此功能已在最新的 2.3.0 版本中实现并发布，在此之后的几个月后，现在是讨论该功能的好时机。
+该帖子由 2 个部分组成。第一个介绍了流管道中的连接的想法。下一个讨论两种受支持的类型之一-内连接。
+连接和流 在流上执行连接操作非常具有挑战性，这有很多原因。最明显的是延迟。对于有界数据源，要连接的所有数据都就位，而对于基于流的数据源，数据则在不断移动。有时（通常？）移动速度不同。可能是由于技术方面的问题（例如摄入管道问题），或者仅是由于功能要求，而相关事件并非总是在相似的时间段内生成。这种功能限制之一可能是在电子商务商店中的订购过程，在该过程中，订单很难很快完成。因此，连接操作必须以某种方式管理相关但非常异步的事件的情况。
+解决的另一个重要点是状态管理。由于给定事件的数据可能随时（非常晚）到达，并且存储该事件的存储空间有限，因此引擎必须弄清楚如何处理累积状态，尤其是何时丢弃它。此特定时间对应于我们不希望为给定的连接键接收任何新事件的时刻。
+Apache Spark 结构化流提供了连接 2 个或更多流的功能，从而解决了 2.3.0 版本中的两个问题。流到流的连接可以通过以下时间轴来表征：
+连接语义与批连接相同 找到匹配元素后立即生成输出（内连接） 水位和时间范围查询用于连接较晚的数据，并确定何时不再发生给定键的其他事件（状态丢弃） 支持不同的连接类型：内连和外连 连接可以级联，即应用于两个以上的流 但是，从 Apache Spark 2.3.1 开始，流到流连接具有几个限制：
+它只能与 append 输出模式一起使用（已计划支持其他模式） 连接之前仅支持类似 map 的操作，例如我们不能在连接之前进行聚合 流的内连接 支持的第一种流到流连接是内连接。由于当没有匹配的行不发出时是严格的连接，因此连接的列不需要任何时间限制。但是，这样做很危险，因为即使没有匹配的行也可能在状态存储中保留很长时间。这是因为建议使用一种条件来告知特定键的状态应保留多长时间。下面显示了不清除状态时内连接的最简单情况：
+it should &#34;output the result as soon as it arrives without watermark&#34; in { val mainEventsStream = new MemoryStream[MainEvent](1, sparkSession.sqlContext) val joinedEventsStream = new MemoryStream[JoinedEvent](2, sparkSession.sqlContext) val stream = mainEventsStream.toDS().join(joinedEventsStream.toDS(), $&#34;mainKey&#34; === $&#34;joinedKey&#34;) val query = stream.</p>
 
     </div>
 
@@ -1060,10 +1155,10 @@ use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/with-friends-like-these/'
-               title="Read more about with friends like these">
+            <a href='https://ohmyweekly.github.io/notes/inner-joins-between-streams-in-spark-structured-streaming/'
+               title="Read more about Spark Structured Streaming 中流之间的内连接">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about with friends like these</span>
+                <span class="screen-readers-only" > about Spark Structured Streaming 中流之间的内连接</span>
             </a>
         </div>
     
@@ -1072,7 +1167,7 @@ use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/itch-scratch/'> itch-scratch</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/outer-joins-in-spark-structured-streaming/'> Spark Structured Streaming 中的外连接</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1134,7 +1229,7 @@ use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&
     
     <div class="post-date">
         
-        <time datetime="2019-09-18T23:04:01+0000" class="dt-published">Wed Sep 18, 2019</time>
+        <time datetime="2019-10-04T08:25:57+0000" class="dt-published">Fri Oct 4, 2019</time>
         
         
     </div>
@@ -1143,10 +1238,11 @@ use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&
     </header>
 
     <div class="post p-summary" >
-        <p>在我过去写的一些博客中, 我经常遇到 Raku 不能如我所愿的情况。这是件小事儿, 但是像许多其它的小事儿一样, 它不经常发生但确一直刺激到我。
-在我之前写的东西中, 我使用了一些 Raku 代码完美地阐述了这一点。我需要为 @values 数组中的每个值创建一个对象, 如果 @values 为空, 则创建一个特殊的对象:
-for @values Z $label,&#34;&#34;,* -&gt; ($value, $label) { Result.new: desc =&gt; &#34;$label ($param.name() = $value)&#34;, value =&gt; timed { $block($value) }, check =&gt; { last if .timing &gt; TIMEOUT } } if !@values { Result.new: desc =&gt; $label, value =&gt; timed { $block(Empty) } } 几乎在同一时间, 在其它我所写的代码中(不在博客里的), 我需要完全相同的结构&hellip;处理数组中的每个元素, 如果数组中没有元素, 则做一些不同的处理:
-for @errors -&gt; $error { note $error if DEBUG; LAST die X::CompilationFailed.</p>
+        <p>以前，我们在 Apache Spark 中发现了流到流的内连接，但是它们不是唯一受支持的类型。另一个是外连接，使我们可以在不匹配行的情况下连接流。
+这篇文章是关于结构化流模块中的外连接的。它的第一部分介绍了有关这种连接的一些理论观点。第二篇展示了如何通过一些 Scala 示例来实现它。
+当匹配是可选的 流式外连接与经典的，类似批处理的连接没有什么不同。有了它们，我们总是从一侧获得所有行，即使其中一些行在连接数据集中没有匹配项也是如此。对于 RDBMS 之类的有限数据源，此类不匹配将直接返回，其中 null 表示另一侧的行。但是，无限来源的逻辑是不同的。由于不同的特性，例如网络延迟影响或脱机设备产生事件，因此在给定时刻我们可能没有所有连接的元素。因此，我们必须能够将物理连接推迟到我们确定要连接的大多数行都将到来的那一刻。为此，我们需要将一侧的行存储在某处。并且，如果您还记得 Apache Spark 结构化流中流之间的内连接的文章中的一些注释，则 Apache Spark 为此使用状态存储。下图从鸟瞰显示了这一点：
+该图像清楚地表明，与内连接水位的情况一样，行被缓冲在状态存储中。 外连接还使用水位和范围查询条件的概念来确定何时不应在给定的行中接收第二个流中的任何新匹配。 这就是为什么完全没有水位的外连接是不可能的：
+it should &#34;fail without watermark and range condition on watermark in the query&#34; in { val mainEventsStream = new MemoryStream[MainEvent](1, sparkSession.sqlContext) val joinedEventsStream = new MemoryStream[JoinedEvent](2, sparkSession.sqlContext) val mainEventsDataset = mainEventsStream.toDS().select($&#34;mainKey&#34;, $&#34;mainEventTime&#34;, $&#34;mainEventTimeWatermark&#34;) .withWatermark(&#34;mainEventTimeWatermark&#34;, &#34;2 seconds&#34;) val joinedEventsDataset = joinedEventsStream.toDS().select($&#34;joinedKey&#34;, $&#34;joinedEventTime&#34;, $&#34;joinedEventTimeWatermark&#34;) .withWatermark(&#34;joinedEventTimeWatermark&#34;, &#34;2 seconds&#34;) val stream = mainEventsDataset.</p>
 
     </div>
 
@@ -1154,106 +1250,10 @@ for @errors -&gt; $error { note $error if DEBUG; LAST die X::CompilationFailed.<
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/itch-scratch/'
-               title="Read more about itch-scratch">
+            <a href='https://ohmyweekly.github.io/notes/outer-joins-in-spark-structured-streaming/'
+               title="Read more about Spark Structured Streaming 中的外连接">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about itch-scratch</span>
-            </a>
-        </div>
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/six-slices-of-pie/'> six slices of pie</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2019-07-27T15:33:57+0000" class="dt-published">Sat Jul 27, 2019</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>第 15 周挑战赛的第一个任务是找到甜品的最佳排队位置。
-这是对创造越野车鞭子或牛仔电影或实体书店或碳基能源的老难题的重新表述：什么时候才是选择在一个不断缩小的馅饼中获得一块不断增加的最佳时机？
-在这个任务中，馅饼足够大，可以容纳100个人，但排在第一位的人只能得到相当于其中1%的一块。第二个人得到剩下的2%，第三个人得到之后剩下的3%，等等，等等，直到第一百个人得到前面99个人分到自己那份后剩下的100%的碎屑。换句话说，我们要&quot;让苹果派再次伟大！&quot;
-实际的任务是确定哪一个是队伍中的最佳位置。是早早地进入，得到一小块还算大的馅饼呢？还是等待，最终获得一块更大的剩饼？让我们用六种不同的方式来回答这个问题。
-必需的切片 我的开发者生涯是以C语言程序员的身份开始的，我仍然觉得以命令式模式来处理像这样的小问题是很自然的。所以，我第一次尝试回答这个问题（幸好是用 Raku 而不是C语言）的时候是这样的。
-# Start with a full pie, and no idea who gets the most... my $pie = 1.00; # i.e. 100% my $max-share = 0.00; # i.e. 0% my $max-index; # For everyone in line... for 1..100 -&gt; $N { # Take N% of what’s left as the next share... my $share = $pie * $N/100; $pie -= $share; # Remember it if it’s maximal.</p>
-
-    </div>
-
-    
-    
-    
-        <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/six-slices-of-pie/'
-               title="Read more about six slices of pie">
-                read <span class="more"> more</span>
-                <span class="screen-readers-only" > about six slices of pie</span>
+                <span class="screen-readers-only" > about Spark Structured Streaming 中的外连接</span>
             </a>
         </div>
     

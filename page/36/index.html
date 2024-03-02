@@ -301,7 +301,7 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/metacpan-mojolicious-and-openapi/'> 第七天 - MetaCPAN, Mojolicious 和 OpenAPI</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/a-practical-example-of-mojo-dom/'> 第十四天 - Mojo::DOM 实例</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -363,7 +363,7 @@
     
     <div class="post-date">
         
-        <time datetime="2018-12-07T22:16:24+0000" class="dt-published">Fri Dec 7, 2018</time>
+        <time datetime="2018-12-14T12:30:57+0000" class="dt-published">Fri Dec 14, 2018</time>
         
         
     </div>
@@ -372,17 +372,13 @@
     </header>
 
     <div class="post p-summary" >
-        <p>在这几年meta :: hack 3中，我非常幸运地与Joel Berger合作，通过Mojolicious将OpenAPI与MetaCPAN API集成/记录。
-它是什么？ OpenAPI是用于设计，记录，验证和驱动RESTful API的规范。它可用于为现有API提供文档，或者在创建新API时提供文档。
-OpenAPI规范起源于Swagger规范，并重命名为将API描述格式（OpenAPI）与开源工具（Swagger）分开。该规范已移至新的GitHub存储库，但未更改。
-对于MetaCPAN API，我们开始提供现有API的文档，但很快也转向支持API调用的验证。
-工具 OpenAPI有许多可用的工具可供帮助，包括有助于编写规范的发现工具。我们选择手动编写定义（当然是vim）并使用工具生成文档并将规范集成到MetaCPAN中。
-ReDoc - OpenAPI / Swagger生成的API参考文档 ReDoc创建一个交互式页面，根据OpenAPI规范文件中提供的详细信息提供文档和示例。 ReDoc包含一个HTML模板，用作静态文件，用于自定义文档的显示方式。
-Mojolicious :: Plugin :: OpenAPI - Mojolicious的OpenAPI / Swagger插件 读取OpenAPI规范文件，并为基于Mojolicious的应用程序添加适当的路由和验证。
-JSON :: Validator - 根据JSON模式验证数据 集成到Mojolicious :: Plugin :: OpenAPI模块中，提供输入和输出验证，以及为规范文件本身提供验证。
-入门 在实现MetaCPAN OpenAPI规范时使用以下策略。
-OpenAPI 规范文件 通过支持多行属性值，可以更轻松地以更少的格式进行读写，我们选择了YAML。还支持JSON。
-# Define the version of the OpenAPI spec to use. Version 2.0 still uses # swagger as the key swagger: &#34;2.0&#34; # general information about the API info: version: &#34;1.</p>
+        <p>随着最新版本的Mojolicious，Mojo::DOM获得了很多力量，我很兴奋尝试，但没有时间。最近，我在实际工作中遇到了一个问题（在工程，采购和施工，或简称EPC），我在很短的时间内用Mojo::DOM（和Mojolicious的其他部分）解决了 - 包括学习如何使用Mojo::DOM，我以前从未做过。
+任务 - 简单，但乏味 3D模型和绘图是很棒的工具，但实际上并不是那么完美。建筑公差就是它们的原因，我们公司非常依赖激光扫描，我们在那里进入项目现场并创建一个竣工条件的点云。这会生成数百个需要花费数小时才能处理的文件 - 最近的一个项目有超过30亿个人点。这些对于我们所做的每个项目的工程，建模和构造都至关重要。
+问题是当我们的3D建模软件（Tekla Structures）处理点云时，它会将每个文件名从人类可读的东西（例如Pipe Rack Area1）更改为散列，如2e9d52829f973c5b98f60935d8a9fa2b。当一个项目可能有几十个区域时，这不是非常用户友好，而您实际上只想一次加载一个或两个（平均面积为15gb！）。
+点云提供的关键信息太难或太昂贵，无法直接建模
+幸运的是，Tekla使用了许多任何人都可以编辑的标准文件格式 - 包括使用XML来描述它已处理的每个点云。当然，我可以手工编辑它们来更改名称，但是每次扫描和每个项目都必须这样做 - 这不是一个好的解决方案。
+方便的是，XML文件包含哈希名称和原始文件名 - 所以我知道我可以使用Mojo::DOM来解析XML并将点云重命名为人类可读。这个简单的任务就是Mojolicious如何用相对较短的代码完成大量工作的完美例子。结果如下：
+#!/usr/bin/perl use Mojo::Base -base; use Mojo::Util qw(getopt); use Mojo::File; use Mojo::DOM; getopt &#39;p|path=s&#39; =&gt; \my $path; sub main { # look in xml elements for laserscans that have hashes for names my $file = Mojo::File-&gt;new($path, &#39;pointclouds.xml&#39;); my $dom = Mojo::DOM-&gt;new($file-&gt;slurp); # if &#39;Hash&#39; is populated, rename_files(); otherwise ignore for my $e ($dom-&gt;find(&#39;PointCloudData&#39;)-&gt;each) { $e-&gt;{Folder} = rename_files($e) and $e-&gt;{Hash} = &#39;&#39; if $e-&gt;{Hash}; } # save xml file so we don&#39;t try to rename the pointclouds again $file-&gt;spurt($dom); } sub rename_files { # rename pointcloud folder and database file my $e = shift; my $newname = $e-&gt;{Folder} =~ s/$e-&gt;{Hash}/$e-&gt;{Name}/r; say &#34;renaming: $e-&gt;{Folder} to:\n$newname&#34;; rename $e-&gt;{Folder}, $newname || die $!</p>
 
     </div>
 
@@ -390,10 +386,10 @@ OpenAPI 规范文件 通过支持多行属性值，可以更轻松地以更少�
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/metacpan-mojolicious-and-openapi/'
-               title="Read more about 第七天 - MetaCPAN, Mojolicious 和 OpenAPI">
+            <a href='https://ohmyweekly.github.io/notes/a-practical-example-of-mojo-dom/'
+               title="Read more about 第十四天 - Mojo::DOM 实例">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第七天 - MetaCPAN, Mojolicious 和 OpenAPI</span>
+                <span class="screen-readers-only" > about 第十四天 - Mojo::DOM 实例</span>
             </a>
         </div>
     
@@ -402,7 +398,7 @@ OpenAPI 规范文件 通过支持多行属性值，可以更轻松地以更少�
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/the-joy-of-unicode-in-perl6/'> 🎄 7/25. Raku 中 Unicode 的乐趣</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/another-solution-of-yesterday-problem/'> 🎄 14/25. 昨天问题的另一个解决方案</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -464,7 +460,7 @@ OpenAPI 规范文件 通过支持多行属性值，可以更轻松地以更少�
     
     <div class="post-date">
         
-        <time datetime="2018-12-07T11:16:51+0000" class="dt-published">Fri Dec 7, 2018</time>
+        <time datetime="2018-12-14T09:15:43+0000" class="dt-published">Fri Dec 14, 2018</time>
         
         
     </div>
@@ -473,14 +469,17 @@ OpenAPI 规范文件 通过支持多行属性值，可以更轻松地以更少�
     </header>
 
     <div class="post p-summary" >
-        <p>欢迎来到 Raku One-Liner Advent Calendar 的第7天！ 今天，我们将看看2019年Raku日历中的三月份：
-这里的代码使用 ASCII 领地之外的三个字符。 我们甚至可以再添加一个 Unicode 字符：
-say π × $𝜌² 在 Raku 中，您可以在标识符中自由地使用 Unicode 字符，例如变量或函数名。 但最重要的是，有许多预定义的符号，如 π，它们有 ASCII 替代品。 检查文档页面 Unicode 与 ASCII 符号，以查看可在 Raku 中使用的全部 Unicode 字符集。
-使用 ASCII，可以通过以下方式重写上述单行程序：
-say pi * $r ** 2 让我们回到第2天的附加题代码，看看 Unicode 字符可以用在什么位置：
-sub f($n) { ($n &lt;&lt;*&gt;&gt; (1...1000 / $n)).grep: * &lt; 1000 } say (f(3) ∪ f(5)).keys.sum; 这里有一些因素。
-首先，超运算符 &lt;&lt;*&gt;&gt; 可以用适当的法语引号替换：«*»，乘法字符可以是我们今天使用的交叉：«×»。 同样可以应用于除法：÷。
-其次，序列运算符的三个点可以用一个 Unicode 字符替换：…（如果您在 Word 中编程，则在键入完整停止三次后自动获得此字符）。</p>
+        <p>欢迎来到 Raku One-Liner Advent Calendar 的第14天！今天，我们正在提出我们昨天解决的问题的另一个答案。任务是计算二十世纪第一个月的所有星期日。
+昨天，我们只扫描了整个世纪的所有日子，选择星期日（ .day-of-week == 7）并且是本月的第一天（.day == 1）。
+可以制作更有效的算法。由于我们只对本月的第一天感兴趣，因此无需在100年内扫描所有36525天，而只需要扫描100天，这是1901年到2000年之间每个月的第一天。
+因此，我们需要两个嵌套循环：年和月。我们需要两个 for 吗？不必要。我们使用 X 运算符;我们从以前的出版帖子中熟悉它。
+这是我们今天的单行：
+(gather for 1901..2000 X 1..12 { take Date.new(|@_, 1) }).grep(*.day-of-week == 7).elems.say; for 1901..2000 X 1..12 循环在遍历二十世纪的每个月份。对于每个循环变量，我们通过调用具有三个参数的构造函数来创建 Date 对象。
+请注意，在循环内部，您可以同时使用 $_[0] 和 $_[1]，以及 @_[0] 和 @_[1]。在第一种情况下，$_ 变量包含两个元素的列表，而在第二种情况下，它是一个数组 @_。如果您只是使用点来调用主题（默认）变量上的方法，则可以实现最短的代码：.[0] 和 .[1]。
+您可以键入 Date.new(.[0], .[1], 1) 代替 Date.new(|@_, 1)。 |@_ 语法用于展开数组，否则 Raku 会认为您将数组作为第一个参数传递。
+在 gather-take 对儿的帮助下，将这些月份的所有第一天收集到序列中。
+最后一步是昨天的 grep，但这次我们只需要选择星期日，所以单个 *.day-of-week == 7 条件就足够了。
+elems 方法的调用返回列表中元素的数量，即我们正在寻找的星期日数量。因此，请用 say 打印出来。</p>
 
     </div>
 
@@ -488,10 +487,10 @@ sub f($n) { ($n &lt;&lt;*&gt;&gt; (1...1000 / $n)).grep: * &lt; 1000 } say (f(3)
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/the-joy-of-unicode-in-perl6/'
-               title="Read more about 🎄 7/25. Raku 中 Unicode 的乐趣">
+            <a href='https://ohmyweekly.github.io/notes/another-solution-of-yesterday-problem/'
+               title="Read more about 🎄 14/25. 昨天问题的另一个解决方案">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 🎄 7/25. Raku 中 Unicode 的乐趣</span>
+                <span class="screen-readers-only" > about 🎄 14/25. 昨天问题的另一个解决方案</span>
             </a>
         </div>
     
@@ -500,7 +499,7 @@ sub f($n) { ($n &lt;&lt;*&gt;&gt; (1...1000 / $n)).grep: * &lt; 1000 } say (f(3)
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/making-a-list-with-yancy/'> 第六天 - 用 Yancy 制作一个列表</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-spark-hbase-connector-%E8%AF%BB%E5%8F%96-hbase/'> 使用 Spark HBase Connector 读取 HBase</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -562,7 +561,7 @@ sub f($n) { ($n &lt;&lt;*&gt;&gt; (1...1000 / $n)).grep: * &lt; 1000 } say (f(3)
     
     <div class="post-date">
         
-        <time datetime="2018-12-06T21:59:08+0000" class="dt-published">Thu Dec 6, 2018</time>
+        <time datetime="2018-12-13T16:16:21+0000" class="dt-published">Thu Dec 13, 2018</time>
         
         
     </div>
@@ -571,9 +570,9 @@ sub f($n) { ($n &lt;&lt;*&gt;&gt; (1...1000 / $n)).grep: * &lt; 1000 } say (f(3)
     </header>
 
     <div class="post p-summary" >
-        <p>在这些近代，世界上有数十亿人，圣诞老人需要一个现代化的系统来跟踪他的淘气又好看的名单。幸运的圣诞老人，现代 Perl 有一个现代的 web 框架，Mojolicious。
-第1步：构建列表 首先，我们需要一个数据库模式。圣诞老人只需要知道某人是否顽皮或好，所以我们的架构非常简单。我们将通过使用 Mojo::SQLite 连接到 SQLite 数据库并使用 Mojo::SQLite 迁移从我们脚本的DATA部分加载我们的数据库模式来启动我们的 Mojolicious::Lite 应用程序：
-use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite database and load our schema from the # &#39;@@ migrations&#39; section, below my $db = Mojo::SQLite-&gt;new( &#39;sqlite:thelist.db&#39; ); $db-&gt;auto_migrate(1)-&gt;migrations-&gt;from_data(); # Start the app. Must be the last code of the script. app-&gt;start; __DATA__ @@ migrations -- 1 up CREATE TABLE the_list ( id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR NOT NULL, address VARCHAR NOT NULL, is_nice BOOLEAN DEFAULT FALSE, is_delivered BOOLEAN DEFAULT FALSE ); 创建我们的架构后，我们可以添加 Yancy。 Yancy是一个简单的 CMS，用于编辑内容和简化数据驱动的网站开发。我们将告诉 Yancy 阅读我们的数据库架构以进行自我配置，但我们也会给它一些提示，以便更轻松地编辑内容。</p>
+        <p>pom 依赖：
+&lt;!-- https://mvnrepository.com/artifact/com.hortonworks/shc-core --&gt; &lt;dependency&gt; &lt;groupId&gt;com.hortonworks&lt;/groupId&gt; &lt;artifactId&gt;shc-core&lt;/artifactId&gt; &lt;version&gt;1.1.1-2.1-s_2.11&lt;/version&gt; &lt;/dependency&gt; 部分代码：
+package xxxx.xxxx import org.apache.log4j.{Level, Logger} import org.apache.spark.sql.execution.datasources.hbase._ import org.apache.spark.sql.functions._ import org.apache.spark.sql.{DataFrame, SparkSession} /** * 提交方式 * spark2-submit --name HBASE-CONNECTOR --files /etc/hbase/conf/hbase-site.xml --class xxx.xxxx --master yarn --deploy-mode cluster --driver-memory 2g --driver-cores 2 --executor-memory 2g --executor-cores 1 --num-executors 2 wmanxiety-1.0-SNAPSHOT.jar --day 20180810 --repartition 500 --interval 7 */ object MileageAnxiety { def cat = s&#34;&#34;&#34;{ |&#34;table&#34;:{&#34;namespace&#34;:&#34;default&#34;, &#34;name&#34;:&#34;trip_signal&#34;, &#34;tableCoder&#34;:&#34;PrimitiveType&#34;}, |&#34;rowkey&#34;:&#34;key&#34;, |&#34;columns&#34;:{ |&#34;rowkey&#34; :{&#34;cf&#34;:&#34;rowkey&#34;, &#34;col&#34;:&#34;key&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;vin&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;vin&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;tripStatus&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;tripStatus&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;tripStartTime&#34;:{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;tripStartTime&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;tripEndTime&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;tripEndTime&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;tripDistance&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;tripDistance&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;startSoc&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;startSoc&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;endSoc&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;endSoc&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;maxSpeed&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;maxSpeed&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;startMileage&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;startMileage&#34;, &#34;type&#34;:&#34;string&#34;}, |&#34;coordinate&#34; :{&#34;cf&#34;:&#34;info&#34;, &#34;col&#34;:&#34;coordinate&#34;, &#34;type&#34;:&#34;string&#34;} |} |}&#34;&#34;&#34;.</p>
 
     </div>
 
@@ -581,10 +580,10 @@ use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite data
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/making-a-list-with-yancy/'
-               title="Read more about 第六天 - 用 Yancy 制作一个列表">
+            <a href='https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-spark-hbase-connector-%E8%AF%BB%E5%8F%96-hbase/'
+               title="Read more about 使用 Spark HBase Connector 读取 HBase">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第六天 - 用 Yancy 制作一个列表</span>
+                <span class="screen-readers-only" > about 使用 Spark HBase Connector 读取 HBase</span>
             </a>
         </div>
     
@@ -593,7 +592,7 @@ use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite data
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/testing-palindromic-numbers-inperl6/'> 🎄 6/25. 在 Raku 中测试回文数字</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/taking-on-roles/'> 第十三天 - 承担角色</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -655,7 +654,7 @@ use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite data
     
     <div class="post-date">
         
-        <time datetime="2018-12-06T11:12:33+0000" class="dt-published">Thu Dec 6, 2018</time>
+        <time datetime="2018-12-13T12:25:53+0000" class="dt-published">Thu Dec 13, 2018</time>
         
         
     </div>
@@ -664,106 +663,12 @@ use v5.28; use Mojolicious::Lite; use Mojo::SQLite; # Connect to the SQLite data
     </header>
 
     <div class="post p-summary" >
-        <p>欢迎来到 Raku One-Liner Advent Calendar 的第6天！ 正如昨天所承诺的那样，今天我们将解决欧拉项目的问题4。 让我再次提醒您，您可以先自己暂停阅读并自行解决问题。 我的目的是展示Raku和Perl的美妙之处。
-因此，任务是找到最大的回文数（从两端读取的数字，例如1551），这是两个三位数的乘积。
-换句话说，我们必须扫描999×999以下的数字，并且可以优化解决方案，但实际上，我们只需要允许数字，即乘积，因此，我们不要跳过乘法部分。
-这是我们今天的单行程序：
-(((999...100) X* (999...100)).grep: {$^a eq $^a.flip}).max.say 如果你正在阅读这个 advent 日历，那么你已经准备好了链式方法调用在Raku单行中使用非常方便的事实。
-我们在第2天早些时候也看到了 grep 的冒号形式，但这次我们使用了一个带占位符变量的代码块。 目前还不清楚你是否可以在这里使用星号，因为我们需要在块中使用两次变量。
-该行的第一部分使用十字运算符 X*，我们将在几天内回到本系列中。 它生成所有三位数字的乘积。 由于我们需要最大的数字，从右到左开始是有意义的，这就是为什么序列 999 ... 100，而不是 100 ... 999。
-让我们看看 grepped 乘积序列中的前几个数字：
-580085 514415 906609 119911 282282 141141 853358 650056 单行并不总是非常理想。 在我们的例子中，我们需要生成整个乘积序列以找到它们中的最大值。 答案位于第三个位置，因此将 max 替换为 first 将是错误的。 但好的部分是，如果你先使用，Raku将不会生成所有数字。 还有另一个有用的方法，head，它也可以防止生成超过必要结果的方法。
-以下代码运行得更快，并提供正确的结果：
-(((999...100) X* (999...100)).grep: {$^a eq $^a.flip}).head(10).max.say 让我们今天就到此为止。 敬请关注！</p>
-
-    </div>
-
-    
-    
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/compound-selectors-are-easier-than-regexes/'> 第五天 - 复合选择器比正则表达式更容易</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-05T21:34:46+0000" class="dt-published">Wed Dec 5, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>当人们告诉我我不能（他们的意思是不应该）用正则表达式解析 HTML 时，我说“拿酒来”。这不仅仅是技巧或态度，而是方便。以正确的方式做到并不总是那么容易（我记得 HTML 0.9 是一个大问题）。最近，我一直在使用 Mojo::DOM 为我做这件事。它比旧的，权宜之计更容易。
-诀窍始终是隔离感兴趣的 HTML。我可以做到这一点切除有趣部分周围的所有数据：
-my $html = ...; $html =~ s/.*?&lt;table class=&#34;foo&#34;.*?&gt;//; $html =~ s/&lt;\/table&gt;.*//; 现在我不必解析所有的 HTML;我可以考虑一下表格。即使这是权宜之计，也不是那么好。在我用更好的东西替换它之前，我会快速绕道而行。
-层叠样式表 您可能知道层叠样式表（CSS）使你的网页看起来很漂亮（但不是我的，真的）。您可以将元数据添加到标记上：
-&lt;img id=&#34;bender&#34; class=&#34;robot&#34; src=&#34;...&#34; /&gt; &lt;img id=&#34;fry&#34; class=&#34;human&#34; src=&#34;...&#34; /&gt; &lt;img id=&#34;leela&#34; class=&#34;mutant&#34; src=&#34;...&#34; /&gt; CSS 规则可以通过其 ID 或类来处理这些项目以将样式应用于它们。这个寻址是一个“选择器”，拥有比我更好的技能的人使用这些来使演示非常漂亮：
-img#fry { border: 1px; } img.robot { margin: 20px; } HTML 可能有点复杂。也许那些有趣的标签在列表中。这包裹了数据的另一层 HTML 结构：
-&lt;ul class=&#34;employees&#34;&gt; &lt;li&gt;&lt;img id=&#34;bender&#34; class=&#34;robot&#34; src=&#34;...&#34; /&gt;&lt;/li&gt; &lt;li&gt;&lt;img id=&#34;fry&#34; class=&#34;human&#34; src=&#34;...&#34; /&gt;&lt;/li&gt; &lt;li&gt;&lt;img id=&#34;leela&#34; class=&#34;mutant&#34; src=&#34;.</p>
+        <p>在我之前的 Advent 文章中，我创建了高阶 promise并向您展示了如何使用它们。我没有告诉你它们如何工作的魔力。现在我将从另一个方向开发另一个例子。
+有时候我希望 Mojo::File 的行为有点不同。我经常有一个路径，我想只将基本名称与不同的目录结合起来。我最终为两者制作 Mojo::File 对象，然后使用目录对象来获得我想要的东西：
+use Mojo::File qw(path); my $path = Mojo::File-&gt;new( &#39;/Users/brian/bin/interesting.txt&#39; ); my $dir = Mojo::File-&gt;new( &#39;/usr/local/bin&#39; ); my $new_path = $dir-&gt;child( $path-&gt;basename ); say $new_path; # /usr/local/bin/interesting.txt 那很烦人。我不喜欢它需要这么多步骤。我想要一些方法。我宁愿能够像这样编写它，我从有趣的文件开始并继续处理它而不是切换到其他对象：
+use Mojo::File qw(path); my $new_path = Mojo::File -&gt;new( &#39;/Users/brian/bin/interesting.txt&#39; ) -&gt;rebase( &#39;/usr/local/bin&#39; ); # this isn&#39;t a method say $new_path; # /usr/local/bin/interesting.txt 我可以通过各种 Perl 技巧通过猴子补丁或子类化将此方法添加到 Mojo::File。但是，像往常一样，Mojolicious 期待我的愿望并提供一种方法来做到这一点。我可以添加一个角色，
+当我跳进它时，你可以自己阅读角色。首先，我创建一个代表我的角色的类。我定义了我想要的方法。我使用我想要影响的包的名称，添加 ::Role::，然后我想使用的名称;它的小写并不重要。 Mojo::Base 设置了当我导入 -role 时所需的一切：
+package Mojo::File::Role::rebase { use Mojo::Base qw(-role -signatures); sub rebase ($file, $dir) { $file-&gt;new( $dir, $file-&gt;basename ) } } 我在我想要影响的类上使用 with_roles 来应用我的新功能。因为我使用命名约定通过在它前面加上目标类（Mojo::File），然后是 ::Role::，然后是我想要的短名称。当我应用这个时，我可以省去大部分包裹名称，并使用前面加号的短名称：</p>
 
     </div>
 
@@ -771,10 +676,10 @@ img#fry { border: 1px; } img.robot { margin: 20px; } HTML 可能有点复杂。�
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/compound-selectors-are-easier-than-regexes/'
-               title="Read more about 第五天 - 复合选择器比正则表达式更容易">
+            <a href='https://ohmyweekly.github.io/notes/taking-on-roles/'
+               title="Read more about 第十三天 - 承担角色">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第五天 - 复合选择器比正则表达式更容易</span>
+                <span class="screen-readers-only" > about 第十三天 - 承担角色</span>
             </a>
         </div>
     
@@ -783,7 +688,7 @@ img#fry { border: 1px; } img.robot { margin: 20px; } HTML 可能有点复杂。�
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/what-s-the-date-today/'> 🎄 5/25. 在 Raku 中今天是什么日期?</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/how-many-days-in-the-century-match-the-condition/'> 🎄 13/25. 本世纪多少天符合条件?</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -845,7 +750,7 @@ img#fry { border: 1px; } img.robot { margin: 20px; } HTML 可能有点复杂。�
     
     <div class="post-date">
         
-        <time datetime="2018-12-05T14:28:23+0000" class="dt-published">Wed Dec 5, 2018</time>
+        <time datetime="2018-12-13T09:20:12+0000" class="dt-published">Thu Dec 13, 2018</time>
         
         
     </div>
@@ -854,107 +759,14 @@ img#fry { border: 1px; } img.robot { margin: 20px; } HTML 可能有点复杂。�
     </header>
 
     <div class="post p-summary" >
-        <p>欢迎来到这个可爱的 Raku One-Liner Advent Calendar 的第5天！
-今天，我们将回答今天是什么日期的问题（如果你愿意的话，明天我们可以谈论回文）。
-因此，要打印答案，您可以使用以下Raku代码行：
-DateTime.now.yyyy-mm-dd.say 它看起来显而易见，并以YYYY-MM-DD的格式打印日期。 好的部分是 DateTime 类可以直接使用，例如，您不需要像在Perl 5中那样包含模块。
-$ raku -e&#39;DateTime.now.yyyy-mm-dd.say&#39; 2018-12-05 正如您在日历的前几天已经看到的那样，链式方法调用是典型的Raku惯用法。 另一种选择是使用say作为子例程并使用括号来标记方法调用：
-say(DateTime.now().yyyy-mm-dd()); 这段代码也有效; 它完全正确，但看起来很重。
-您还应该注意并告诉您的朋友，在Raku中，您可以在标识符中使用短划线和撇号。
-好吧，也许使用撇号不是一个好主意，但是在Raku的源代码中已经广泛使用了连字符。只需确保在表达式中的减法运算符周围放置空格以避免解析中的任何冲突。
-浏览源代码或阅读文档，您将找到以相同方式命名的另一种方法： hh-mm-ss。 我打赌你明白它的作用。
-&gt; DateTime.now.hh-mm-ss.say 00:12:01 请注意，对于不同的输出格式，您将找不到类似的方法，例如 dd-mm-yy 或 hh-mm。 请改用 formatter 程序。 它不是方法，而是在 Datish 角色中定义的属性。 DateTime 类中有一个默认格式化程序，但您可以通过为构造函数提供自己的子例程来重新定义它，例如：
-DateTime.now(formatter =&gt; -&gt; $dt { sprintf &#39;%02d.%02d.%04d&#39;, $dt.day, $dt.month, $dt.year }).say 这里的格式化程序接收一个带有参数 $dt 的匿名子例程（由箭头引入）。
-我希望这段代码与我们的初始单行打印相同的日期，因为您最有可能在一天内阅读整篇文章。
-不过，明天见一下测试回文的代码！</p>
-
-    </div>
-
-    
-    
-    
-</article>
-      
-    
-        <article class="summary h-entry notes">
-    <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/test-hooks-and-helpers/'> 第四天 - 测试钩子和助手</a> </h2>
-        
-    <div class="taxo no-text-decoration">
-         
-            
-                <ul class="no-bullets inline categories">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts categorized in ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-         
-            
-                <ul class="no-bullets inline tags">
-                    
-                        
-                        
-                        
-                            
-                            
-                            
-                            
-                            
-                            <li class="__rakulang__"
-                                
-                                
-                                title="See all 0 posts tagged with ‘rakulang’"
-                                
-                            >
-                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
-                            </li>
-                        
-                    
-                </ul>
-            
-        
-    </div>
-
-
-        
-
-
-    
-    
-    <div class="post-date">
-        
-        <time datetime="2018-12-04T21:19:23+0000" class="dt-published">Tue Dec 4, 2018</time>
-        
-        
-    </div>
-
-
-    </header>
-
-    <div class="post p-summary" >
-        <p>Test::Mojo 是 Mojolicious 测试工具，有很多方法可以测试 Web 应用程序中的路由（甚至可以在其他 Web 框架中进行测试）。
-但是，如果我需要测试的不是路由呢？如果它是一个钩子，一个插件或一个助手怎么办？我们也可以测试所有这些东西！
-钩子 为了彻底测试钩子，我需要找到配置我的测试用例的方法。我可以指望我的应用程序执行它，并找到正确的路由来测试正确的行为。但是，这会产生更大的测试，集成不同的部分并使测试失败更难调试。我想要的是隔离我正在测试的东西。最好的方法是创建仅测试我想测试的路由。
-如果我有一个钩子来记录特殊日志文件的异常，如下所示：
-#!/usr/bin/env perl use Mojolicious::Lite; # Log exceptions to a separate log file hook after_dispatch =&gt; sub { my ( $c ) = @_; return unless my $e = $c-&gt;stash( &#39;exception&#39; ); state $path = $c-&gt;app-&gt;home-&gt;child(&#34;exception.log&#34;); state $log = Mojo::Log-&gt;new( path =&gt; $path ); $log-&gt;error( $e ); }; app-&gt;start; 为了测试这个，一旦我加载了我的应用并创建了一个 Test::Mojo 对象，我就可以自由地为我的应用添加更多配置，包括新路由！这些路由可以为我的测试设置恰当的条件。
-# test.pl use Test::More; use Test::Mojo; use Mojo::File qw( path ); my $t = Test::Mojo-&gt;new( path( &#39;myapp.</p>
+        <p>欢迎来到 Raku One-Liner Advent Calendar 的第13天！今天的单行将很长，最好用两行编写，但它会显示 Raku 的 Date 对象的一个​​非常好的功能：它可以很容易地在一个范围内使用。
+今天，我们正在解决欧拉项目的问题19。从本质上讲，任务是计算在1901年1月1日至2000年12月31日期间的星期日，这是在第一个月。
+Raku 中的 Date 对象实现了 succ 和 prec 方法，它们递增和递减日期。也可以使用两个日期作为范围的边界：
+say ( Date.new(year =&gt; 1901) ..^ Date.new(year =&gt; 2001) ).grep({.day == 1 &amp;&amp; .day-of-week == 7}).elems 在这里评论一下。
+首先，使用单个命名参数（year）创建两个 Date 对象。这是可能的，因为构造函数的签名具有月和日的默认值：
+multi method new( Date: Int:D() :$year!, Int:D() :$month = 1, Int:D() :$day = 1, :&amp;formatter, *%_) { . . . } 因此，创建1月1日的日期很容易，但是在一年的最后一天你不能这样做。但是 Raku 有一个很好的范围运算符 ..^，它排除了右边界并允许我们节省相当多的字符（而我们还没有玩 Raku Golf :-)。
+具有日期的所有显式部分的较长版本将如下所示：
+say ( Date.</p>
 
     </div>
 
@@ -962,10 +774,10 @@ DateTime.now(formatter =&gt; -&gt; $dt { sprintf &#39;%02d.%02d.%04d&#39;, $dt.d
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/test-hooks-and-helpers/'
-               title="Read more about 第四天 - 测试钩子和助手">
+            <a href='https://ohmyweekly.github.io/notes/how-many-days-in-the-century-match-the-condition/'
+               title="Read more about 🎄 13/25. 本世纪多少天符合条件?">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第四天 - 测试钩子和助手</span>
+                <span class="screen-readers-only" > about 🎄 13/25. 本世纪多少天符合条件?</span>
             </a>
         </div>
     
@@ -974,7 +786,7 @@ DateTime.now(formatter =&gt; -&gt; $dt { sprintf &#39;%02d.%02d.%04d&#39;, $dt.d
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/working-with-big-numbers-in-raku/'> 🎄 4/25. 在 Raku 中使用大数</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8-phoenix-%E8%AF%BB%E5%8F%96-hbase/'> 使用 Phoenix 读取 HBase</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1036,7 +848,7 @@ DateTime.now(formatter =&gt; -&gt; $dt { sprintf &#39;%02d.%02d.%04d&#39;, $dt.d
     
     <div class="post-date">
         
-        <time datetime="2018-12-04T09:58:26+0000" class="dt-published">Tue Dec 4, 2018</time>
+        <time datetime="2018-12-12T16:16:21+0000" class="dt-published">Wed Dec 12, 2018</time>
         
         
     </div>
@@ -1045,15 +857,10 @@ DateTime.now(formatter =&gt; -&gt; $dt { sprintf &#39;%02d.%02d.%04d&#39;, $dt.d
     </header>
 
     <div class="post p-summary" >
-        <p>欢迎来到第4天的 Raku One-Liner Advent Calendar!
-今天我们会看一看欧拉项目的第十三个问题。我先给你展示一张截图：
-实际上，它看起来很大，任务是找到一百个整数之和的前十位数，每个整数由50位数组成。
-听起来像是一项任务，可能需要一些优化和简化来摆脱对结果的前十位无贡献的一切。 但不是在Raku中。
-在Raku中，您可以简单地将数字相加并取其前十位数字：
-&lt; 37107287433902102798797998220837590246510135740250 # Other 98 numbers here 53503534526472524250874054075591789781264330331690 &gt;.sum.substr(0, 10).say Raku默认使用任意长整数运行; 您不需要包含任何模块或以其他方式激活此行为。 您甚至可以快速计算幂并获得结果：
-$ raku -e&#39;say 37107287433902102798797998220837590 ** 1000&#39; 需要注意的另一件事是我们可以透明地将整数转换为数字，反之亦然。 在我们今天的程序中，数字列表显示为一对尖括号内的字符串的引用列表。
-在列表中，您调用 sum 方法，该方法适用于数字。 获得总和后，再次将其视为字符串并提取其前十个字符。 整个代码看起来非常自然，易于阅读。
-有了这种情绪，我们明天再见！</p>
+        <p>我使用的是 CDH5.13.2， 所以 pom 文件依赖为：
+&lt;dependency&gt; &lt;groupId&gt;org.apache.phoenix&lt;/groupId&gt; &lt;artifactId&gt;phoenix-spark&lt;/artifactId&gt; &lt;version&gt;4.14.0-cdh5.13.2&lt;/version&gt; &lt;scope&gt;provided&lt;/scope&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.phoenix&lt;/groupId&gt; &lt;artifactId&gt;phoenix-core&lt;/artifactId&gt; &lt;version&gt;4.14.0-cdh5.13.2&lt;/version&gt; &lt;/dependency&gt; 这样读取：
+val df = sqlContext.read.format(&#34;jdbc&#34;) .option(&#34;driver&#34;, &#34;org.apache.phoenix.jdbc.PhoenixDriver&#34;) .option(&#34;url&#34;, &#34;jdbc:phoenix:localhost:2181&#34;) .option(&#34;dbtable&#34;, &#34;US_POPULATION&#34;) .load() 或者
+val df = sqlContext.load( &#34;jdbc&#34;, Map(&#34;zkUrl&#34; -&gt; &#34;localhost:2181&#34;, &#34;url&#34; -&gt; &#34;jdbc:phoenix:localhost:2181&#34;, &#34;dbtable&#34; -&gt; &#34;US_POPULATION&#34;, &#34;driver&#34; -&gt; &#34;org.apache.phoenix.jdbc.PhoenixDriver&#34;) ) </p>
 
     </div>
 
@@ -1065,7 +872,7 @@ $ raku -e&#39;say 37107287433902102798797998220837590 ** 1000&#39; 需要注意�
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/higher-order-promises/'> 第三天 - 高阶 Promises</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/using-minion-in-dancer-apps/'> 第十二天 - 在 Dancer 应用程序中使用 Minion</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1127,7 +934,7 @@ $ raku -e&#39;say 37107287433902102798797998220837590 ** 1000&#39; 需要注意�
     
     <div class="post-date">
         
-        <time datetime="2018-12-03T20:59:26+0000" class="dt-published">Mon Dec 3, 2018</time>
+        <time datetime="2018-12-12T14:22:46+0000" class="dt-published">Wed Dec 12, 2018</time>
         
         
     </div>
@@ -1136,11 +943,14 @@ $ raku -e&#39;say 37107287433902102798797998220837590 ** 1000&#39; 需要注意�
     </header>
 
     <div class="post p-summary" >
-        <p>通过组合 Promises 来创建新的复杂 Promise Mojolicious 7.49 添加了自己的 Promises/A+ 规范实现。莫霍克在第14天写到了这些：你答应召唤！ 在 2017 年的 Mojolicious Advent Calender 中，他向你展示了如何同时获取多个网页。这个 Advent 条目扩展了更多的 Promise 技巧。
-Promise 是一种旨在消除嵌套回调（也称为“回调地狱”）的结构。正确编写的 Promises 链具有扁平结构，易于线性跟随。
-高阶 Promise 是包含其他 Promise 并以其身份为基础的 Promise。 Mojo::Promise::Role::HigherOrder 发行版提供了三个角色，您可以将它们混合到 Mojo::Promise 中以创建包含 Promises 的更好看的 Promise。不过，在你看到它们之前，先看看 Mojo::Promise 已经提供的两个。
-All 只有当 all Promise 都解决时，所有承诺才会解决。如果其中一个被拒绝，则拒绝所有承诺。这意味着如果一个被拒绝并且不需要知道任何其他人的状态，整个 Promise 知道该怎么做。
-use Mojo::Promise; use Mojo::UserAgent; my $ua = Mojo::UserAgent-&gt;new; my @urls = ( ... ); my @all_sites = map { $ua-&gt;get_p( $_ ) } @urls; my $all_promise = Mojo::Promise -&gt;all( @all_sites ) -&gt;then( sub { say &#34;They all worked!</p>
+        <p>在 $work，我们使用 Dancer 构建了一个 API，用于生成 PDF 文档和 XML 文件。此 API 是保险登记系统的重要组成部分：生成 PDF 以立即在 Web 浏览器中传送给客户端，并且 XML 一旦可用就会立即传送给运营商。由于XML 通常需要花费大量时间来生成，因此在后台生成作业，以免在较长时间内占用应用程序服务器。完成后，开发了一个自行开发的流程管理系统，并通过 fork() 进程，跟踪其 pid，并希望我们以后可以成功获得完成的流程。
+这种方法存在一些问题： - 它很脆弱 - 它不能扩展 - 作为开发人员搞砸某事太容易了
+在2019年，我们不得不加大承担更大的工作量。目前的解决方案根本无法处理我们预计需要处理的工作量。z直到遇见 Minion。
+注意：本文中使用的技术与 Dancer 或 Dancer2 同样适用。
+为何选择 Minion？ 我们研究了 Minion 的几种替代品，包括 beanstalkd 和 celeryd。然而，使用其中任何一个意味着涉及我们已经过度征税的基础设施团队;使用 Minion 允许我们使用我的团队已经拥有的专业知识，而不必向其他人提供帮助。从开发的角度来看，使用 Perl 开发的产品为我们提供了最快的实施时间。
+扩展我们现有的设置几乎是不可能的。处理我们分叉的进程所消耗的资源不仅难以处理，而且不可能在多个服务器上运行作业。从 Minion 开始也给了我们一个急需的机会来清理一些需要重构的代码。通过最少量的工作，我们能够清理我们的 XML 呈现代码并使其在 Minion 中运行。通过此清理，我们可以更轻松地获取有关XML呈现作业消耗了多少内存和 CPU 的信息。这些信息对于我们规划未来容量至关重要。
+进入 Minion 由于我们是一个舞蹈工作室，而不是 Mojolicious，因此我们可以从 Mojolicious 那里获得很多与 Minion 合作的便利。鉴于我们还在商业模式中共享一些基于 Minion 的代码，我们必须围绕 Minion 构建一些自己的管道：
+package MyJob::JobQueue; use Moose; use Minion; use MyJob::Models::FooBar; with &#39;MyJob::Roles::ConfigReader&#39;; has &#39;runner&#39; =&gt; ( is =&gt; &#39;ro&#39;, isa =&gt; &#39;Minion&#39;, lazy =&gt; 1, default =&gt; sub( $self ) { $ENV{ MOJO_PUBSUB_EXPERIMENTAL } = 1; Minion-&gt;new( mysql =&gt; MyJob::DBConnectionManager-&gt;new-&gt;get_connection_uri({ db_type =&gt; &#39;feeds&#39;, io_type =&gt; &#39;rw&#39;, })); }, ); 我们在 Minion 周围包含了一个简单的 Moose 类，以便使用我们想要的额外功能轻松添加到任何类或 Dancer 应用程序。</p>
 
     </div>
 
@@ -1148,10 +958,10 @@ use Mojo::Promise; use Mojo::UserAgent; my $ua = Mojo::UserAgent-&gt;new; my @ur
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/higher-order-promises/'
-               title="Read more about 第三天 - 高阶 Promises">
+            <a href='https://ohmyweekly.github.io/notes/using-minion-in-dancer-apps/'
+               title="Read more about 第十二天 - 在 Dancer 应用程序中使用 Minion">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 第三天 - 高阶 Promises</span>
+                <span class="screen-readers-only" > about 第十二天 - 在 Dancer 应用程序中使用 Minion</span>
             </a>
         </div>
     
@@ -1160,7 +970,7 @@ use Mojo::Promise; use Mojo::UserAgent; my $ua = Mojo::UserAgent-&gt;new; my @ur
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/generating-random-integers-in-raku/'> 🎄 3/25. 在 Raku 中生成随机整数</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/five-spark-sql-helper-utility-functions-to-extract-and-explore-complex-data-types/'> 五个用于提取和探索复杂数据类型的 Spark SQL Helper 实用程序函数</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1222,7 +1032,7 @@ use Mojo::Promise; use Mojo::UserAgent; my $ua = Mojo::UserAgent-&gt;new; my @ur
     
     <div class="post-date">
         
-        <time datetime="2018-12-03T10:06:05+0000" class="dt-published">Mon Dec 3, 2018</time>
+        <time datetime="2018-12-12T11:26:52+0000" class="dt-published">Wed Dec 12, 2018</time>
         
         
     </div>
@@ -1231,16 +1041,16 @@ use Mojo::Promise; use Mojo::UserAgent; my $ua = Mojo::UserAgent-&gt;new; my @ur
     </header>
 
     <div class="post p-summary" >
-        <p>欢迎来到 Raku One-Liner Advent Calendar 的第3天！ 今天，我们将生成随机数。
-您可能会问，与它有什么关系，调用一种 rand 函数不是常规任务吗？ 好吧，从某种意义上说，是的，但在Raku中，您可能更喜欢调用方法。
-我们来看看Raku日历中8月的代码：
-2019.rand.Int.say 这就是整个程序！ 它只使用方法调用，方法一个接一个地链接在一起。 如果您以前从未见过Raku，那么你首先注意到的是在一个数字上调用的方法。 在Raku中，这一点也不特别。
-在数字上调用 rand 方法可能是对 Cool类 中定义的方法的调用，该类立即代理给数字的数字表示：
-method rand() { self.Num.rand } 稍后在 Num类 中，会发生对底层 NQP 引擎的调用：
-method rand(Num:D: ) { nqp::p6box_n(nqp::rand_n(nqp::unbox_n(self))); } 在我们的示例中，对象 2019 是 Int，因此 rand 被直接分派给 Num 类的方法。
-rand 方法返回一个浮点数，因此在其上调用 Int 来获取整数。
-运行代码几次以确认它生成随机数：
-$ raku -e&#39;2019.rand.Int.say&#39; 543 $ raku -e&#39;2019.rand.Int.say&#39; 1366 $ raku -e&#39;2019.rand.Int.say&#39; 1870 如果您想了解随机数生成器的质量，请深入挖掘 NQP 和 MoarVM，然后再深入了解虚拟机的后端引擎。 要使结果可重复（例如，对于测试），通过调用 srand 函数来设置种子：</p>
+        <p>https://docs.databricks.com/_static/notebooks/complex-nested-structured.html
+虽然这个深入的博客列出并解释了处理和处理复杂数据类型和格式的概念和动机，但这个笔记本示例通过几个具体示例检查了如何将它们应用于您在使用中可能遇到的数据类型案例。这个简短的笔记本教程展示了一些方法，您可以在其中探索和使用许多新的帮助程序 Spark SQL 实用程序函数和 API 作为org.apache.spark.sql.functions 包的一部分。特别是，它们在执行 Streaming ETL 时派上用场，其中数据是具有复杂和嵌套结构的 JSON 对象：嵌入为 JSON 的 Map 和 Structs：
+_ get_json_object()
+_ from_json()
+_ to_json()
+_ explode()
+_ selectExpr()
+本简短教程的内容是使用 Spark SQL 实用程序函数对嵌套 JSON 结构进行切片和切块的无数方法。
+让我们创建一个带有属性和值的简单 JSON 模式，而不使用任何嵌套结构。
+import org.apache.spark.sql.types._ // include the Spark Types to define our schema import org.apache.spark.sql.functions._ // include the Spark helper functions val jsonSchema = new StructType() .add(&#34;battery_level&#34;, LongType) .add(&#34;c02_level&#34;, LongType) .add(&#34;cca3&#34;,StringType) .add(&#34;cn&#34;, StringType) .add(&#34;device_id&#34;, LongType) .</p>
 
     </div>
 
@@ -1248,10 +1058,201 @@ $ raku -e&#39;2019.rand.Int.say&#39; 543 $ raku -e&#39;2019.rand.Int.say&#39; 13
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/generating-random-integers-in-raku/'
-               title="Read more about 🎄 3/25. 在 Raku 中生成随机整数">
+            <a href='https://ohmyweekly.github.io/notes/five-spark-sql-helper-utility-functions-to-extract-and-explore-complex-data-types/'
+               title="Read more about 五个用于提取和探索复杂数据类型的 Spark SQL Helper 实用程序函数">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 🎄 3/25. 在 Raku 中生成随机整数</span>
+                <span class="screen-readers-only" > about 五个用于提取和探索复杂数据类型的 Spark SQL Helper 实用程序函数</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/whats-behind-0-dot-1-plus-0-dot2-in-perl6/'> 🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2018-12-12T09:13:30+0000" class="dt-published">Wed Dec 12, 2018</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>欢迎来到今年 12/25 的 Raku One-Liner Advent Calendar! 的第12天。今天，我们将研究一个计算零的单行程序。
+say 0.1 + 0.2 - 0.3 如果您熟悉编程，那么您很清楚，只要开始使用浮点运算，就会失去精度，并且很快就会面对小错误。
+您可能还看到了网站，0.30000000000000004.com，它有很多不同的编程语言列表，以及它们如何打印简单的表达式 0.1 + 0.2。在大多数情况下，您没有得到 0.3 这个准确值。通常当你得到零时，它实际上是在打印操作期间舍入的结果。
+在 Raku 中，0.1 + 0.2正好是 0.3，今天的单行程序正好打印了一个零。
+让我们稍微探讨一下 Raku 的内部结构，看看它是如何工作的。几天前，我们看到 Raku 的 grammar（在 Rakudo 编译器中实现）具有以下检测数字的片段：
+token numish { [ | &#39;NaN&#39; &gt;&gt; | &lt;integer&gt; | &lt;dec_number&gt; | &lt;rad_number&gt; | &lt;rat_number&gt; | &lt;complex_number&gt; | &#39;Inf&#39; &gt;&gt; | $&lt;uinf&gt;=&#39;∞&#39; | &lt;unum=:No+:Nl&gt; ] } 假如你很熟悉 Raku，就会知道 Raku 使用有理数来存储浮点数（如0.1）这一事实可以解释上述行为。这是对的，但是看一下 grammar，你会发现这篇文章有点长。
+Grammar 中所谓的 rat_number 是用尖括号写的数字：</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/whats-behind-0-dot-1-plus-0-dot2-in-perl6/'
+               title="Read more about 🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 🎄 12/25. 在 Raku 中, 0.1 &#43; 0.2 背后的东西</span>
+            </a>
+        </div>
+    
+</article>
+      
+    
+        <article class="summary h-entry notes">
+    <header>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/who-watches-the-minions/'> 第十一天 - 谁在看着 Minions</a> </h2>
+        
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmyweekly.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+
+        
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2018-12-11T23:02:01+0000" class="dt-published">Tue Dec 11, 2018</time>
+        
+        
+    </div>
+
+
+    </header>
+
+    <div class="post p-summary" >
+        <p>现在我有一个 Minion 工作队列，我需要妥善处理它。工人是否在工作（他们是否抓住了生产资料）？工作是否顺利完成？有什么错误吗？这些是什么？
+Minion Jobs Command Minion 带有一个 job 命令，列出了作业及其状态。
+$ perl myapp.pl minion job 6 inactive default check_url 5 active default check_url 4 failed default check_url 3 failed default check_url 2 finished default check_url 1 finished default check_url 我可以通过传递工作的ID来查看单个工作的信息。
+$ perl minion.pl minion job 1 { &#34;args&#34; =&gt; [ &#34;http://mojolicious.org&#34; ], &#34;attempts&#34; =&gt; 1, &#34;children&#34; =&gt; [], &#34;created&#34; =&gt; &#34;2018-11-23T19:15:47Z&#34;, &#34;delayed&#34; =&gt; &#34;2018-11-23T19:15:47Z&#34;, &#34;finished&#34; =&gt; &#34;2018-11-23T19:15:48Z&#34;, &#34;id&#34; =&gt; 1, &#34;notes&#34; =&gt; {}, &#34;parents&#34; =&gt; [], &#34;priority&#34; =&gt; 0, &#34;queue&#34; =&gt; &#34;default&#34;, &#34;result&#34; =&gt; &#34;0.</p>
+
+    </div>
+
+    
+    
+    
+        <div class="readmore no-text-decoration">
+            <a href='https://ohmyweekly.github.io/notes/who-watches-the-minions/'
+               title="Read more about 第十一天 - 谁在看着 Minions">
+                read <span class="more"> more</span>
+                <span class="screen-readers-only" > about 第十一天 - 谁在看着 Minions</span>
             </a>
         </div>
     

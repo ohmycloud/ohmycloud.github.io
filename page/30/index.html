@@ -301,7 +301,7 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/kafka-ksql-in-action/'> Kafka KSQL 用例</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/custom-session-windows/'> 自定义会话窗口</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -363,7 +363,7 @@
     
     <div class="post-date">
         
-        <time datetime="2019-05-15T15:18:18+0000" class="dt-published">Wed May 15, 2019</time>
+        <time datetime="2019-10-01T16:22:19+0000" class="dt-published">Tue Oct 1, 2019</time>
         
         
     </div>
@@ -372,9 +372,12 @@
     </header>
 
     <div class="post p-summary" >
-        <p>有一次, 在威马项目, 项目经理说, xxx, 你能不能给我查一下 kafka 中, 这个车某一时间段的数据？ 我说不好查, 查询 Kafka 中某一条记录, 需要 Consumer 程序来消费。虽然 kt 之类的 Kafka 命令行工具可以查询 Kafka 中数据. 但是能力有限, 它只能从某个 offset 开始查询, 满足不了我们的过滤条件。
-幸运的是, ksql 可以让我们像查询 sql 一样来查询 kafka, 毕竟写 sql, 谁不会呢？于是我们到它的官网, 看到 ksql 这个产品的宣传是 Streaming SQL for Apache Kafka。 毕竟底层用的是 Kafka-Streams, 所以 ksql 支持流式查询。我们下载最新的 ksql。我们将程序解压到 ~/opt/confluent-5.0.0
-启动 zk cd ~/opt/confluent-5.0.0 bin/zookeeper-server-start -daemon etc/kafka/zookeeper.properties 启动 kafka cd ~/opt/confluent-5.0.0 bin/kafka-server-start -daemon etc/kafka/server.properties 创建 topic 和 data confluent 自带了一个 ksql-datagen 工具，可以创建和产生相关的 topic 和数据，</p>
+        <p>Spark Structured Streaming 允许我们以一种直接了当的方式在滑动事件时间窗口上执行聚合。
+Spark Structured Streaming 提供开箱即用的事件时间上的窗口操作和水位。
+用例 在会话持续时间内求用户收益的总和，当流中有存款事件时，存入当前余额并关闭会话。
+窗口和水位 默认情况下，窗口和水位与基于时间的窗口一起使用。在我们的用例中，这不起作用，因为当我们收到一个存放当前余额的信号时，我们想关闭会话。
+结果 我们可以通过基于 mapGroupsWithState 函数实现自定义会话窗口来实现.
+定义自定义会话类 case class Transaction(sessionId: String, winAmount: Double, deposit: Boolean) case class SessionTrackingValue(totalSum: Double) case class SessionUpdate(sessionId: String, currentBalance: Double, depositCurrentBalance: Boolean) 创建本地 SparkSession val spark: SparkSession = SparkSession .builder .master(&#34;local[*]&#34;) .appName(getClass.getName) .getOrCreate() 创建 socket 流 val socketStream: DataFrame = spark.readStream // socket as stream input .format(&#34;socket&#34;) // connect to socket port localhost:9999 waiting for incoming stream .</p>
 
     </div>
 
@@ -382,10 +385,10 @@
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/kafka-ksql-in-action/'
-               title="Read more about Kafka KSQL 用例">
+            <a href='https://ohmyweekly.github.io/notes/custom-session-windows/'
+               title="Read more about 自定义会话窗口">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about Kafka KSQL 用例</span>
+                <span class="screen-readers-only" > about 自定义会话窗口</span>
             </a>
         </div>
     
@@ -394,7 +397,7 @@
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/ksql-stream-processing-cookbook/'> KSQL Stream Processing CookBook</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/bucket-pruning/'> Apache Spark 2.4.0 特性 - bucket pruning</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -456,7 +459,7 @@
     
     <div class="post-date">
         
-        <time datetime="2019-05-15T15:18:18+0000" class="dt-published">Wed May 15, 2019</time>
+        <time datetime="2019-09-30T11:06:42+0000" class="dt-published">Mon Sep 30, 2019</time>
         
         
     </div>
@@ -465,11 +468,12 @@
     </header>
 
     <div class="post p-summary" >
-        <p>KSQL Stream Processing CookBook 数据过滤 KSQL 流式查询持续运行。您可以使用 KSQL CREATE STREAM AS 语法将流式查询输出持久保存到 Kafka topic。 KSQL 从一个 Kafka topic 中实时获取事件，转换它们并将它们连续写入另一个 topic。
-此示例显示如何从入站 topic 过滤数据流数据以排除源自特定地理位置的记录。
-指示 在此示例中，使用名为 purchase 的源事件流。
-{ &#34;order_id&#34;: 1, &#34;customer_name&#34;: &#34;Maryanna Andryszczak&#34;, &#34;date_of_birth&#34;: &#34;1922-06-06T02:21:59Z&#34;, &#34;product&#34;: &#34;Nut - Walnut, Pieces&#34;, &#34;order_total_usd&#34;: &#34;1.65&#34;, &#34;town&#34;: &#34;Portland&#34;, &#34;country&#34;: &#34;United States&#34; } 1、在 KSQL 中, 注册 purchases 流:
-ksql&gt; CREATE STREAM purchases \ (order_id INT, customer_name VARCHAR, date_of_birth VARCHAR, \ product VARCHAR, order_total_usd VARCHAR, town VARCHAR, country VARCHAR) \ WITH (KAFKA_TOPIC=&#39;purchases&#39;, VALUE_FORMAT=&#39;JSON&#39;); 2、检查收到的前几条消息：</p>
+        <p>https://www.waitingforcode.com/apache-spark-sql/apache-spark-2.4.0-features-bucket-pruning/read
+桶定义 均衡的分区让我们更快地处理数据。例如，我们可以收集物联网事件，并把它们按照日期分区并存储在树一样的结构中：
+/events/2018/10/29 /events/2018/10/30 /events/2018/10/31 如果我们想按物联网设备号划分相同的数据，我们该怎么办？ 从技术上讲，这是可行的，但从概念上讲，它可能不如基于日期的分区有效。 设备密钥是具有非常高的基数（可能的唯一值的数量）的值，我们最终将得到一棵具有数百或数千个子目录的树。 对于不是分区的最佳选择的值问题，解决方案之一是桶存储，也称为群集。
+桶是“分区内的分区”。 区别在于桶的数量是固定的。 在大多数情况下，这些值会使用基于哈希的简单策略分配给存储桶。 您可以在下面找到 Apache Spark 中存储桶的示例：
+&#34;Spark&#34; should &#34;create buckets in partitions for orders Dataset&#34; in { val tableName = s&#34;orders${System.currentTimeMillis()}&#34; val orders = Seq((1L, &#34;user1&#34;), (2L, &#34;user2&#34;), (3L, &#34;user3&#34;), (4L, &#34;user1&#34;)).toDF(&#34;order_id&#34;, &#34;user_id&#34;) orders.write.mode(SaveMode.Overwrite).bucketBy(2, &#34;user_id&#34;).saveAsTable(tableName) val metadata = TestedSparkSession.sessionState.catalog.getTableMetadata(TableIdentifier(tableName)) metadata.bucketSpec shouldBe defined metadata.bucketSpec.get.numBuckets shouldEqual 2 metadata.bucketSpec.get.bucketColumnNames(0) shouldEqual &#34;user_id&#34; } 在分布式数据处理框架中，这种方法往往有助于避免洗牌阶段。例如，当桶用于2个数据集与 Spark SQL 中排序合并连接时，因为这两个数据集已经可以位于同一个分区中, 因此洗牌可能没有必要。当然，这两个数据集必须具有相同的分区数并使用哈希分区算法。
+桶剪枝实现 在 Apache Spark 2.4.0 之前，当桶列之一参与查询时，Spark 引擎并没有作出任何优化。毕竟，由于桶存储是确定性的，引擎只能读取桶文件存储筛选值。</p>
 
     </div>
 
@@ -477,10 +481,10 @@ ksql&gt; CREATE STREAM purchases \ (order_id INT, customer_name VARCHAR, date_of
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/ksql-stream-processing-cookbook/'
-               title="Read more about KSQL Stream Processing CookBook">
+            <a href='https://ohmyweekly.github.io/notes/bucket-pruning/'
+               title="Read more about Apache Spark 2.4.0 特性 - bucket pruning">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about KSQL Stream Processing CookBook</span>
+                <span class="screen-readers-only" > about Apache Spark 2.4.0 特性 - bucket pruning</span>
             </a>
         </div>
     
@@ -489,7 +493,7 @@ ksql&gt; CREATE STREAM purchases \ (order_id INT, customer_name VARCHAR, date_of
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/run-flink-in-idea/'> 在 IDEA 中运行 Flink 程序</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/stateful-transformations-with-mapgroupswithstate/'> 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -551,7 +555,7 @@ ksql&gt; CREATE STREAM purchases \ (order_id INT, customer_name VARCHAR, date_of
     
     <div class="post-date">
         
-        <time datetime="2019-05-14T21:22:28+0000" class="dt-published">Tue May 14, 2019</time>
+        <time datetime="2019-09-30T09:50:04+0000" class="dt-published">Mon Sep 30, 2019</time>
         
         
     </div>
@@ -560,10 +564,13 @@ ksql&gt; CREATE STREAM purchases \ (order_id INT, customer_name VARCHAR, date_of
     </header>
 
     <div class="post p-summary" >
-        <p>我们需要把 Flink 安装路径中的 opt 和 lib 添加到项目的 Libraries 中。
-依次点击 File -&gt; Project Structure -&gt; Project Settings -&gt; Libraries, 然后点击右侧栏中的加号 ➕, 选择 Java, 在弹出的对话框中选择 Flink 安装路径。
-我的 Flink 安装在 /usr/local/Cellar/apache-flink/1.8.0/libexec, 默认是隐藏的, 所以要点击 Macintosh HD, 同时按住 Command + Shift + . 即可显示出隐藏目录, 分别添加 opt 目录和 lib 目录到相应的模块的 Libraries 中。这样就可以在 IDEA 中直接运行 Flink 程序了。
-tree /usr/local/Cellar/apache-flink/1.8.0/libexec ├── bin │ ├── config.sh │ ├── start-cluster.sh │ ├── ... ├── conf │ ├── flink-conf.yaml │ ├── log4j-cli.</p>
+        <p>mapGroupsWithState 解释 mapGroupsWithState(timeoutConf: GroupStateTimeout)(func: (K, Iterator[V], GroupState[S]) =&gt; U) 是一个应用到数据组上的转换。由于它要求数据分组, 所以可能会引入 shuffling 的风险。通过调用 func 参数来计算 state。这个转换可以用在有界数据源和无界数据源上。对于有界数据源, 最终状态会立即被计算出来, 对于无界数据源, 每次触发处理后, 状态都可能会改变。
+mapGroupsWithState 的参数 timeoutConf: GroupStateTimeout 这个参数负责处理超时。 mapGroupsWithState 转换接收 3 个不同的超时值: NoTimeout, ProcessingTimeTimeout 和 EventTimeTimeout(只在设置了水位时才有效)。状态过期时间定义在作为 func 参数值的函数里面, 它要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutDuration (processing time), 要么是 org.apache.spark.sql.streaming.GroupState#setTimeoutTimestamp (event time)。
+每次至少有一条记录被发送到组里时, 就更新超时时间。状态只有在给定组在指定阈值时间内未接收到任何数据时才被认为过期。
+超时时间是在指定 GroupState 对象里面定义的, 所以根据处理的组指定不同的超时配置也是完全可行的。
+func: (K, Iterator[V], GroupState[S]) =&gt; U - 该函数定义如何处理组里的值以生成状态。 如你所见, 它完全是类型无关的, 例如, 值([V]) 和状态 [S] 都不影响所返回的数据集([U])的类型。
+当两个条件之一满足时, 该函数就会被调用: 要么组里有要处理的新值, 要么状态已经过期。在状态过期这种情况下, 会使用一个空列表的值作为第二个参数来调用该函数。
+GroupState 另一个重要的与状态管理有关的对象是 org.</p>
 
     </div>
 
@@ -571,10 +578,10 @@ tree /usr/local/Cellar/apache-flink/1.8.0/libexec ├── bin │ ├── c
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/run-flink-in-idea/'
-               title="Read more about 在 IDEA 中运行 Flink 程序">
+            <a href='https://ohmyweekly.github.io/notes/stateful-transformations-with-mapgroupswithstate/'
+               title="Read more about 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 在 IDEA 中运行 Flink 程序</span>
+                <span class="screen-readers-only" > about 使用 Spark Structured Streaming 中的 mapGroupsWithState 进行状态转换</span>
             </a>
         </div>
     
@@ -583,7 +590,7 @@ tree /usr/local/Cellar/apache-flink/1.8.0/libexec ├── bin │ ├── c
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/rewrite-subtrip-in-flink/'> 使用 Flink 重写项目</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/add-for-else-branch/'> 给 for 添加 else 分支</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -645,7 +652,7 @@ tree /usr/local/Cellar/apache-flink/1.8.0/libexec ├── bin │ ├── c
     
     <div class="post-date">
         
-        <time datetime="2019-03-20T23:37:58+0000" class="dt-published">Wed Mar 20, 2019</time>
+        <time datetime="2019-09-24T12:25:09+0000" class="dt-published">Tue Sep 24, 2019</time>
         
         
     </div>
@@ -654,9 +661,9 @@ tree /usr/local/Cellar/apache-flink/1.8.0/libexec ├── bin │ ├── c
     </header>
 
     <div class="post p-summary" >
-        <p>使用 Flink 重写一下之前用 Spark Streaming 做的项目, 发现 Flink 在实时处理上比 Spark Streaming 友好。
-结构 目录结构跟之前基本一样:
-src ├── main │ ├── java │ ├── resources │ │ └── application.conf │ └── scala │ ├── dataset │ └── datastream │ ├── com │ │ └── gac │ │ └── xs6 │ │ ├── BigdataApplication.scala │ │ ├── conf │ │ │ └── KafkaConfiguration.scala │ │ ├── core │ │ │ ├── Adapter.scala │ │ │ └── impl │ │ │ ├── AdapterImpl.</p>
+        <p>标准 Raku 中, for 关键字是没有 else 分支的, 但是 Raku 可以实现 for...else 方言, 新建一个模块, 命名为 Slang::ForElse, 其目录结构如下:
+Slang/ForElse.pm6 其中 ForElse.pm6 的内容如下:
+role ForElse::Grammar { rule statement_control:sym&lt;for&gt; { &lt;sym&gt;&lt;.kok&gt; {} &lt;.vetPerl5Syntax&gt; &lt;xblock(2)&gt; {} [ &#39;else&#39; &lt;elseblock=pblock&gt; ]? } rule vetPerl5Syntax { [ &lt;?before &#39;my&#39;? &#39;$&#39;\w+\s+&#39;(&#39; &gt; &lt;.typed_panic: &#39;X::Syntax::P5&#39;&gt; ]? [ &lt;?before &#39;(&#39; &lt;.EXPR&gt;? &#39;;&#39; &lt;.EXPR&gt;? &#39;;&#39; &lt;.EXPR&gt;? &#39;)&#39; &gt; &lt;.obs(&#39;C-style &#34;for (;;)&#34; loop&#39;, &#39;&#34;loop (;;)&#34;&#39;)&gt; ]? } } role ForElse::Actions { use nqp; use QAST:from&lt;NQP&gt;; sub lookup(Mu \match, \key) { nqp::atkey( nqp::findmethod(match, &#39;hash&#39;)(match), key ).</p>
 
     </div>
 
@@ -664,10 +671,10 @@ src ├── main │ ├── java │ ├── resources │ │ └─
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/rewrite-subtrip-in-flink/'
-               title="Read more about 使用 Flink 重写项目">
+            <a href='https://ohmyweekly.github.io/notes/add-for-else-branch/'
+               title="Read more about 给 for 添加 else 分支">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 使用 Flink 重写项目</span>
+                <span class="screen-readers-only" > about 给 for 添加 else 分支</span>
             </a>
         </div>
     
@@ -676,7 +683,7 @@ src ├── main │ ├── java │ ├── resources │ │ └─
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/make-commandline-tools-in-raku/'> 在 Raku 中制作命令行工具</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/chopping-substrings/'> chopping-substrings</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -738,7 +745,7 @@ src ├── main │ ├── java │ ├── resources │ │ └─
     
     <div class="post-date">
         
-        <time datetime="2019-03-20T11:25:38+0000" class="dt-published">Wed Mar 20, 2019</time>
+        <time datetime="2019-09-18T23:22:26+0000" class="dt-published">Wed Sep 18, 2019</time>
         
         
     </div>
@@ -747,9 +754,18 @@ src ├── main │ ├── java │ ├── resources │ │ └─
     </header>
 
     <div class="post p-summary" >
-        <p>准备 zef install App::Mi6 # 安装模块骨架工具 mi6 new FakeStreaming # 创建一个模块骨架 使用 tree 看一下目录结构：
-├── Changes ├── LICENSE ├── META6.json ├── README.md ├── bin │ └── fake-stream ├── dist.ini ├── lib │ └── FakeStreaming.pm6 └── t └── 01-basic.t 我们主要看 META6.json, bin 目录, lib 目录。
-META6.json { &#34;authors&#34; : [ &#34;&#34; ], &#34;build-depends&#34; : [ ], &#34;depends&#34; : [&#34;PKafka&#34;], &#34;description&#34; : &#34;a commandline tool to simulate socket streraming mock and kafka producer&#34;, &#34;license&#34; : &#34;Artistic-2.</p>
+        <p>第18周挑战赛的第一个任务是在一组字符串中找出最长的共同子串，即给定一组字符串如 &ldquo;ABABC&rdquo;、&ldquo;BABCA &ldquo;和 &ldquo;ABCBA&rdquo;，打印出 &ldquo;ABC&rdquo;。
+&ldquo;最佳实践&quot;解决方案是一种被称为后缀树的技术，它需要一些中等复杂的编码。然而，我们可以使用一种简单得多的方法，对长达几十万字符的字符串获得非常合理的性能。
+让我们从一个非常简洁，但次优的解决方案开始。如果我们有一个每个字符串的所有可能的子串的列表:
+ABABC: ABABC, ABAB, BABC, ABA, BAB, ABC, AB, BA, BC, A, B, C BABCA: BABCA, BABC, ABCA, BAB, ABC, BCA, BA, AB, BC, CA, B, A, C ABCBA: ABCBA, ABCB, BCBA, ABC, BCB, CBA, AB, BC, CB, BA, A, B, C
+&hellip;那么我们可以把每个列表当作一个集合，取这些集合的交集:
+ABC, AB, BA, BC, A, B, C
+&hellip;然后只需找到最长的元素: ABC
+当然，有时所有可能的子串的交集会有一个以上的最长元素:
+SHAMELESSLY NAMELESS LAMENESS
+&hellip;所以我们需要确保我们的算法能够找到所有的子串。
+鉴于 Raku 语言中内置了集合和集合操作，这里唯一的挑战就是为每个字符串生成所有可能的子串的完整集合。而且，鉴于 Raku 有非常复杂的正则表达式匹配，这也不是什么真正的挑战。
+在普通的 regex 匹配中:</p>
 
     </div>
 
@@ -757,10 +773,10 @@ META6.json { &#34;authors&#34; : [ &#34;&#34; ], &#34;build-depends&#34; : [ ], 
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/make-commandline-tools-in-raku/'
-               title="Read more about 在 Raku 中制作命令行工具">
+            <a href='https://ohmyweekly.github.io/notes/chopping-substrings/'
+               title="Read more about chopping-substrings">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 在 Raku 中制作命令行工具</span>
+                <span class="screen-readers-only" > about chopping-substrings</span>
             </a>
         </div>
     
@@ -769,7 +785,7 @@ META6.json { &#34;authors&#34; : [ &#34;&#34; ], &#34;build-depends&#34; : [ ], 
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/sub-trip-using-flink/'> 使用 Flink 进行行程划分</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/beauty-is-best/'> beauty-is-best</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -831,7 +847,7 @@ META6.json { &#34;authors&#34; : [ &#34;&#34; ], &#34;build-depends&#34; : [ ], 
     
     <div class="post-date">
         
-        <time datetime="2019-02-27T17:25:58+0800" class="dt-published">Wed Feb 27, 2019</time>
+        <time datetime="2019-09-18T23:20:11+0000" class="dt-published">Wed Sep 18, 2019</time>
         
         
     </div>
@@ -840,10 +856,11 @@ META6.json { &#34;authors&#34; : [ &#34;&#34; ], &#34;build-depends&#34; : [ ], 
     </header>
 
     <div class="post p-summary" >
-        <p>准备 ① 启动 Flink 本地模式
-/usr/local/Cellar/apache-flink/1.7.0/libexec/bin/start-cluster.sh Starting cluster. Starting standalonesession daemon on host summer. Starting taskexecutor daemon on host summer. ② 模拟实时流数据
-raku fake-streaming.pl6 该脚本每隔秒打印一行数据, 每隔 15 秒暂停打印, 然后在继续每隔一秒打印一行, 然后在 sleep 15 秒, 模拟行程间隔。
-sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJA0000000000091&#39;; my $last_meter = 0; react { whenever IO::Socket::Async.listen($host, $port) -&gt; $conn { react { my Bool:D $ignore = True; whenever Supply.interval(15).rotor(1, 1 =&gt; 1) { $ignore = !</p>
+        <p>狂热的，贪婪的本性是太少
+20 年前，我首次涉足 Perl 编程的工作之一是使用一种纯文本工具，分析其结构并为给定的线宽整齐地设置其格式的工具。 这是一个中等复杂的换行应用程序，我每天都使用它来整理电子邮件通信，软件文档和博客条目。
+因此，第 19 届 Perl 每周挑战赛的第二项任务-实现&quot;贪婪的&quot;换行算法-在许多方面对我来说是一个老朋友。
+贪婪的换行只是将输入文本中的每个单词都添加到输出的当前行中，除非这样做会导致输出行超出所需的最大行宽，在这种情况下，它会在该点断开行并继续填充第二行，等等。 因此，一个 45 列的贪婪包装的段落如下所示：
+It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.</p>
 
     </div>
 
@@ -851,10 +868,10 @@ sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJ
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/sub-trip-using-flink/'
-               title="Read more about 使用 Flink 进行行程划分">
+            <a href='https://ohmyweekly.github.io/notes/beauty-is-best/'
+               title="Read more about beauty-is-best">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 使用 Flink 进行行程划分</span>
+                <span class="screen-readers-only" > about beauty-is-best</span>
             </a>
         </div>
     
@@ -863,7 +880,7 @@ sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJ
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/extract-section-block/'> 提取文本块儿的 5 种方法</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/with-friends-like-these/'> with friends like these</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -925,7 +942,7 @@ sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJ
     
     <div class="post-date">
         
-        <time datetime="2019-01-19T23:53:38+0000" class="dt-published">Sat Jan 19, 2019</time>
+        <time datetime="2019-09-18T23:15:48+0000" class="dt-published">Wed Sep 18, 2019</time>
         
         
     </div>
@@ -934,8 +951,13 @@ sub MAIN(Str :$host = &#39;0.0.0.0&#39;, Int :$port = 3333) { my $vin = &#39;LSJ
     </header>
 
     <div class="post p-summary" >
-        <p>假设有一段文本, =begin code 和 =end code 把文本分割为一个一个的 section, 我想提取每一个 section 之间的内容。 Grammar 来拯救！
-my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code block is what we&#39;re after. We&#39;ll use &#39;ff&#39; to get it. =end code More unimportant text. =begin code I want this line. and this line as well. HaHa =end code More unimport text. =begin code Let&#39;s to go home. =end code END Grammar #use Grammar::Tracer; #use Grammar::Debugger; grammar ExtractSection { rule TOP { ^ &lt;section&gt;+ %% &lt;.</p>
+        <p>http://blogs.perl.org/users/damian_conway/2019/08/with-friends-like-these.html
+C-o-rr-a-ll-i-n-g d-i-tt-o-e-d l-e-tt-e-r-s
+我本打算本周重点关注第20周挑战的第一个任务&hellip;&hellip;但我能说什么呢？这个任务是把一个在命令行中指定的字符串分解成相同的字符:
+&quot;toolless&quot; → t oo ll e ss &quot;subbookkeeper&quot; → s u bb oo kk ee p e r &quot;committee&quot; → c o mm i tt ee 但是这在 Raku 中就是小菜一碟:
+use v6.d; sub MAIN (\str) { .say for str.comb: /(.) $0*/ } 或者使用更优雅的方式：
+.say for $str.comb: /\w+ % &lt;same&gt;/ 而在 Perl 中也几乎一样简单:
+use v5.30; my $str = $ARGV[0] // die &#34;Usage:\n $0 &lt;str&gt;\n&#34;; say $&amp; while $str =~ /(.</p>
 
     </div>
 
@@ -943,10 +965,10 @@ my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/extract-section-block/'
-               title="Read more about 提取文本块儿的 5 种方法">
+            <a href='https://ohmyweekly.github.io/notes/with-friends-like-these/'
+               title="Read more about with friends like these">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 提取文本块儿的 5 种方法</span>
+                <span class="screen-readers-only" > about with friends like these</span>
             </a>
         </div>
     
@@ -955,7 +977,7 @@ my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/toggle/'> 开关</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/itch-scratch/'> itch-scratch</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1017,7 +1039,7 @@ my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code
     
     <div class="post-date">
         
-        <time datetime="2019-01-19T10:56:07+0000" class="dt-published">Sat Jan 19, 2019</time>
+        <time datetime="2019-09-18T23:04:01+0000" class="dt-published">Wed Sep 18, 2019</time>
         
         
     </div>
@@ -1026,10 +1048,10 @@ my $excerpt = q:to/END/; Here&#39;s some unimportant text. =begin code This code
     </header>
 
     <div class="post p-summary" >
-        <p>toggle 字面意思是开关, 函数签名如下：
-method toggle(Any:D: *@conditions where .all ~~ Callable:D, Bool :$off --&gt; Seq:D) 它接收一个数组, 数组中的每个元素都是一个 Callable。
-它迭代调用者, 产生一个 Seq, 根据开关是开还是关把接收到的值填充到结果中, 开关是开还是关取决于 @conditions 数组里面调用 Callables 的结果:
-say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 13 14)␤» say (1..15).toggle(:off, * &gt; 2, * &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(3 4 11 12 13 14)␤» 想象一下开关是打开还是关闭（True或False），如果它打开则产生值。默认情况下，该开关的初始状态处于 &ldquo;on&rdquo; 位置，除非 :$off 设置为 true 值，在这种情况下，初始状态将为&quot;off&quot;。</p>
+        <p>在我过去写的一些博客中, 我经常遇到 Raku 不能如我所愿的情况。这是件小事儿, 但是像许多其它的小事儿一样, 它不经常发生但确一直刺激到我。
+在我之前写的东西中, 我使用了一些 Raku 代码完美地阐述了这一点。我需要为 @values 数组中的每个值创建一个对象, 如果 @values 为空, 则创建一个特殊的对象:
+for @values Z $label,&#34;&#34;,* -&gt; ($value, $label) { Result.new: desc =&gt; &#34;$label ($param.name() = $value)&#34;, value =&gt; timed { $block($value) }, check =&gt; { last if .timing &gt; TIMEOUT } } if !@values { Result.new: desc =&gt; $label, value =&gt; timed { $block(Empty) } } 几乎在同一时间, 在其它我所写的代码中(不在博客里的), 我需要完全相同的结构&hellip;处理数组中的每个元素, 如果数组中没有元素, 则做一些不同的处理:
+for @errors -&gt; $error { note $error if DEBUG; LAST die X::CompilationFailed.</p>
 
     </div>
 
@@ -1037,10 +1059,10 @@ say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 1
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/toggle/'
-               title="Read more about 开关">
+            <a href='https://ohmyweekly.github.io/notes/itch-scratch/'
+               title="Read more about itch-scratch">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 开关</span>
+                <span class="screen-readers-only" > about itch-scratch</span>
             </a>
         </div>
     
@@ -1049,7 +1071,7 @@ say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 1
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/using-raku-grammars-to-decompressing-zelda3-gfx/'> 使用 Raku Grammars 解压缩 Zelda 3 GFX</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/six-slices-of-pie/'> six slices of pie</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1111,7 +1133,7 @@ say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 1
     
     <div class="post-date">
         
-        <time datetime="2019-01-15T10:37:24+0000" class="dt-published">Tue Jan 15, 2019</time>
+        <time datetime="2019-07-27T15:33:57+0000" class="dt-published">Sat Jul 27, 2019</time>
         
         
     </div>
@@ -1120,12 +1142,12 @@ say (1..15).toggle(* &lt; 5, * &gt; 10, * &lt; 15); # OUTPUT: «(1 2 3 4 11 12 1
     </header>
 
     <div class="post p-summary" >
-        <p>grammars
-Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西。如果说任何压缩后的数据遵循可能由相应的解压缩算法“解析”的结构，那就不足为奇了。
-那么为什么不使用 Raku Grammar 进行这类工作呢？特别是我熟悉的压缩。
-深入研究任天堂压缩 任天堂在他们的 SNES 游戏中使用了相同的基本压缩格式，并根据游戏使用了一些变体。这非常简单，在 ~2Mhz 的 SNES CPU 上很容易。
-它是这样的：
-&lt;a byte that contains an header&gt; the header is split into 2 parts : the 3 left most bits form a command number The 5 other bits code the lenght associated with the command &lt;An arbitrary number of bytes associated with the command&gt; &lt;repeat until the header is \xFF&gt; 命令取决于游戏，但是 Zelda 3 的命令非常简单</p>
+        <p>第 15 周挑战赛的第一个任务是找到甜品的最佳排队位置。
+这是对创造越野车鞭子或牛仔电影或实体书店或碳基能源的老难题的重新表述：什么时候才是选择在一个不断缩小的馅饼中获得一块不断增加的最佳时机？
+在这个任务中，馅饼足够大，可以容纳100个人，但排在第一位的人只能得到相当于其中1%的一块。第二个人得到剩下的2%，第三个人得到之后剩下的3%，等等，等等，直到第一百个人得到前面99个人分到自己那份后剩下的100%的碎屑。换句话说，我们要&quot;让苹果派再次伟大！&quot;
+实际的任务是确定哪一个是队伍中的最佳位置。是早早地进入，得到一小块还算大的馅饼呢？还是等待，最终获得一块更大的剩饼？让我们用六种不同的方式来回答这个问题。
+必需的切片 我的开发者生涯是以C语言程序员的身份开始的，我仍然觉得以命令式模式来处理像这样的小问题是很自然的。所以，我第一次尝试回答这个问题（幸好是用 Raku 而不是C语言）的时候是这样的。
+# Start with a full pie, and no idea who gets the most... my $pie = 1.00; # i.e. 100% my $max-share = 0.00; # i.e. 0% my $max-index; # For everyone in line... for 1..100 -&gt; $N { # Take N% of what’s left as the next share... my $share = $pie * $N/100; $pie -= $share; # Remember it if it’s maximal.</p>
 
     </div>
 
@@ -1133,10 +1155,10 @@ Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/using-raku-grammars-to-decompressing-zelda3-gfx/'
-               title="Read more about 使用 Raku Grammars 解压缩 Zelda 3 GFX">
+            <a href='https://ohmyweekly.github.io/notes/six-slices-of-pie/'
+               title="Read more about six slices of pie">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 使用 Raku Grammars 解压缩 Zelda 3 GFX</span>
+                <span class="screen-readers-only" > about six slices of pie</span>
             </a>
         </div>
     
@@ -1145,7 +1167,7 @@ Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西
     
         <article class="summary h-entry notes">
     <header>
-        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/'> 使用rotor操作列表</a> </h2>
+        <h2 class="post-title p-name no-text-decoration"><a class="u-url" href='https://ohmyweekly.github.io/notes/import-external-libs-in-idea/'> 在 IDEA 中导入外部库</a> </h2>
         
     <div class="taxo no-text-decoration">
          
@@ -1207,7 +1229,7 @@ Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西
     
     <div class="post-date">
         
-        <time datetime="2019-01-10T15:23:11+0000" class="dt-published">Thu Jan 10, 2019</time>
+        <time datetime="2019-07-26T13:50:59+0000" class="dt-published">Fri Jul 26, 2019</time>
         
         
     </div>
@@ -1216,10 +1238,9 @@ Grammar 结合 actions 可以解析字符串并从字符串中产生一些东西
     </header>
 
     <div class="post p-summary" >
-        <p>假设有一个 0..100 的数字区间, 需要分成下面这样的区间：
-0..5 5..10 10..15 15..20 20..25 25..30 30..35 35..40 40..45 45..50 50..55 55..60 60..65 65..70 70..75 75..80 80..85 85..90 90..95 95..100 rotor 来拯救：
-.minmax.say for (0..100).rotor(6 =&gt; -1) 我想偷懒用程序生成下面的代码：
-if (current &gt;=0 &amp;&amp; current &lt; 5) &#34;0&#34; if (current &gt;=5 &amp;&amp; current &lt; 10) &#34;1&#34; if (current &gt;=10 &amp;&amp; current &lt; 15) &#34;2&#34; if (current &gt;=15 &amp;&amp; current &lt; 20) &#34;3&#34; if (current &gt;=20 &amp;&amp; current &lt; 25) &#34;4&#34; if (current &gt;=25 &amp;&amp; current &lt; 30) &#34;5&#34; if (current &gt;=30 &amp;&amp; current &lt; 35) &#34;6&#34; if (current &gt;=35 &amp;&amp; current &lt; 40) &#34;7&#34; if (current &gt;=40 &amp;&amp; current &lt; 45) &#34;8&#34; if (current &gt;=45 &amp;&amp; current &lt; 50) &#34;9&#34; if (current &gt;=50 &amp;&amp; current &lt; 55) &#34;10&#34; if (current &gt;=55 &amp;&amp; current &lt; 60) &#34;11&#34; if (current &gt;=60 &amp;&amp; current &lt; 65) &#34;12&#34; if (current &gt;=65 &amp;&amp; current &lt; 70) &#34;13&#34; if (current &gt;=70 &amp;&amp; current &lt; 75) &#34;14&#34; if (current &gt;=75 &amp;&amp; current &lt; 80) &#34;15&#34; if (current &gt;=80 &amp;&amp; current &lt; 85) &#34;16&#34; if (current &gt;=85 &amp;&amp; current &lt; 90) &#34;17&#34; if (current &gt;=90 &amp;&amp; current &lt; 95) &#34;18&#34; if (current &gt;=95 &amp;&amp; current &lt; 100) &#34;19&#34; for (0.</p>
+        <p>有一个解析报文的 Java 程序, 里面封装好了可用的函数, 用来解析车辆上的原始报文, kafka 数据如下所示(rawData 字段为报文)。我们用它提供的 libs 来解析该报文。
+{&#34;keyId&#34;:&#34;XXXXXXXXXXXXX&#34;,&#34;sampleTime&#34;:&#34;1563348447814&#34;,&#34;msgType&#34;:&#34;gbdata&#34;,&#34;dataList&#34;:{&#34;msgType&#34;:&#34;gbdata&#34;,&#34;vehicleModelCode&#34;:&#34;1xd9&#34;,&#34;vehicleSeries&#34;:&#34;A76&#34;,&#34;vin&#34;:&#34;LLLLLLLLLLLLLL&#34;,&#34;rawData&#34;:&#34;131302fe4c4e414132414131354b355331303236330101271307110f1b190102010100000000546d0eae26c063010f03e80000050006c3a1fd015f5e080601431018010c100801184a010344070000000000000000000801010eae26c0005c00015c100f101310111010101110101014100b10121010100f1008100e100c100c1010101210111013100e100c1010101310101015101310131015101410141013100e100c100e100d1010100f10131013101410131015100c100d100d100f100e100e101210161015101510431016101710131016101510151016100f101310131016101210101018101010151014101710141014101310131017100e10101013100e100f10111013101410141017101410181016101510161017090101002048474445454545454546444545454545454645464545494a4949464849484849bb&#34;,&#34;sampleTime&#34;:&#34;1563348447814&#34;}} 要在新的项目中使用它们的库, 需要做的是:
+在 src 同级目录下, 创建一个 libs 目录, 把 xx.jar 复制到 libs 目录里面 在 src 同级目录下, 创建一个 out 目录, 用于 build Artifact 时存放最后的 jar 包文件 File -&gt; Project Structure -&gt; Artifacts -&gt; + -&gt; Extracted Directory -&gt; 选择外部库.jar File -&gt; Project Structure -&gt; Artifacts -&gt; 勾选 include in projects. (重要) File -&gt; Project Structure -&gt; Libraries -&gt; + -&gt; 选择 libs 目录和外部库.</p>
 
     </div>
 
@@ -1227,10 +1248,10 @@ if (current &gt;=0 &amp;&amp; current &lt; 5) &#34;0&#34; if (current &gt;=5 &am
     
     
         <div class="readmore no-text-decoration">
-            <a href='https://ohmyweekly.github.io/notes/%E4%BD%BF%E7%94%A8rotor%E6%93%8D%E4%BD%9C%E5%88%97%E8%A1%A8/'
-               title="Read more about 使用rotor操作列表">
+            <a href='https://ohmyweekly.github.io/notes/import-external-libs-in-idea/'
+               title="Read more about 在 IDEA 中导入外部库">
                 read <span class="more"> more</span>
-                <span class="screen-readers-only" > about 使用rotor操作列表</span>
+                <span class="screen-readers-only" > about 在 IDEA 中导入外部库</span>
             </a>
         </div>
     
