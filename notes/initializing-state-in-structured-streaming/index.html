@@ -1,10 +1,915 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/</title>
-    <link rel="canonical" href="https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            Spark Structured Streaming 中的初始化状态 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="Spark Structured Streaming 中的初始化状态" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/" />
+
+
+    
+        <meta property="article:published_time" content="2019-10-03T16:43:59&#43;00:00"/>
+    
+    
+        <meta property="article:modified_time" content="2019-10-03T16:43:59&#43;00:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Spark Structured Streaming 中的初始化状态"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmycloud.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry notes">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">Spark Structured Streaming 中的初始化状态</h1>
+
+        
+        <data class="u-url" value="https://ohmycloud.github.io/notes/initializing-state-in-structured-streaming/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2019-10-03T16:43:59+0000" class="dt-published">Thu Oct 3, 2019</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmycloud.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>不久前，Sunil 询问我是否可以像基于 DStream 的 API 一样在 Apache Spark 结构化流中加载初始状态。 由于回应并不明显，因此我决定调查并通过这篇文章分享调查结果。</p>
+<p>文章首先简短地回忆了 Apache Spark Streaming 模块中的状态初始化。 下一节将讨论可用于在 Apache Spark 结构化流库中执行相同操作的方法。</p>
+<h2 id="流中的初始化状态">流中的初始化状态&nbsp;<a class="headline-hash no-text-decoration" href="#流中的初始化状态">#</a> </h2>
+<p>在基于 DStream 的库中初始化状态很简单。 您只需要创建一个基于键的 RDD 并将其传递给 StateSpec 的 <code>initialState</code> 方法：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="s">&#34;streaming processing&#34;</span> <span class="n">should</span> <span class="s">&#34;start with initialized state&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">conf</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">SparkConf</span><span class="o">().</span><span class="n">setAppName</span><span class="o">(</span><span class="s">&#34;DStream initialState test&#34;</span><span class="o">).</span><span class="n">setMaster</span><span class="o">(</span><span class="s">&#34;local[*]&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">streamingContext</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StreamingContext</span><span class="o">(</span><span class="n">conf</span><span class="o">,</span> <span class="nc">Durations</span><span class="o">.</span><span class="n">seconds</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">streamingContext</span><span class="o">.</span><span class="n">checkpoint</span><span class="o">(</span><span class="s">&#34;/tmp/spark-initialstate-test&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">dataQueue</span> <span class="k">=</span> <span class="k">new</span> <span class="n">mutable</span><span class="o">.</span><span class="nc">Queue</span><span class="o">[</span><span class="kt">RDD</span><span class="o">[</span><span class="kt">OneVisit</span><span class="o">]]()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// A mapping function that maintains an integer state and return a UserVisit
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">def</span> <span class="n">mappingFunction</span><span class="o">(</span><span class="n">key</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">OneVisit</span><span class="o">],</span> <span class="n">state</span><span class="k">:</span> <span class="kt">State</span><span class="o">[</span><span class="kt">UserVisit</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">)]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">var</span> <span class="n">visitedPages</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">().</span><span class="n">map</span><span class="o">(</span><span class="n">userVisitState</span> <span class="k">=&gt;</span> <span class="n">userVisitState</span><span class="o">.</span><span class="n">visitedPages</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">value</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">visit</span> <span class="k">=&gt;</span> <span class="n">visit</span><span class="o">.</span><span class="n">page</span><span class="o">).</span><span class="n">foreach</span><span class="o">(</span><span class="n">page</span> <span class="k">=&gt;</span> <span class="n">visitedPages</span> <span class="k">=</span> <span class="n">visitedPages</span> <span class="k">:</span><span class="kt">+</span> <span class="kt">page</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="nc">UserVisit</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">visitedPages</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">Some</span><span class="o">((</span><span class="n">key</span><span class="o">,</span> <span class="n">visitedPages</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;, &#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">initialStateRdd</span> <span class="k">=</span> <span class="n">streamingContext</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">UserVisit</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">,</span> <span class="nc">Seq</span><span class="o">(</span><span class="s">&#34;page1&#34;</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">,</span> <span class="s">&#34;page3&#34;</span><span class="o">)),</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">UserVisit</span><span class="o">(</span><span class="s">&#34;b&#34;</span><span class="o">,</span> <span class="nc">Seq</span><span class="o">(</span><span class="s">&#34;page4&#34;</span><span class="o">)),</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">UserVisit</span><span class="o">(</span><span class="s">&#34;c&#34;</span><span class="o">,</span> <span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">)).</span><span class="n">map</span><span class="o">(</span><span class="n">visitState</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">visitState</span><span class="o">.</span><span class="n">userId</span><span class="o">,</span> <span class="n">visitState</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">visits</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">OneVisit</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">,</span> <span class="s">&#34;page4&#34;</span><span class="o">),</span> <span class="nc">OneVisit</span><span class="o">(</span><span class="s">&#34;b&#34;</span><span class="o">,</span> <span class="s">&#34;page5&#34;</span><span class="o">),</span> <span class="nc">OneVisit</span><span class="o">(</span><span class="s">&#34;b&#34;</span><span class="o">,</span> <span class="s">&#34;page6&#34;</span><span class="o">),</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">OneVisit</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">,</span> <span class="s">&#34;page7&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">visits</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="n">visit</span> <span class="k">=&gt;</span> <span class="n">dataQueue</span> <span class="o">+=</span> <span class="n">streamingContext</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">.</span><span class="n">makeRDD</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="n">visit</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateSpec</span> <span class="k">=</span> <span class="nc">StateSpec</span><span class="o">.</span><span class="n">function</span><span class="o">(</span><span class="n">mappingFunction</span> <span class="k">_</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">initialState</span><span class="o">(</span><span class="n">initialStateRdd</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">allValues</span><span class="o">.</span><span class="n">clear</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">streamingContext</span><span class="o">.</span><span class="n">queueStream</span><span class="o">(</span><span class="n">dataQueue</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">visit</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">visit</span><span class="o">.</span><span class="n">userId</span><span class="o">,</span> <span class="n">visit</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapWithState</span><span class="o">(</span><span class="n">stateSpec</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreachRDD</span><span class="o">(</span><span class="n">rdd</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">rdd</span><span class="o">.</span><span class="n">collect</span><span class="o">().</span><span class="n">foreach</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">case</span> <span class="nc">Some</span><span class="o">((</span><span class="n">userId</span><span class="o">,</span> <span class="n">pages</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">addValue</span><span class="o">(</span><span class="n">userId</span><span class="o">,</span> <span class="n">pages</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">})</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">streamingContext</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">streamingContext</span><span class="o">.</span><span class="n">awaitTerminationOrTimeout</span><span class="o">(</span><span class="mi">10000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;page1, page2, page3, page4&#34;</span><span class="o">,</span> <span class="s">&#34;page1, page2, page3, page4, page7&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="s">&#34;b&#34;</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="s">&#34;b&#34;</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;page4, page5&#34;</span><span class="o">,</span> <span class="s">&#34;page4, page5, page6&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>在后台，DStream 有状态操作在 <code>MapWithStateRDD</code> 上运行，并且初始状态在状态计算中仅被视为输入 RDD：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="cm">/** Method that generates an RDD for the given time */</span>
+</span></span><span class="line"><span class="cl"><span class="k">override</span> <span class="k">def</span> <span class="n">compute</span><span class="o">(</span><span class="n">validTime</span><span class="k">:</span> <span class="kt">Time</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">RDD</span><span class="o">[</span><span class="kt">MapWithStateRDDRecord</span><span class="o">[</span><span class="kt">K</span>, <span class="kt">S</span>, <span class="kt">E</span><span class="o">]]]</span> <span class="k">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// Get the previous state or create a new empty state RDD
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">val</span> <span class="n">prevStateRDD</span> <span class="k">=</span> <span class="n">getOrCompute</span><span class="o">(</span><span class="n">validTime</span> <span class="o">-</span> <span class="n">slideDuration</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">rdd</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="o">(</span><span class="n">rdd</span><span class="o">.</span><span class="n">partitioner</span> <span class="o">!=</span> <span class="nc">Some</span><span class="o">(</span><span class="n">partitioner</span><span class="o">))</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// If the RDD is not partitioned the right way, let us repartition it using the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// partition index as the key. This is to ensure that state RDD is always partitioned
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// before creating another state RDD using it
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nc">MapWithStateRDD</span><span class="o">.</span><span class="n">createFromRDD</span><span class="o">[</span><span class="kt">K</span>, <span class="kt">V</span>, <span class="kt">S</span>, <span class="kt">E</span><span class="o">](</span>
+</span></span><span class="line"><span class="cl">          <span class="n">rdd</span><span class="o">.</span><span class="n">flatMap</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">stateMap</span><span class="o">.</span><span class="n">getAll</span><span class="o">()</span> <span class="o">},</span> <span class="n">partitioner</span><span class="o">,</span> <span class="n">validTime</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">rdd</span>
+</span></span><span class="line"><span class="cl">      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span>
+</span></span><span class="line"><span class="cl">      <span class="nc">MapWithStateRDD</span><span class="o">.</span><span class="n">createFromPairRDD</span><span class="o">[</span><span class="kt">K</span>, <span class="kt">V</span>, <span class="kt">S</span>, <span class="kt">E</span><span class="o">](</span>
+</span></span><span class="line"><span class="cl">        <span class="n">spec</span><span class="o">.</span><span class="n">getInitialStateRDD</span><span class="o">().</span><span class="n">getOrElse</span><span class="o">(</span><span class="k">new</span> <span class="nc">EmptyRDD</span><span class="o">[(</span><span class="kt">K</span>, <span class="kt">S</span><span class="o">)](</span><span class="n">ssc</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">)),</span>
+</span></span><span class="line"><span class="cl">        <span class="n">partitioner</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">validTime</span>
+</span></span><span class="line"><span class="cl">      <span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span></code></pre></div><h2 id="结构化流中的初始化状态-流的静态连接">结构化流中的初始化状态-流的静态连接&nbsp;<a class="headline-hash no-text-decoration" href="#结构化流中的初始化状态-流的静态连接">#</a> </h2>
+<p>我最初想到的是面向 API 的结构化流中的初始化状态。 但是不幸的是，我没有找到任何引导计算状态的方法。 因此，我首先尝试通过组合数据集来实现状态管理。 第一个工作版本使用流的静态左连接：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">private</span> <span class="k">val</span> <span class="nc">MappingFunctionJoin</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">materializedValues</span> <span class="k">=</span> <span class="n">values</span><span class="o">.</span><span class="n">toSeq</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">defaultState</span> <span class="k">=</span> <span class="n">materializedValues</span><span class="o">.</span><span class="n">headOption</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;state_name&#34;</span><span class="o">))).</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="n">defaultState</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">materializedValues</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;be initialized with a join&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateDataset</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;old_page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;old_page2&#34;</span><span class="o">)).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;state_id&#34;</span><span class="o">,</span> <span class="s">&#34;state_name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;state-load-join&#34;</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">initialDataset</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">joinedDataset</span> <span class="k">=</span>  <span class="n">initialDataset</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">stateDataset</span><span class="o">,</span> <span class="n">$</span><span class="s">&#34;id&#34;</span> <span class="o">===</span> <span class="n">$</span><span class="s">&#34;state_id&#34;</span><span class="o">,</span> <span class="s">&#34;left&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">joinedDataset</span><span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunctionJoin</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;, &#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">60000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;old_page2, page2&#34;</span><span class="o">,</span> <span class="s">&#34;old_page1, page1&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>即使它按预期工作，我也不满意。首先，映射函数变得更加复杂。它不再是简单的状态累积函数，因为它也需要管理状态初始化。同样，该解决方案需要始终将静态数据集保留在内存中，即使不需要初始状态也是如此。由于这两个缺点，我转向了使用基于状态检查点的另一种方法。</p>
+<h2 id="在结构化流中初始化状态-检查点">在结构化流中初始化状态-检查点&nbsp;<a class="headline-hash no-text-decoration" href="#在结构化流中初始化状态-检查点">#</a> </h2>
+<p>在结构化流中，您可以定义一个 <code>checkpointLocation</code> 选项，以提高数据处理的容错能力。定义检查点目录后，引擎将在重新开始处理之前首先检查是否有一些数据要还原。在要还原的数据中，您会发现在上一次执行期间累积的状态。</p>
+<p>这个想法是或多或少地将可能存储在某些 NoSQL 或关系存储中的初始状态转换为流处理所使用的检查点状态：</p>
+<p><img src="https://www.waitingforcode.com/public/images/articles/structured_streaming_state_init.png" alt="img"></p>
+<p>除了状态之外，检查点还存储有关数据源的信息。而且，由于用于状态初始化和流处理的源可能会有所不同，因此将它们混合在一起非常危险，就像您稍后将看到的那样，它将无法正常工作。另一方面，根据文档，状态操作具有更灵活的语义：“不允许对用户定义状态的模式进行任何更改，也不允许超时类型。用户定义状态映射函数内的任何更改均被允许，但更改的语义效果取决于用户定义的逻辑。”</p>
+<p>正如我之前提到的，当数据源在初始化和实际处理步骤中相同时，此解决方案（或者说是魔改）可以正常工作。对于不兼容的源，要实现它要困难得多。因此，即使该魔改看上去与 DStream 的初始状态非常相似，但由于具有检查点语义，因此不建议这样做。除非您确定具有相同的数据源，并且偶然地在整个查询运行中保持一致。您可以在说明兼容性和不兼容性的以下测试案例中观察到这两点：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">private</span> <span class="k">val</span> <span class="nc">MappingFunction</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">Seq</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;be initialized for the same data source&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;state-init-same-source-mode&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">checkpointDir</span> <span class="k">=</span> <span class="s">s&#34;/tmp/batch-checkpoint</span><span class="si">${</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="nc">StructType</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="nc">DataTypes</span><span class="o">.</span><span class="nc">LongType</span><span class="o">,</span> <span class="kc">false</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">&#34;name&#34;</span><span class="o">,</span> <span class="nc">DataTypes</span><span class="o">.</span><span class="nc">StringType</span><span class="o">,</span> <span class="kc">false</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">sourceDir</span> <span class="k">=</span> <span class="s">&#34;/tmp/batch-state-init&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateDataset</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;old_page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;old_page2&#34;</span><span class="o">)).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateDataset</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateQuery</span> <span class="k">=</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="n">schema</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">).</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;checkpointLocation&#34;</span><span class="o">,</span> <span class="n">checkpointDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateQuery</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">45000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateQuery</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">newInputData</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">)).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">newInputData</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">fileBasedQuery</span> <span class="k">=</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="n">schema</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">).</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;checkpointLocation&#34;</span><span class="o">,</span> <span class="n">checkpointDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;, &#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">fileBasedQuery</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">45000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">fileBasedQuery</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">4</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;old_page2&#34;</span><span class="o">,</span> <span class="s">&#34;old_page1&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;old_page2, page2&#34;</span><span class="o">,</span> <span class="s">&#34;old_page1, page1&#34;</span> <span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;not be initialized for different data sources&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;state-init-different-source-mode&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">checkpointDir</span> <span class="k">=</span> <span class="s">s&#34;/tmp/batch-checkpoint</span><span class="si">${</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span><span class="si">}</span><span class="s">&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="nc">StructType</span><span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nc">Seq</span><span class="o">(</span><span class="nc">StructField</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="nc">DataTypes</span><span class="o">.</span><span class="nc">LongType</span><span class="o">,</span> <span class="kc">false</span><span class="o">),</span> <span class="nc">StructField</span><span class="o">(</span><span class="s">&#34;name&#34;</span><span class="o">,</span> <span class="nc">DataTypes</span><span class="o">.</span><span class="nc">StringType</span><span class="o">,</span> <span class="kc">false</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">sourceDir</span> <span class="k">=</span> <span class="s">&#34;/tmp/batch-state-init&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateDataset</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;old_page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;old_page2&#34;</span><span class="o">)).</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateDataset</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="o">(</span><span class="nc">SaveMode</span><span class="o">.</span><span class="nc">Overwrite</span><span class="o">).</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateQuery</span> <span class="k">=</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">readStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">schema</span><span class="o">(</span><span class="n">schema</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">json</span><span class="o">(</span><span class="n">sourceDir</span><span class="o">).</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;checkpointLocation&#34;</span><span class="o">,</span> <span class="n">checkpointDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateQuery</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">45000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateQuery</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="c1">// Cleans the checkpoint location and keeps only the state files
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">cleanCheckpointLocation</span><span class="o">(</span><span class="n">checkpointDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputDataset</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">mappedValues</span> <span class="k">=</span> <span class="n">inputDataset</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunction</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">mappedValues</span><span class="o">.</span><span class="n">writeStream</span><span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="s">&#34;update&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">option</span><span class="o">(</span><span class="s">&#34;checkpointLocation&#34;</span><span class="o">,</span> <span class="n">checkpointDir</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;,&#34;</span><span class="o">))).</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">60000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">4</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;old_page2&#34;</span><span class="o">,</span> <span class="s">&#34;old_page1&#34;</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">,</span> <span class="s">&#34;page1&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="k">private</span> <span class="k">def</span> <span class="n">cleanCheckpointLocation</span><span class="o">(</span><span class="n">checkpointDir</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">FileUtils</span><span class="o">.</span><span class="n">deleteDirectory</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">checkpointDir</span><span class="si">}</span><span class="s">/commits&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">FileUtils</span><span class="o">.</span><span class="n">deleteDirectory</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">checkpointDir</span><span class="si">}</span><span class="s">/offsets&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">FileUtils</span><span class="o">.</span><span class="n">deleteDirectory</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">checkpointDir</span><span class="si">}</span><span class="s">/sources&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">s&#34;</span><span class="si">${</span><span class="n">checkpointDir</span><span class="si">}</span><span class="s">/metadata&#34;</span><span class="o">).</span><span class="n">delete</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><h2 id="在结构化流中初始化状态-直接查找">在结构化流中初始化状态-直接查找&nbsp;<a class="headline-hash no-text-decoration" href="#在结构化流中初始化状态-直接查找">#</a> </h2>
+<p>在检查点尝试失败之后，我决定转向一个更简单的解决方案。 上一节中定义的映射函数会为第一次看到的每个键创建一个空序列。 但是，我们可以从另一个角度解决问题，仅在需要时才加载它，而不是在批处理中加载整个状态。 当然，当初始状态包含一些我们想要输出的信息时，即使没有关于它的新数据，也不适合这种情况。 但是至少该解决方案比魔改检查点系统的解决方案干净得多。</p>
+<p>新的映射函数类似于以下代码片段。 它不返回空序列，而是在某些键值存储或任何其他保证O(1)查找的存储中查找数据：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-scala" data-lang="scala"><span class="line"><span class="cl"><span class="k">private</span> <span class="k">val</span> <span class="nc">MappingFunctionKeyValueLoad</span><span class="k">:</span> <span class="o">(</span><span class="kt">Long</span><span class="o">,</span> <span class="kt">Iterator</span><span class="o">[</span><span class="kt">Row</span><span class="o">],</span> <span class="nc">GroupState</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]])</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">values</span><span class="o">,</span> <span class="n">state</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNames</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getOption</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="nc">KeyValueStore</span><span class="o">.</span><span class="nc">State</span><span class="o">(</span><span class="n">key</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">stateNewNames</span> <span class="k">=</span> <span class="n">stateNames</span> <span class="o">++</span> <span class="n">values</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="s">&#34;name&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">stateNewNames</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">stateNewNames</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="s">&#34;the state&#34;</span> <span class="n">should</span> <span class="s">&#34;be loaded with key-value store&#34;</span> <span class="n">in</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">testKey</span> <span class="k">=</span> <span class="s">&#34;state-load-key-value&#34;</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">inputStream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">MemoryStream</span><span class="o">[(</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">)](</span><span class="mi">1</span><span class="o">,</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">sqlContext</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">inputStream</span><span class="o">.</span><span class="n">addData</span><span class="o">((</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;page1&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">2L</span><span class="o">,</span> <span class="s">&#34;page2&#34;</span><span class="o">),</span> <span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="s">&#34;page3&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">initialDataset</span> <span class="k">=</span> <span class="n">inputStream</span><span class="o">.</span><span class="n">toDS</span><span class="o">().</span><span class="n">toDF</span><span class="o">(</span><span class="s">&#34;id&#34;</span><span class="o">,</span> <span class="s">&#34;name&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">val</span> <span class="n">query</span> <span class="k">=</span> <span class="n">initialDataset</span><span class="o">.</span><span class="n">groupByKey</span><span class="o">(</span><span class="n">row</span> <span class="k">=&gt;</span> <span class="n">row</span><span class="o">.</span><span class="n">getAs</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="s">&#34;id&#34;</span><span class="o">))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">mapGroupsWithState</span><span class="o">(</span><span class="nc">MappingFunctionKeyValueLoad</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">writeStream</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">outputMode</span><span class="o">(</span><span class="nc">OutputMode</span><span class="o">.</span><span class="nc">Update</span><span class="o">())</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">foreach</span><span class="o">(</span><span class="k">new</span> <span class="nc">InMemoryStoreWriter</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]](</span><span class="n">testKey</span><span class="o">,</span> <span class="o">(</span><span class="n">stateSeq</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">stateSeq</span><span class="o">.</span><span class="n">mkString</span><span class="o">(</span><span class="s">&#34;, &#34;</span><span class="o">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">query</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">60000</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">have</span> <span class="n">size</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="nc">InMemoryKeyedStore</span><span class="o">.</span><span class="n">getValues</span><span class="o">(</span><span class="n">testKey</span><span class="o">)</span> <span class="n">should</span> <span class="n">contain</span> <span class="n">allOf</span><span class="o">(</span><span class="s">&#34;old_page1, page2&#34;</span><span class="o">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;old_page1, old_page2, page1, page3&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></div><p>在迭代的解决方案中，这似乎是最简单的。与基于 JOIN 的方法不同，它不再需要时不再保留数据。而且，它不会尝试破解结构化流库的语义，就像使用检查点的建议一样。另一方面，可能需要一些额外的预处理步骤才能将数据放入键值存储中。另外，它不会生成没有任何新传入数据的记录，因此对于某些必须完全恢复状态的管道可能是不可接受的。</p>
+<p>在需要数据重新处理的所有情况下，初始化状态可能非常有用。例如，如果您对某个 Kafka 主题进行了有状态的处理，并且必须切换数据源，例如，使用另一个流代理系统中的数据，那么使用当前的实现可能会很困难。如文档中所述，“由于结果不可预测，通常不允许更改订阅的主题/文件”。如果没有简单的方法来移动状态，那么将很难实现这种情况。当然，您可以使用所描述的方法之一，但是与 DStream 的 initialState 之类的内置解决方案相比，它们更像是魔改。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#流中的初始化状态">流中的初始化状态</a></li>
+    <li><a href="#结构化流中的初始化状态-流的静态连接">结构化流中的初始化状态-流的静态连接</a></li>
+    <li><a href="#在结构化流中初始化状态-检查点">在结构化流中初始化状态-检查点</a></li>
+    <li><a href="#在结构化流中初始化状态-直接查找">在结构化流中初始化状态-直接查找</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/spark-structured-streaming-and-kafka-offests-management/" class="nobr">« Spark Structured Streaming 和 Kafka 偏移量管理</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/foreach-batch/" class="nobr">Apache Spark 2.4.0 特性  - foreachBatch »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>

@@ -1,10 +1,740 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <title>https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/</title>
-    <link rel="canonical" href="https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/">
-    <meta name="robots" content="noindex">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/">
-  </head>
+    
+    
+    
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+
+    
+    <meta name="referrer" content="no-referrer">
+
+    <title>
+        
+            第十三天 - 使用 Cro 和 Debian 从头构建 Web 服务 ❚ 焉知非鱼
+        
+    </title>
+
+    
+    
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+    
+    <style>
+     
+     
+     :root {
+         --theme-color: #ac4142;
+         --theme-color-light: rgba(172, 65, 66, 0.2);
+     }
+     
+     html {
+         line-height: 1.5;
+     }
+    </style>
+
+    
+    
+
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css">
+    
+    <link rel="preload" href="/css/refined.min.7f6d3ee611034e4ebcbc063f1db3bc042fecdc8901afbedad80ff02bae409204.css" as="style">
+
+    
+
+
+
+    
+        <style>
+         
+         /* Background */ .chroma { background-color: #ffffff }
+/* Error */ .chroma .err { color: #a61717; background-color: #e3d2d2 }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+/* LineHighlight */ .chroma .hl { display: block; width: 100%;background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* LineNumbers */ .chroma .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em; }
+/* Keyword */ .chroma .k { color: #000000; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #000000; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #000000; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #000000; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #000000; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #000000; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #445588; font-weight: bold }
+/* NameAttribute */ .chroma .na { color: #008080 }
+/* NameBuiltin */ .chroma .nb { color: #0086b3 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #999999 }
+/* NameClass */ .chroma .nc { color: #445588; font-weight: bold }
+/* NameConstant */ .chroma .no { color: #008080 }
+/* NameDecorator */ .chroma .nd { color: #3c5d5d; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #800080 }
+/* NameException */ .chroma .ne { color: #990000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #990000; font-weight: bold }
+/* NameLabel */ .chroma .nl { color: #990000; font-weight: bold }
+/* NameNamespace */ .chroma .nn { color: #555555 }
+/* NameTag */ .chroma .nt { color: #000080 }
+/* NameVariable */ .chroma .nv { color: #008080 }
+/* NameVariableClass */ .chroma .vc { color: #008080 }
+/* NameVariableGlobal */ .chroma .vg { color: #008080 }
+/* NameVariableInstance */ .chroma .vi { color: #008080 }
+/* LiteralString */ .chroma .s { color: #dd1144 }
+/* LiteralStringAffix */ .chroma .sa { color: #dd1144 }
+/* LiteralStringBacktick */ .chroma .sb { color: #dd1144 }
+/* LiteralStringChar */ .chroma .sc { color: #dd1144 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #dd1144 }
+/* LiteralStringDoc */ .chroma .sd { color: #dd1144 }
+/* LiteralStringDouble */ .chroma .s2 { color: #dd1144 }
+/* LiteralStringEscape */ .chroma .se { color: #dd1144 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #dd1144 }
+/* LiteralStringInterpol */ .chroma .si { color: #dd1144 }
+/* LiteralStringOther */ .chroma .sx { color: #dd1144 }
+/* LiteralStringRegex */ .chroma .sr { color: #009926 }
+/* LiteralStringSingle */ .chroma .s1 { color: #dd1144 }
+/* LiteralStringSymbol */ .chroma .ss { color: #990073 }
+/* LiteralNumber */ .chroma .m { color: #009999 }
+/* LiteralNumberBin */ .chroma .mb { color: #009999 }
+/* LiteralNumberFloat */ .chroma .mf { color: #009999 }
+/* LiteralNumberHex */ .chroma .mh { color: #009999 }
+/* LiteralNumberInteger */ .chroma .mi { color: #009999 }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #009999 }
+/* LiteralNumberOct */ .chroma .mo { color: #009999 }
+/* Operator */ .chroma .o { color: #000000; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #999988; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #999988; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #999988; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #999988; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #999999; font-weight: bold; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #999999; font-weight: bold; font-style: italic }
+/* GenericDeleted */ .chroma .gd { color: #000000; background-color: #ffdddd }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #aa0000 }
+/* GenericHeading */ .chroma .gh { color: #999999 }
+/* GenericInserted */ .chroma .gi { color: #000000; background-color: #ddffdd }
+/* GenericOutput */ .chroma .go { color: #888888 }
+/* GenericPrompt */ .chroma .gp { color: #555555 }
+/* GenericStrong */ .chroma .gs { font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa }
+/* GenericTraceback */ .chroma .gt { color: #aa0000 }
+/* GenericUnderline */ .chroma .gl { text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #bbbbbb }
+
+         
+         /* Overrides on top of the theme and Chroma CSS */
+/* Chroma-based lines highlighting in code blocks */
+.chroma .hl {
+    background-color: #e8e8e8;
+    /* Extend highlight up to 100 characters (assuming that the code blocks never have more than 100 characters in a line) */
+    min-width: 100ch;
+}
+/* GenericHeading */ .chroma .gh { color: #999999; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #aaaaaa; font-weight: bold }
+
+         
+        </style>
+    
+
+    
+
+    
+    
+    
+
+    
+    <script src="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js"></script>
+    
+    <link rel="preload" href="/js/responsive-nav-orig.min.e2b5f2a956b488f466da513820636134defdc38b90ed566248960593f2bb4ba5.js" as="script">
+
+    
+    
+    <script defer src="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js"></script>
+    
+    <link rel="preload" href="/js/libs/fa/fontawesome-all.min.08916ac0fd078adfb58edc890460e2c8990729aee02bca7586404b56805f5219.js" as="script">
+
+    
+
+    
+
+    
+    
+    
+
+    
+    
+<!-- rel="me" links for IndieAuth -->
+
+
+
+
+
+
+
+    
+ 
+<meta property="og:title" content="第十三天 - 使用 Cro 和 Debian 从头构建 Web 服务" />
+<meta property="og:description"
+      content=" " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/" />
+
+
+    
+        <meta property="article:published_time" content="2018-12-13T10:43:05&#43;08:00"/>
+    
+    
+        <meta property="article:modified_time" content="2018-12-13T10:43:05&#43;08:00"/>
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+     <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="第十三天 - 使用 Cro 和 Debian 从头构建 Web 服务"/>
+<meta name="twitter:description" content=" "/>
+
+
+    
+    
+    <link rel="alternate" type="application/jf2post+json" href="https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/jf2post.json" title="Jf2post for 焉知非鱼" />
+    
+     
+
+
+
+    
+    
+    
+        
+    
+
+
+     
+        
+        <meta name="DC.Creator" content="焉知非鱼"/>
+    
+
+
+
+    
+    
+    
+    <meta name="hugo-build-date" content="2024-03-01T16:16:06Z"/>
+    <meta name="hugo-commit-hash" content="312735366b20d64bd61bff8627f593749f86c964"/>
+    <meta name="generator" content="Hugo 0.123.7">
+</head>
+
+
+    
+        <body lang="en">
+    
+
+        
+        <div class="border" id="home"></div>
+
+        <div class="wrapper">   
+            
+<nav id="nav" class="nav-collapse opened" aria-hidden="false">
+    <ul class="navbar">
+        <li><a class="" href="/">Home</a></li>
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/posts/">Posts</a></li>
+            
+        
+            
+                <li><a class="" href="https://ohmycloud.github.io/notes/">Notes</a></li>
+            
+        
+        
+            <li><a class="" href="https://ohmycloud.github.io/search/">Search</a></li>
+        
+    </ul>
+</nav>
+
+            <div class="container">
+                <header class="masthead">
+                    <div class="masthead-title no-text-decoration">
+                        <a href="/">焉知非鱼</a> <span class="blinking-cursor">❚</span>
+                    </div>
+                    <div class="masthead-tagline">
+                        Wait the light to fall
+                    </div>
+                </header>
+
+                
+
+
+
+
+
+
+
+
+<article class="post h-entry posts">
+    <header>
+        <div class="center">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+
+        <h1 class="post-title p-name">第十三天 - 使用 Cro 和 Debian 从头构建 Web 服务</h1>
+
+        
+        <data class="u-url" value="https://ohmycloud.github.io/posts/2018-12-13-web-server-from-scratch-with-cro-and-debian/"></data>
+
+        <div class="date-syndication">
+            
+
+
+    
+    
+    <div class="post-date">
+        
+        <time datetime="2018-12-13T10:43:05+0800" class="dt-published">Thu Dec 13, 2018</time>
+        
+        
+    </div>
+
+
+            
+
+
+
+
+        </div>
+         
+
+
+
+    
+    
+    
+        
+    
+
+
+    
+        
+        <span class="hide">
+            &mdash; <a href="https://ohmycloud.github.io/" class="u-author">焉知非鱼</a>
+        </span>
+    
+
+
+    </header>
+
+    <div class="content">
+        
+
+
+        
+
+
+
+
+
+                       
+
+
+        <div class="e-content">
+            
+
+
+
+
+<p>我和圣诞老人​​谈过，他说他不知道如何在 <strong>Debian</strong> 上安装 <strong>Cro</strong>，所以我对自己说：我要帮助他。</p>
+<p>如果您对 <strong>Apache</strong> 等 Web 服务器有一些经验，并且您已经听说过 <strong>Raku</strong> 强大的并发/响应方面，那么您肯定有兴趣了解 <a href="https://cro.services/">Cro 服务</a>。这篇文章的受众是<strong>具有 Debian 基本经验的人</strong>，或者在 <strong>Raku</strong> 新手&hellip;就像圣诞老人一样。</p>
+<p><strong>Cro</strong> 是一个 <strong>Raku 模块</strong>，它提供了轻松构建反应式和并发服务所需的一切，例如：Web 服务器。</p>
+<p>在这篇文章中，我们将看到如何在 <strong>Debian</strong> 中安装 <strong>Cro</strong>，这是最受欢迎的 Linux 发行版之一。然后，我将解释 <strong>Cro</strong> 的演示示例。</p>
+<p>我们将使用 <strong>Debian 9,64 位</strong>（Stretch），我们将在安装后启动它。</p>
+<h2 id="安装-rakudo-raku-编译器">安装 Rakudo Raku 编译器&nbsp;<a class="headline-hash no-text-decoration" href="#安装-rakudo-raku-编译器">#</a> </h2>
+<p><a href="https://rakudo.org/">Rakudo</a> 是 <strong>Cro</strong> 模块运行的当前 <strong>Raku</strong> 编译器。安装 <strong>Rakudo</strong> 的常规方法是安装 <a href="https://rakudo.org/files">Rakudo Star</a>，但我更喜欢快速的方式：<a href="https://github.com/nxadm/rakudo-pkg">rakudo-pkg</a> &hellip;&hellip;怎么样？只需从此 <a href="https://github.com/nxadm/rakudo-pkg#direct-downloads">repo</a> 下载并安装相应的 <strong>Debian 软件包</strong>。在我们的例子中，是来自 <strong>Debian 9, 64位</strong>的 <strong>.deb</strong> 文件。</p>
+<p>使用 <strong>Debian</strong> 中的 root 用户，我们可以在 root home 中为 <strong>Rakudo</strong> 创建一个包文件夹，进入这个目录，下载 <strong>Debian 9, 64 位</strong>的当前 <strong>Rakudo</strong> 包，并安装它。就我而言：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="line"><span class="cl"><span class="nb">mkdir</span> <span class="o">~/</span><span class="n">rakudo-packages</span> <span class="o">&amp;&amp;</span> <span class="n">cd</span> <span class="nv">$_</span>
+</span></span><span class="line"><span class="cl"><span class="nf">wget</span> <span class="n">https:</span><span class="p">//</span><span class="n">github</span><span class="o">.</span><span class="nf">com</span><span class="o">/</span><span class="n">nxadm</span><span class="o">/</span><span class="n">rakudo-pkg</span><span class="o">/</span><span class="n">releases</span><span class="o">/</span><span class="n">download</span><span class="o">/</span><span class="k">v</span><span class="mi">2018</span><span class="ni">.10</span><span class="o">-</span><span class="mo">02</span><span class="o">/</span><span class="n">rakudo-pkg-Debian9_2018</span><span class="mf">.10</span><span class="o">-</span><span class="mo">02</span><span class="n">_amd64</span><span class="o">.</span><span class="nf">deb</span>
+</span></span><span class="line"><span class="cl"><span class="n">dpkg</span> <span class="o">-</span><span class="no">i</span> <span class="n">rakudo-pkg-Debian9_2018</span><span class="mf">.10</span><span class="o">-</span><span class="mo">02</span><span class="n">_amd64</span><span class="o">.</span><span class="nf">deb</span>
+</span></span></code></pre></div><p><strong>Rakudo</strong> 运行时编译器和相关工具现在安装在 <strong>/opt/rakudo-pkg</strong> 文件夹中。在 <strong>export PATH</strong> 行之前，让所有用户在 <strong>/etc/profile</strong> 文件中插入以下行：</p>
+<pre tabindex="0"><code>PATH=$PATH:/opt/rakudo-pkg/bin
+</code></pre><p>最后运行：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> /etc/profile
+</span></span></code></pre></div><p>为所有用户重新加载 <strong>Debian</strong> 配置文件。</p>
+<p>输入 <strong>raku -v</strong>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">raku -v
+</span></span><span class="line"><span class="cl">This is Rakudo version 2018.10 built on MoarVM version 2018.10
+</span></span><span class="line"><span class="cl">implementing Raku.c.
+</span></span></code></pre></div><p>欢迎来到 <strong>Rakudo Raku!</strong></p>
+<h2 id="安装-cro-服务">安装 Cro 服务&nbsp;<a class="headline-hash no-text-decoration" href="#安装-cro-服务">#</a> </h2>
+<p><strong>Cro</strong> 是 Raku 模块，<strong>Zef</strong> 是已经安装的当前 <strong>Raku</strong> 模块管理器。我们来安装 <strong>Cro</strong> 吧！</p>
+<p>首先，我们将安装一些 <strong>Cro 包依赖项</strong>，例如 <strong>git</strong> 来连接和下载来自 Cro 相关存储库的文件，<strong>libssl-dev</strong> 以提供对安全套接字层的支持，<strong>build-essential</strong> 用于构建在安装期间 <strong>Cro</strong> 所使用的一些依赖项：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">apt-get install git libssl-dev build-essential
+</span></span></code></pre></div><p>如果您位于仅允许 Web 流量（端口80和443）的防火墙下，它将阻止 <strong>git</strong> 协议使用的端口，并且 <strong>Cro</strong> 安装将失败。要避免这种情况，请键入：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git config --global url.<span class="s2">&#34;https://&#34;</span>.insteadOf git://
+</span></span></code></pre></div><p>这告诉 <strong>git</strong> 使用 <strong>https</strong> 而不是 <strong>git</strong> 协议来连接 git 远程仓库。</p>
+<p>现在我们准备用 <strong>Zef</strong>（及其所有依赖项）安装 <strong>Cro</strong>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">zef install cro
+</span></span></code></pre></div><p>如果在测试阶段安装失败，请尝试：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">zef install --/test cro
+</span></span></code></pre></div><p>如果 <strong>Cro</strong> 安装正确完成，<strong>Cro</strong> 就准备好了。</p>
+<h2 id="cro-实战">Cro 实战&nbsp;<a class="headline-hash no-text-decoration" href="#cro-实战">#</a> </h2>
+<p>让我们继续演示脚本。创建一个工作区文件夹，输入它并将下面的代码粘贴到名为 <strong>server.p6</strong> 的新文件中：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-raku" data-lang="raku"><span class="line"><span class="cl"><span class="k">use</span> <span class="nn">Cro::HTTP::Router</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">use</span> <span class="nn">Cro::HTTP::Server</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">my</span> <span class="nv">$application</span> <span class="o">=</span> <span class="n">route</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">get</span> <span class="k">-&gt;</span> <span class="p">&#39;</span><span class="s1">greet</span><span class="p">&#39;</span><span class="o">,</span> <span class="nv">$name</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">content</span> <span class="p">&#39;</span><span class="s1">text/plain</span><span class="p">&#39;</span><span class="o">,</span> <span class="p">&#34;</span><span class="s2">Hello, </span><span class="nv">$name</span><span class="s2">!</span><span class="p">&#34;;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">my</span> <span class="n">Cro::Service</span> <span class="nv">$hello</span> <span class="o">=</span> <span class="n">Cro::HTTP::Server</span><span class="o">.</span><span class="nb">new</span><span class="p">(:</span><span class="s">host</span><span class="p">&lt;</span><span class="s">0.0.0.0</span><span class="p">&gt;</span><span class="o">,</span> <span class="p">:</span><span class="s">port</span><span class="p">&lt;</span><span class="s">10000</span><span class="p">&gt;</span><span class="o">,</span> <span class="o">:</span><span class="nv">$application</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">$hello</span><span class="o">.</span><span class="k">start</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">react</span> <span class="k">whenever</span> <span class="nb">signal</span><span class="p">(</span><span class="n">SIGINT</span><span class="p">)</span> <span class="p">{</span> <span class="nv">$hello</span><span class="o">.</span><span class="nf">stop</span><span class="p">;</span> <span class="nb">exit</span><span class="p">;</span> <span class="p">}</span>
+</span></span></code></pre></div><p>这个脚本有 <strong>4个部分</strong>：</p>
+<p>“use”使<strong>路由</strong>和<strong>服务</strong>类可用于下面。</p>
+<p><strong>$application</strong> 是包含我们的 Web 应用程序的路由逻辑的对象，接收数据并将数据从客户端分发到我们的服务器。在这种情况下，<strong>get  -&gt;&lsquo;greet&rsquo;，$name</strong> 映射来自客户端 Web 浏览器的传入 URL <strong>/greet/Ramiro</strong>，在对象 <strong>$name</strong> 中推送 Ramiro。然后将代码转换为花括号 {}，返回响应 HTTP 请求头 <strong>content &rsquo;text/plain&rsquo;</strong> 和 HTTP 请求体 <strong>Hello, Ramiro!</strong> 到客户端 Web 浏览器。在一个严肃的应用程序中，在这部分中将会调用应用程序本身，并且它将等待响应，如示例所示。</p>
+<p><strong>$hello</strong> 是一个服务对象，它使传入的数据通过新的侦听套接字传递给我们的 <strong>$application</strong>。它有3个参数，<strong>:host&lt;0.0.0.0&gt;</strong> 是服务启动的 localhost, <strong>:port&lt;10000&gt;</strong> 是用于监听传入数据的端口，<strong>$application</strong> 是我们的Web 应用程序。 下面的行 <strong>$hello.start</strong> 开始侦听。</p>
+<p><strong>react whenever</strong> 等待按下 CTRL-C 时停止 Web 服务。</p>
+<p>现在是从 shell 运行 Web 服务的时刻：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">raku server.p6
+</span></span></code></pre></div><p>现在您需要知道服务器主机的当前 IP 地址，尝试使用 <strong>ip addr</strong>。我的 Ip 地址是: <strong>192.168.1.48</strong>。</p>
+<p>然后，从同一网络中的其他主机，打开 Web 浏览器并键入（在我这儿）：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">http://192.168.1.48:10000/greet/Ramiro
+</span></span></code></pre></div><p>答案应该是 <strong>Hello, Ramiro!</strong></p>
+<h2 id="总结">总结&nbsp;<a class="headline-hash no-text-decoration" href="#总结">#</a> </h2>
+<p>从 <strong>Debian</strong> 的新安装开始，我们已经了解了如何安装 <strong>Cro</strong> 并运行演示脚本。现在，您已准备好继续使用 Cro 文档，并发现 <strong>Raku</strong> 可提供的最有前途的并发/异步服务平台。</p>
+<p>我希望在阅读这篇文章并查看 <a href="https://cro.services/docs">Cro 文档</a>后，圣诞老人可以将他的网站迁移到 Cro Services。</p>
+
+
+        </div>
+    </div>
+</article>
+
+
+
+                <footer>
+                    
+
+
+
+
+<div class="no-text-decoration">
+    <div class="jump top"><a href="#" title="Top of this page">⮉</a></div>
+    <div class="jump bottom"><a href="#bottom" title="Bottom of this page">⮋</a></div>
+</div>
+
+
+ 
+    
+        <div class="hugotoc no-text-decoration">
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#安装-rakudo-raku-编译器">安装 Rakudo Raku 编译器</a></li>
+    <li><a href="#安装-cro-服务">安装 Cro 服务</a></li>
+    <li><a href="#cro-实战">Cro 实战</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+            <a href="#" class="back-to-top">Back to top</a>
+        </div>
+    
+    
+<script src="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js"></script>
+
+<link rel="preload" href="/js/libs/jquery/3.3.1/jquery.slim.min.min.22ee3db0c0e99fd0fbce3aee19672bd53d25469daf734bd4c165649f6eaf7d7f.js" as="script">
+
+<script type="application/javascript">(function() {
+     var $window = $(window);
+     if ($window.width() >= 1400) { 
+         var $toc = $('#TableOfContents');
+         if ($toc.length > 0) {
+             function onScroll(){
+                 var currentScroll = $window.scrollTop();
+                 var h = $('.content h1, .content h2, .content h3, .content h4, .content h5, .content h6, .h-feed h2');
+                 var id = "";
+                 h.each(function (i, e) {
+                     e = $(e);
+                     if (e.offset().top - 10 <= currentScroll) {
+                         id = e.attr('id');
+                     }
+                 });
+                 var current = $toc.find('a.current');
+                 if (current.length == 1 && current.eq(0).attr('href') == '#' + id) return true;
+
+                 current.each(function (i, e) {
+                     $(e).removeClass('current').siblings('ul').hide();
+                 });
+                 $toc.find('a[href="#' + id + '"]').parentsUntil('#TableOfContents').each(function (i, e) {
+                     $(e).children('a').addClass('current').siblings('ul').show();
+                 });
+             }
+             $window.on('scroll', onScroll);
+             $(document).ready(function() {
+                 $toc.find('a').parent('li').find('ul').hide();
+                 onScroll();
+                 document.getElementsByClassName('hugotoc')[0].style.display = '';
+             });}}})();</script>
+
+
+
+
+
+
+
+
+<div class="backtotop center no-text-decoration">
+    <a href="#">back to <span class="top">top</span></a>
+</div>
+
+
+<div class="right">
+    <div class="taxo no-text-decoration">
+         
+            
+                <ul class="no-bullets inline categories">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts categorized in ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/categories/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+         
+            
+                <ul class="no-bullets inline tags">
+                    
+                        
+                        
+                        
+                            
+                            
+                            
+                            
+                            
+                            <li class="__rakulang__"
+                                
+                                
+                                title="See all 0 posts tagged with ‘rakulang’"
+                                
+                            >
+                                <a class="p-category" href="https://ohmycloud.github.io/tags/rakulang/">rakulang</a>
+                            </li>
+                        
+                    
+                </ul>
+            
+        
+    </div>
+
+</div>
+<div class="clear-float"></div>
+
+
+
+<div class="prev-next-navigator clear-float">
+    
+        <span class="prev-post left no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/how-many-days-in-the-century-match-the-condition/" class="nobr">« 🎄 13/25. 本世纪多少天符合条件?</a>
+        </span>
+    
+    
+        <span class="next-post right no-text-decoration">
+            <a href="https://ohmycloud.github.io/notes/%E4%BD%BF%E7%94%A8-phoenix-%E8%AF%BB%E5%8F%96-hbase/" class="nobr">使用 Phoenix 读取 HBase »</a>
+        </span>
+    
+</div>
+
+
+<a id="bottom"></a>
+
+
+
+
+
+
+
+
+
+                       
+
+
+
+
+
+
+
+                    <ul class="no-bullets feed right inline">
+    
+        
+        
+    
+</ul>
+<div class="clear-float"></div>
+
+                </footer>
+                <hr />
+            </div>               
+
+            <footer> 
+                
+
+<ul class="social no-text-decoration">
+    
+</ul>
+
+
+
+
+
+
+
+
+
+
+ 
+    
+    
+
+
+
+<p class="generated no-text-decoration">
+    Generated using  <a href="https://gitlab.com/kaushalmodi/hugo-theme-refined"><code class="nobr">hugo-theme-refined</code></a> + <span class="nobr">Hugo <a href="https://github.com/gohugoio/hugo/commit/312735366b20d64bd61bff8627f593749f86c964">0.123.7</a></span>
+</p>
+
+<p>
+    
+</p>
+
+
+
+
+<div class="badges no-text-decoration">
+    
+    
+
+    
+</div>
+
+
+
+
+<script type="application/javascript">var nav=responsiveNav("#nav");</script>
+
+
+
+
+<script defer src="/js/libs/fragmentions/wrapper.min.e8c468c89edc4f5dccaa8c720c6b220b3088a16cd7b1e4a1e3345985788260c9.js"></script>
+
+
+
+
+
+
+
+
+
+            </footer>
+        </div> 
+    </body>
 </html>
