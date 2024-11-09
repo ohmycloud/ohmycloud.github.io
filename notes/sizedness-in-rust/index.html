@@ -1,0 +1,703 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Sizedness in Rust</title><meta content="Sizedness in Rust" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/sizedness-in-rust/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Sizedness in Rust" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/sizedness-in-rust/ property=twitter:url><meta content="Sizedness in Rust" property=twitter:title><link href=https://ohmycloud.github.io/notes/sizedness-in-rust/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>sizedness-in-rust</span></div><time datetime=2021-04-11>Published on: <span class=accent-data>2021-04-11</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Sizedness in Rust</h1><h2 id=intro>Intro</h2><p>Sizedness 是 Rust 中最重要的概念之一。它与其他语言特性有很多微妙的交集，只是以_"x在编译时不知道大小"_错误信息的形式出现，而这些错误信息是每个Rustacean都非常熟悉的。在这篇文章中，我们将探讨从大小类型，到无大小类型，再到零大小类型的各种风味，同时研究它们的用例、好处、痛点和变通方法。<p>我使用的短语表，以及它们的含义。<table><thead><tr><th>Phrase<th>Shorthand for<tbody><tr><td>sizedness<td>property of being sized or unsized<tr><td>sized type<td>type with a known size at compile time<tr><td>1) unsized type <em>or</em><br>2) DST<td>dynamically-sized type, i.e. size not known at compile time<tr><td>?sized type<td>type that may or may not be sized<tr><td>unsized coercion<td>coercing a sized type into an unsized type<tr><td>ZST<td>zero-sized type, i.e. instances of the type are 0 bytes in size<tr><td>width<td>single unit of measurement of pointer width<tr><td>1) thin pointer <em>or</em><br>2) single-width pointer<td>pointer that is <em>1 width</em><tr><td>1) fat pointer <em>or</em><br>2) double-width pointer<td>pointer that is <em>2 widths</em><tr><td>1) pointer <em>or</em><br>2) reference<td>some pointer of some width, width will be clarified by context<tr><td>slice<td>double-width pointer to a dynamically sized view into some array</table><h2 id=sizedness>Sizedness</h2><p>在 Rust 中，如果在编译时可以确定类型的字节大小，那么就可以确定类型的大小。确定一个类型的大小对于能够在栈上为该类型的实例分配足够的空间是很重要的。固定大小的类型可以通过值或引用来传递。如果一个类型的大小不能在编译时确定，那么它被称为不确定大小类型或 DST，动态大小类型。由于不确定大小类型不能被放置在栈上，它们只能通过引用来传递。下面是一些固定大小类型和不确定大小类型的例子。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::mem::size_of;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// primitives
+</span><span>    assert_eq!(</span><span style=color:#c18401>4</span><span>, size_of::<</span><span style=color:#a626a4>i32</span><span>>());
+</span><span>    assert_eq!(</span><span style=color:#c18401>8</span><span>, size_of::<</span><span style=color:#a626a4>f64</span><span>>());
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// tuples
+</span><span>    assert_eq!(</span><span style=color:#c18401>8</span><span>, size_of::<(</span><span style=color:#a626a4>i32</span><span>, </span><span style=color:#a626a4>i32</span><span>)>());
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// arrays
+</span><span>    assert_eq!(</span><span style=color:#c18401>0</span><span>, size_of::<[</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>0</span><span>]>());
+</span><span>    assert_eq!(</span><span style=color:#c18401>12</span><span>, size_of::<[</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>3</span><span>]>());
+</span><span>
+</span><span>    </span><span style=color:#a626a4>struct </span><span>Point {
+</span><span>        </span><span style=color:#e45649>x</span><span>: </span><span style=color:#a626a4>i32</span><span>,
+</span><span>        </span><span style=color:#e45649>y</span><span>: </span><span style=color:#a626a4>i32</span><span>,
+</span><span>    }
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// structs
+</span><span>    assert_eq!(</span><span style=color:#c18401>8</span><span>, size_of::&LTPoint>());
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// enums
+</span><span>    assert_eq!(</span><span style=color:#c18401>8</span><span>, size_of::&LTOption<</span><span style=color:#a626a4>i32</span><span>>>());
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// get pointer width, will be
+</span><span>    </span><span style=color:#a0a1a7>// 4 bytes wide on 32-bit targets or
+</span><span>    </span><span style=color:#a0a1a7>// 8 bytes wide on 64-bit targets
+</span><span>    </span><span style=color:#a626a4>const </span><span style=color:#c18401>WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span>size_of::<</span><span style=color:#a626a4>&</span><span>()>();
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// pointers to sized types are 1 width
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&i32</span><span>>());
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&mut i32</span><span>>());
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::&LTBox<</span><span style=color:#a626a4>i32</span><span>>>());
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>fn</span><span>(</span><span style=color:#a626a4>i32</span><span>) -> </span><span style=color:#a626a4>i32</span><span>>());
+</span><span>
+</span><span>    </span><span style=color:#a626a4>const </span><span style=color:#c18401>DOUBLE_WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span style=color:#c18401>2 </span><span style=color:#a626a4>* </span><span style=color:#c18401>WIDTH</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// unsized struct
+</span><span>    </span><span style=color:#a626a4>struct </span><span>Unsized {
+</span><span>        </span><span style=color:#e45649>unsized_field</span><span>: [</span><span style=color:#a626a4>i32</span><span>],
+</span><span>    }
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// pointers to unsized types are 2 widths
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&str</span><span>>()); </span><span style=color:#a0a1a7>// slice
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>]>()); </span><span style=color:#a0a1a7>// slice
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>dyn ToString>()); </span><span style=color:#a0a1a7>// trait object
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::&LTBox&LTdyn ToString>>()); </span><span style=color:#a0a1a7>// trait object
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>Unsized>()); </span><span style=color:#a0a1a7>// user-defined unsized type
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// unsized types
+</span><span>    size_of::<</span><span style=color:#a626a4>str</span><span>>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>    size_of::<[</span><span style=color:#a626a4>i32</span><span>]>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>    size_of::&LTdyn ToString>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>    size_of::&LTUnsized>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>}
+</span></code></pre><p>我们如何确定固定大小类型的大小是直截了当的：所有原生类型和指针都有已知的大小，所有的结构体、元组、枚举和数组只是由原生类型和指针或其他嵌套的结构体、元组、枚举和数组组成，因此我们只需考虑到填充和对齐所需的额外字节，递归地计数字节即可。我们无法确定不确定大小类型的大小，原因同样简单明了：切片可以有任意数量的元素在其中，因此在运行时可以是任意大小的，trait 对象可以由任意数量的结构或枚举实现，因此在运行时也可以是任意大小的。<p><strong>专业提示</strong><ul><li>在Rust中，视图到数组中的动态大小的指针被称为切片。例如 <code>&str</code> 是一个"字符串切片", <code>&[i32]</code> 一个 <em>"i32 切片"</em>。<li>切片是双倍宽度的，因为它们存储了一个指向数组的指针和数组中元素的数量。<li>trait 对象指针是双宽度的，因为它们存储了一个指向数据的指针和一个指向 vtable 的指针。<li>不确定大小的结构体指针是双倍宽度的，因为它们存储了一个指向结构体数据的指针和结构体的大小。<li>不确定大小的结构体只能有1个不确定大小的字段，而且必须是结构体中的最后一个字段。</ul><p>为了让大家真正明白关于不确定大小类型的双宽度指针的点，这里有一个比较数组和切片的注释代码示例。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::mem::size_of;
+</span><span>
+</span><span style=color:#a626a4>const </span><span style=color:#c18401>WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span>size_of::<</span><span style=color:#a626a4>&</span><span>()>();
+</span><span style=color:#a626a4>const </span><span style=color:#c18401>DOUBLE_WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span style=color:#c18401>2 </span><span style=color:#a626a4>* </span><span style=color:#c18401>WIDTH</span><span>;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// data length stored in type
+</span><span>    </span><span style=color:#a0a1a7>// an [i32; 3] is an array of three i32s
+</span><span>    </span><span style=color:#a626a4>let</span><span> nums: </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>3</span><span>] </span><span style=color:#a626a4>= &</span><span>[</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>];
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// single-width pointer
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>3</span><span>]>());
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> sum </span><span style=color:#a626a4>= </span><span style=color:#c18401>0</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// can iterate over nums safely
+</span><span>    </span><span style=color:#a0a1a7>// Rust knows it's exactly 3 elements
+</span><span>    </span><span style=color:#a626a4>for</span><span> num </span><span style=color:#a626a4>in</span><span> nums {
+</span><span>        sum </span><span style=color:#a626a4>+=</span><span> num;
+</span><span>    }
+</span><span>
+</span><span>    assert_eq!(</span><span style=color:#c18401>6</span><span>, sum);
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// unsized coercion from [i32; 3] to [i32]
+</span><span>    </span><span style=color:#a0a1a7>// data length now stored in pointer
+</span><span>    </span><span style=color:#a626a4>let</span><span> nums: </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>] </span><span style=color:#a626a4>= &</span><span>[</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>];
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// double-width pointer required to also store data length
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>]>());
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> sum </span><span style=color:#a626a4>= </span><span style=color:#c18401>0</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// can iterate over nums safely
+</span><span>    </span><span style=color:#a0a1a7>// Rust knows it's exactly 3 elements
+</span><span>    </span><span style=color:#a626a4>for</span><span> num </span><span style=color:#a626a4>in</span><span> nums {
+</span><span>        sum </span><span style=color:#a626a4>+=</span><span> num;
+</span><span>    }
+</span><span>
+</span><span>    assert_eq!(</span><span style=color:#c18401>6</span><span>, sum);
+</span><span>}
+</span></code></pre><p>这里还有一个注释的代码例子，比较结构体和 trait 对象。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::mem::size_of;
+</span><span>
+</span><span style=color:#a626a4>const </span><span style=color:#c18401>WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span>size_of::<</span><span style=color:#a626a4>&</span><span>()>();
+</span><span style=color:#a626a4>const </span><span style=color:#c18401>DOUBLE_WIDTH</span><span>: </span><span style=color:#a626a4>usize = </span><span style=color:#c18401>2 </span><span style=color:#a626a4>* </span><span style=color:#c18401>WIDTH</span><span>;
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>);
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>Struct;
+</span><span style=color:#a626a4>struct </span><span>Struct2;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>Struct {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {
+</span><span>        println!(</span><span style=color:#50a14f>"struct"</span><span>);
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>Struct2 {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {
+</span><span>        println!(</span><span style=color:#50a14f>"struct2"</span><span>);
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print_struct</span><span>(</span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&</span><span>Struct) {
+</span><span>    </span><span style=color:#a0a1a7>// always prints "struct"
+</span><span>    </span><span style=color:#a0a1a7>// this is known at compile-time
+</span><span>    s.</span><span style=color:#0184bc>print</span><span>();
+</span><span>    </span><span style=color:#a0a1a7>// single-width pointer
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>Struct>());
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print_struct2</span><span>(</span><span style=color:#e45649>s2</span><span>: </span><span style=color:#a626a4>&</span><span>Struct2) {
+</span><span>    </span><span style=color:#a0a1a7>// always prints "struct2"
+</span><span>    </span><span style=color:#a0a1a7>// this is known at compile-time
+</span><span>    s2.</span><span style=color:#0184bc>print</span><span>();
+</span><span>    </span><span style=color:#a0a1a7>// single-width pointer
+</span><span>    assert_eq!(</span><span style=color:#c18401>WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>Struct2>());
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print_trait</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) {
+</span><span>    </span><span style=color:#a0a1a7>// print "struct" or "struct2" ?
+</span><span>    </span><span style=color:#a0a1a7>// this is unknown at compile-time
+</span><span>    t.</span><span style=color:#0184bc>print</span><span>();
+</span><span>    </span><span style=color:#a0a1a7>// Rust has to check the pointer at run-time
+</span><span>    </span><span style=color:#a0a1a7>// to figure out whether to use Struct's
+</span><span>    </span><span style=color:#a0a1a7>// or Struct2's implementation of "print"
+</span><span>    </span><span style=color:#a0a1a7>// so the pointer has to be double-width
+</span><span>    assert_eq!(</span><span style=color:#c18401>DOUBLE_WIDTH</span><span>, size_of::<</span><span style=color:#a626a4>&</span><span>dyn Trait>());
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// single-width pointer to data
+</span><span>    </span><span style=color:#a626a4>let</span><span> s </span><span style=color:#a626a4>= &</span><span>Struct;
+</span><span>    </span><span style=color:#0184bc>print_struct</span><span>(s); </span><span style=color:#a0a1a7>// prints "struct"
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// single-width pointer to data
+</span><span>    </span><span style=color:#a626a4>let</span><span> s2 </span><span style=color:#a626a4>= &</span><span>Struct2;
+</span><span>    </span><span style=color:#0184bc>print_struct2</span><span>(s2); </span><span style=color:#a0a1a7>// prints "struct2"
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// unsized coercion from Struct to dyn Trait
+</span><span>    </span><span style=color:#a0a1a7>// double-width pointer to point to data AND Struct's vtable
+</span><span>    </span><span style=color:#a626a4>let</span><span> t: </span><span style=color:#a626a4>&</span><span>dyn Trait </span><span style=color:#a626a4>= &</span><span>Struct;
+</span><span>    </span><span style=color:#0184bc>print_trait</span><span>(t); </span><span style=color:#a0a1a7>// prints "struct"
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// unsized coercion from Struct2 to dyn Trait
+</span><span>    </span><span style=color:#a0a1a7>// double-width pointer to point to data AND Struct2's vtable
+</span><span>    </span><span style=color:#a626a4>let</span><span> t: </span><span style=color:#a626a4>&</span><span>dyn Trait </span><span style=color:#a626a4>= &</span><span>Struct2;
+</span><span>    </span><span style=color:#0184bc>print_trait</span><span>(t); </span><span style=color:#a0a1a7>// prints "struct2"
+</span><span>}
+</span></code></pre><p><strong>关键要点</strong><ul><li>只有固定大小类型的实例才能被放置在栈上，也就是说，可以通过值来传递<li>不确定大小类型的实例不能放在栈上，必须通过引用来传递<li>指向不确定大小类型的指针是双宽度的，因为除了指向数据外，它们还需要做额外的记账工作，以跟踪数据的长度或指向一个 vtable</ul><h2 id=sized-trait><code>Sized</code> Trait</h2><p>Rust中的 "Sized" trait 是一个自动 trait 和一个标记 trait。<p>自动 trait 是指当一个类型通过某些条件时，自动实现的 trait。标记 trait 是标记一个类型具有特定属性的 trait。标记 trait 没有任何 trait 项，如方法、关联函数、关联常量或关联类型。所有的自动 trait 都是标记 trait，但不是所有的标记 trait 都是自动 trait。自动 trait 必须是标记 trait，所以编译器可以为它们提供一个自动的缺省实现，如果 trait 有任何 trait 项，这是不可能的。<p>如果一个类型的所有成员也是 "确定大小的"，那么它就会得到一个自动的 <code>Sized</code> 实现。"成员"的含义取决于所包含的类型，例如：结构体的字段、枚举的变体、数组的元素、元组的项等等。一旦一个类型被 "标记" 了一个 <code>Sized</code> 的实现，这意味着在编译时就知道它的字节大小。<p>其他自动标记 trait 的例子是 <code>Send</code> 和 <code>Sync</code> trait。如果跨线程发送一个类型是安全的，那么这个类型就是可 <code>Send</code> 的。如果在线程之间共享该类型的引用是安全的，那么该类型就是可 <code>Sync</code> 的。如果一个类型的所有成员都是可 <code>Send</code> 和 <code>Sync</code> 的, 那么这个类型就会得到自动的 <code>Send</code> 和 <code>Sync</code> 实现。<code>Sized</code> 的特殊之处在于它不可能选择退出，不像其他自动标记 trait 可以选择退出。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#![</span><span style=color:#e45649>feature</span><span>(negative_impls)]
+</span><span>
+</span><span style=color:#a0a1a7>// this type is Sized, Send, and Sync
+</span><span style=color:#a626a4>struct </span><span>Struct;
+</span><span>
+</span><span style=color:#a0a1a7>// opt-out of Send trait
+</span><span style=color:#a626a4>impl </span><span>!Send for Struct {}
+</span><span>
+</span><span style=color:#a0a1a7>// opt-out of Sync trait
+</span><span style=color:#a626a4>impl </span><span>!Sync for Struct {}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>!Sized for Struct {} </span><span style=color:#a0a1a7>// compile error
+</span></code></pre><p>这似乎是合理的，因为我们可能有理由不希望我们的类型被跨线程发送或共享，但是很难想象我们会希望编译器 "忘记" 我们类型的大小，并将其视为一个不确定大小的类型，因为这不会带来任何好处，只会让类型更难处理。<p>另外，说得迂腐一点，<code>Sized</code> 在技术上并不是一个自动 trait，因为它没有使用 <code>auto</code> 关键字来定义，但是编译器对它的特殊处理使它的行为与自动 trait 非常相似，所以在实践中，把它看作是一个自动 trait 是可以的。<p><strong>关键要点</strong><ul><li><code>Sized</code> 是一个自动标记 trait</ul><h2 id=fan-xing-zhong-de-sized>泛型中的 <code>Sized</code></h2><p>每当我们编写任何泛型代码时，每一个泛型类型参数都会被默认的 <code>Sized</code> trait 自动绑定，这一点并不明显。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// this generic function...
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>func</span><span>&LTT>(</span><span style=color:#e45649>t</span><span>: T) {}
+</span><span>
+</span><span style=color:#a0a1a7>// ...desugars to...
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>func</span><span>&LTT: Sized>(</span><span style=color:#e45649>t</span><span>: T) {}
+</span><span>
+</span><span style=color:#a0a1a7>// ...which we can opt-out of by explicitly setting ?Sized...
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>func</span><span>&LTT: </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized</span><span style=color:#a626a4>></span><span>(t: T) {} </span><span style=color:#a0a1a7>// compile error
+</span><span>
+</span><span style=color:#a0a1a7>// ...which doesn't compile since t doesn't have
+</span><span style=color:#a0a1a7>// a known size so we must put it behind a pointer...
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>func</span><span>&LTT: </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized</span><span style=color:#a626a4>></span><span>(t: </span><span style=color:#a626a4>&</span><span>T) {} </span><span style=color:#a0a1a7>// compiles
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>func</span><span>&LTT: </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized</span><span style=color:#a626a4>></span><span>(t: Box&LTT>) {} </span><span style=color:#a0a1a7>// compiles
+</span></code></pre><p><strong>专业提示</strong><ul><li><code>?Sized</code> can be pronounced <em>"optionally sized"</em> or <em>"maybe sized"</em> and adding it to a type parameter's bounds allows the type to be sized or unsized<li><code>?Sized</code> in general is referred to as a <em>"widening bound"</em> or a <em>"relaxed bound"</em> as it relaxes rather than constrains the type parameter<li><code>?Sized</code> is the only relaxed bound in Rust</ul><p>So why does this matter? Well, any time we're working with a generic type and that type is behind a pointer we almost always want to opt-out of the default <code>Sized</code> bound to make our function more flexible in what argument types it will accept. Also, if we don't opt-out of the default <code>Sized</code> bound we'll eventually get some surprising and confusing compile error messages.<p>Let me take you on the journey of the first generic function I ever wrote in Rust. I started learning Rust before the <code>dbg!</code> macro landed in stable so the only way to print debug values was to type out <code>println!("{:?}", some_value);</code> every time which is pretty tedious so I decided to write a <code>debug</code> helper function like this:<ul><li><code>?Sized</code> 可以读作 <em>"optionally sized"</em> 或 <em>"maybe sized"</em>，将它添加到类型参数的绑定中，可以让类型被确定大小或不确定大小。<li><code>?Sized</code> 一般被称为 "拓宽绑定" 或 "宽松绑定"，因为它放松而不是约束类型参数。<li><code>?Sized</code> 是 Rust 中唯一的宽松绑定。</ul><p>那么为什么这很重要呢？任何时候，当我们在处理泛型类型，并且该类型在一个指针后面时，我们几乎总是希望选择退出默认的 <code>Sized</code> 绑定，以使我们的函数在接受什么参数类型时更加灵活。另外，如果我们不选择退出默认的 <code>Sized</code> 绑定，我们最终会得到一些令人惊讶和困惑的编译错误信息。<p>让我带你了解一下我在 Rust 中写的第一个泛型函数的历程。在 <code>dbg!</code> 宏登陆稳定版之前，我就开始学习 Rust 了，所以打印调试值的唯一方法就是每次都要打出 <code>println!("{:?}", some_value);</code>，这是很乏味的，所以我决定写一个像这样的调试帮助函数。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::fmt::Debug;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>debug</span><span>&LTT: Debug>(</span><span style=color:#e45649>t</span><span>: T) { </span><span style=color:#a0a1a7>// T: Debug + Sized
+</span><span>    println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, t);
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#0184bc>debug</span><span>(</span><span style=color:#50a14f>"my str"</span><span>); </span><span style=color:#a0a1a7>// T = &str, &str: Debug + Sized ✔️
+</span><span>}
+</span></code></pre><p>到目前为止还不错，但函数会对传递给它的任何值拥有所有权，这有点烦人，所以我把函数改为只接受引用。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::fmt::Debug;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>dbg</span><span>&LTT: Debug>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>T) { </span><span style=color:#a0a1a7>// T: Debug + Sized
+</span><span>    println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, t);
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#0184bc>dbg</span><span>(</span><span style=color:#50a14f>"my str"</span><span>); </span><span style=color:#a0a1a7>// &T = &str, T = str, str: Debug + !Sized ❌
+</span><span>}
+</span></code></pre><p>现在出现了这个错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0277</span><span>]: the size </span><span style=color:#a626a4>for</span><span> values of </span><span style=color:#a626a4>type</span><span> `</span><span style=color:#a626a4>str</span><span>` cannot be known at compilation time
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>main.rs:</span><span style=color:#c18401>8</span><span>:</span><span style=color:#c18401>9
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>3 </span><span style=color:#a626a4>| fn </span><span style=color:#0184bc>dbg</span><span>&LTT: Debug>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>T) {
+</span><span>  </span><span style=color:#a626a4>|        -</span><span> required by this bound </span><span style=color:#a626a4>in</span><span> `dbg`
+</span><span style=color:#a626a4>...
+</span><span style=color:#c18401>8 </span><span style=color:#a626a4>|     </span><span style=color:#0184bc>dbg</span><span>(</span><span style=color:#50a14f>"my str"</span><span>);
+</span><span>  |         ^^^^^^^^ doesn</span><span style=color:#a626a4>'t</span><span> have a size known at compile-time
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: the </span><span style=color:#a626a4>trait</span><span> `std::marker::Sized` is not implemented </span><span style=color:#a626a4>for</span><span> `</span><span style=color:#a626a4>str</span><span>`
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: to learn more, visit </span><span style=color:#a626a4><</span><span>https:</span><span style=color:#a0a1a7>//doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait>
+</span><span>help: consider relaxing the implicit `Sized` restriction
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>3 </span><span style=color:#a626a4>| fn </span><span style=color:#0184bc>dbg</span><span>&LTT: Debug </span><span style=color:#a626a4>+ </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized</span><span style=color:#a626a4>></span><span>(t: </span><span style=color:#a626a4>&</span><span>T) {
+</span><span>  |
+</span></code></pre><p>当我第一次看到这个问题时，我发现它令人难以置信的混乱。尽管我的函数对参数的限制比以前更严格，但现在它却莫名其妙地抛出了一个编译错误！这是怎么回事？到底发生了什么？<p>我已经在上面的代码注释中破坏了答案，但基本上。Rust 在编译过程中把 <code>T</code> 解析为具体类型时，会执行模式匹配。这里有几个表格可以帮助澄清。<table><thead><tr><th>Type<th><code>T</code><th><code>&T</code><tbody><tr><td><code>&str</code><td><code>T</code> = <code>&str</code><td><code>T</code> = <code>str</code></table><table><thead><tr><th>Type<th><code>Sized</code><tbody><tr><td><code>str</code><td>❌<tr><td><code>&str</code><td>✔️<tr><td><code>&&str</code><td>✔️</table><p>这也是为什么我不得不在改成取用引用后，加了一个 <code>?Sized</code> 的绑定，使函数能正常工作。下面是可以工作的函数。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::fmt::Debug;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>debug</span><span>&LTT: Debug </span><span style=color:#a626a4>+ </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized</span><span style=color:#a626a4>></span><span>(t: </span><span style=color:#a626a4>&</span><span>T) { </span><span style=color:#a0a1a7>// T: Debug + ?Sized
+</span><span>    println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, t);
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#0184bc>debug</span><span>(</span><span style=color:#50a14f>"my str"</span><span>); </span><span style=color:#a0a1a7>// &T = &str, T = str, str: Debug + !Sized ✔️
+</span><span>}
+</span></code></pre><p><strong>关键要点</strong><ul><li>所有的泛型类型参数默认都是自动绑定 <code>Sized</code>。<li>如果我们有一个泛型函数，它的参数是指针后面的一些 <code>T</code>，例如 <code>&T</code>、<code>Box&LTT></code>、<code>Rc&LTT></code> 等，那么我们几乎总是希望用<code>T: ?Sized</code> 来退出默认的 <code>Sized</code> 约束。</ul><h2 id=unsized-lei-xing>Unsized 类型</h2><h3 id=qie-pian>切片</h3><p>最常见的切片是字符串切片 <code>&str</code> 和数组切片 <code>&[T]</code>。切片的好处是许多其他类型也会对其进行 coerce，所以利用切片和 Rust 的自动类型 coerce，我们可以编写灵活的 API。<p>类型 coerce 可以发生在几个地方，但最明显的是在函数参数和方法调用时。我们感兴趣的类型 coerce 是 deref coerce 和 unsized coerce。deref coerce 是指当 <code>T</code> 在 deref 操作之后被 coerce 成一个 <code>U</code>，即 <code>T: Deref&LTTarget = U></code>，例如 <code>String.deref() -> str</code>。不确定大小 coerce 是指 <code>T</code> 被 coerce 成 <code>U</code>，其中 <code>T</code> 是一个确定大小的类型，<code>U</code> 是一个不确定大小的类型，即 <code>T: Unsize&LTU></code>，例如 <code>[i32; 3] -> [i32]</code>。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {
+</span><span>    </span><span style=color:#a0a1a7>// can now call "method" on
+</span><span>    </span><span style=color:#a0a1a7>// 1) str or
+</span><span>    </span><span style=color:#a0a1a7>// 2) String since String: Deref&LTTarget = str>
+</span><span>}
+</span><span style=color:#a626a4>impl</span><span>&LTT> Trait </span><span style=color:#a626a4>for</span><span> [T] {
+</span><span>    </span><span style=color:#a0a1a7>// can now call "method" on
+</span><span>    </span><span style=color:#a0a1a7>// 1) any &[T]
+</span><span>    </span><span style=color:#a0a1a7>// 2) any U where U: Deref&LTTarget = [T]>, e.g. Vec&LTT>
+</span><span>    </span><span style=color:#a0a1a7>// 3) [T; N] for any N, since [T; N]: Unsize<[T]>
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>str_fun</span><span>(</span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&str</span><span>) {}
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>slice_fun</span><span>&LTT>(</span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&</span><span>[T]) {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> str_slice: </span><span style=color:#a626a4>&str = </span><span style=color:#50a14f>"str slice"</span><span>;
+</span><span>    </span><span style=color:#a626a4>let</span><span> string: String </span><span style=color:#a626a4>= </span><span style=color:#50a14f>"string"</span><span>.</span><span style=color:#0184bc>to_owned</span><span>();
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// function args
+</span><span>    </span><span style=color:#0184bc>str_fun</span><span>(str_slice);
+</span><span>    </span><span style=color:#0184bc>str_fun</span><span>(</span><span style=color:#a626a4>&</span><span>string); </span><span style=color:#a0a1a7>// deref coercion
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// method calls
+</span><span>    str_slice.</span><span style=color:#0184bc>method</span><span>();
+</span><span>    string.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// deref coercion
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> slice: </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>] </span><span style=color:#a626a4>= &</span><span>[</span><span style=color:#c18401>1</span><span>];
+</span><span>    </span><span style=color:#a626a4>let</span><span> three_array: [</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>3</span><span>] </span><span style=color:#a626a4>= </span><span>[</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>];
+</span><span>    </span><span style=color:#a626a4>let</span><span> five_array: [</span><span style=color:#a626a4>i32</span><span>; </span><span style=color:#c18401>5</span><span>] </span><span style=color:#a626a4>= </span><span>[</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>, </span><span style=color:#c18401>4</span><span>, </span><span style=color:#c18401>5</span><span>];
+</span><span>    </span><span style=color:#a626a4>let</span><span> vec: Vec<</span><span style=color:#a626a4>i32</span><span>> </span><span style=color:#a626a4>= </span><span>vec![</span><span style=color:#c18401>1</span><span>];
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// function args
+</span><span>    </span><span style=color:#0184bc>slice_fun</span><span>(slice);
+</span><span>    </span><span style=color:#0184bc>slice_fun</span><span>(</span><span style=color:#a626a4>&</span><span>vec); </span><span style=color:#a0a1a7>// deref coercion
+</span><span>    </span><span style=color:#0184bc>slice_fun</span><span>(</span><span style=color:#a626a4>&</span><span>three_array); </span><span style=color:#a0a1a7>// unsized coercion
+</span><span>    </span><span style=color:#0184bc>slice_fun</span><span>(</span><span style=color:#a626a4>&</span><span>five_array); </span><span style=color:#a0a1a7>// unsized coercion
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// method calls
+</span><span>    slice.</span><span style=color:#0184bc>method</span><span>();
+</span><span>    vec.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// deref coercion
+</span><span>    three_array.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// unsized coercion
+</span><span>    five_array.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// unsized coercion
+</span><span>}
+</span></code></pre><p><strong>关键要点</strong><ul><li>利用切片和 Rust 的自动类型强制，我们可以编写灵活的 API。</ul><h3 id=trait-dui-xiang>Trait 对象</h3><p>Traits 默认是 <code>?Sized</code> 的。这个程序:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait: ?Sized {}
+</span></code></pre><p>抛出这个错误:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error: `</span><span style=color:#a626a4>?</span><span>Trait` is not permitted </span><span style=color:#a626a4>in</span><span> supertraits
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>main.rs:</span><span style=color:#c18401>1</span><span>:</span><span style=color:#c18401>14
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>1 </span><span style=color:#a626a4>| trait </span><span>Trait: ?Sized {}
+</span><span>  </span><span style=color:#a626a4>|              ^^^^^^
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: traits are `</span><span style=color:#a626a4>?</span><span>Sized` by default
+</span></code></pre><p>我们很快就会讨论为什么 trait 默认为 <code>?Sized</code>，但首先让我们问问自己，一个 trait 被 <code>?Sized</code> 的含义是什么？让我们把上面的例子去掉。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait where Self: ?Sized {}
+</span></code></pre><p>好的，默认情况下，trait 允许 <code>self</code> 是一个不确定大小的类型。正如我们前面所学，我们不能通过值来传递不确定大小的类型，所以这限制了我们在 trait 中定义方法的种类。应该是不可能写出一个通过取值来获取或返回 <code>self</code> 的方法，然而这令人惊讶的是，它的编译:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>); </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>然而，当我们试图实现该方法时，无论是通过提供一个默认的实现，还是通过实现一个不确定大小类型的 trait，我们都会得到编译错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {} </span><span style=color:#a0a1a7>// compile error
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {} </span><span style=color:#a0a1a7>// compile error
+</span><span>}
+</span></code></pre><p>抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0277</span><span>]: the size </span><span style=color:#a626a4>for</span><span> values of </span><span style=color:#a626a4>type</span><span> `</span><span style=color:#a626a4>Self</span><span>` cannot be known at compilation time
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>lib.rs:</span><span style=color:#c18401>2</span><span>:</span><span style=color:#c18401>15
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>2 </span><span style=color:#a626a4>|     fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {}
+</span><span>  </span><span style=color:#a626a4>|               ^^^^</span><span> doesn</span><span style=color:#a626a4>'t</span><span> have a size known at compile</span><span style=color:#a626a4>-</span><span>time
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: the </span><span style=color:#a626a4>trait</span><span> `std::marker::Sized` is not implemented </span><span style=color:#a626a4>for</span><span> `</span><span style=color:#a626a4>Self</span><span>`
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: to learn more, visit </span><span style=color:#a626a4><</span><span>https:</span><span style=color:#a0a1a7>//doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait>
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: all local variables must have a statically known size
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: </span><span style=color:#fafafa;background-color:#e06c75>unsized</span><span> locals are gated </span><span style=color:#a626a4>as</span><span> an unstable feature
+</span><span>help: consider further restricting `</span><span style=color:#a626a4>Self</span><span>`
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>2 </span><span style=color:#a626a4>|     fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) </span><span style=color:#a626a4>where Self</span><span>: std::marker::Sized {}
+</span><span>  </span><span style=color:#a626a4>|                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+</span><span>
+</span><span>error[</span><span style=color:#c18401>E0277</span><span>]: the size </span><span style=color:#a626a4>for</span><span> values of </span><span style=color:#a626a4>type</span><span> `</span><span style=color:#a626a4>str</span><span>` cannot be known at compilation time
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>lib.rs:</span><span style=color:#c18401>6</span><span>:</span><span style=color:#c18401>15
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>6 </span><span style=color:#a626a4>|     fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {}
+</span><span>  </span><span style=color:#a626a4>|               ^^^^</span><span> doesn</span><span style=color:#a626a4>'t</span><span> have a size known at compile</span><span style=color:#a626a4>-</span><span>time
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: the </span><span style=color:#a626a4>trait</span><span> `std::marker::Sized` is not implemented </span><span style=color:#a626a4>for</span><span> `</span><span style=color:#a626a4>str</span><span>`
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: to learn more, visit </span><span style=color:#a626a4><</span><span>https:</span><span style=color:#a0a1a7>//doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait>
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: all local variables must have a statically known size
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: </span><span style=color:#fafafa;background-color:#e06c75>unsized</span><span> locals are gated </span><span style=color:#a626a4>as</span><span> an unstable feature
+</span></code></pre><p>如果我们决心通过值来传递 <code>self</code>，我们可以通过显式绑定 trait 与 <code>Sized</code> 来解决第一个错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait: Sized {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {} </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str { </span><span style=color:#a0a1a7>// compile error
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span></code></pre><p>现在抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0277</span><span>]: the size </span><span style=color:#a626a4>for</span><span> values of </span><span style=color:#a626a4>type</span><span> `</span><span style=color:#a626a4>str</span><span>` cannot be known at compilation time
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>lib.rs:</span><span style=color:#c18401>7</span><span>:</span><span style=color:#c18401>6
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>1 </span><span style=color:#a626a4>| trait </span><span>Trait: Sized {
+</span><span>  |              ----- required by this bound in `Trait`
+</span><span style=color:#a626a4>...
+</span><span style=color:#c18401>7 </span><span style=color:#a626a4>| impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {
+</span><span>  |      ^^^^^ doesn</span><span style=color:#a626a4>'t</span><span> have a size known at compile-time
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: the </span><span style=color:#a626a4>trait</span><span> `std::marker::Sized` is not implemented </span><span style=color:#a626a4>for</span><span> `</span><span style=color:#a626a4>str</span><span>`
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: to learn more, visit </span><span style=color:#a626a4><</span><span>https:</span><span style=color:#a0a1a7>//doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait>
+</span></code></pre><p>这并没有问题，因为我们知道，当我们将 trait 与 <code>Sized</code> 绑定后，我们就不能再为诸如 <code>str</code> 这样的不确定大小类型实现它了。另一方面，如果我们真的想为 <code>str</code> 实现 trait，另一种解决方案是保留 <code>?Sized</code> trait，并通过引用传递 <code>self</code>。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {} </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {} </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>与其将整个 trait 标记为 <code>?Sized</code> 或 <code>Sized</code>，我们有更细化和精确的选择，将单个方法标记为 <code>Sized</code>，像这样。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) </span><span style=color:#a626a4>where Self</span><span>: Sized {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {} </span><span style=color:#a0a1a7>// compiles!?
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#50a14f>"str"</span><span>.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>}
+</span></code></pre><p>令人惊讶的是，Rust编译 <code>impl Trait for str {}</code> 时没有任何抱怨，但当我们试图在一个不确定大小的类型上调用 <code>method</code> 时，它最终还是抓到了错误，所以一切正常。这有点怪异，但为我们提供了一些灵活性，只要我们从不调用 <code>Sized</code> 方法，我们就可以用一些 <code>Sized</code> 方法为不确定大小的类型实现 trait。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) </span><span style=color:#a626a4>where Self</span><span>: Sized {}
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>str {} </span><span style=color:#a0a1a7>// compiles
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// we never call "method" so no errors
+</span><span>    </span><span style=color:#50a14f>"str"</span><span>.</span><span style=color:#0184bc>method2</span><span>(); </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>现在回到最初的问题，为什么 trait 默认是 <code>?Sized</code>？答案是 trait 对象。trait 对象本质上是不确定大小的，因为任何大小的类型都可以实现 trait，因此我们只有在 <code>Trait: ?Sized</code> 的情况下，才能为 <code>dyn Trait</code> 实现 <code>Trait</code>。用代码来说：<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait: ?Sized {}
+</span><span>
+</span><span style=color:#a0a1a7>// the above is REQUIRED for
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>dyn Trait {
+</span><span>    </span><span style=color:#a0a1a7>// compiler magic here
+</span><span>}
+</span><span>
+</span><span style=color:#a0a1a7>// since `dyn Trait` is unsized
+</span><span>
+</span><span style=color:#a0a1a7>// and now we can use `dyn Trait` in our program
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) {} </span><span style=color:#a0a1a7>// compiles
+</span></code></pre><p>如果我们尝试实际编译上述程序，我们会得到：<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0371</span><span>]: the object </span><span style=color:#a626a4>type</span><span> `(dyn Trait </span><span style=color:#a626a4>+ 'static</span><span>)` automatically implements the </span><span style=color:#a626a4>trait</span><span> `Trait`
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>lib.rs:</span><span style=color:#c18401>5</span><span>:</span><span style=color:#c18401>1
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>5 </span><span style=color:#a626a4>| impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>dyn Trait {
+</span><span>  | ^^^^^^^^^^^^^^^^^^^^^^^^ `(</span><span style=color:#e45649>dyn Trait</span><span> + '</span><span style=color:#e45649>static</span><span>)` automatically implements trait `Trait`
+</span></code></pre><p>这就是编译器告诉我们要冷静，因为它自动为 <code>dyn Trait</code> 提供了 <code>Trait</code> 的实现。同样，由于 <code>dyn Trait</code> 是不确定大小的，编译器只能在 <code>Trait: ?Sized</code> 的情况下提供这个实现。如果我们将 <code>Trait</code> 与 <code>Sized</code> 绑定，那么 <code>Trait</code> 就变成了 "对象不安全" 的了，这意味着我们不能将实现 <code>Trait</code> 的类型转为 <code>dyn Trait</code> 的 trait 对象。正如预期的那样，这个程序不能编译:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait: Sized {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) {} </span><span style=color:#a0a1a7>// compile error
+</span></code></pre><p>抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0038</span><span>]: the </span><span style=color:#a626a4>trait</span><span> `Trait` cannot be made into an object
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>lib.rs:</span><span style=color:#c18401>3</span><span>:</span><span style=color:#c18401>18
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>1 </span><span style=color:#a626a4>| trait </span><span>Trait: Sized {}
+</span><span>  </span><span style=color:#a626a4>|       -----  ----- ...</span><span>because it requires `</span><span style=color:#a626a4>Self</span><span>: Sized`
+</span><span>  </span><span style=color:#a626a4>|       |
+</span><span>  </span><span style=color:#a626a4>|</span><span>       this </span><span style=color:#a626a4>trait </span><span>cannot be made into an object...
+</span><span>2 |
+</span><span>3 | fn function(t: &dyn Trait) {}
+</span><span>  </span><span style=color:#a626a4>|                ^^^^^^^^^^</span><span> the </span><span style=color:#a626a4>trait</span><span> `Trait` cannot be made into an object
+</span></code></pre><p>让我们尝试用 <code>Sized</code> 方法制作一个 <code>?Sized</code> trait，看看能否将它转一个 trait 对象。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#e45649>self</span><span>) </span><span style=color:#a626a4>where Self</span><span>: Sized {}
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>(</span><span style=color:#e45649>arg</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) { </span><span style=color:#a0a1a7>// compiles
+</span><span>    arg.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// compile error
+</span><span>    arg.</span><span style=color:#0184bc>method2</span><span>(); </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>正如我们之前看到的那样，只要我们不调用 trait 对象上的 <code>Sized</code> 方法，一切都没问题。<p><strong>关键要点</strong><ul><li>所有的 traits 默认都是 <code>?Sized</code> 的。<li><code>Trait: ?Sized</code> 是 <code>impl Trait for dyn Trait</code> 所必需的。<li>我们可以在每个方法的基础上要求 <code>Self: Sized</code>。<li>由 <code>Sized</code> 绑定的 trait 不能成为 trait 对象。</ul><h3 id=trait-dui-xiang-xian-zhi>trait 对象限制</h3><p>即使一个 traitt 是对象安全的，也会有一些与大小相关的边缘情况，这些情况限制了哪些类型可以转换为 trait 对象，以及一个 trait 对象可以表示多少个和什么样的 trait。<h4 id=bu-neng-jiang-bu-que-ding-da-xiao-de-lei-xing-zhuan-huan-wei-trait-dui-xiang>不能将不确定大小的类型转换为 Trait 对象</h4><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>generic</span><span>&LTT: ToString>(</span><span style=color:#e45649>t</span><span>: T) {}
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>trait_object</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn ToString) {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#0184bc>generic</span><span>(String::from(</span><span style=color:#50a14f>"String"</span><span>)); </span><span style=color:#a0a1a7>// compiles
+</span><span>    </span><span style=color:#0184bc>generic</span><span>(</span><span style=color:#50a14f>"str"</span><span>); </span><span style=color:#a0a1a7>// compiles
+</span><span>    </span><span style=color:#0184bc>trait_object</span><span>(</span><span style=color:#a626a4>&</span><span>String::from(</span><span style=color:#50a14f>"String"</span><span>)); </span><span style=color:#a0a1a7>// compiles, unsized coercion
+</span><span>    </span><span style=color:#0184bc>trait_object</span><span>(</span><span style=color:#50a14f>"str"</span><span>); </span><span style=color:#a0a1a7>// compile error, unsized coercion impossible
+</span><span>}
+</span></code></pre><p>抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0277</span><span>]: the size </span><span style=color:#a626a4>for</span><span> values of </span><span style=color:#a626a4>type</span><span> `</span><span style=color:#a626a4>str</span><span>` cannot be known at compilation time
+</span><span> </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>main.rs:</span><span style=color:#c18401>8</span><span>:</span><span style=color:#c18401>18
+</span><span>  </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>8 </span><span style=color:#a626a4>|     </span><span style=color:#0184bc>trait_object</span><span>(</span><span style=color:#50a14f>"str"</span><span>); </span><span style=color:#a0a1a7>// compile error
+</span><span>  </span><span style=color:#a626a4>|                  ^^^^^</span><span> doesn</span><span style=color:#a626a4>'t</span><span> have a size known at compile</span><span style=color:#a626a4>-</span><span>time
+</span><span>  </span><span style=color:#a626a4>|
+</span><span>  </span><span style=color:#a626a4>=</span><span> help: the </span><span style=color:#a626a4>trait</span><span> `std::marker::Sized` is not implemented </span><span style=color:#a626a4>for</span><span> `</span><span style=color:#a626a4>str</span><span>`
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: to learn more, visit </span><span style=color:#a626a4><</span><span>https:</span><span style=color:#a0a1a7>//doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait>
+</span><span>  </span><span style=color:#a626a4>=</span><span> note: required </span><span style=color:#a626a4>for</span><span> the cast to the object </span><span style=color:#a626a4>type</span><span> `dyn std::string::ToString`
+</span></code></pre><p>为什么将一个 <code>&String</code> 传给一个期望得到 <code>&dyn ToString</code> 的函数，是因为类型胁迫。<code>String</code> 实现了 <code>ToString</code>，我们可以通过不确定大小的胁迫将 <code>String</code> 这样的确定大小的类型转换成 <code>dyn ToString</code> 这样的不确定大小的类型。<code>str</code> 也实现了 <code>ToString</code>，将 <code>str</code> 转换为 <code>dyn ToString</code> 也需要一个不确定大小的胁迫，但 <code>str</code> 已经是不确定大小的了！我们如何将一个已经是不确定大小的类型，变成另一个不确定大小的类型？<p><code>&str</code> 指针是双宽的，存储一个数据指针和数据长度。<code>&dyn ToString</code> 指针也是双宽度的，存储一个指向数据的指针和一个指向 vtable 的指针。要把一个 <code>&str</code> 胁迫成一个 <code>&dyn toString</code>，就需要一个三倍宽度的指针来存储一个指向数据的指针、数据长度和一个指向 vtable 的指针。Rust 不支持三倍宽度指针，所以不可能将一个不确定大小的类型转换成一个 trait 对象。<p>前面2段用表格总结了一下。<table><thead><tr><th>Type<th>Pointer to Data<th>Data Length<th>Pointer to VTable<th>Total Width<tbody><tr><td><code>&String</code><td>✔️<td>❌<td>❌<td>1 ✔️<tr><td><code>&str</code><td>✔️<td>✔️<td>❌<td>2 ✔️<tr><td><code>&String as &dyn ToString</code><td>✔️<td>❌<td>✔️<td>2 ✔️<tr><td><code>&str as &dyn ToString</code><td>✔️<td>✔️<td>✔️<td>3 ❌</table><h4 id=bu-neng-chuang-jian-multi-trait-dui-xiang>不能创建 Multi-Trait 对象</h4><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {}
+</span><span style=color:#a626a4>trait </span><span>Trait2 {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>(</span><span style=color:#e45649>dyn Trait</span><span> + </span><span style=color:#e45649>Trait2</span><span>)) {}
+</span></code></pre><p>抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0225</span><span>]: only auto traits can be used </span><span style=color:#a626a4>as</span><span> additional traits </span><span style=color:#a626a4>in</span><span> a </span><span style=color:#a626a4>trait </span><span>object
+</span><span> --> src/lib.rs:4:30
+</span><span>  |
+</span><span>4 | fn function(t: &(dyn Trait + Trait2)) {}
+</span><span>  </span><span style=color:#a626a4>|                      -----   ^^^^^^
+</span><span>  </span><span style=color:#a626a4>|                      |       |
+</span><span>  </span><span style=color:#a626a4>|                      |</span><span>       additional non</span><span style=color:#a626a4>-</span><span>auto </span><span style=color:#a626a4>trait
+</span><span>  </span><span style=color:#a626a4>|                      |       trait </span><span>alias used in trait object type (additional use)
+</span><span>  |                      first non-auto trait
+</span><span>  |                      trait alias used in trait object type (first use)
+</span></code></pre><p>请记住，trait 对象指针是双宽度的：存储1个指向数据的指针和另一个指向 vtable 的指针，但这里有2个trait，所以有2个 vtable，这就需要 <code>&(dyn Trait + Trait2)</code> 指针是3个宽度。像 <code>Send</code> 和 <code>Sync</code> 这样的自动 trait 是允许的，因为它们没有方法，因此没有 vtable。<p>这方面的变通方法是通过使用另一个 trait 来组合 vtable，比如这样。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait2 {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait3: Trait + Trait2 {}
+</span><span>
+</span><span style=color:#a0a1a7>// auto blanket impl Trait3 for any type that also impls Trait & Trait2
+</span><span style=color:#a626a4>impl</span><span>&LTT: Trait </span><span style=color:#a626a4>+</span><span> Trait2> Trait3 </span><span style=color:#a626a4>for </span><span>T {}
+</span><span>
+</span><span style=color:#a0a1a7>// from `dyn Trait + Trait2` to `dyn Trait3`
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait3) {
+</span><span>    t.</span><span style=color:#0184bc>method</span><span>(); </span><span style=color:#a0a1a7>// compiles
+</span><span>    t.</span><span style=color:#0184bc>method2</span><span>(); </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>这个变通方法的一个缺点是，Rust 不支持 supertrait 向上转换。这意味着，如果我们有一个 <code>dyn Trait3</code>，我们不能在需要 <code>dyn Trait</code> 或 <code>dyn Trait2</code> 的地方使用它。这个程序不能编译。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait2 {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>method2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait3: Trait + Trait2 {}
+</span><span>
+</span><span style=color:#a626a4>impl</span><span>&LTT: Trait </span><span style=color:#a626a4>+</span><span> Trait2> Trait3 </span><span style=color:#a626a4>for </span><span>T {}
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>Struct;
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>Struct {}
+</span><span style=color:#a626a4>impl </span><span>Trait2 </span><span style=color:#a626a4>for </span><span>Struct {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>takes_trait</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) {}
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>takes_trait2</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait2) {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> t: </span><span style=color:#a626a4>&</span><span>dyn Trait3 </span><span style=color:#a626a4>= &</span><span>Struct;
+</span><span>    </span><span style=color:#0184bc>takes_trait</span><span>(t); </span><span style=color:#a0a1a7>// compile error
+</span><span>    </span><span style=color:#0184bc>takes_trait2</span><span>(t); </span><span style=color:#a0a1a7>// compile error
+</span><span>}
+</span></code></pre><p>抛出:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>error[</span><span style=color:#c18401>E0308</span><span>]: mismatched types
+</span><span>  </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>main.rs:</span><span style=color:#c18401>22</span><span>:</span><span style=color:#c18401>17
+</span><span>   </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>22 </span><span style=color:#a626a4>|     </span><span style=color:#0184bc>takes_trait</span><span>(t);
+</span><span>   |                 ^ expected trait `Trait`, found trait `Trait3`
+</span><span>   </span><span style=color:#a626a4>|
+</span><span>   </span><span style=color:#a626a4>=</span><span> note: expected reference `</span><span style=color:#a626a4>&</span><span>dyn Trait`
+</span><span>              found reference `</span><span style=color:#a626a4>&</span><span>dyn Trait3`
+</span><span>
+</span><span>error[</span><span style=color:#c18401>E0308</span><span>]: mismatched types
+</span><span>  </span><span style=color:#a626a4>-</span><span>-> src</span><span style=color:#a626a4>/</span><span>main.rs:</span><span style=color:#c18401>23</span><span>:</span><span style=color:#c18401>18
+</span><span>   </span><span style=color:#a626a4>|
+</span><span style=color:#c18401>23 </span><span style=color:#a626a4>|     </span><span style=color:#0184bc>takes_trait2</span><span>(t);
+</span><span>   |                  ^ expected trait `Trait2`, found trait `Trait3`
+</span><span>   </span><span style=color:#a626a4>|
+</span><span>   </span><span style=color:#a626a4>=</span><span> note: expected reference `</span><span style=color:#a626a4>&</span><span>dyn Trait2`
+</span><span>              found reference `</span><span style=color:#a626a4>&</span><span>dyn Trait3`
+</span></code></pre><p>这是因为 <code>dyn Trait3</code> 是一个不同于 <code>dyn Trait</code> 和 <code>dyn Trait</code> 的类型，因为它们有不同的 vtable 布局，尽管 <code>dyn Trait3</code> 确实包含 <code>dyn Trait</code> 和 <code>dyn Trait2</code> 的所有方法。这里的变通办法是增加显式转换方法。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>trait </span><span>Trait {}
+</span><span style=color:#a626a4>trait </span><span>Trait2 {}
+</span><span>
+</span><span style=color:#a626a4>trait </span><span>Trait3: Trait + Trait2 {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>as_trait</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>dyn Trait;
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>as_trait2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>dyn Trait2;
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl</span><span>&LTT: Trait </span><span style=color:#a626a4>+</span><span> Trait2> Trait3 </span><span style=color:#a626a4>for </span><span>T {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>as_trait</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>dyn Trait {
+</span><span>        </span><span style=color:#e45649>self
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>as_trait2</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>dyn Trait2 {
+</span><span>        </span><span style=color:#e45649>self
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>Struct;
+</span><span style=color:#a626a4>impl </span><span>Trait </span><span style=color:#a626a4>for </span><span>Struct {}
+</span><span style=color:#a626a4>impl </span><span>Trait2 </span><span style=color:#a626a4>for </span><span>Struct {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>takes_trait</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait) {}
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>takes_trait2</span><span>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>dyn Trait2) {}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> t: </span><span style=color:#a626a4>&</span><span>dyn Trait3 </span><span style=color:#a626a4>= &</span><span>Struct;
+</span><span>    </span><span style=color:#0184bc>takes_trait</span><span>(t.</span><span style=color:#0184bc>as_trait</span><span>()); </span><span style=color:#a0a1a7>// compiles
+</span><span>    </span><span style=color:#0184bc>takes_trait2</span><span>(t.</span><span style=color:#0184bc>as_trait2</span><span>()); </span><span style=color:#a0a1a7>// compiles
+</span><span>}
+</span></code></pre><p>这是一个简单而直接的工作方法，似乎是 Rust 编译器可以为我们自动完成的事情。Rust 并不羞于执行类型胁迫，正如我们在 deref 和 unsized 胁迫中所看到的那样，那么为什么没有 trait 向上胁迫呢？这是一个很好的问题，有一个熟悉的答案：Rust核心团队正在研究其他更高优先级和更高影响的功能。很公平。<p><strong>关键要点</strong><ul><li>Rust 不支持宽度超过2的指针，所以... <ul><li>我们不能将不确定大小的类型转换 trait 对象<li>我们不能有多个 trait 对象，但我们可以通过将多个 trait 强转成一个 trait 来解决这个问题。</ul></ul><h3 id=yong-hu-zi-ding-yi-de-bu-que-ding-da-xiao-lei-xing>用户自定义的不确定大小类型</h3><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Unsized {
+</span><span>    </span><span style=color:#e45649>unsized_field</span><span>: [</span><span style=color:#a626a4>i32</span><span>],
+</span><span>}
+</span></code></pre><p>我们可以通过赋予结构体一个不确定大小的字段来定义一个不确定大小的结构体。不确定大小的结构体只能有1个不确定大小的字段，而且它必须是结构体中的最后一个字段。这是一个要求，这样编译器就可以在编译时确定结构中每个字段的起始偏移量，这对高效快速的字段访问非常重要。此外，使用双宽度指针最多只能跟踪一个不确定大小的字段，因为更多的不确定大小的字段将需要更多的宽度。<p>那么我们到底该如何实例化这个东西呢？和我们处理任何不确定大小类型的方式一样：先做一个可确定大小的版本，然后胁迫它变成不确定大小的版本。然而，<code>Unsized</code> 的定义总是不确定大小的，没有办法制作它的可确定大小版本！唯一的变通办法是使结构体通用化，使它可以存在于确定大小的版本中和不确定大小的版本中。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>MaybeSized&LTT: </span><span style=color:#fafafa;background-color:#e06c75>?</span><span>Sized> {
+</span><span>    </span><span style=color:#e45649>maybe_sized</span><span>: T,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// unsized coercion from MaybeSized<[i32; 3]> to MaybeSized<[i32]>
+</span><span>    </span><span style=color:#a626a4>let</span><span> ms: </span><span style=color:#a626a4>&</span><span>MaybeSized<[</span><span style=color:#a626a4>i32</span><span>]> </span><span style=color:#a626a4>= &</span><span>MaybeSized { maybe_sized: [</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>] };
+</span><span>}
+</span></code></pre><p>那么这有什么用处呢？没有什么特别引人注目的，用户定义的不确定大小的类型现在是一个非常半成品的功能，它们的局限性超过了任何好处。这里提到它们纯粹是为了全面性。<p><strong>有趣的事实：</strong> <code>std::fi::OsStr</code> 和 <code>std::path::Path</code> 是标准库中的2个不确定大小的结构，你可能已经在不知不觉中使用过了。<p><strong>关键 要点</strong><ul><li>用户定义的不确定大小类型现在是一个半成品的功能，它们的局限性超过了任何好处</ul><h2 id=zero-sized-lei-xing>Zero-Sized 类型</h2><p>Zero-Sized 乍听起来很奇异，但到处都在使用。<h3 id=unit-lei-xing>Unit 类型</h3><p>最常见的零大小类型是 Unit 类型: <code>()</code>. 所有的空块 <code>{}</code> 都评估为 <code>()</code>，如果块是非空的，但最后一个表达式用分号 <code>;</code> 丢弃，那么它也评估为 <code>()</code>。例子如下:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> a: () </span><span style=color:#a626a4>= </span><span>{};
+</span><span>    </span><span style=color:#a626a4>let</span><span> b: </span><span style=color:#a626a4>i32 = </span><span>{
+</span><span>        </span><span style=color:#c18401>5
+</span><span>    };
+</span><span>    </span><span style=color:#a626a4>let</span><span> c: () </span><span style=color:#a626a4>= </span><span>{
+</span><span>        </span><span style=color:#c18401>5</span><span>;
+</span><span>    };
+</span><span>}
+</span></code></pre><p>每一个没有显式返回类型的函数都会默认返回 <code>()</code>。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// with sugar
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>() {}
+</span><span>
+</span><span style=color:#a0a1a7>// desugared
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>() -> () {}
+</span></code></pre><p>由于 <code>()</code> 是零字节，所以 <code>()</code> 的所有实例都是一样的，这使得 <code>Default</code>、<code>PartialEq</code> 和 <code>Ord</code> 的实现非常简单。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::cmp::Ordering;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Default </span><span style=color:#a626a4>for</span><span> () {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>default</span><span>() {}
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>PartialEq </span><span style=color:#a626a4>for</span><span> () {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>eq</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>_other</span><span>: </span><span style=color:#a626a4>&</span><span>()) -> </span><span style=color:#a626a4>bool </span><span>{
+</span><span>        </span><span style=color:#c18401>true
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>ne</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>_other</span><span>: </span><span style=color:#a626a4>&</span><span>()) -> </span><span style=color:#a626a4>bool </span><span>{
+</span><span>        </span><span style=color:#c18401>false
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Ord </span><span style=color:#a626a4>for</span><span> () {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>cmp</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>_other</span><span>: </span><span style=color:#a626a4>&</span><span>()) -> Ordering {
+</span><span>        Ordering::Equal
+</span><span>    }
+</span><span>}
+</span></code></pre><p>编译器理解 <code>()</code> 是零大小的，并优化了与 <code>()</code> 实例的交互。例如，<code>Vec<()></code> 永远不会进行任何堆分配，从 <code>Vec</code> 中推送和弹出 <code>()</code> 只是增加和减少它的 <code>len</code> 字段。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// zero capacity is all the capacity we need to "store" infinitely many ()
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> vec: Vec<()> </span><span style=color:#a626a4>= </span><span>Vec::with_capacity(</span><span style=color:#c18401>0</span><span>);
+</span><span>    </span><span style=color:#a0a1a7>// causes no heap allocations or vec capacity changes
+</span><span>    vec.</span><span style=color:#0184bc>push</span><span>(()); </span><span style=color:#a0a1a7>// len++
+</span><span>    vec.</span><span style=color:#0184bc>push</span><span>(()); </span><span style=color:#a0a1a7>// len++
+</span><span>    vec.</span><span style=color:#0184bc>push</span><span>(()); </span><span style=color:#a0a1a7>// len++
+</span><span>    vec.</span><span style=color:#0184bc>pop</span><span>(); </span><span style=color:#a0a1a7>// len--
+</span><span>    assert_eq!(</span><span style=color:#c18401>2</span><span>, vec.</span><span style=color:#0184bc>len</span><span>());
+</span><span>}
+</span></code></pre><p>上面的例子没有实际应用，但是有没有什么情况下，我们可以有意义地利用上面的想法呢？令人惊讶的是，是的，我们可以通过将 <code>Value</code> 设置为 <code>()</code>，从 <code>HashMap&LTKey，Value></code> 中得到一个高效的 <code>HashSet&LTKey></code> 实现，这正是 Rust 标准库中 <code>HashSet</code> 的工作原理。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// std::collections::HashSet
+</span><span style=color:#a626a4>pub struct </span><span>HashSet&LTT> {
+</span><span>    </span><span style=color:#e45649>map</span><span>: HashMap&LTT, ()>,
+</span><span>}
+</span></code></pre><p><strong>关键要点</strong><ul><li>ZST 的所有实例都是彼此相等的。<li>Rust 编译器知道优化与 ZSTs 的交互。</ul><h3 id=yong-hu-zi-ding-yi-de-unit-jie-gou-ti>用户自定义的 Unit 结构体</h3><p>Unit 结构体是指不含任何字段的结构体，如<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Struct;
+</span></code></pre><p>属性，使 Unit 结构体比 <code>()</code> 更有用。<ul><li>我们可以在自己的 Unit 结构体上实现任何我们想要的 trait，Rust 的 trait 孤儿规则阻止我们实现标准库中定义的 <code>()</code> 的 trait。<li>在我们的程序中，Unit 结构体可以被赋予有意义的名称。<li>Unit 结构体，就像所有结构体一样，默认情况下是不可复制的，这在我们的程序中可能很重要。</ul><h3 id=never-lei-xing>Never 类型</h3><p>第二种最常见的 ZST 是 never 类型: <code>!</code>。 之所以称为 never 类型，是因为它代表的是永远不会解析到任何值的计算。<p><code>!</code> 的几个有趣的特性使它不同于 <code>()</code>。<ul><li><code>!</code> 可以被胁迫成任何其他类型。<li>不可能创建 <code>!</code> 的实例。</ul><p>第一个有趣的属性对人体工程学非常有用，允许我们使用像这样的方便的宏。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// nice for quick prototyping
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>example</span><span>&LTT>(</span><span style=color:#e45649>t</span><span>: </span><span style=color:#a626a4>&</span><span>[T]) -> Vec&LTT> {
+</span><span>    unimplemented!() </span><span style=color:#a0a1a7>// ! coerced to Vec&LTT>
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>example2</span><span>() -> </span><span style=color:#a626a4>i32 </span><span>{
+</span><span>    </span><span style=color:#a0a1a7>// we know this parse call will never fail
+</span><span>    </span><span style=color:#a626a4>match </span><span style=color:#50a14f>"123"</span><span>.parse::<</span><span style=color:#a626a4>i32</span><span>>() {
+</span><span>        Some(num) </span><span style=color:#a626a4>=></span><span> num,
+</span><span>        None </span><span style=color:#a626a4>=> </span><span>unreachable!(), </span><span style=color:#a0a1a7>// ! coerced to i32
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>example3</span><span>(</span><span style=color:#e45649>some_condition</span><span>: </span><span style=color:#a626a4>bool</span><span>) -> </span><span style=color:#a626a4>&'static str </span><span>{
+</span><span>    </span><span style=color:#a626a4>if !</span><span>some_condition {
+</span><span>        panic!() </span><span style=color:#a0a1a7>// ! coerced to &str
+</span><span>    } </span><span style=color:#a626a4>else </span><span>{
+</span><span>        </span><span style=color:#50a14f>"str"
+</span><span>    }
+</span><span>}
+</span></code></pre><p><code>break</code>, <code>continue</code> 和 <code>return</code> 表达式也拥有类型 <code>!</code>:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>example</span><span>() -> </span><span style=color:#a626a4>i32 </span><span>{
+</span><span>    </span><span style=color:#a0a1a7>// we can set the type of x to anything here
+</span><span>    </span><span style=color:#a0a1a7>// since the block never evaluates to any value
+</span><span>    </span><span style=color:#a626a4>let</span><span> x: String </span><span style=color:#a626a4>= </span><span>{
+</span><span>        </span><span style=color:#a626a4>return </span><span style=color:#c18401>123 </span><span style=color:#a0a1a7>// ! coerced to String
+</span><span>    };
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>example2</span><span>(</span><span style=color:#e45649>nums</span><span>: </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>i32</span><span>]) -> Vec<</span><span style=color:#a626a4>i32</span><span>> {
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> filtered </span><span style=color:#a626a4>= </span><span>Vec::new();
+</span><span>    </span><span style=color:#a626a4>for</span><span> num </span><span style=color:#a626a4>in</span><span> nums {
+</span><span>        filtered.</span><span style=color:#0184bc>push</span><span>(
+</span><span>            </span><span style=color:#a626a4>if *</span><span>num </span><span style=color:#a626a4>< </span><span style=color:#c18401>0 </span><span>{
+</span><span>                </span><span style=color:#a626a4>break </span><span style=color:#a0a1a7>// ! coerced to i32
+</span><span>            } </span><span style=color:#a626a4>else if *</span><span>num </span><span style=color:#a626a4>% </span><span style=color:#c18401>2 </span><span style=color:#a626a4>== </span><span style=color:#c18401>0 </span><span>{
+</span><span>                </span><span style=color:#a626a4>*</span><span>num
+</span><span>            } </span><span style=color:#a626a4>else </span><span>{
+</span><span>                </span><span style=color:#a626a4>continue </span><span style=color:#a0a1a7>// ! coerced to i32
+</span><span>            }
+</span><span>        );
+</span><span>    }
+</span><span>    filtered
+</span><span>}
+</span></code></pre><p><code>!</code> 的第二个有趣的属性允许我们在类型层面上将某些状态标记为不可能。让我们以这个函数签名为例。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>() -> Result&LTSuccess, Error>;
+</span></code></pre><p>我们知道，如果函数返回并成功，<code>Result</code> 将包含一些类型为 <code>Success</code> 的实例，如果函数出错，<code>Result</code> 将包含一些类型为 <code>Error</code> 的实例。现在我们来对比一下这个函数的签名。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>() -> Result&LTSuccess, </span><span style=color:#fafafa;background-color:#e06c75>!</span><span style=color:#a626a4>></span><span>;
+</span></code></pre><p>我们知道，如果函数返回并且成功了，<code>Result</code> 将持有一些类型为 <code>Success</code> 的实例，如果出错了...但等等，它永远不会出错，因为不可能创建 <code>!</code> 的实例。鉴于上面的函数签名，我们知道这个函数永远不会出错。那这个函数签名呢:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>function</span><span>() -> Result<</span><span style=color:#fafafa;background-color:#e06c75>!</span><span>, Error</span><span style=color:#a626a4>></span><span>;
+</span></code></pre><p>前面的反义词现在是真的：如果这个函数返回，我们知道它肯定出错了，因为成功是不可能的。<p>前一个例子的实际应用是 <code>FromStr</code> 对 <code>String</code> 的实现，因为将 <code>&str</code> 转换为 <code>String</code> 是不可能失败的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#![</span><span style=color:#e45649>feature</span><span>(never_type)]
+</span><span>
+</span><span style=color:#a626a4>use </span><span>std::str::FromStr;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>FromStr </span><span style=color:#a626a4>for </span><span>String {
+</span><span>    </span><span style=color:#a626a4>type </span><span>Err </span><span style=color:#a626a4>= !</span><span>;
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>from_str</span><span>(</span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&str</span><span>) -> Result&LTString, </span><span style=color:#a626a4>Self::</span><span>Err> {
+</span><span>        Ok(String::from(s))
+</span><span>    }
+</span><span>}
+</span></code></pre><p>后一个例子的实际应用是一个运行无限循环的函数，这个函数永远不打算返回，就像服务器响应客户端的请求一样，除非有一些错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#![</span><span style=color:#e45649>feature</span><span>(never_type)]
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>run_server</span><span>() -> Result<</span><span style=color:#fafafa;background-color:#e06c75>!</span><span>, ConnectionError</span><span style=color:#a626a4>> </span><span>{
+</span><span>    </span><span style=color:#a626a4>loop </span><span>{
+</span><span>        </span><span style=color:#a626a4>let </span><span>(request, response) </span><span style=color:#a626a4>= </span><span style=color:#0184bc>get_request</span><span>()</span><span style=color:#a626a4>?</span><span>;
+</span><span>        </span><span style=color:#a626a4>let</span><span> result </span><span style=color:#a626a4>=</span><span> request.</span><span style=color:#0184bc>process</span><span>();
+</span><span>        response.</span><span style=color:#0184bc>send</span><span>(result);
+</span><span>    }
+</span><span>}
+</span></code></pre><p>这个 <code>feature</code> 标记是必要的，因为当 never 类型存在并在 Rust 内部工作时，在用户代码中使用它仍然被认为是实验性的。<p><strong>要点</strong><ul><li><code>!</code> 可以被胁迫成任何其他类型。<li>不可能创建 <code>!</code> 的实例，我们可以用它来标记某些状态，在类型级别上是不可能的。</ul><h3 id=yong-hu-ding-yi-de-wei-never-lei-xing>用户定义的伪 Never 类型</h3><p>虽然不可能定义一个可以强制到任何其他类型的类型，但可以定义一个不可能创建实例的类型，比如一个 <code>enum</code>，没有任何变体。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>enum </span><span>Void {}
+</span></code></pre><p>这使得我们可以从前面的2个例子中移除 <code>feature</code> 标记，并使用稳定的 Rust 实现它们。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>enum </span><span>Void {}
+</span><span>
+</span><span style=color:#a0a1a7>// example 1
+</span><span style=color:#a626a4>impl </span><span>FromStr </span><span style=color:#a626a4>for </span><span>String {
+</span><span>    </span><span style=color:#a626a4>type </span><span>Err </span><span style=color:#a626a4>=</span><span> Void;
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>from_str</span><span>(</span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&str</span><span>) -> Result&LTString, </span><span style=color:#a626a4>Self::</span><span>Err> {
+</span><span>        Ok(String::from(s))
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style=color:#a0a1a7>// example 2
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>run_server</span><span>() -> Result&LTVoid, ConnectionError> {
+</span><span>    </span><span style=color:#a626a4>loop </span><span>{
+</span><span>        </span><span style=color:#a626a4>let </span><span>(request, response) </span><span style=color:#a626a4>= </span><span style=color:#0184bc>get_request</span><span>()</span><span style=color:#a626a4>?</span><span>;
+</span><span>        </span><span style=color:#a626a4>let</span><span> result </span><span style=color:#a626a4>=</span><span> request.</span><span style=color:#0184bc>process</span><span>();
+</span><span>        response.</span><span style=color:#0184bc>send</span><span>(result);
+</span><span>    }
+</span><span>}
+</span></code></pre><p>这是 Rust 标准库使用的技术，因为 <code>String</code> 的 <code>FromStr</code> 实现的 <code>Err</code> 类型是 <code>std::convert::Infallible</code>，它被定义为:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>pub enum </span><span>Infallible {}
+</span></code></pre><h3 id=phantomdata>PhantomData</h3><p>第三种最常用的 ZST 可能是 <code>PhantomData</code>。<code>PhantomData</code> 是一个零大小的标记结构，它可以用来 "标记" 一个包含的结构体具有某些属性。它和它的自动标记 trait 表亲如 <code>Sized</code>、<code>Send</code>、<code>Sync</code> 等在目的上是相似的，但作为一个标记结构体的使用方式有点不同。对 <code>PhantomData</code> 进行彻底的解释并探索它的所有用例不在本文的范围内，所以我们只简单地介绍一个简单的例子。回顾一下前面介绍的这个代码片段。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#![</span><span style=color:#e45649>feature</span><span>(negative_impls)]
+</span><span>
+</span><span style=color:#a0a1a7>// this type is Send and Sync
+</span><span style=color:#a626a4>struct </span><span>Struct;
+</span><span>
+</span><span style=color:#a0a1a7>// opt-out of Send trait
+</span><span style=color:#a626a4>impl </span><span>!Send for Struct {}
+</span><span>
+</span><span style=color:#a0a1a7>// opt-out of Sync trait
+</span><span style=color:#a626a4>impl </span><span>!Sync for Struct {}
+</span></code></pre><p>很不幸，我们必须使用一个 <code>feature</code> 标记，我们是否可以只使用稳定的 Rust 来达到同样的结果？我们已经了解到，一个类型只有当它的所有成员也是 <code>Send</code> 和 <code>Sync</code> 时才是 <code>Send</code> 和 <code>Sync</code> 的，所以我们可以像 <code>Rc<()></code> 一样在 <code>Struct</code> 中添加一个 <code>!Send</code> 和 <code>!Sync</code> 成员。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::rc::Rc;
+</span><span>
+</span><span style=color:#a0a1a7>// this type is not Send or Sync
+</span><span style=color:#a626a4>struct </span><span>Struct {
+</span><span>    </span><span style=color:#a0a1a7>// adds 8 bytes to every instance
+</span><span>    </span><span style=color:#e45649>_not_send_or_sync</span><span>: Rc<()>,
+</span><span>}
+</span></code></pre><p>这不太理想，因为它增加了 <code>Struct</code> 的每个实例的大小，而且我们现在每次要创建一个 <code>Struct</code> 时，还得凭空想象出一个 <code>Rc<()></code>。由于 <code>PhantomData</code> 是一个 ZST，它解决了这两个问题。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::rc::Rc;
+</span><span style=color:#a626a4>use </span><span>std::marker::PhantomData;
+</span><span>
+</span><span style=color:#a626a4>type </span><span>NotSendOrSyncPhantom </span><span style=color:#a626a4>= </span><span>PhantomData&LTRc<()>>;
+</span><span>
+</span><span style=color:#a0a1a7>// this type is not Send or Sync
+</span><span style=color:#a626a4>struct </span><span>Struct {
+</span><span>    </span><span style=color:#a0a1a7>// adds no additional size to instances
+</span><span>    </span><span style=color:#e45649>_not_send_or_sync</span><span>: NotSendOrSyncPhantom,
+</span><span>}
+</span></code></pre><p><strong>关键要点</strong><ul><li><code>PhantomData</code> 是一个零大小的标记结构，它可以用来 "标记" 一个包含的结构体具有某些属性。</ul><h2 id=jie-lun>结论</h2><ul><li>只有确定大小类型的实例才能被放置在栈上，也就是说，可以通过值来传递<li>不确定大小类型的实例不能放在栈上，必须通过引用来传递。<li>指向不确定大小类型的指针是双宽度的，因为除了指向数据外，它们还需要做额外的记账工作，以跟踪数据的长度或指向一个 vtable。<li><code>Sized</code> 是一个 "自动" 标记 trait。<li>所有的泛型类型参数默认都是自动绑定 <code>Sized</code> 的。<li>如果我们有一个泛型函数，它的参数是指针后面的一些 <code>T</code>，例如 <code>&T</code>、<code>Box&LTT></code>、<code>Rc&LTT></code> 等，那么我们几乎总是希望用 <code>T: ?Sized</code> 来退出默认的 <code>Sized</code> 约束。<li>利用切片和 Rust 的自动类型强制，我们可以编写灵活的 API。<li>所有的 trait 默认为 <code>Sized</code>。<li><code>Trait: ?Sized</code> 是 <code>impl Trait for dyn Trait</code> 所必需的。<li>我们可以根据每个方法要求 <code>Self: Sized</code>。<li>由 <code>Sized </code> 绑定的 trait 不能被制作成 trait 对象。<li>Rust 不支持宽度超过2的指针，所以... <ul><li>我们不能将不确定大小的类型转换为 trait 对象<li>我们不能有多 trait 对象，但我们可以通过将多个 trait 转化成一个 trait 来解决这个问题。</ul><li>用户定义的不确定大小的类型现在是一个半成品的功能，它们的局限性超过了任何好处<li>ZST 的所有实例都是彼此相等的。<li>Rust 编译器知道优化与 ZSTs 的交互。<li><code>!</code> 可以被胁迫成任何其他类型。<li>不可能创建 <code>!</code> 的实例，我们可以用它来标记某些状态，在类型级别上是不可能的。<li><code>PhantomData</code> 是一个零大小的标记结构，它可以用来 "标记" 一个包含的结构体具有某些属性。</ul><h2 id=tao-lun>讨论</h2><p>在这里讨论本文:<ul><li><a href="https://users.rust-lang.org/t/blog-post-sizedness-in-rust/46293?u=pretzelhammer">official Rust users forum</a><li><a href=https://www.reddit.com/r/learnrust/comments/hx2jd0/sizedness_in_rust/>learnrust subreddit</a><li><a href=https://twitter.com/pretzelhammer/status/1286669073137491973>Twitter</a><li><a href=https://www.reddit.com/r/rust/comments/hxips7/sizedness_in_rust/>rust subreddit</a><li><a href=https://github.com/pretzelhammer/rust-blog/discussions>Github</a></ul><h2 id=tong-zhi>通知</h2><p>当发表下一篇博文时，会收到通知:<ul><li><a href=https://twitter.com/pretzelhammer>Following pretzelhammer on Twitter</a> or<li>Watching this repo's releases (click <code>Watch</code> -> click <code>Custom</code> -> select <code>Releases</code> -> click <code>Apply</code>)</ul><h2 id=geng-duo-yue-du>更多阅读</h2><ul><li><a href=https://ohmycloud.github.io/notes/sizedness-in-rust/./common-rust-lifetime-misconceptions.md>Common Rust Lifetime Misconceptions</a><li><a href=https://ohmycloud.github.io/notes/sizedness-in-rust/./tour-of-rusts-standard-library-traits.md>Tour of Rust's Standard Library Traits</a><li><a href=https://ohmycloud.github.io/notes/sizedness-in-rust/./learning-rust-in-2020.md>Learning Rust in 2020</a><li><a href=https://ohmycloud.github.io/notes/sizedness-in-rust/./too-many-brainfuck-compilers.md>Learn Assembly with Entirely Too Many Brainfuck Compilers</a></ul><p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/sizedness>/sizedness/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

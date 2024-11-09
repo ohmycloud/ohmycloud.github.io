@@ -1,0 +1,227 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Basic Async Rust</title><meta content="Basic Async Rust" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/basic-async-rust/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Basic Async Rust" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/basic-async-rust/ property=twitter:url><meta content="Basic Async Rust" property=twitter:title><link href=https://ohmycloud.github.io/notes/basic-async-rust/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>basic-async-rust</span></div><time datetime=2024-11-01>Published on: <span class=accent-data>2024-11-01</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Basic Async Rust</h1><h2 id=futures>Futures</h2><p>One of the key features of async programming is the concept of a future. We mentioned above that a future is a placeholder object that represents the result of an anynchronous operation that has not yet completed. Futures allow you to start a task and continue with other operations while the task is being executed in the background.<p>To truly understand how a future works, we should cover the lifecycle of a future. When a future is created, the future is idle. It has yet to be executed. Once the future is executed, it can either yield a value, resolve, or go to sleep because the future is pending(awaiting on a result). When the future is polled again the poll can either return a pending or reday result. The future will continue to be polled until it is either resolved or cancelled.<p>To concrete how futures work, let us build a basic counter future. The counter future will merely up to 5 and then ready once the counter has reached 5. First we need to import the following:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>use </span><span>std::future::Future;
+</span><span style=color:#a626a4>use </span><span>std::pin::Pin;
+</span><span style=color:#a626a4>use </span><span>std::task::{Context, Poll};
+</span><span style=color:#a626a4>use </span><span>std::time::Duration;
+</span><span>
+</span><span style=color:#a626a4>use </span><span>tokio::task::JoinHandle;
+</span></code></pre><p>We will cover context and Pin after building our basic future. Seeing as our future is a counter, the struct takes the following from:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>struct </span><span>CounterFuture {
+</span><span>    </span><span style=color:#e45649>count</span><span>: </span><span style=color:#a626a4>u32</span><span>,
+</span><span>}
+</span></code></pre><p>We then implement the Future trait with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>Future </span><span style=color:#a626a4>for </span><span>CounterFuture {
+</span><span>    </span><span style=color:#a626a4>type </span><span>Output </span><span style=color:#a626a4>= u32</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>poll</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>self</span><span>: Pin<</span><span style=color:#a626a4>&mut Self</span><span>>, </span><span style=color:#e45649>cx</span><span>: </span><span style=color:#a626a4>&mut </span><span>Context<'</span><span style=color:#a626a4>_</span><span>>) -> Poll<</span><span style=color:#a626a4>Self::</span><span>Output> {
+</span><span>        </span><span style=color:#e45649>self</span><span>.count </span><span style=color:#a626a4>+= </span><span style=color:#c18401>1</span><span>;
+</span><span>        println!(</span><span style=color:#50a14f>"polling with result: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, </span><span style=color:#e45649>self</span><span>.count);
+</span><span>        std::thread::sleep(Duration::from_secs(</span><span style=color:#c18401>1</span><span>));
+</span><span>        </span><span style=color:#a626a4>if </span><span style=color:#e45649>self</span><span>.count </span><span style=color:#a626a4>< </span><span style=color:#c18401>5 </span><span>{
+</span><span>            cx.</span><span style=color:#0184bc>waker</span><span>().</span><span style=color:#0184bc>wake_by_ref</span><span>();
+</span><span>            Poll::Pending
+</span><span>        } </span><span style=color:#a626a4>else </span><span>{
+</span><span>            Poll::Ready(</span><span style=color:#e45649>self</span><span>.count)
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>Everytime the future is polled, the count is increased by one. If the count is at five we then state that the future is ready. We introduce the <code>std::thread::sleep</code> function to merely exaggrate the time taken so it is easier to following this example when running this code. To run the code, we simply need the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span>#[</span><span style=color:#e45649>tokio</span><span>::</span><span style=color:#e45649>main</span><span>]
+</span><span>async </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> counter_one </span><span style=color:#a626a4>=</span><span> CounterFuture { count: </span><span style=color:#c18401>0 </span><span>};
+</span><span>    </span><span style=color:#a626a4>let</span><span> counter_two </span><span style=color:#a626a4>=</span><span> CounterFuture { count: </span><span style=color:#c18401>0 </span><span>};
+</span><span>    </span><span style=color:#a626a4>let</span><span> handle_one: JoinHandle<</span><span style=color:#a626a4>u32</span><span>> </span><span style=color:#a626a4>= </span><span>tokio::task::spawn(async </span><span style=color:#a626a4>move </span><span>{
+</span><span>        counter_one.await;
+</span><span>    });
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> handle_two: JoinHandle<</span><span style=color:#a626a4>u32</span><span>> </span><span style=color:#a626a4>= </span><span>tokio::task::spawn(async </span><span style=color:#a626a4>move </span><span>{
+</span><span>        counter_two.await;
+</span><span>    });
+</span><span>    tokio::join</span><span style=color:#a626a4>!</span><span>(handle_one, handle_two);
+</span><span>}
+</span></code></pre><p>Running two of our futures in different tasks gives us the following printout:<pre style=color:#383a42;background-color:#fafafa><code><span>polling with result: 1
+</span><span>polling with result: 1
+</span><span>polling with result: 2
+</span><span>polling with result: 2
+</span><span>polling with result: 3
+</span><span>polling with result: 3
+</span><span>polling with result: 4
+</span><span>polling with result: 4
+</span><span>polling with result: 5
+</span><span>polling with result: 5
+</span></code></pre><p>We can see that one of the futures was taken off the queue, polled, and then set to idle whist another future was taken off the task queue to be polled. These futures were polled in alternate fashion, You may have noticed that our <code>poll</code> function is not async. This is because an async poll function would return a circular dependency as you would be sending a future to be polled in order to resolve a future being polled. With this, we can see that the future is the bedrock of the async computation.<p>We see that <code>poll</code> function takes a mutable reference of itself, however, this mutable reference is wrapped in a Pin which we need to disscuss.<h2 id=pin-in-futures>Pin in Futures</h2><p>In Rust, the compiler often moves values around in memory. For instance, if we move a variable into a function, the memory may be moved.<p>It's not just moving values that may rusult in moving of memory address. Collections can also change memory address. For instance, if a vector gets to capacity, the vector will have to be reallocated in memory changing the memory address.<p>Most normal primitives such as number, string, bools, structs, enum etc implement the <code>Unpin</code> trait enabling them to be moved around. If you are unsure if your data implements the <code>Unpin</code> trait, run a doc command and check the traits your data type implements. For example, below is the auto-trait implementations on <code>i32</code> in the standard docs:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>RefUnwindSafe </span><span style=color:#a626a4>for </span><span>i32
+</span><span>impl Send for i32
+</span><span>impl Sync for i32
+</span><span>impl Unpin for i32
+</span><span>impl UnwindSafe for i32
+</span></code></pre><p>So why do we concern ourselves with <a href=https://rust-lang.github.io/rfcs/2349-pin.html>pin</a> and <a href=https://blog.cloudflare.com/pin-and-unpin-in-rust/>unpinning</a>? We know that futures get moved as we use the async move in our code when spawning a task. However, moving can be dangerous. To demonstrate the data, we can build a basic struct that <strong>references itself</strong> with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>use </span><span>std::ptr;
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>SelfReferential {
+</span><span>    </span><span style=color:#e45649>data</span><span>: String,
+</span><span>    </span><span style=color:#e45649>self_pointer</span><span>: </span><span style=color:#a626a4>*const</span><span> String,
+</span><span>}
+</span></code></pre><p>The <code>*const String</code> is a raw pointer to a string. This means that the pointer directly references the memory address where the data is. The pointer offers no safety guarantees. This means that the reference does not update if the data being pointed to moves. We are using a raw pointer to demonstrate why pinning is needed. For this demonstration to take place, we need to define the constructor of the struct, and printing of the structs reference using the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>SelfReferential {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#e45649>data</span><span>: String) -> SelfReferential {
+</span><span>        </span><span style=color:#a626a4>let mut</span><span> sr </span><span style=color:#a626a4>=</span><span> SelfReferential {
+</span><span>            data,
+</span><span>            self_pointer: ptr::null(),
+</span><span>        };
+</span><span>        sr.self_pointer </span><span style=color:#a626a4>= &</span><span>sr.data </span><span style=color:#a626a4>as *const </span><span>String;
+</span><span>        sr
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>print</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) {
+</span><span>        </span><span style=color:#a626a4>unsafe </span><span>{
+</span><span>            println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, </span><span style=color:#a626a4>*</span><span style=color:#e45649>self</span><span>.self_pointer);
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>To then expose the danger of moving the struct by creating two instances of the <code>SelfReferential</code> struct, swap these instances in memory, and then print what data the raw pointer is pointing to with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> first </span><span style=color:#a626a4>= </span><span>SelfReferential::new(</span><span style=color:#50a14f>"first"</span><span>.</span><span style=color:#0184bc>to_string</span><span>());
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> second </span><span style=color:#a626a4>= </span><span>SelfReferential::new(</span><span style=color:#50a14f>"second"</span><span>.</span><span style=color:#0184bc>to_string</span><span>());
+</span><span>    </span><span style=color:#a626a4>unsafe </span><span>{
+</span><span>        ptr::swap(</span><span style=color:#a626a4>&mut</span><span> first, </span><span style=color:#a626a4>&mut</span><span> second);
+</span><span>    }
+</span><span>    first.</span><span style=color:#0184bc>print</span><span>();
+</span><span>}
+</span></code></pre><p>If you try and run the code, you will get an error, which is highly probable to be a segmentation fault. The segmentation fault is an error caused by accessing memory that does not belong to the program. We can see that moving struct with references to itself can be dangerous. Pinning essentially ensures that the future remains at a fixed memory address. This is import because futures can be paused or resumed which can change the memory address.<p>We have nearly covered all of the components in the basic future that we have defined. The only component is the context.<h2 id=context-in-futures>Context in Futures</h2><p>A <code>Context</code> only serves to provide access to a waker to wake a task. A <code>Waker</code> is a handle that notifies the executor when the task is ready to be run.<p>While this is the primary role of <code>Context</code> today, it's important to note that this functionality might evolve in the future. The design of <code>Context</code> has allowed space for expansion such as the introduction of additional responsibilities or capabilities as Rust's asynchronous ecosystem grows.<p>Lets look at a stripped down version of our poll function so we can focus on the path of waking up the future:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>fn </span><span style=color:#0184bc>poll</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>self</span><span>: Pin<</span><span style=color:#a626a4>&mut Self</span><span>>, </span><span style=color:#e45649>cx</span><span>: </span><span style=color:#a626a4>&mut </span><span>Context<'</span><span style=color:#a626a4>_</span><span>>) -> Poll<</span><span style=color:#a626a4>Self::</span><span>Output> {
+</span><span>    </span><span style=color:#a626a4>...
+</span><span>        </span><span style=color:#a626a4>if </span><span style=color:#e45649>self</span><span>.count </span><span style=color:#a626a4>< </span><span style=color:#c18401>5 </span><span>{
+</span><span>            cx.</span><span style=color:#0184bc>waker</span><span>().</span><span style=color:#0184bc>wake_by_ref</span><span>();
+</span><span>            Poll::Pending
+</span><span>        } </span><span style=color:#a626a4>else </span><span>{
+</span><span>            Poll::Ready(</span><span style=color:#e45649>self</span><span>.count)
+</span><span>        }
+</span><span>}
+</span></code></pre><p>We can see that the waker is wrapped in the context, and is only utilised when the result of the poll is going to be pending. The waker is essentially waking up the future so it can be executed. If the future is completed then there is no need for any more execution to be done. If we were to remove the waker and run our program again, we would get the following printout:<pre style=color:#383a42;background-color:#fafafa><code><span>polling with result: 1
+</span><span>polling with result: 1
+</span></code></pre><p>We can seee that our program would not have completed and the program hangs. This is because our tasks are still idle but there is no way to wake them up again to be polled and executed to completion. Futures need the <code>Waker::wake()</code> function so the wake function can be called when the future should be polled again. The process takes the following steps:<ol><li>The poll function for a future is called and the result is that the future needs to wait for some async operation to completed before the future is able to return a value.<li>The future then regisers its interest of being notified of the completion of the operation by calling a method that references the waker.<li>the executor then taks note of the interest in the future's operation and stores the waker in a queue.<li>At some later time the operation completes and the executor is notified. The executor retrieves the wakers from the queue and calls the <code>wake_by_ref</code> on each one waking up the futures.<li>The <code>wake_by_ref</code> signals the associated task that should be scheduled for execution. The way in which this is done can vary depending on the runtime.<li>When the future is executed, the executor will call the poll method of the future again and the future will determine whether the operation has completed returning a value if completion is achieved.</ol><p>We can see that Futures are used with an async/await function but let's have a think about how else they can be used. We can also use a timeout on a thread of execution. This means that the thread finishes when so much time has elapsed meaning that we do not end up in a situation where the program hangs indefinitely. This is useful when we have a function that can be slow to complete and we want to move or error early. Remember that threads provide the underlying functionality for executing tasks. We import timeout from <code>tokio::time</code> and set up a slow task. In this case, we put this as a sleep for 10 seconds to exaggerate the effect.<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>use </span><span>std::time::Duration;
+</span><span style=color:#a626a4>use </span><span>tokio::time::timeout;
+</span><span>
+</span><span>async </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>slow_task</span><span>() -> </span><span style=color:#a626a4>&'static str </span><span>{
+</span><span>    tokio::time::sleep(Duration::from_secs(</span><span style=color:#c18401>10</span><span>)).await;
+</span><span>    </span><span style=color:#50a14f>"Slow Task Completed"
+</span><span>}
+</span></code></pre><p>Now we set up our timeout, in this case, setting it to 3 seconds. This means that the thread will end if the Future is not compelted within these 3 seconds. We match the result and print "Task timed out".<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span>#[</span><span style=color:#e45649>tokio</span><span>::</span><span style=color:#e45649>main</span><span>]
+</span><span>async </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> duration </span><span style=color:#a626a4>= </span><span>Duration::from_secs(</span><span style=color:#c18401>3</span><span>);
+</span><span>    </span><span style=color:#a626a4>let</span><span> result </span><span style=color:#a626a4>= </span><span style=color:#0184bc>timeout</span><span>(duration, </span><span style=color:#0184bc>slow_task</span><span>()).await;
+</span><span>
+</span><span>    </span><span style=color:#a626a4>match</span><span> result {
+</span><span>        Ok(value) </span><span style=color:#a626a4>=> </span><span>println!(</span><span style=color:#50a14f>"Task completed successfully: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, value),
+</span><span>        Err(</span><span style=color:#a626a4>_</span><span>) </span><span style=color:#a626a4>=> </span><span>println!(</span><span style=color:#50a14f>"Task timed out"</span><span>),
+</span><span>    }
+</span><span>}
+</span></code></pre><p>Note When we apply a timeout to a future, as shown in the example, there's a possibility that the future(in this case, <code>slow_task()</code>) will be cancelled if it doesn't complete within the specified duration. This introduces the concept of "cancel safety".<p>Cancel safety refers to the fact that when a future is canceled, it's essential to ensure that any resources or state it was using are handled correctly. This means that if a task is in the middle of an operation when it's canceled, it shouldn't leave the system in a bad state, like holding onto locks, leaving files open, or partially modifying data.<p>In Rust's async ecosystem, most operations are cancel-safe by default, which means they can be safely interrupted without causing issues. However, it's still a good practice to be aware of how your tasks interact with external resources or state and ensure that thoese interactions are cancel-safe.<p>In our example, if the <code>slow_task()</code> is canceled due to the timeout, the task itself simply stopped, and the timeout returns an error indicating the task didn't compelte in time. Since <code>tokio::time::sleep</code> is a cancel-safe operation, there is no risk of the resource leaks or inconsistent states. However, if the task involved more complex operations, such as network communication or file I/O, additional care might be needed to ensure that the cancellation is handled appropriately.<p>For CPU-intensive work, we can also off-load work to a separate threadpool and the future resolves when the work is finished. We have now covered the context of futures.<p>Polling directly is not the most efficient way as our executor will be busy polling futures that are not ready. To explainhow we can prevent busy polling, we will move onto waking futures remotely.<h2 id=waking-futures-remotely>Waking Futures Remotely</h2><p>Imagine that we make a network call to another computer using async Rust. The routing of the network call and reveiving of the response happens outside of our Rust program. Considering this, it does not make sense to constantly poll our networking future until we get a signal from the OS that data has been received at the port we are listening to. We can hold on the polling of the future by externally referencing the future's waker, and waking the future when we need to.<p>To see this in action, we can simulate an external call with channels. First, we need the following imports:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>use </span><span>std::pin::Pin;
+</span><span style=color:#a626a4>use </span><span>std::task::{Context, Poll, Waker};
+</span><span style=color:#a626a4>use </span><span>std::sync::{Arc, Mutex};
+</span><span style=color:#a626a4>use </span><span>std::future::Future;
+</span><span style=color:#a626a4>use </span><span>tokio::sync::mpsc;
+</span><span style=color:#a626a4>use </span><span>tokio::task;
+</span></code></pre><p>With these imports, we can now define our future which takes the form below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>struct </span><span>MyFuture {
+</span><span>    </span><span style=color:#e45649>state</span><span>: Arc&LTMutex&LTMyFutureState>>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>MyFutureState {
+</span><span>    </span><span style=color:#e45649>data</span><span>: Option&LTVec<</span><span style=color:#a626a4>u8</span><span>>>,
+</span><span>    </span><span style=color:#e45649>waker</span><span>: Option&LTWaker>,
+</span><span>}
+</span></code></pre><p>Here, we can see that the state of our <code>MyFuture</code> can be accessed from another thread. The state of our <code>MyFuture</code> has the waker and data. To make our <code>main</code> function more concise, we define a constructor for <code>MyFuture</code> with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>MyFuture {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>() -> (</span><span style=color:#a626a4>Self</span><span>, Arc&LTMutex&LTMyFutureState>>) {
+</span><span>        </span><span style=color:#a626a4>let</span><span> state </span><span style=color:#a626a4>= </span><span>Arc::new(Mutex::new(MyFutureState {
+</span><span>            data: None,
+</span><span>            waker: None,
+</span><span>        }));
+</span><span>        (
+</span><span>            MyFuture {
+</span><span>                state: state.</span><span style=color:#0184bc>clone</span><span>(),
+</span><span>            },
+</span><span>            state,
+</span><span>        )
+</span><span>    }
+</span><span>}
+</span></code></pre><p>For our constructor, we can see that we construct the future, but we also return a reference to the state so we can access the waker outside of the future. Finally we implement the <code>Future</code> trait for our future with the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>Future </span><span style=color:#a626a4>for </span><span>MyFuture {
+</span><span>    </span><span style=color:#a626a4>type </span><span>Output </span><span style=color:#a626a4>= </span><span>String;
+</span><span>
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>poll</span><span>(</span><span style=color:#e45649>self</span><span>: Pin<</span><span style=color:#a626a4>&mut Self</span><span>>, </span><span style=color:#e45649>cx</span><span>: </span><span style=color:#a626a4>&mut </span><span>Context<'</span><span style=color:#a626a4>_</span><span>>) -> Poll<</span><span style=color:#a626a4>Self::</span><span>Output> {
+</span><span>        println!(</span><span style=color:#50a14f>"Polling the future"</span><span>);
+</span><span>        </span><span style=color:#a626a4>let mut</span><span> state </span><span style=color:#a626a4>= </span><span style=color:#e45649>self</span><span>.state.</span><span style=color:#0184bc>lock</span><span>().</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>
+</span><span>        </span><span style=color:#a626a4>if</span><span> state.data.</span><span style=color:#0184bc>is_some</span><span>() {
+</span><span>            </span><span style=color:#a626a4>let</span><span> data </span><span style=color:#a626a4>=</span><span> state.data.</span><span style=color:#0184bc>take</span><span>().</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>            Poll::Ready(String::from_utf8(data).</span><span style=color:#0184bc>unwrap</span><span>())
+</span><span>        } </span><span style=color:#a626a4>else </span><span>{
+</span><span>            state.waker </span><span style=color:#a626a4>= </span><span>Some(cx.</span><span style=color:#0184bc>waker</span><span>().</span><span style=color:#0184bc>clone</span><span>());
+</span><span>            Poll::Pending
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>Here, we can see that we print every time we poll the future so we can keep track of how many times wo poll our future. We then access the state and see there is any data. If there is no data, we pass the waker into the state so we can wake the future from outside of the future. If there is data in the state, we know that we are ready, and we return a <code>Ready</code>.<p>Our future is now ready to test. Inside our <code>main</code> function, we create our future, channel for communication, and spawn our future with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>let </span><span>(my_future, state) </span><span style=color:#a626a4>= </span><span>MyFuture::new();
+</span><span style=color:#a626a4>let </span><span>(tx, </span><span style=color:#a626a4>mut</span><span> rx) </span><span style=color:#a626a4>= </span><span>mpsc::channel::<()>(</span><span style=color:#c18401>1</span><span>);
+</span><span style=color:#a626a4>let</span><span> task_handle </span><span style=color:#a626a4>= </span><span>task::spawn(async </span><span style=color:#a626a4>move </span><span>{
+</span><span>    my_future.await
+</span><span>});
+</span><span>
+</span><span>tokio::time::sleep(tokio::time::Duration::from_secs(</span><span style=color:#c18401>3</span><span>)).await;
+</span><span>println!(</span><span style=color:#50a14f>"spawning trigger task"</span><span>);
+</span></code></pre><p>We can see that we are sleeping for three seconds. This sleep gives us time to check if we are polling multiple times. If our approach works as intended, we should only get one poll during the time of sleeping. We then spawn our trigger task with the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>let</span><span> trigger_task </span><span style=color:#a626a4>= </span><span>task::spawn(async </span><span style=color:#a626a4>move </span><span>{
+</span><span>   rx.</span><span style=color:#0184bc>recv</span><span>().await;
+</span><span>  </span><span style=color:#a626a4>let mut</span><span> state </span><span style=color:#a626a4>=</span><span> state.</span><span style=color:#0184bc>lock</span><span>().</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>  state.data </span><span style=color:#a626a4>= </span><span>Some(</span><span style=color:#a626a4>b</span><span style=color:#50a14f>"Hello from the outside"</span><span>.</span><span style=color:#0184bc>to_vec</span><span>());
+</span><span>
+</span><span>  </span><span style=color:#a626a4>loop </span><span>{
+</span><span>      </span><span style=color:#a626a4>if let </span><span>Some(waker) </span><span style=color:#a626a4>=</span><span> state.waker.</span><span style=color:#0184bc>take</span><span>() {
+</span><span>          waker.</span><span style=color:#0184bc>wake</span><span>();
+</span><span>          </span><span style=color:#a626a4>break</span><span>;
+</span><span>      }
+</span><span>  }
+</span><span>});
+</span><span>tx.</span><span style=color:#0184bc>send</span><span>(()).await.</span><span style=color:#0184bc>unwrap</span><span>();
+</span></code></pre><p>We can see that once our trigger task receives the message in the channel, it gets the state of our future, and populate the data. We then check to see if the waker is present. Once we get hold of the waker, we wake the future.<p>Finally, we await on both of the async tasks with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>let</span><span> outcome </span><span style=color:#a626a4>=</span><span> task_handle.await.</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>println!(</span><span style=color:#50a14f>"Task completed with outcome: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, outcome);
+</span><span>trigger_task.await.</span><span style=color:#0184bc>unwrap</span><span>();
+</span></code></pre><p>If we run our code, we get the printout below:<pre style=color:#383a42;background-color:#fafafa><code><span>Polling the future
+</span><span>spawning trigger task
+</span><span>Polling the future
+</span><span>Task completed with outcome: Hello from the outside
+</span></code></pre><p>We can see that our polling pnly happens once on the initial setup, and then happens one more time when we wake the future with the data. Async runtimes setup efficient ways to listen to OS events so they do not have to blindly poll futures. For instance, Tokio has an event loop that listens to OS events, and then handles them so the event wakes up the right task.<h2 id=sharing-data-between-futures>Sharing data between Futures</h2><p>We can share data between futures. We may want to share data between futures for the following reasons:<ul><li>Aggregating Results<li>Dependent Computations<li>Caching Results<li>Synchronization<li>Shared State<li>Task Coordination and supervision<li>Resource Management<li>Error Propagation</ul><p>While sharing data between futures is useful, there are some things that we need to be mindful of when doing so. We can highlight them as we work through a simple example. First, we will be relying on the standard Mutex with the following import:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>use </span><span>std::sync::{Arc, Mutex};
+</span><span style=color:#a626a4>use </span><span>tokio::task::JoinHandle;
+</span><span style=color:#a626a4>use </span><span>core::task::Poll;
+</span><span style=color:#a626a4>use </span><span>tokio::time::Duration;
+</span><span style=color:#a626a4>use </span><span>std::task::Context;
+</span><span style=color:#a626a4>use </span><span>std::pin::Pin;
+</span><span style=color:#a626a4>use </span><span>std::future::Future;
+</span></code></pre><p>For our example, we will be using a basic struct that has a counter. One async task will be for increasing the count, and the other task will be decreasing the count. If both tasks hit the shared data the same number of times, the end result will be zero. Therefore, we need to build a basic enum to define what type of task is being run with the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span>#[</span><span style=color:#e45649>derive</span><span>(Debug)]
+</span><span style=color:#a626a4>enum </span><span>CounterType {
+</span><span>    Increment,
+</span><span>    Decrement,
+</span><span>}
+</span></code></pre><p>We can then define our shared data struct with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>struct </span><span>SharedData {
+</span><span>    </span><span style=color:#e45649>counter</span><span>: </span><span style=color:#a626a4>i32</span><span>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>SharedData {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>increment</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>) {
+</span><span>        </span><span style=color:#e45649>self</span><span>.counter </span><span style=color:#a626a4>+= </span><span style=color:#c18401>1</span><span>;
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>decrement</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>) {
+</span><span>        </span><span style=color:#e45649>self</span><span>.counter </span><span style=color:#a626a4>-= </span><span style=color:#c18401>1</span><span>;
+</span><span>    }
+</span><span>}
+</span></code></pre><p>Now that our shared data struct is defined, we can define our counter future with the code below:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>struct </span><span>CounterFuture {
+</span><span>    </span><span style=color:#e45649>counter_type</span><span>: CounterType,
+</span><span>    </span><span style=color:#e45649>data_reference</span><span>: Arc&LTMutex&LTSharedData>>,
+</span><span>    </span><span style=color:#e45649>count</span><span>: </span><span style=color:#a626a4>u32
+</span><span>}
+</span></code></pre><p>Here, we have defined the type of operation the future will perform on the shared data. We also have access to the shared data and a count to stop the future once the total number of executions of the shared data has happened for the future.<p>The signature of our poll function takes the following form:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span style=color:#a626a4>impl </span><span>Future </span><span style=color:#a626a4>for </span><span>CounterFuture {
+</span><span>    </span><span style=color:#a626a4>type </span><span>Output </span><span style=color:#a626a4>= u32</span><span>,
+</span><span>
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>poll</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>self</span><span>: Pin<</span><span style=color:#a626a4>&mut Self</span><span>>, </span><span style=color:#e45649>cx</span><span>: </span><span style=color:#a626a4>&mut </span><span>Context<'</span><span style=color:#a626a4>_</span><span>>) -> Poll<</span><span style=color:#a626a4>Self::</span><span>Output> {
+</span><span>        </span><span style=color:#a626a4>...
+</span><span>    }
+</span><span>}
+</span></code></pre><p>Inside our poll function we first cover getting access to the shared data with the following code:<pre class=language-rs data-lang=rs style=color:#383a42;background-color:#fafafa><code class=language-rs data-lang=rs><span>std::thread::sleep(Duration::from_secs(</span><span style=color:#c18401>1</span><span>));
+</span><span style=color:#a626a4>let mut</span><span> guard </span><span style=color:#a626a4>= match </span><span style=color:#e45649>self</span><span>.data_reference.</span><span style=color:#0184bc>try_lock</span><span>() {
+</span><span>    Ok(guard) </span><span style=color:#a626a4>=></span><span> guard,
+</span><span>    Err(error) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>        println!(</span><span style=color:#50a14f>"error for </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, </span><span style=color:#e45649>self</span><span>.counter_type, error);
+</span><span>        cx.</span><span style=color:#0184bc>waker</span><span>().</span><span style=color:#0184bc>wake_by_ref</span><span>();
+</span><span>        </span><span style=color:#a626a4>return </span><span>Poll::Pending
+</span><span>    }
+</span><span>}
+</span></code></pre><p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/futures>/futures/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

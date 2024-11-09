@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>焉知非鱼 - futures</title>
+    <link rel="self" type="application/atom+xml" href="https://ohmycloud.github.io/tags/futures/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://ohmycloud.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2024-11-01T00:00:00+00:00</updated>
+    <id>https://ohmycloud.github.io/tags/futures/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Basic Async Rust</title>
+        <published>2024-11-01T00:00:00+00:00</published>
+        <updated>2024-11-01T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/basic-async-rust/"/>
+        <id>https://ohmycloud.github.io/notes/basic-async-rust/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/basic-async-rust/">&lt;h2 id=&quot;futures&quot;&gt;Futures&lt;&#x2F;h2&gt;
+&lt;p&gt;One of the key features of async programming is the concept of a future. We mentioned above that a future is a
+placeholder object that represents the result of an anynchronous operation that has not yet completed. Futures allow
+you to start a task and continue with other operations while the task is being executed in the background.&lt;&#x2F;p&gt;
+&lt;p&gt;To truly understand how a future works, we should cover the lifecycle of a future.
+When a future is created, the future is idle. It has yet to be executed. Once the future is executed, it can either
+yield a value, resolve, or go to sleep because the future is pending(awaiting on a result). When the future is polled
+again the poll can either return a pending or reday result. The future will continue to be polled until it is either
+resolved or cancelled.&lt;&#x2F;p&gt;
+&lt;p&gt;To concrete how futures work, let us build a basic counter future. The counter future will merely up to 5 and then ready
+once the counter has reached 5. First we need to import the following:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::future::Future;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::pin::Pin;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::task::{Context, Poll};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::time::Duration;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::task::JoinHandle;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We will cover context and Pin after building our basic future. Seeing as our future is a counter, the
+struct takes the following from:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;CounterFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;count&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We then implement the Future trait with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Future &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;CounterFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;Output &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= u32&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;poll&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;: Pin&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut Self&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;cx&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;Context&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; Poll&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self::&lt;&#x2F;span&gt;&lt;span&gt;Output&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;polling with result: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count);
+&lt;&#x2F;span&gt;&lt;span&gt;        std::thread::sleep(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;lt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;5 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            cx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;waker&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;wake_by_ref&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Pending
+&lt;&#x2F;span&gt;&lt;span&gt;        } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Ready(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count)
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Everytime the future is polled, the count is increased by one. If the count is at five we then
+state that the future is ready. We introduce the &lt;code&gt;std::thread::sleep&lt;&#x2F;code&gt; function to merely exaggrate
+the time taken so it is easier to following this example when running this code. To run the code, we simply
+need the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;tokio&lt;&#x2F;span&gt;&lt;span&gt;::&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; counter_one &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; CounterFuture { count: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0 &lt;&#x2F;span&gt;&lt;span&gt;};
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; counter_two &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; CounterFuture { count: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0 &lt;&#x2F;span&gt;&lt;span&gt;};
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; handle_one: JoinHandle&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;tokio::task::spawn(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        counter_one.await;
+&lt;&#x2F;span&gt;&lt;span&gt;    });
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; handle_two: JoinHandle&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;tokio::task::spawn(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        counter_two.await;
+&lt;&#x2F;span&gt;&lt;span&gt;    });
+&lt;&#x2F;span&gt;&lt;span&gt;    tokio::join&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;!&lt;&#x2F;span&gt;&lt;span&gt;(handle_one, handle_two);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Running two of our futures in different tasks gives us the following printout:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;polling with result: 1
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 1
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 2
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 2
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 3
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 3
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 4
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 4
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 5
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 5
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can see that one of the futures was taken off the queue, polled, and then set to idle whist another
+future was taken off the task queue to be polled. These futures were polled in alternate fashion, You may have
+noticed that our &lt;code&gt;poll&lt;&#x2F;code&gt; function is not async. This is because an async poll function would return a circular dependency
+as you would be sending a future to be polled in order to resolve a future being polled. With this, we can see that the
+future is the bedrock of the async computation.&lt;&#x2F;p&gt;
+&lt;p&gt;We see that &lt;code&gt;poll&lt;&#x2F;code&gt; function takes a mutable reference of itself, however, this mutable reference is wrapped in a Pin which
+we need to disscuss.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;pin-in-futures&quot;&gt;Pin in Futures&lt;&#x2F;h2&gt;
+&lt;p&gt;In Rust, the compiler often moves values around in memory. For instance, if we move a variable into a function, the
+memory may be moved.&lt;&#x2F;p&gt;
+&lt;p&gt;It&#x27;s not just moving values that may rusult in moving of memory address. Collections can also change memory address.
+For instance, if a vector gets to capacity, the vector will have to be reallocated in memory changing the memory address.&lt;&#x2F;p&gt;
+&lt;p&gt;Most normal primitives such as number, string, bools, structs, enum etc implement the &lt;code&gt;Unpin&lt;&#x2F;code&gt; trait enabling them to be
+moved around. If you are unsure if your data implements the &lt;code&gt;Unpin&lt;&#x2F;code&gt; trait, run a doc command and check the traits your data
+type implements. For example, below is the auto-trait implementations on &lt;code&gt;i32&lt;&#x2F;code&gt; in the standard docs:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;RefUnwindSafe &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;i32
+&lt;&#x2F;span&gt;&lt;span&gt;impl Send for i32
+&lt;&#x2F;span&gt;&lt;span&gt;impl Sync for i32
+&lt;&#x2F;span&gt;&lt;span&gt;impl Unpin for i32
+&lt;&#x2F;span&gt;&lt;span&gt;impl UnwindSafe for i32
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;So why do we concern ourselves with &lt;a href=&quot;https:&#x2F;&#x2F;rust-lang.github.io&#x2F;rfcs&#x2F;2349-pin.html&quot;&gt;pin&lt;&#x2F;a&gt; and &lt;a href=&quot;https:&#x2F;&#x2F;blog.cloudflare.com&#x2F;pin-and-unpin-in-rust&#x2F;&quot;&gt;unpinning&lt;&#x2F;a&gt;?
+We know that futures get moved as we use the async move in our code when spawning a task. However, moving can be dangerous.
+To demonstrate the data, we can build a basic struct that &lt;strong&gt;references itself&lt;&#x2F;strong&gt; with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::ptr;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;SelfReferential {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;data&lt;&#x2F;span&gt;&lt;span&gt;: String,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self_pointer&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*const&lt;&#x2F;span&gt;&lt;span&gt; String,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The &lt;code&gt;*const String&lt;&#x2F;code&gt; is a raw pointer to a string. This means that the pointer directly references the memory address where
+the data is. The pointer offers no safety guarantees. This means that the reference does not update if the data being
+pointed to moves. We are using a raw pointer to demonstrate why pinning is needed. For this demonstration to take place,
+we need to define the constructor of the struct, and printing of the structs reference using the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;SelfReferential {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;data&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; SelfReferential {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; sr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; SelfReferential {
+&lt;&#x2F;span&gt;&lt;span&gt;            data,
+&lt;&#x2F;span&gt;&lt;span&gt;            self_pointer: ptr::null(),
+&lt;&#x2F;span&gt;&lt;span&gt;        };
+&lt;&#x2F;span&gt;&lt;span&gt;        sr.self_pointer &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;sr.data &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;as *const &lt;&#x2F;span&gt;&lt;span&gt;String;
+&lt;&#x2F;span&gt;&lt;span&gt;        sr
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;print&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.self_pointer);
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To then expose the danger of moving the struct by creating two instances of the &lt;code&gt;SelfReferential&lt;&#x2F;code&gt; struct,
+swap these instances in memory, and then print what data the raw pointer is pointing to with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; first &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;SelfReferential::new(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;first&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; second &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;SelfReferential::new(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;second&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;unsafe &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        ptr::swap(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; first, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; second);
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    first.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;print&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you try and run the code, you will get an error, which is highly probable to be a segmentation fault.
+The segmentation fault is an error caused by accessing memory that does not belong to the program. We can see that moving
+struct with references to itself can be dangerous. Pinning essentially ensures that the future remains at a fixed memory address.
+This is import because futures can be paused or resumed which can change the memory address.&lt;&#x2F;p&gt;
+&lt;p&gt;We have nearly covered all of the components in the basic future that we have defined. The only component is the context.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;context-in-futures&quot;&gt;Context in Futures&lt;&#x2F;h2&gt;
+&lt;p&gt;A &lt;code&gt;Context&lt;&#x2F;code&gt; only serves to provide access to a waker to wake a task. A &lt;code&gt;Waker&lt;&#x2F;code&gt; is a handle that notifies the executor when the task
+is ready to be run.&lt;&#x2F;p&gt;
+&lt;p&gt;While this is the primary role of &lt;code&gt;Context&lt;&#x2F;code&gt; today, it&#x27;s important to note that this functionality might evolve in the future.
+The design of &lt;code&gt;Context&lt;&#x2F;code&gt; has allowed space for expansion such as the introduction of additional responsibilities or capabilities as Rust&#x27;s
+asynchronous ecosystem grows.&lt;&#x2F;p&gt;
+&lt;p&gt;Lets look at a stripped down version of our poll function so we can focus on the path of waking up the future:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;poll&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;: Pin&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut Self&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;cx&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;Context&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; Poll&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self::&lt;&#x2F;span&gt;&lt;span&gt;Output&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;if &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;lt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;5 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            cx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;waker&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;wake_by_ref&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Pending
+&lt;&#x2F;span&gt;&lt;span&gt;        } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Ready(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.count)
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can see that the waker is wrapped in the context, and is only utilised when the result of the poll is going to be pending.
+The waker is essentially waking up the future so it can be executed. If the future is completed then there is no need for any more
+execution to be done. If we were to remove the waker and run our program again, we would get the following printout:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;polling with result: 1
+&lt;&#x2F;span&gt;&lt;span&gt;polling with result: 1
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can seee that our program would not have completed and the program hangs. This is because our tasks are still
+idle but there is no way to wake them up again to be polled and executed to completion. Futures need the &lt;code&gt;Waker::wake()&lt;&#x2F;code&gt;
+function so the wake function can be called when the future should be polled again. The process takes the following steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The poll function for a future is called and the result is that the future needs to wait for some async operation to
+completed before the future is able to return a value.&lt;&#x2F;li&gt;
+&lt;li&gt;The future then regisers its interest of being notified of the completion of the operation by calling a method that references the waker.&lt;&#x2F;li&gt;
+&lt;li&gt;the executor then taks note of the interest in the future&#x27;s operation and stores the waker in a queue.&lt;&#x2F;li&gt;
+&lt;li&gt;At some later time the operation completes and the executor is notified. The executor retrieves the wakers from the queue and
+calls the &lt;code&gt;wake_by_ref&lt;&#x2F;code&gt; on each one waking up the futures.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;wake_by_ref&lt;&#x2F;code&gt; signals the associated task that should be scheduled for execution. The way in which this is done
+can vary depending on the runtime.&lt;&#x2F;li&gt;
+&lt;li&gt;When the future is executed, the executor will call the poll method of the future again and the future will determine
+whether the operation has completed returning a value if completion is achieved.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;We can see that Futures are used with an async&#x2F;await function but let&#x27;s have a think about how else they can be used.
+We can also use a timeout on a thread of execution. This means that the thread finishes when so much time has elapsed
+meaning that we do not end up in a situation where the program hangs indefinitely. This is useful when we have a function
+that can be slow to complete and we want to move or error early. Remember that threads provide the underlying functionality
+for executing tasks. We import timeout from &lt;code&gt;tokio::time&lt;&#x2F;code&gt; and set up a slow task. In this case, we put this as a sleep for
+10 seconds to exaggerate the effect.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::time::Duration;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::time::timeout;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;slow_task&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&amp;#39;static str &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    tokio::time::sleep(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;10&lt;&#x2F;span&gt;&lt;span&gt;)).await;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Slow Task Completed&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now we set up our timeout, in this case, setting it to 3 seconds. This means that the thread will end if the Future
+is not compelted within these 3 seconds. We match the result and print &quot;Task timed out&quot;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;tokio&lt;&#x2F;span&gt;&lt;span&gt;::&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; duration &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; result &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;timeout&lt;&#x2F;span&gt;&lt;span&gt;(duration, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;slow_task&lt;&#x2F;span&gt;&lt;span&gt;()).await;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match&lt;&#x2F;span&gt;&lt;span&gt; result {
+&lt;&#x2F;span&gt;&lt;span&gt;        Ok(value) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Task completed successfully: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, value),
+&lt;&#x2F;span&gt;&lt;span&gt;        Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Task timed out&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Note
+When we apply a timeout to a future, as shown in the example, there&#x27;s a possibility that the future(in this case, &lt;code&gt;slow_task()&lt;&#x2F;code&gt;)
+will be cancelled if it doesn&#x27;t complete within the specified duration. This introduces the concept of &quot;cancel safety&quot;.&lt;&#x2F;p&gt;
+&lt;p&gt;Cancel safety refers to the fact that when a future is canceled, it&#x27;s essential to ensure that any resources or state it
+was using are handled correctly. This means that if a task is in the middle of an operation when it&#x27;s canceled, it shouldn&#x27;t
+leave the system in a bad state, like holding onto locks, leaving files open, or partially modifying data.&lt;&#x2F;p&gt;
+&lt;p&gt;In Rust&#x27;s async ecosystem, most operations are cancel-safe by default, which means they can be safely interrupted without
+causing issues. However, it&#x27;s still a good practice to be aware of how your tasks interact with external resources or state
+and ensure that thoese interactions are cancel-safe.&lt;&#x2F;p&gt;
+&lt;p&gt;In our example, if the &lt;code&gt;slow_task()&lt;&#x2F;code&gt; is canceled due to the timeout, the task itself simply stopped, and the timeout returns
+an error indicating the task didn&#x27;t compelte in time. Since &lt;code&gt;tokio::time::sleep&lt;&#x2F;code&gt; is a cancel-safe operation, there is no risk
+of the resource leaks or inconsistent states. However, if the task involved more complex operations, such as network communication
+or file I&#x2F;O, additional care might be needed to ensure that the cancellation is handled appropriately.&lt;&#x2F;p&gt;
+&lt;p&gt;For CPU-intensive work, we can also off-load work to a separate threadpool and the future resolves when the work is finished.
+We have now covered the context of futures.&lt;&#x2F;p&gt;
+&lt;p&gt;Polling directly is not the most efficient way as our executor will be busy polling futures that are not ready.
+To explainhow we can prevent busy polling, we will move onto waking futures remotely.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;waking-futures-remotely&quot;&gt;Waking Futures Remotely&lt;&#x2F;h2&gt;
+&lt;p&gt;Imagine that we make a network call to another computer using async Rust. The routing of the network call and reveiving
+of the response happens outside of our Rust program. Considering this, it does not make sense to constantly poll our
+networking future until we get a signal from the OS that data has been received at the port we are listening to.
+We can hold on the polling of the future by externally referencing the future&#x27;s waker, and waking the future when we need to.&lt;&#x2F;p&gt;
+&lt;p&gt;To see this in action, we can simulate an external call with channels. First, we need the following imports:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::pin::Pin;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::task::{Context, Poll, Waker};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::sync::{Arc, Mutex};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::future::Future;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::sync::mpsc;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::task;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;With these imports, we can now define our future which takes the form below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;MyFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;state&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Mutex&amp;lt;MyFutureState&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;MyFutureState {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;data&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u8&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;waker&lt;&#x2F;span&gt;&lt;span&gt;: Option&amp;lt;Waker&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here, we can see that the state of our &lt;code&gt;MyFuture&lt;&#x2F;code&gt; can be accessed from another thread. The state of our &lt;code&gt;MyFuture&lt;&#x2F;code&gt; has
+the waker and data. To make our &lt;code&gt;main&lt;&#x2F;code&gt; function more concise, we define a constructor for &lt;code&gt;MyFuture&lt;&#x2F;code&gt; with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;MyFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;, Arc&amp;lt;Mutex&amp;lt;MyFutureState&amp;gt;&amp;gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; state &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Arc::new(Mutex::new(MyFutureState {
+&lt;&#x2F;span&gt;&lt;span&gt;            data: None,
+&lt;&#x2F;span&gt;&lt;span&gt;            waker: None,
+&lt;&#x2F;span&gt;&lt;span&gt;        }));
+&lt;&#x2F;span&gt;&lt;span&gt;        (
+&lt;&#x2F;span&gt;&lt;span&gt;            MyFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;                state: state.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;(),
+&lt;&#x2F;span&gt;&lt;span&gt;            },
+&lt;&#x2F;span&gt;&lt;span&gt;            state,
+&lt;&#x2F;span&gt;&lt;span&gt;        )
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;For our constructor, we can see that we construct the future, but we also return a reference to the state so we can access
+the waker outside of the future. Finally we implement the &lt;code&gt;Future&lt;&#x2F;code&gt; trait for our future with the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Future &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;MyFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;Output &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;String;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;poll&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;: Pin&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut Self&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;cx&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;Context&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; Poll&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self::&lt;&#x2F;span&gt;&lt;span&gt;Output&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Polling the future&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; state &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.state.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;lock&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; state.data.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;is_some&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; data &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; state.data.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;take&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Ready(String::from_utf8(data).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;())
+&lt;&#x2F;span&gt;&lt;span&gt;        } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            state.waker &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Some(cx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;waker&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span&gt;            Poll::Pending
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here, we can see that we print every time we poll the future so we can keep track of how many times wo poll our future.
+We then access the state and see there is any data. If there is no data, we pass the waker into the state so we can wake
+the future from outside of the future. If there is data in the state, we know that we are ready, and we return a &lt;code&gt;Ready&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Our future is now ready to test. Inside our &lt;code&gt;main&lt;&#x2F;code&gt; function, we create our future, channel for communication, and spawn our
+future with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;(my_future, state) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;MyFuture::new();
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;(tx, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; rx) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;mpsc::channel::&amp;lt;()&amp;gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; task_handle &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;task::spawn(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    my_future.await
+&lt;&#x2F;span&gt;&lt;span&gt;});
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;tokio::time::sleep(tokio::time::Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;)).await;
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;spawning trigger task&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can see that we are sleeping for three seconds. This sleep gives us time to check if we are polling multiple times.
+If our approach works as intended, we should only get one poll during the time of sleeping. We then spawn our trigger
+task with the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; trigger_task &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;task::spawn(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;   rx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;recv&lt;&#x2F;span&gt;&lt;span&gt;().await;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; state &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; state.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;lock&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;  state.data &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Some(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;b&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Hello from the outside&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_vec&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;loop &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;if let &lt;&#x2F;span&gt;&lt;span&gt;Some(waker) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; state.waker.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;take&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;          waker.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;wake&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;break&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;});
+&lt;&#x2F;span&gt;&lt;span&gt;tx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(()).await.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can see that once our trigger task receives the message in the channel, it gets the state of our future, and populate the data.
+We then check to see if the waker is present. Once we get hold of the waker, we wake the future.&lt;&#x2F;p&gt;
+&lt;p&gt;Finally, we await on both of the async tasks with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; outcome &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; task_handle.await.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Task completed with outcome: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, outcome);
+&lt;&#x2F;span&gt;&lt;span&gt;trigger_task.await.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If we run our code, we get the printout below:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;Polling the future
+&lt;&#x2F;span&gt;&lt;span&gt;spawning trigger task
+&lt;&#x2F;span&gt;&lt;span&gt;Polling the future
+&lt;&#x2F;span&gt;&lt;span&gt;Task completed with outcome: Hello from the outside
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can see that our polling pnly happens once on the initial setup, and then happens one more time when we wake the future
+with the data. Async runtimes setup efficient ways to listen to OS events so they do not have to blindly poll futures.
+For instance, Tokio has an event loop that listens to OS events, and then handles them so the event wakes up the right task.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;sharing-data-between-futures&quot;&gt;Sharing data between Futures&lt;&#x2F;h2&gt;
+&lt;p&gt;We can share data between futures. We may want to share data between futures for the following reasons:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Aggregating Results&lt;&#x2F;li&gt;
+&lt;li&gt;Dependent Computations&lt;&#x2F;li&gt;
+&lt;li&gt;Caching Results&lt;&#x2F;li&gt;
+&lt;li&gt;Synchronization&lt;&#x2F;li&gt;
+&lt;li&gt;Shared State&lt;&#x2F;li&gt;
+&lt;li&gt;Task Coordination and supervision&lt;&#x2F;li&gt;
+&lt;li&gt;Resource Management&lt;&#x2F;li&gt;
+&lt;li&gt;Error Propagation&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;While sharing data between futures is useful, there are some things that we need to be mindful of when doing so.
+We can highlight them as we work through a simple example.
+First, we will be relying on the standard Mutex with the following import:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::sync::{Arc, Mutex};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::task::JoinHandle;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;core::task::Poll;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;tokio::time::Duration;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::task::Context;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::pin::Pin;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::future::Future;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;For our example, we will be using a basic struct that has a counter.
+One async task will be for increasing the count, and the other task will be decreasing the count.
+If both tasks hit the shared data the same number of times, the end result will be zero. Therefore,
+we need to build a basic enum to define what type of task is being run with the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;enum &lt;&#x2F;span&gt;&lt;span&gt;CounterType {
+&lt;&#x2F;span&gt;&lt;span&gt;    Increment,
+&lt;&#x2F;span&gt;&lt;span&gt;    Decrement,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We can then define our shared data struct with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;SharedData {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;counter&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;SharedData {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;increment&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.counter &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;decrement&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.counter &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now that our shared data struct is defined, we can define our counter future with the code below:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;CounterFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;counter_type&lt;&#x2F;span&gt;&lt;span&gt;: CounterType,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;data_reference&lt;&#x2F;span&gt;&lt;span&gt;: Arc&amp;lt;Mutex&amp;lt;SharedData&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;count&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u32
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Here, we have defined the type of operation the future will perform on the shared data.
+We also have access to the shared data and a count to stop the future once the total number of executions of the
+shared data has happened for the future.&lt;&#x2F;p&gt;
+&lt;p&gt;The signature of our poll function takes the following form:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Future &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;CounterFuture {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;Output &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= u32&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;poll&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;: Pin&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut Self&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;cx&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;Context&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; Poll&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self::&lt;&#x2F;span&gt;&lt;span&gt;Output&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Inside our poll function we first cover getting access to the shared data with the following code:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rs&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rs &quot;&gt;&lt;code class=&quot;language-rs&quot; data-lang=&quot;rs&quot;&gt;&lt;span&gt;std::thread::sleep(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; guard &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.data_reference.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;try_lock&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    Ok(guard) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; guard,
+&lt;&#x2F;span&gt;&lt;span&gt;    Err(error) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;error for &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.counter_type, error);
+&lt;&#x2F;span&gt;&lt;span&gt;        cx.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;waker&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;wake_by_ref&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span&gt;Poll::Pending
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+</content>
+        
+    </entry>
+</feed>

@@ -1,0 +1,108 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Parser API - 解析 INI</title><meta content="Parser API - 解析 INI" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/parser-api-example-ini/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Parser API - 解析 INI" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/parser-api-example-ini/ property=twitter:url><meta content="Parser API - 解析 INI" property=twitter:title><link href=https://ohmycloud.github.io/notes/parser-api-example-ini/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>parser-api-example-ini</span></div><time datetime=2021-01-19>Published on: <span class=accent-data>2021-01-19</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Parser API - 解析 INI</h1><h2 id=li-zi-ini>例子: INI</h2><p>INI(initialization 的简称)文件是简单的配置文件。由于没有标准的格式，我们将编写一个能够解析这个例子文件的程序。<pre class=language-ini data-lang=ini style=color:#383a42;background-color:#fafafa><code class=language-ini data-lang=ini><span style=color:#e45649>username </span><span style=color:#a626a4>=</span><span> noha
+</span><span style=color:#e45649>password </span><span style=color:#a626a4>=</span><span> plain_text
+</span><span style=color:#e45649>salt </span><span style=color:#a626a4>=</span><span> NaCl
+</span><span>
+</span><span style=color:#a626a4>[server_1]
+</span><span style=color:#e45649>interface</span><span style=color:#a626a4>=</span><span>eth0
+</span><span style=color:#e45649>ip</span><span style=color:#a626a4>=</span><span style=color:#c18401>127.0.0.1
+</span><span style=color:#e45649>document_root</span><span style=color:#a626a4>=/</span><span>var</span><span style=color:#a626a4>/</span><span>www</span><span style=color:#a626a4>/</span><span>example</span><span style=color:#a626a4>.</span><span>org
+</span><span>
+</span><span style=color:#a626a4>[empty_section]
+</span><span>
+</span><span style=color:#a626a4>[second_server]
+</span><span style=color:#e45649>document_root</span><span style=color:#a626a4>=/</span><span>var</span><span style=color:#a626a4>/</span><span>www</span><span style=color:#a626a4>/</span><span>example</span><span style=color:#a626a4>.</span><span>com
+</span><span style=color:#e45649>ip</span><span style=color:#a626a4>=
+</span><span style=color:#e45649>interface</span><span style=color:#a626a4>=</span><span>eth1
+</span></code></pre><p>每一行都包含一个键和值，中间用等号隔开；或者包含一个用方括号括起来的章节名；或者是空白，没有任何意义。<p>每当出现一个节名，下面的键和值就属于该节，直到下一个节名。文件开头的键值对属于一个隐式的 "空"节。<h2 id=bian-xie-grammar>编写 grammar</h2><p>首先使用 Cargo <a href=https://pest.rs/book/examples/csv.html#setup>初始化一个新项目</a>，添加依赖关系 <code>pest = "2.0"</code> 和 <code>pest_derive = "2.0"</code>。创建一个新文件 <code>src/ini.pest</code> 来保存 grammar。<p>我们文件中感兴趣的文本 - <code>username</code>、<code>/var/www/example.org</code> 等 - 只由几个字符组成。让我们制定一个规则来识别该集合中的单个字符。内置的规则 <code>ASCII_ALPHANUMERIC</code> 是表示任何大写或小写 ASCII 字母或任何数字的快捷方式。<pre style=color:#383a42;background-color:#fafafa><code><span>char = { ASCII_ALPHANUMERIC | "." | "_" | "/" }
+</span></code></pre><p>节名和属性键不能为空，但属性值可以为空（如上文中的 <code>ip=</code> 行）。也就是说，前者由一个或多个字符组成，<code>char+</code>; 后者由零或多个字符组成，<code>char*</code>。我们将其含义分为两条规则。<pre style=color:#383a42;background-color:#fafafa><code><span>name = { char+ }
+</span><span>value = { char* }
+</span></code></pre><p>现在很容易表达这两种输入行。<pre style=color:#383a42;background-color:#fafafa><code><span>section = { "[" ~ name ~ "]" }
+</span><span>property = { name ~ "=" ~ value }
+</span></code></pre><p>最后，我们需要一个规则来表示整个输入文件。表达式 <code>(section | property)?</code> 匹配 <code>section</code>、<code>property</code>，否则什么也不匹配。使用内置规则 <code>NEWLINE</code> 来匹配行尾。<pre style=color:#383a42;background-color:#fafafa><code><span>file = {
+</span><span>    SOI ~
+</span><span>    ((section | property)? ~ NEWLINE)* ~
+</span><span>    EOI
+</span><span>}
+</span></code></pre><p>要将解析器编译成 Rust，我们需要在 <code>src/main.rs</code> 中添加以下内容。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>extern crate</span><span> pest;
+</span><span>#[</span><span style=color:#e45649>macro_use</span><span>]
+</span><span style=color:#a626a4>extern crate</span><span> pest_derive;
+</span><span>
+</span><span style=color:#a626a4>use </span><span>pest::Parser;
+</span><span>
+</span><span>#[</span><span style=color:#e45649>derive</span><span>(Parser)]
+</span><span>#[</span><span style=color:#e45649>grammar </span><span style=color:#a626a4>= </span><span style=color:#50a14f>"ini.pest"</span><span>]
+</span><span style=color:#a626a4>pub struct </span><span>INIParser;
+</span></code></pre><h2 id=cheng-xu-chu-shi-hua>程序初始化</h2><p>现在我们可以读取文件，并用 <code>pest</code> 进行解析。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::collections::HashMap;
+</span><span style=color:#a626a4>use </span><span>std::fs;
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> unparsed_file </span><span style=color:#a626a4>= </span><span>fs::read_to_string(</span><span style=color:#50a14f>"config.ini"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"cannot read file"</span><span>);
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> file </span><span style=color:#a626a4>= </span><span>INIParser::parse(Rule::file, </span><span style=color:#a626a4>&</span><span>unparsed_file)
+</span><span>        .</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"unsuccessful parse"</span><span>) </span><span style=color:#a0a1a7>// unwrap the parse result
+</span><span>        .</span><span style=color:#0184bc>next</span><span>().</span><span style=color:#0184bc>unwrap</span><span>(); </span><span style=color:#a0a1a7>// get and unwrap the `file` rule; never fails
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// ...
+</span><span>}
+</span></code></pre><p>我们将使用嵌套的 <code>HashMap</code> 来表达属性列表。外层哈希 map 将以章节名称作为键，以章节内容（内部哈希 map）作为值。每个内部哈希 map 将有属性键和属性值。例如，要访问 <code>server_1</code> 的 <code>document_root</code>，我们可以写 <code>properties["server_1"]["document_root"]</code>。隐含的 "空"节将由常规部分表示，名称为空字符串 <code>""</code>，这样 <code>properties[""]["salt"]</code> 就是有效的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// ...
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> properties: HashMap<</span><span style=color:#a626a4>&str</span><span>, HashMap<</span><span style=color:#a626a4>&str</span><span>, </span><span style=color:#a626a4>&str</span><span>>> </span><span style=color:#a626a4>= </span><span>HashMap::new();
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// ...
+</span><span>}
+</span></code></pre><p>请注意，哈希 map 的键和值都是 <code>&str</code>，即借用的字符串。<code>pest</code> 解析器不会复制他们解析的输入，而是借用。所有用于检查解析结果的方法都会返回从原始解析字符串中借用字符串。<h2 id=zhu-xun-huan>主循环</h2><p>现在我们解释解析结果。我们循环浏览文件的每一行，这一行要么是节名，要么是键值属性对。如果遇到一个节名，我们更新一个变量。如果遇到一个属性对，我们就获取一个对当前章节的哈希 map 的引用，然后把这个属性对插入到这个哈希 map 中。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>    </span><span style=color:#a0a1a7>// ...
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> current_section_name </span><span style=color:#a626a4>= </span><span style=color:#50a14f>""</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a626a4>for</span><span> line </span><span style=color:#a626a4>in</span><span> file.</span><span style=color:#0184bc>into_inner</span><span>() {
+</span><span>        </span><span style=color:#a626a4>match</span><span> line.</span><span style=color:#0184bc>as_rule</span><span>() {
+</span><span>            Rule::section </span><span style=color:#a626a4>=> </span><span>{
+</span><span>                </span><span style=color:#a626a4>let mut</span><span> inner_rules </span><span style=color:#a626a4>=</span><span> line.</span><span style=color:#0184bc>into_inner</span><span>(); </span><span style=color:#a0a1a7>// { name }
+</span><span>                current_section_name </span><span style=color:#a626a4>=</span><span> inner_rules.</span><span style=color:#0184bc>next</span><span>().</span><span style=color:#0184bc>unwrap</span><span>().</span><span style=color:#0184bc>as_str</span><span>();
+</span><span>            }
+</span><span>            Rule::property </span><span style=color:#a626a4>=> </span><span>{
+</span><span>                </span><span style=color:#a626a4>let mut</span><span> inner_rules </span><span style=color:#a626a4>=</span><span> line.</span><span style=color:#0184bc>into_inner</span><span>(); </span><span style=color:#a0a1a7>// { name ~ "=" ~ value }
+</span><span>
+</span><span>                </span><span style=color:#a626a4>let</span><span> name: </span><span style=color:#a626a4>&str =</span><span> inner_rules.</span><span style=color:#0184bc>next</span><span>().</span><span style=color:#0184bc>unwrap</span><span>().</span><span style=color:#0184bc>as_str</span><span>();
+</span><span>                </span><span style=color:#a626a4>let</span><span> value: </span><span style=color:#a626a4>&str =</span><span> inner_rules.</span><span style=color:#0184bc>next</span><span>().</span><span style=color:#0184bc>unwrap</span><span>().</span><span style=color:#0184bc>as_str</span><span>();
+</span><span>
+</span><span>                </span><span style=color:#a0a1a7>// Insert an empty inner hash map if the outer hash map hasn't
+</span><span>                </span><span style=color:#a0a1a7>// seen this section name before.
+</span><span>                </span><span style=color:#a626a4>let</span><span> section </span><span style=color:#a626a4>=</span><span> properties.</span><span style=color:#0184bc>entry</span><span>(current_section_name).</span><span style=color:#0184bc>or_default</span><span>();
+</span><span>                section.</span><span style=color:#0184bc>insert</span><span>(name, value);
+</span><span>            }
+</span><span>            Rule::</span><span style=color:#c18401>EOI </span><span style=color:#a626a4>=> </span><span>(),
+</span><span>            </span><span style=color:#a626a4>_ => </span><span>unreachable!(),
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// ...
+</span></code></pre><p>在输出方面，我们用<a href=https://doc.rust-lang.org/std/fmt/index.html#sign0>漂亮的打印</a> <code>Debug</code> 格式简单地转储哈希 map。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a0a1a7>// ...
+</span><span>
+</span><span>    println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{:#?}</span><span style=color:#50a14f>"</span><span>, properties);
+</span><span>}
+</span></code></pre><h2 id=kong-bai>空白</h2><p>如果你把本章顶部的例子 INI 文件复制到 <code>config.ini</code> 文件中并运行程序，它将无法解析。我们已经忘记了等号周围的可选空格!<p>对于大型 grammar 来说，处理空白会很不方便。显示地编写 <code>whitespace</code> 规则并手动插入空白会让 grammar 变得难以阅读和修改。<code>pest</code> 提供了一个<a href=https://pest.rs/book/grammars/syntax.html#implicit-whitespace>特殊规则 <code>WHITESPACE</code></a> 的解决方案。如果定义了 <code>WHITESPACE</code>，它将被隐式地运行，尽可能多次地在每个波浪号 <code>~</code> 和每个重复之间运行（例如，<code>*</code> 和 <code>+</code>）。对于我们的 INI 解析器，只有空格才是合法的 whitespace。<pre style=color:#383a42;background-color:#fafafa><code><span>WHITESPACE = _{ " " }
+</span></code></pre><p>我们用一个前导的下划线 <code>_{ ... }</code> 来标记 <code>WHITESPACE</code> 规则的<a href=https://pest.rs/book/grammars/syntax.html#silent-and-atomic-rules>静默</a>。}. 这样，即使它匹配，也不会出现在其他规则中。如果它不是静默的，解析就会复杂得多，因为对 <code>Pairs::next(...)</code> 的每次调用都有可能返回 <code>Rule::WHITESPACE</code> 而不是想要的下一条规则。<p>但是等等! 节名、键或值中不应该有空格！目前，空格是自动插入的。目前，在 <code>name = { char+ }</code> 中，空格会自动插入字符之间。对空格敏感的规则需要用前导符号 <code>@{ ... }</code> 来标记<a href=https://pest.rs/book/grammars/syntax.html#atomic>原子</a>。}. 在原子规则中，自动的空白处理是被禁用的，而内部规则是静默的。<pre style=color:#383a42;background-color:#fafafa><code><span>name = @{ char+ }
+</span><span>value = @{ char* }
+</span></code></pre><h2 id=wan-gong>完工</h2><p>试试吧！确保文件 <code>config.ini</code> 存在，然后运行程序! 你应该看到这样的东西。<pre style=color:#383a42;background-color:#fafafa><code><span>$ cargo run
+</span><span>  [ ... ]
+</span><span>{
+</span><span>    "": {
+</span><span>        "password": "plain_text",
+</span><span>        "username": "noha",
+</span><span>        "salt": "NaCl"
+</span><span>    },
+</span><span>    "second_server": {
+</span><span>        "ip": "",
+</span><span>        "document_root": "/var/www/example.com",
+</span><span>        "interface": "eth1"
+</span><span>    },
+</span><span>    "server_1": {
+</span><span>        "interface": "eth0",
+</span><span>        "document_root": "/var/www/example.org",
+</span><span>        "ip": "127.0.0.1"
+</span><span>    }
+</span><span>}
+</span></code></pre><p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/grammar>/grammar/</a> <a href=/tags/parser>/parser/</a> <a href=/tags/ini>/ini/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

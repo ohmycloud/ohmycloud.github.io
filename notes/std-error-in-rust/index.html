@@ -1,0 +1,166 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Std Error in Rust</title><meta content="Std Error in Rust" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/std-error-in-rust/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Std Error in Rust" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/std-error-in-rust/ property=twitter:url><meta content="Std Error in Rust" property=twitter:title><link href=https://ohmycloud.github.io/notes/std-error-in-rust/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>std-error-in-rust</span></div><time datetime=2021-04-05>Published on: <span class=accent-data>2021-04-05</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Std Error in Rust</h1><h1 id=xue-xi-std-io-error>学习 std::io::Error</h1><p>在这篇文章中，我们将剖析 Rust 标准库中 std::io::Error 类型的实现。相关代码在这里：<code>library/std/src/io/error.rs</code>。<p>你可以把这篇文章看成是其中之一。<ul><li>一个标准库的特定位的研究<li>一个高级错误管理指南<li>一个漂亮的 API 设计案例</ul><p>文章要求基本熟悉 Rust 错误处理。<p>在设计一个用于 <code>Result&LTT，E></code> 的 Error 类型时，主要的问题是"如何使用这个错误？"。通常，以下情况之一为真。<ul><li>错误被程序化处理。消费者检查错误，所以它的内部结构需要在合理的程度上暴露出来。<li>错误被传播并显示给用户。消费者不检查 <code>fmt::Display</code> 之外的错误；所以它的内部结构可以被封装。</ul><p>请注意，暴露实现细节和封装细节之间存在紧张关系。实现第一种情况的常见反模式是定义一个厨房水槽枚举。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>pub enum </span><span>Error {
+</span><span>  Tokio(tokio::io::Error),
+</span><span>  ConnectionDiscovery {
+</span><span>    path: PathBuf,
+</span><span>    reason: String,
+</span><span>    stderr: String,
+</span><span>  },
+</span><span>  Deserialize {
+</span><span>    source: serde_json::Error,
+</span><span>    data: String,
+</span><span>  },
+</span><span>  </span><span style=color:#a626a4>...</span><span>,
+</span><span>  Generic(String),
+</span><span>}
+</span></code></pre><p>这种方法有很多问题。<p>首先，从底层库中暴露错误会使它们成为你的公共 API 的一部分。在你的依赖关系中的主要 semver bump 会要求你也做一个新的主要版本。<p>其次，它将所有的实现细节都固定下来。例如，如果你注意到 ConnectionDiscovery 的大小是巨大的，那么将这个变体装箱将是一个突破性的变化。<p>第三，它通常表明了一个更大的设计问题。厨房水槽错误将不同的故障模式打包成一种类型。但是，如果故障模式差异很大，处理起来可能就不合理了! 这说明情况看起来更像案例二。<p>错误厨房水槽病的一个经常有效的治疗方法是将错误推送给调用者的模式。<p>考虑这个例子:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>my_function</span><span>() -> Result<</span><span style=color:#a626a4>i32</span><span>, MyError> {
+</span><span>  </span><span style=color:#a626a4>let</span><span> thing </span><span style=color:#a626a4>= </span><span style=color:#0184bc>dep_function</span><span>()</span><span style=color:#a626a4>?</span><span>;
+</span><span>  </span><span style=color:#a626a4>...
+</span><span>  Ok(</span><span style=color:#c18401>92</span><span>)
+</span><span>}
+</span></code></pre><p><code>my_function</code> 调用 <code>dep_function</code>，所以 <code>MyError</code> 应该可以从 <code>DepError</code> 转换过来。更好的写法可能是这样的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>my_function</span><span>(</span><span style=color:#e45649>thing</span><span>: DepThing) -> Result<</span><span style=color:#a626a4>i32</span><span>, MyError> {
+</span><span>  </span><span style=color:#a626a4>...
+</span><span>  Ok(</span><span style=color:#c18401>92</span><span>)
+</span><span>}
+</span></code></pre><p>在这个版本中，调用者被迫调用 <code>dep_function</code> 并处理其错误。这就用更多的类型交换了更多的类型安全。<code>MyError</code> 和 <code>DepError</code> 现在是不同的类型，调用者可以分别处理它们。如果 <code>DepError</code> 是 <code>MyError</code> 的变体，那么就需要进行运行时匹配。<p>这个想法的一个极端版本是 <code>sans-io</code> 编程。大多数错误来自于 IO；如果你把所有的 IO 推给调用者，你就可以跳过大部分的错误处理。<p>无论枚举方法多么糟糕，它确实实现了第一种情况的最大可检查性。<p>以传播为中心的第二种情况下的错误管理，通常是通过使用盒状特质对象来处理。像 <code>Box&LTdyn std::error::Error></code> 这样的类型可以从任何具体的错误中构造出来，可以通过 <code>Display</code> 打印出来，并且仍然可以选择通过动态下传来暴露底层错误。<code>Anyhow</code> crate 就是这种风格的一个很好的例子。<p><code>std::io::Error</code> 的例子很有趣，因为它想同时具备上述两种风格。<ul><li>这是 std，所以封装和面向未来是最重要的。<li>来自操作系统的 IO 错误往往可以被处理（比如 EWOULDBLOCK）。<li>对于系统编程语言来说，准确地暴露底层 OS 错误是很重要的。<li>未来潜在的操作系统错误集是没有限制的。<li><code>io::Error</code> 也是一种词汇类型，应该可以表示一些不完全的 os 错误。例如，Rust Paths 可以包含内部的0字节，打开这样的路径应该在进行 <code>syscall</code> 之前返回一个 <code>io::Error</code>。</ul><p>下面是 <code>std::io::Error</code> 的样子。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>pub struct </span><span>Error {
+</span><span>  </span><span style=color:#e45649>repr</span><span>: Repr,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>enum </span><span>Repr {
+</span><span>  Os(</span><span style=color:#a626a4>i32</span><span>),
+</span><span>  Simple(ErrorKind),
+</span><span>  Custom(Box&LTCustom>),
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>struct </span><span>Custom {
+</span><span>  </span><span style=color:#e45649>kind</span><span>: ErrorKind,
+</span><span>  </span><span style=color:#e45649>error</span><span>: Box&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>,
+</span><span>}
+</span></code></pre><p>首先要注意的是，它内部是一个枚举，但这是一个隐藏得很好的实现细节。为了允许检查和处理各种错误条件，有一个单独的公共无字段种类枚举。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#[</span><span style=color:#e45649>derive</span><span>(Clone, Copy)]
+</span><span>#[</span><span style=color:#e45649>non_exhaustive</span><span>]
+</span><span style=color:#a626a4>pub enum </span><span>ErrorKind {
+</span><span>  NotFound,
+</span><span>  PermissionDenied,
+</span><span>  Interrupted,
+</span><span>  </span><span style=color:#a626a4>...
+</span><span>  Other,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>kind</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> ErrorKind {
+</span><span>    </span><span style=color:#a626a4>match &</span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(code) </span><span style=color:#a626a4>=> </span><span>sys::decode_error_kind(</span><span style=color:#a626a4>*</span><span>code),
+</span><span>      Repr::Custom(c) </span><span style=color:#a626a4>=></span><span> c.kind,
+</span><span>      Repr::Simple(kind) </span><span style=color:#a626a4>=> *</span><span>kind,
+</span><span>    }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>虽然 ErrorKind 和 Repr 都是枚举，但公开暴露 ErrorKind 就没那么可怕了。一个 <code>#[non_exhaustive]Copy</code> 无字段枚举的设计空间是一个点 - 没有合理的替代方案或兼容性隐患。<p>有些 <code>io::Errors</code> 只是原始的操作系统错误代码。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>from_raw_os_error</span><span>(</span><span style=color:#e45649>code</span><span>: </span><span style=color:#a626a4>i32</span><span>) -> Error {
+</span><span>    Error { repr: Repr::Os(code) }
+</span><span>  }
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>raw_os_error</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> Option<</span><span style=color:#a626a4>i32</span><span>> {
+</span><span>    </span><span style=color:#a626a4>match </span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(i) </span><span style=color:#a626a4>=> </span><span>Some(i),
+</span><span>      Repr::Custom(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>      Repr::Simple(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>    }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>特定平台的 <code>sys::decode_error_kind</code> 函数负责将错误代码映射到 <code>ErrorKind</code> 枚举。所有这些都意味着代码可以通过检查 <code>.kind()</code> 来跨平台处理错误类别。然而，如果需要以一种依赖于操作系统的方式处理一个非常特殊的错误代码，这也是可能的。API 小心翼翼地提供了一个方便的抽象，而没有抽象掉重要的低级细节。<p>一个 <code>std::io::Error</code> 也可以从一个 <code>ErrorKind</code> 中构造出来。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>From&LTErrorKind> </span><span style=color:#a626a4>for </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>from</span><span>(</span><span style=color:#e45649>kind</span><span>: ErrorKind) -> Error {
+</span><span>    Error { repr: Repr::Simple(kind) }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>这提供了跨平台访问错误代码风格的错误处理。如果你需要尽可能快的错误，这很方便。<p>最后，还有第三种完全自定义的变体表示。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>new</span><span>&LTE>(</span><span style=color:#e45649>kind</span><span>: ErrorKind, </span><span style=color:#e45649>error</span><span>: E) -> Error
+</span><span>  </span><span style=color:#a626a4>where
+</span><span>    E: Into&LTBox&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>>,
+</span><span>  {
+</span><span>    </span><span style=color:#a626a4>Self</span><span>::_new(kind, error.</span><span style=color:#0184bc>into</span><span>())
+</span><span>  }
+</span><span>
+</span><span>  </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>_new</span><span>(
+</span><span>    </span><span style=color:#e45649>kind</span><span>: ErrorKind,
+</span><span>    </span><span style=color:#e45649>error</span><span>: Box&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>,
+</span><span>  ) -> Error {
+</span><span>    Error {
+</span><span>      repr: Repr::Custom(Box::new(Custom { kind, error })),
+</span><span>    }
+</span><span>  }
+</span><span>
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>get_ref</span><span>(
+</span><span>    </span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>,
+</span><span>  ) -> Option<</span><span style=color:#a626a4>&</span><span>(dyn error::Error + Send + Sync + </span><span style=color:#a626a4>'static</span><span>)> {
+</span><span>    </span><span style=color:#a626a4>match &</span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>      Repr::Simple(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>      Repr::Custom(c) </span><span style=color:#a626a4>=> </span><span>Some(</span><span style=color:#a626a4>&*</span><span>c.error),
+</span><span>    }
+</span><span>  }
+</span><span>
+</span><span>  </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>into_inner</span><span>(
+</span><span>    </span><span style=color:#e45649>self</span><span>,
+</span><span>  ) -> Option&LTBox&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>> {
+</span><span>    </span><span style=color:#a626a4>match </span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>      Repr::Simple(</span><span style=color:#a626a4>..</span><span>) </span><span style=color:#a626a4>=> </span><span>None,
+</span><span>      Repr::Custom(c) </span><span style=color:#a626a4>=> </span><span>Some(c.error),
+</span><span>    }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>需要注意的地方。<ul><li><p>通用的 <code>new</code> 函数委托给单态的 <code>_new</code> 函数。这改善了编译时间，因为在单态化过程中需要重复的代码更少。我认为这也改善了一些运行时：<code>_new</code> 函数没有被标记为内联，所以会在调用处产生一个函数调用。这是好的，因为错误构造是冷路径，节省指令缓存是受欢迎的。</p><li><p>自定义变体被框住了 - 这是为了让整体 <code>size_of</code> 更小。错误的 <code>on-the-stack</code> 大小是很重要的：即使没有错误，你也要为此付出代价!</p></ul><p>这两种类型都是指"静态错误"。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>type </span><span>A </span><span style=color:#a626a4>=   &</span><span>(dyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync </span><span style=color:#a626a4>+ 'static</span><span>);
+</span><span style=color:#a626a4>type </span><span>B </span><span style=color:#a626a4>= </span><span>Box&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>
+</span></code></pre><p>在 <code>dyn Trait + '_</code> 中，<code>'_</code> 被省略为 <code>'static</code>，除非 trait 对象是在引用后面，在这种情况下，它被省略为 <code>&'a dyn Trait + 'a</code>。<p><code>get_ref</code>, <code>get_mut</code> 和 <code>into_inner</code> 提供了对底层错误的完全访问。类似于 <code>os_error</code> 的情况，抽象模糊了细节，但也提供了钩子来获取底层数据的原样。<p>同样，Display 的实现揭示了内部表示的最重要细节。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>fmt::Display </span><span style=color:#a626a4>for </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>fmt</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>fmt</span><span>: </span><span style=color:#a626a4>&mut </span><span>fmt::Formatter<'</span><span style=color:#a626a4>_</span><span>>) -> fmt::Result {
+</span><span>    </span><span style=color:#a626a4>match &</span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(code) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>        </span><span style=color:#a626a4>let</span><span> detail </span><span style=color:#a626a4>= </span><span>sys::os::error_string(</span><span style=color:#a626a4>*</span><span>code);
+</span><span>        write!(fmt, </span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f> (os error </span><span style=color:#c18401>{}</span><span style=color:#50a14f>)"</span><span>, detail, code)
+</span><span>      }
+</span><span>      Repr::Simple(kind) </span><span style=color:#a626a4>=> </span><span>write!(fmt, </span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, kind.</span><span style=color:#0184bc>as_str</span><span>()),
+</span><span>      Repr::Custom(c) </span><span style=color:#a626a4>=></span><span> c.error.</span><span style=color:#0184bc>fmt</span><span>(fmt),
+</span><span>    }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>综上所述，std::io::Error:<ul><li>封装了它的内部表现形式，并通过框定大的枚举变体来优化它。<li>通过 <code>ErrorKind</code> 模式提供了一种方便的方法来处理基于类别的错误。<li>完全暴露底层操作系统的错误（如果有的话）。</ul><p>可以透明地包裹任何其他错误类型。<p>最后一点意味着 <code>io::Error</code> 可以用于临时错误，因为 <code>&str</code> 和 String 可以转换为 <code>Box&LTdyn std::error::Error></code>。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>io::Error::new(io::ErrorKind::Other, </span><span style=color:#50a14f>"something went wrong"</span><span>)
+</span></code></pre><p>它也可以作为 anyhow 的简单替换。我想一些库可能会用这个来简化他们的错误处理。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>io::Error::new(io::ErrorKind::InvalidData, my_specific_error)
+</span></code></pre><p>例如，<code>serde_json</code> 提供了以下方法。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>from_reader</span><span>&LTR, T>(</span><span style=color:#e45649>rdr</span><span>: R) -> Result&LTT, serde_json::Error>
+</span><span style=color:#a626a4>where
+</span><span>  R: Read,
+</span><span>  T: DeserializeOwned,
+</span></code></pre><p>读取会因为 <code>io::Error</code> 而失败，所以 <code>serde_json::Error</code> 需要能够在内部表示 <code>io::Error</code>。我认为这是倒退的 (但我不知道整个上下文，如果被证明是错的我会很高兴！)，签名应该是这样的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>from_reader</span><span>&LTR, T>(</span><span style=color:#e45649>rdr</span><span>: R) -> Result&LTT, io::Error>
+</span><span style=color:#a626a4>where
+</span><span>  R: Read,
+</span><span>  T: DeserializeOwned,
+</span></code></pre><p>那么，<code>serde_json::Error</code> 就不会有 <code>Io</code> 的变体，而会以 <code>InvalidData</code> 的形式被藏到 <code>io::Error</code> 中。 补遗, 2021-01-25<p>重新阅读这篇文章，我现在认为正确的返回类型应该是：<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>from_reader</span><span>&LTR, T>(
+</span><span>  </span><span style=color:#e45649>rdr</span><span>: R,
+</span><span>) -> Result&LTResult&LTT, serde_json::Error>, io::Error>
+</span><span style=color:#a626a4>where
+</span><span>  R: Read,
+</span><span>  T: DeserializeOwned,
+</span></code></pre><p>这迫使 IO 和反序列化错误分开处理，这在这种情况下是有意义的。IO 错误可能是程序领域之外的硬件/环境问题，而序列化错误很可能是系统中的某个错误。<p>我认为 <code>std::io::Error</code> 是一个非常了不起的类型，它能够在没有太多妥协的情况下为许多不同的用例服务。但我们是否可以做得更好呢？<p><code>std::io::Error</code> 的首要问题是，当一个文件系统操作失败时，你不知道它是为哪个路径失败的。这是可以理解的 - Rust 是一种系统语言，所以它不应该比 OS 原生提供的东西增加多少脂肪。OS 返回的是一个整数返回代码，而将其与一个堆分配的 <code>PathBuf</code> 耦合在一起，可能是一个不可接受的开销!<p>我很惊讶地得知，事实上，<code>std</code> 对每一个与路径相关的系统调用都会进行分配。<p>它需要以某种形式存在。<code>OS API</code> 需要在字符串的结尾有一个不幸的零字节. 但我想知道对短路径使用堆栈分配的缓冲区是否有意义。可能不会 - 路径通常不会那么短，而且现代分配器能有效地处理瞬时分配。<p>我不知道这里有什么明显的好办法。一个选择是在编译时（一旦我们得到 <code>std-aware cargo</code>）或运行时（<code>a-la RUST_BACKTRACE</code>）添加开关，以堆分配所有与路径相关的 IO 错误。一个类似形的问题是 <code>io::Error</code> 不携带 backtrace。<p>另一个问题是，<code>std::io::Error</code> 的效率不高。<p>它的体积是相当大的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>assert_eq!(size_of::&LTio::Error>(), </span><span style=color:#c18401>2 </span><span style=color:#a626a4>* </span><span>size_of::<</span><span style=color:#a626a4>usize</span><span>>());
+</span></code></pre><p>对于自定义的情况，会产生双重的间接和分配。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>    </span><span style=color:#a626a4>enum </span><span>Repr {
+</span><span>      Os(</span><span style=color:#a626a4>i32</span><span>),
+</span><span>      Simple(ErrorKind),
+</span><span>      </span><span style=color:#a0a1a7>// First Box :|
+</span><span>      Custom(Box&LTCustom>),
+</span><span>    }
+</span><span>
+</span><span>    </span><span style=color:#a626a4>struct </span><span>Custom {
+</span><span>      </span><span style=color:#e45649>kind</span><span>: ErrorKind,
+</span><span>      </span><span style=color:#a0a1a7>// Second Box :(
+</span><span>      </span><span style=color:#e45649>error</span><span>: Box&LTdyn error::Error </span><span style=color:#a626a4>+ </span><span>Send </span><span style=color:#a626a4>+ </span><span>Sync>,
+</span><span>    }
+</span></code></pre><p>我想我们现在可以解决这个问题了<p>首先，我们可以通过使用一个瘦的特质对象来摆脱双重内向性，比如失败或 anyhow。现在 GlobalAlloc 已经存在，这是一个比较直接的实现。<p>其次，我们可以利用指针是对齐的这一事实，将 Os 和 Simple 变体都用最小的有效位集储藏到 usize 中。我认为我们甚至可以发挥创意，使用第二个最小有意义的位，把第一个位留作小众。这样一来，即使是像 <code>io::Result&LTi32></code> 这样的东西，也可以是指针大小的!<p>本篇文章到此结束。下一次你要为你的库设计一个错误类型的时候，花点时间去看看 <code>std::io::Error</code> 的源头，你可能会发现一些值得偷的东西。<p>讨论在 /r/rust.Net 上进行。<h2 id=e-wai-de-mi-ti>额外的谜题</h2><p>看看实现中的这一行。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>fmt::Display </span><span style=color:#a626a4>for </span><span>Error {
+</span><span>  </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>fmt</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>fmt</span><span>: </span><span style=color:#a626a4>&mut </span><span>fmt::Formatter<'</span><span style=color:#a626a4>_</span><span>>) -> fmt::Result {
+</span><span>    </span><span style=color:#a626a4>match &</span><span style=color:#e45649>self</span><span>.repr {
+</span><span>      Repr::Os(code) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>        </span><span style=color:#a626a4>let</span><span> detail </span><span style=color:#a626a4>= </span><span>sys::os::error_string(</span><span style=color:#a626a4>*</span><span>code);
+</span><span>        write!(fmt, </span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f> (os error </span><span style=color:#c18401>{}</span><span style=color:#50a14f>)"</span><span>, detail, code)
+</span><span>      }
+</span><span>      Repr::Simple(kind) </span><span style=color:#a626a4>=> </span><span>write!(fmt, </span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, kind.</span><span style=color:#0184bc>as_str</span><span>()),
+</span><span>      Repr::Custom(c) </span><span style=color:#a626a4>=></span><span> c.error.</span><span style=color:#0184bc>fmt</span><span>(fmt),
+</span><span>    }
+</span><span>  }
+</span><span>}
+</span></code></pre><p>原文链接: https://matklad.github.io/2020/10/15/study-of-std-io-error.html<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/error>/error/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

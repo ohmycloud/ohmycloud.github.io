@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>焉知非鱼 - endianness</title>
+    <link rel="self" type="application/atom+xml" href="https://ohmycloud.github.io/tags/endianness/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://ohmycloud.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2024-06-15T00:00:00+00:00</updated>
+    <id>https://ohmycloud.github.io/tags/endianness/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Networking and Sockets: Endianness</title>
+        <published>2024-06-15T00:00:00+00:00</published>
+        <updated>2024-06-15T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/networking-and-sockets-endianness/"/>
+        <id>https://ohmycloud.github.io/notes/networking-and-sockets-endianness/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/networking-and-sockets-endianness/">&lt;p&gt;在我之前的文章中，我们介绍了关于网络和套接字的一些基本概念。我们讨论了不同的模型，并使用套接字创建了一个简单的网络通信示例，特别是从 &lt;code&gt;Stream TCP&lt;&#x2F;code&gt; 套接字开始。&lt;&#x2F;p&gt;
+&lt;p&gt;我们选择这种套接字类型及其家族，因为它是最常见的实现之一，也是大多数开发人员最常用的。&lt;code&gt;Stream TCP&lt;&#x2F;code&gt; 套接字因其可靠性和建立面向连接的通信通道的能力而被广泛使用。这使得它们在数据完整性和顺序性至关重要的场景中非常理想，如网页浏览、电子邮件和文件传输。通过了解 &lt;code&gt;Stream TCP&lt;&#x2F;code&gt; 套接字的基础知识，开发人员可以构建健壮的网络应用程序并更有效地排除故障。&lt;&#x2F;p&gt;
+&lt;p&gt;在本文中，我们将继续使用这种套接字类型，深入探讨套接字编程。到目前为止，我们已经看到了如何创建一个作为服务器的监听套接字以及如何使用另一个套接字连接到它。现在，我们将探索这种通信的一个关键细节——字节序（endianness）！&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;endianness&quot;&gt;Endianness&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;img src=&quot;https:&#x2F;&#x2F;www.kungfudev.com&#x2F;_next&#x2F;image?url=%2Fimages%2Fblog%2Fendianness_had.jpeg&amp;amp;w=2048&amp;amp;q=75&quot; alt=&quot;img&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;字节序（endianness）指的是在内存中排列字节的顺序。在大端序系统中，最高有效字节存储在最小的内存地址，而在小端序系统中，最低有效字节最先存储。理解字节序在套接字编程中至关重要，因为通过网络传输的数据可能需要在不同的字节序格式之间转换，以确保不同系统能够正确解释数据。这种转换确保了数据的一致性和准确性，无论通信设备的底层架构如何。&lt;&#x2F;p&gt;
+&lt;p&gt;例如，一个 32 位值 1,200,000（十六进制 &lt;code&gt;0x00124F80&lt;&#x2F;code&gt;）展示了字节序。在大端序系统中，字节按 &lt;code&gt;0x00 0x12 0x4F 0x80&lt;&#x2F;code&gt; 从低地址到高地址存储。在小端序系统中，顺序相反：&lt;code&gt;0x80 0x4F 0x12 0x00&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;                        Endianness
+&lt;&#x2F;span&gt;&lt;span&gt;              (Order of bytes in memory)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;                    Big-Endian System
+&lt;&#x2F;span&gt;&lt;span&gt;+-----------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;| Most Significant|                 |                 | Least Significant|
+&lt;&#x2F;span&gt;&lt;span&gt;| Byte            |                 |                 | Byte             |
+&lt;&#x2F;span&gt;&lt;span&gt;| (MSB)           |                 |                 | (LSB)            |
+&lt;&#x2F;span&gt;&lt;span&gt;+-----------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;|      0x00       |      0x12       |      0x4F       |      0x80        |
+&lt;&#x2F;span&gt;&lt;span&gt;+-----------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;| Address: 0x00   | Address: 0x01   | Address: 0x02   | Address: 0x03    |
+&lt;&#x2F;span&gt;&lt;span&gt;+-----------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;                   Little-Endian System
+&lt;&#x2F;span&gt;&lt;span&gt;+------------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;| Least Significant|                 |                 | Most Significant |
+&lt;&#x2F;span&gt;&lt;span&gt;| Byte             |                 |                 | Byte             |
+&lt;&#x2F;span&gt;&lt;span&gt;| (LSB)            |                 |                 | (MSB)            |
+&lt;&#x2F;span&gt;&lt;span&gt;+------------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;|      0x80        |      0x4F       |      0x12       |      0x00        |
+&lt;&#x2F;span&gt;&lt;span&gt;+------------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;span&gt;| Address: 0x00    | Address: 0x01   | Address: 0x02   | Address: 0x03    |
+&lt;&#x2F;span&gt;&lt;span&gt;+------------------+-----------------+-----------------+------------------+
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;假设你收到 &lt;code&gt;0x00124F80&lt;&#x2F;code&gt;，而你不知道它是大端序还是小端序。如果使用错误的字节序来解释这些字节，你将得到一个完全不同的值。在大端序格式中，最高有效字节在前，所以 &lt;code&gt;0x00124F80&lt;&#x2F;code&gt; 保持不变（十进制值：1,200,000）。然而，在小端序格式中，字节顺序反转，值变为 &lt;code&gt;0x804F1200&lt;&#x2F;code&gt;（十进制值：2,152,665,600）。这种差异可能导致数据处理中的重大错误，因此正确处理字节序非常重要。&lt;&#x2F;p&gt;
+&lt;p&gt;为了用更简单的十进制例子说明字节序的概念，考虑 32 位值 574。在大端序系统中，最高有效数字先存储。对于 574，数字是 5、7 和 4。在大端序系统中，这将存储为 500（5 x 100）、70（7 x 10）和 4（4 x 1），按此顺序。相反，小端序系统将这些数字按相反顺序存储：4（4 x 1）、70（7 x 10）和 500（5 x 100）。这种反转可能导致数值被错误解释。&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;network-byte-order&quot;&gt;Network byte order&lt;&#x2F;h1&gt;
+&lt;p&gt;因此，机器在通信时对字节序达成一致是至关重要的，以确保数据被正确解释。例如，在互联网通信中，RFC 1700 和 RFC 9293 等标准定义了使用大端序格式，也称为网络字节序。这种标准化确保了网络上所有设备一致地解释数据，防止错误和误解。&lt;&#x2F;p&gt;
+&lt;p&gt;RFC 1700: 互联网协议文档中使用十进制表示数字，并以“大端序”顺序描述数据……
+RFC 9293: 源地址: 网络字节序中的 IPv4 源地址 目标地址: 网络字节序中的 IPv4 目标地址
+https:&#x2F;&#x2F;datatracker.ietf.org&#x2F;doc&#x2F;html&#x2F;rfc768 https:&#x2F;&#x2F;datatracker.ietf.org&#x2F;doc&#x2F;html&#x2F;rfc1700&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;ji-qi-xie-yi&quot;&gt;机器协议&lt;&#x2F;h1&gt;
+&lt;p&gt;如果应用程序定义了一个指定字节序的协议，发送方和接收方必须遵守该协议。如果协议规定数据中的某些字段应为网络字节序，则必须相应地转换这些字段。依赖纯文本的数据格式（如 JSON 和 XML）要么对字节序无依赖（将数据视为字节串），要么有自己的编码和解码多字节值的规范。&lt;&#x2F;p&gt;
+&lt;p&gt;字节序只适用于多字节值，影响表示较大数据类型（如整数和浮点数）的字节序列的顺序。单字节值不受字节序的影响。&lt;&#x2F;p&gt;
+&lt;p&gt;例如，在 Rust 中，crates &lt;code&gt;bincode&lt;&#x2F;code&gt; 和 &lt;code&gt;postcard&lt;&#x2F;code&gt; 默认使用小端序。这意味着，当你使用这些 crates 序列化数据时，多字节值将按小端序格式排序，除非另有规定。&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;bang-ding-de-tao-jie-zi-di-zhi&quot;&gt;绑定的套接字地址&lt;&#x2F;h1&gt;
+&lt;p&gt;如果你阅读或观看过任何关于套接字编程的内容，你几乎肯定会遇到一些C语言的示例。例如，你可能见过如下代码。这是因为，如前所述，IP地址和端口需要以大端序格式表示：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;c&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-c &quot;&gt;&lt;code class=&quot;language-c&quot; data-lang=&quot;c&quot;&gt;&lt;span&gt;address.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;sin_family &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; AF_INET;
+&lt;&#x2F;span&gt;&lt;span&gt;address.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;sin_addr&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;s_addr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;htonl&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;address.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;sin_port &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;htons&lt;&#x2F;span&gt;&lt;span&gt;(PORT);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;bind&lt;&#x2F;span&gt;&lt;span&gt;(sockfd, (&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; sockaddr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;address, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;sizeof&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct&lt;&#x2F;span&gt;&lt;span&gt; address))
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这些函数 &lt;code&gt;htons&lt;&#x2F;code&gt; 和 &lt;code&gt;htonl&lt;&#x2F;code&gt; 是一系列 C 辅助函数的一部分，帮助将多字节值转换为主机字节序。这些函数确保数据能被正确解释，不论底层系统的字节序如何。&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;The htonl() function converts the unsigned integer hostlong from host byte order to network byte order.
+&lt;&#x2F;span&gt;&lt;span&gt;The htons() function converts the unsigned short integer hostshort from host byte order to network byte order.
+&lt;&#x2F;span&gt;&lt;span&gt;The ntohl() function converts the unsigned integer netlong from network byte order to host byte order.
+&lt;&#x2F;span&gt;&lt;span&gt;The ntohs() function converts the unsigned short integer netshort from network byte order to host byte order.
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;现代编程语言和框架通常会处理这些格式，并提供管理它们的专门函数。例如，在 Rust 中，我们可以这样创建地址：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; server_address &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;SockaddrIn::from_str(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;127.0.0.1:8080&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在前一行中，由于实现原因，我们不必处理字节排序。但是，我们可以检查地址以确定机器上的默认字节顺序，在我的例子中是小端序。我们还可以根据 IP 地址和端口的需要将其转换为大端字节。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Create a socket address
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; sock_addr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;SockaddrIn::from_str(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;127.0.0.1:6797&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; sockaddr: sockaddr_in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; sock_addr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;into&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;sockaddr: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, sockaddr);
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;s_addr Default: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, sockaddr.sin_addr.s_addr);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; big endian
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;s_addr be: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, sockaddr.sin_addr.s_addr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_be&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; little endian
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;s_addr le: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, sockaddr.sin_addr.s_addr.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_le&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;当我们运行这段代码， 我们会获得如下输出：&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;$ cargo run --bin addr
+&lt;&#x2F;span&gt;&lt;span&gt;sockaddr: sockaddr_in { sin_len: 16, sin_family: 2, sin_port: 36122, sin_addr: in_addr { s_addr: 16777343 }, sin_zero: [0, 0, 0, 0, 0, 0, 0, 0] }
+&lt;&#x2F;span&gt;&lt;span&gt;s_addr Default: 16777343
+&lt;&#x2F;span&gt;&lt;span&gt;s_addr be: 2130706433
+&lt;&#x2F;span&gt;&lt;span&gt;s_addr le: 16777343
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;正如我们所提到的，尽管 Rust 和其他现代编程语言在某些级别上处理字节排序并提供方便的抽象，但理解这些基本概念总是有价值的。&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;shi-ji-shi-li-chu-li-ke-hu-duan-fu-wu-qi-tong-xin-zhong-de-duan-xu&quot;&gt;实际示例: 处理客户端-服务器通信中的端序&lt;&#x2F;h1&gt;
+&lt;p&gt;既然我们已经了解了字节排序，那么我们将创建一个简单的示例来说明到目前为止所涉及的内容。为此，我们将创建一个从套接字接收文件的简单程序。客户端首先发送文件的大小，然后发送文件的数据。请注意，这将是一个简单的实现，保持代码简单以说明这个概念。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;fu-wu-qi-duan&quot;&gt;服务器端&lt;&#x2F;h2&gt;
+&lt;p&gt;我们将重用上一篇文章中关于创建流类型和 INET 系列的套接字服务器的代码。我们将创建一个简单的函数来设置这个套接字服务器并返回文件描述符。这将帮助我们保持一个干净的实现，并在以后的所有示例中重用它。该函数名为 &lt;code&gt;create_tcp_server_socket&lt;&#x2F;code&gt;，它非常简单，如下所示:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;create_tcp_server_socket&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;addr&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; Result&amp;lt;OwnedFd, nix::Error&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; socket_fd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;socket&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;        nix::sys::socket::AddressFamily::Inet, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Socket family
+&lt;&#x2F;span&gt;&lt;span&gt;        nix::sys::socket::SockType::Stream,    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Socket type
+&lt;&#x2F;span&gt;&lt;span&gt;        nix::sys::socket::SockFlag::empty(),
+&lt;&#x2F;span&gt;&lt;span&gt;        None,
+&lt;&#x2F;span&gt;&lt;span&gt;    )&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Create a socket address
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; sock_addr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;SockaddrIn::from_str(addr).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Bind the socket to the address
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;bind&lt;&#x2F;span&gt;&lt;span&gt;(socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;sock_addr)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Listen for incoming connections
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; backlog &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Backlog::new(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;listen&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;socket_fd, backlog)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    Ok(socket_fd)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;现在我们可以使用该函数创建服务器套接字并接受传入的连接。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; socket_fd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;create_tcp_server_socket&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;127.0.0.1:8000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Accept incoming connections
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conn_fd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;accept&lt;&#x2F;span&gt;&lt;span&gt;(socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;接下来，在接受连接之后，我们期望接收客户端将通过网络传输的文件的大小。我们希望接收一个 32 位的无符号整数，所以我们准备了一个 4 字节的缓冲区来接收这个大小。然后从套接字中读取数据并将数据放入缓冲区:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Receive the size of the file
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; size_buf &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;recv&lt;&#x2F;span&gt;&lt;span&gt;(conn_fd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; size_buf, MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; file_size &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= u32&lt;&#x2F;span&gt;&lt;span&gt;::from_ne_bytes(size_buf);
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;File size: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, file_size);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果您注意到，我们在这里使用了 &lt;code&gt;from_ne_bytes&lt;&#x2F;code&gt;。这个函数假设字节是按照机器的本机端序排列的(ne stands for native endianness)。因此，我们期望该值使用与我们的机器相同的端序。&lt;&#x2F;p&gt;
+&lt;p&gt;最后，我们将使用该大小创建一个内存缓冲区，以便通过连接接收文件的数据并打印读取的字节。如上所述，这是一个简单而基本的实现，只是为了说明情况:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Receive the file data
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; file_buf &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;vec![&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;; file_size &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;as usize&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; bytes_read &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;recv&lt;&#x2F;span&gt;&lt;span&gt;(conn_fd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; file_buf, MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;File data bytes read: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, bytes_read);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;完整代码：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;nix::sys::socket::{accept, recv, MsgFlags};
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;socket_net::server::create_tcp_server_socket;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::os::fd::AsRawFd;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; socket_fd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;create_tcp_server_socket&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;127.0.0.1:8000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Accept incoming connections
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conn_fd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;accept&lt;&#x2F;span&gt;&lt;span&gt;(socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Receive the size of the file
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; size_buf &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;4&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span&gt;	&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;recv&lt;&#x2F;span&gt;&lt;span&gt;(conn_fd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; size_buf, MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; file_size &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= u32&lt;&#x2F;span&gt;&lt;span&gt;::from_ne_bytes(size_buf);
+&lt;&#x2F;span&gt;&lt;span&gt;    println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;File size: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, file_size);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Receive the file data
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; file_buf &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;vec![&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;; file_size &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;as usize&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; bytes_read &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;recv&lt;&#x2F;span&gt;&lt;span&gt;(conn_fd, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; file_buf, MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;File data bytes read: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{:?}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, bytes_read);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;ke-hu-duan&quot;&gt;客户端&lt;&#x2F;h2&gt;
+&lt;p&gt;对于我们的客户端，逻辑同样非常简单，类似于我们之前使用的逻辑，但是添加了一些微妙的内容，例如在发送实际数据之前读取文件并发送其大小。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt; socket creation and connection
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Read the file into a buffer
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; buffer &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;std::fs::read(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;.&#x2F;src&#x2F;data&#x2F;data.txt&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Failed to read file&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; send the size of the file to the server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; size: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u32 =&lt;&#x2F;span&gt;&lt;span&gt; buffer.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;len&lt;&#x2F;span&gt;&lt;span&gt;() &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;as u32&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;( socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;size.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_ne_bytes&lt;&#x2F;span&gt;&lt;span&gt;(), MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; send the file to the server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;buffer, MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;有两件事需要注意: 正如我们前面提到的，我们为文件大小创建了一个 u32，并且我们使用 &lt;code&gt;to_ne_bytes&lt;&#x2F;code&gt; 函数来发送按本地端序排列的字节，在我的例子中是 little-endian。&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;data.txt&lt;&#x2F;code&gt; 文件是一个简单的文本文件，包含一些 lorem ipsum 数据。我们可以使用 &lt;code&gt;stat&lt;&#x2F;code&gt; 命令检查它的大小:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; stat&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; -c&lt;&#x2F;span&gt;&lt;span&gt;%&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt; .&#x2F;src&#x2F;data&#x2F;data.txt
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;574
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果你想知道为什么我们必须处理大小的端序，而不是文件内容本身，记住我们之前学到的:
+许多依赖于纯文本的应用程序数据格式要么是字节顺序独立的(将数据作为字节字符串处理)，要么…&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;yun-xing&quot;&gt;运行&lt;&#x2F;h1&gt;
+&lt;p&gt;现在我们可以运行服务器和客户机来查看输出并了解其工作原理。文件的大小是 574 字节，我们发送整个文件。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;# Server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; cargo run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --bin&lt;&#x2F;span&gt;&lt;span&gt; tcp-file-server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; file descriptor: 3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; bound to address: 127.0.0.1:8000
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;File&lt;&#x2F;span&gt;&lt;span&gt; size: 574
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;File&lt;&#x2F;span&gt;&lt;span&gt; data bytes read: 574
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;# Client
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; cargo run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --bin&lt;&#x2F;span&gt;&lt;span&gt; tcp-file-client
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; file descriptor: 3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Sending&lt;&#x2F;span&gt;&lt;span&gt; file size: 574
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Sending&lt;&#x2F;span&gt;&lt;span&gt; file data
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;到目前为止，一切顺利，对吧? 行为如预期的那样: 我们正在发送一个 574 字节的文件，并且我们正在服务器中接收它。这是因为客户端和服务器都使用 &lt;code&gt;ne (native endianness)&lt;&#x2F;code&gt;，而且由于它们在同一台机器上，它们都使用 little-endian。但是如果客户端使用不同的端序呢? 例如，如果它使用大端字节 &lt;code&gt;big-endian&lt;&#x2F;code&gt; 来发送大小呢?&lt;&#x2F;p&gt;
+&lt;p&gt;我们可以通过修改客户端的这一行来模拟将要发生的事情，以指示它以大端字节而不是小端字节发送数据。为此，我们使用 &lt;code&gt;to_be_bytes&lt;&#x2F;code&gt; (be 代表大端字节):&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;( socket_fd.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_raw_fd&lt;&#x2F;span&gt;&lt;span&gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;size.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_be_bytes&lt;&#x2F;span&gt;&lt;span&gt;(), MsgFlags::empty()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;...&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果我们再次运行程序，我们将看到为什么理解端序是重要的。从客户端的角度来看，我们发送的是相同的值，只是用了不同的端序。然而，如果你看看我们的服务器，你会注意到这个问题:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;# Client
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; cargo run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --bin&lt;&#x2F;span&gt;&lt;span&gt; tcp-file-client
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; file descriptor: 3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Sending&lt;&#x2F;span&gt;&lt;span&gt; file size: 574
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Sending&lt;&#x2F;span&gt;&lt;span&gt; file data
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;服务器仍然将大小视为以相同的端序来处理，即小端序。但它不再是小端式的;它是大端的。这将导致一个完全不同且不正确的值。在这个简单的例子中，它导致服务器分配的内存远远超过缓冲区接收文件所需的内存。可以想象，在更复杂的情况下，这个问题可能会产生更大、更严重的影响。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;# Server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; cargo run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --bin&lt;&#x2F;span&gt;&lt;span&gt; tcp-file-server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; file descriptor: 3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; bound to address: 127.0.0.1:8000
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;File&lt;&#x2F;span&gt;&lt;span&gt; size: 1040318464
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;File&lt;&#x2F;span&gt;&lt;span&gt; data bytes read: 574
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果我们使用本地的操作系统位大小，比如 64 位整数，并在客户端和服务器中使用 u64 类型作为大小变量，那么问题可能会更糟。我们可以在客户端和服务器端修改以下几行，看看结果:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;&#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span&gt; server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; mut size_buf &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;8&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; file_size &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; u64&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;from_ne_bytes(size_buf);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;&#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span&gt; client
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; size&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt; u64 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; buffer.len() as u64;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在做了这些修改之后，让我们再次运行服务器和客户端:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;# Server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;$&lt;&#x2F;span&gt;&lt;span&gt; cargo run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --bin&lt;&#x2F;span&gt;&lt;span&gt; tcp-file-server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; file descriptor: 3
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Socket&lt;&#x2F;span&gt;&lt;span&gt; bound to address: 127.0.0.1:8000
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;File&lt;&#x2F;span&gt;&lt;span&gt; size: 4468133780304953344
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;memory&lt;&#x2F;span&gt;&lt;span&gt; allocation of 4468133780304953344 bytes failed
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;Aborted&lt;&#x2F;span&gt;&lt;span&gt; (core dumped)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在这种情况下，整数的多字节表示更大，并且在错误的字节顺序下，值表示变得巨大。在这里，服务器尝试分配大约 4.4 eb 的内存，这远远超过当前任何机器上的可用内存。这说明正确处理端序是多么重要，因为不正确的处理可能导致严重的问题，如内存分配失败和程序崩溃。
+您可以在这个 &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;douglasmakey&#x2F;socket_net&quot;&gt;repo&lt;&#x2F;a&gt; 中找到这个示例和未来示例的代码。&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;zong-jie&quot;&gt;总结&lt;&#x2F;h1&gt;
+&lt;p&gt;理解字节序对于开发健壮的网络应用至关重要。如示例所示，即使是简单的任务如通过网络发送文件，如果不正确处理字节序，也会导致严重问题。通过遵循标准并正确管理字节顺序，我们确保数据在不同系统间被准确解释，防止错误并提高应用的可靠性。现代编程语言如Rust提供了有用的抽象，但对这些基础概念的牢固掌握使开发人员能够更有效地排除故障和优化代码。在网络通信中处理多字节值时，务必注意字节序，以避免潜在的陷阱。&lt;&#x2F;p&gt;
+&lt;p&gt;感谢你的阅读。这篇博客是我学习旅程的一部分，非常重视你的反馈。关于套接字和网络还有更多内容可供探索和分享，请关注即将发布的文章。希望我们能在这个领域共同学习和成长。编程愉快！&lt;&#x2F;p&gt;
+&lt;p&gt;原文链接：https:&#x2F;&#x2F;www.kungfudev.com&#x2F;blog&#x2F;2024&#x2F;06&#x2F;14&#x2F;network-sockets-endianness&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

@@ -1,0 +1,104 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Call Site Dependency Injection</title><meta content="Call Site Dependency Injection" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/call-site-dependency-injection/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Call Site Dependency Injection" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/call-site-dependency-injection/ property=twitter:url><meta content="Call Site Dependency Injection" property=twitter:title><link href=https://ohmycloud.github.io/notes/call-site-dependency-injection/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>call-site-dependency-injection</span></div><time datetime=2021-04-05>Published on: <span class=accent-data>2021-04-05</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Call Site Dependency Injection</h1><p>本帖文档调用站点依赖注入模式。这是一个相当低级的样本，和企业 DI 没有什么关系。这个模式有点 Rust 特有。<p>通常，当你实现一个需要用户提供一些功能的类型时，首先想到的是在构造函数中提供它。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Engine {
+</span><span>    </span><span style=color:#e45649>config</span><span>: Config,
+</span><span>    ...
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Engine {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#e45649>config</span><span>: Config) -> Engine { </span><span style=color:#a626a4>... </span><span>}
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>go</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>) { </span><span style=color:#a626a4>... </span><span>}
+</span><span>}
+</span></code></pre><p>在这个例子中，我们实现了 Engine，调用者提供了 Config。<p>另一种方法是将依赖关系传递给每个方法调用。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Engine {
+</span><span>    ...
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Engine {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>() -> Engine { </span><span style=color:#a626a4>... </span><span>}
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>go</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>config</span><span>: </span><span style=color:#a626a4>&</span><span>Config) { </span><span style=color:#a626a4>... </span><span>}
+</span><span>}
+</span></code></pre><p>在 Rust 中，后者(call-site injection)有时用 lifetime 更好。让我们来看看这些例子吧!<h2 id=lazy-zi-duan>Lazy 字段</h2><p>在第一个例子中，我们想根据其他字段惰性地计算一个字段的值。就像这样:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Widget {
+</span><span>    </span><span style=color:#e45649>name</span><span>: String,
+</span><span>    </span><span style=color:#e45649>name_hash</span><span>: Lazy<</span><span style=color:#a626a4>u64</span><span>>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Widget {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#e45649>name</span><span>: String) -> Widget {
+</span><span>        Widget {
+</span><span>            name,
+</span><span>            name_hash: Lazy::new(|| {
+</span><span>                </span><span style=color:#0184bc>compute_hash</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>.name)
+</span><span>            }),
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>这个设计的问题是在 Rust 中无法使用。Lazy 中的闭包需要访问 <strong>self</strong>，而这将创建一个自引用的数据结构!<p>解决的办法是在使用 Lazy 的地方提供闭包。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Widget {
+</span><span>    </span><span style=color:#e45649>name</span><span>: String,
+</span><span>    </span><span style=color:#e45649>name_hash</span><span>: OnceCell<</span><span style=color:#a626a4>u64</span><span>>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Widget {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#e45649>name</span><span>: String) -> Widget {
+</span><span>        Widget {
+</span><span>            name,
+</span><span>            name_hash: OnceCell::new(),
+</span><span>        }
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>name_hash</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>u64 </span><span>{
+</span><span>        </span><span style=color:#a626a4>*</span><span style=color:#e45649>self</span><span>.name_hash.</span><span style=color:#0184bc>get_or_init</span><span>(|| {
+</span><span>            </span><span style=color:#0184bc>compute_hash</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>.name)
+</span><span>        })
+</span><span>    }
+</span><span>}
+</span></code></pre><h2 id=jian-jie-ha-xi-biao>间接哈希表</h2><p>下一个例子是关于将一个自定义的哈希函数插入到哈希表中。在 Rust 的标准库中，这只能在类型级别上实现，通过实现类型的 Hash 特性。更通用的设计是在运行时用哈希函数给表做参数。这是 <code>C++</code> 所做的。然而在 Rust 中，这就不够通用了。<p>考虑一个字符串互译器，它将字符串存储在一个向量中，并额外维护一个基于哈希的索引。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Interner {
+</span><span>    </span><span style=color:#e45649>vec</span><span>: Vec&LTString>,
+</span><span>    </span><span style=color:#e45649>set</span><span>: HashSet<</span><span style=color:#a626a4>usize</span><span>>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Interner {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>intern</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&str</span><span>) -> </span><span style=color:#a626a4>usize </span><span>{ </span><span style=color:#a626a4>... </span><span>}
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>lookup</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>i</span><span>: </span><span style=color:#a626a4>usize</span><span>) -> </span><span style=color:#a626a4>&str </span><span>{ </span><span style=color:#a626a4>... </span><span>}
+</span><span>}
+</span></code></pre><p><strong>set</strong> 字段将字符串存储在一个哈希表中，但它是用相邻 <strong>vec</strong> 的索引来表示它们。<p>用一个闭包来构造 <strong>set</strong> 不会成功，原因和 Lazy 一样 - 这将创建一个自引用结构。在 <code>C++</code> 中，存在一个变通的方法 - 可以将 <strong>vec</strong> 装箱，并在 <strong>Interner</strong> 和闭包之间共享一个稳定的指针。在 Rust 中，这会产生别名，阻止使用 <strong>&mut Vec</strong>。<p>奇怪的是，在 std API 中，使用排序的 vec 而不是哈希是可行的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>Interner {
+</span><span>    </span><span style=color:#e45649>vec</span><span>: Vec&LTString>,
+</span><span>    </span><span style=color:#a0a1a7>// Invariant: sorted
+</span><span>    </span><span style=color:#e45649>set</span><span>: Vec<</span><span style=color:#a626a4>usize</span><span>>,
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>Interner {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>intern</span><span>(</span><span style=color:#a626a4>&mut </span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>s</span><span>: </span><span style=color:#a626a4>&str</span><span>) -> </span><span style=color:#a626a4>usize </span><span>{
+</span><span>        </span><span style=color:#a626a4>let</span><span> idx </span><span style=color:#a626a4>= </span><span style=color:#e45649>self</span><span>.set.</span><span style=color:#0184bc>binary_search_by</span><span>(|</span><span style=color:#a626a4>&</span><span style=color:#e45649>idx</span><span>| {
+</span><span>            </span><span style=color:#e45649>self</span><span>.vec[idx].</span><span style=color:#0184bc>cmp</span><span>(s)
+</span><span>        });
+</span><span>        </span><span style=color:#a626a4>match</span><span> idx {
+</span><span>            Ok(idx) </span><span style=color:#a626a4>=> </span><span style=color:#e45649>self</span><span>.set[idx],
+</span><span>            Err(idx) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>                </span><span style=color:#a626a4>let</span><span> res </span><span style=color:#a626a4>= </span><span style=color:#e45649>self</span><span>.vec.</span><span style=color:#0184bc>len</span><span>();
+</span><span>                </span><span style=color:#e45649>self</span><span>.vec.</span><span style=color:#0184bc>push</span><span>(s.</span><span style=color:#0184bc>to_string</span><span>());
+</span><span>                </span><span style=color:#e45649>self</span><span>.set.</span><span style=color:#0184bc>insert</span><span>(idx, res);
+</span><span>                res
+</span><span>            }
+</span><span>        }
+</span><span>    }
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>lookup</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>i</span><span>: </span><span style=color:#a626a4>usize</span><span>) -> </span><span style=color:#a626a4>&str </span><span>{ </span><span style=color:#a626a4>... </span><span>}
+</span><span>}
+</span></code></pre><p>这是因为闭包是在调用站点而不是在构造站点供给的。<p>hashbrown crate 通过 <a href=https://docs.rs/hashbrown/0.9.1/hashbrown/hash_map/struct.HashMap.html#method.raw_entry_mut>RawEntry</a> 为哈希提供了这种风格的 API。<h2 id=per-rong-qi-fen-pei-qi>Per 容器分配器</h2><p>第三个例子来自 Zig 编程语言。与 Rust 不同，Zig 没有一个祝福的全局分配器。相反，Zig 中的容器有两种风味。"Managed" 风味接受一个分配器作为构造参数，并将其存储为一个字段（<a href=https://github.com/ziglang/zig/blob/1590ed9d6aea95e5a21e3455e8edba4cdb374f2c/lib/std/array_list.zig#L36-L43>Source</a>）。而 "Unmanaged" 风味则在每个方法中添加一个分配器参数（<a href=https://github.com/ziglang/zig/blob/1590ed9d6aea95e5a21e3455e8edba4cdb374f2c/lib/std/array_list.zig#L436-L440>Source</a>）。<p>第二种方式更节俭 - 可以用一个分配器引用与许多容器。<h2 id=pang-zhi-zhen>胖指针</h2><p>最后一个例子来自于 Rust 语言本身。为了实现动态调度，Rust 使用了胖指针，它有两个字宽。第一个字指向对象，第二个字指向 vtable。这些指针是在泛用具体类型的时候制造的。<p>这与 <code>C++</code> 不同，<code>C++</code> 的 vtable 指针是在构造过程中嵌入到对象本身中的。<p>看了这些例子后，我对 Scala 式的隐式参数很热衷。考虑一下这段带有 Zig 风格向量的 Rust 代码的假设。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>{
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> a </span><span style=color:#a626a4>= </span><span style=color:#0184bc>get_allocator</span><span>();
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> xs </span><span style=color:#a626a4>= </span><span>Vec::new();
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> ys </span><span style=color:#a626a4>= </span><span>Vec::new();
+</span><span>    xs.</span><span style=color:#0184bc>push</span><span>(</span><span style=color:#a626a4>&mut</span><span> a, </span><span style=color:#c18401>1</span><span>);
+</span><span>    ys.</span><span style=color:#0184bc>push</span><span>(</span><span style=color:#a626a4>&mut</span><span> a, </span><span style=color:#c18401>2</span><span>);
+</span><span>}
+</span></code></pre><p>这里的问题是 Drop - 释放向量需要访问分配器，而如何提供一个分配器并不清楚。Zig 通过使用 defer 语句而不是 destructors 躲避了这个问题。在使用隐式参数的 Rust 中，我想下面的方法可以用。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl</span><span>&LTimplicit a: </span><span style=color:#a626a4>&mut</span><span> Allocator, T> Drop </span><span style=color:#a626a4>for </span><span>Vec&LTT>
+</span></code></pre><p>最后，我想分享最后一个例子，CSDI 思维帮助我发现了一个更好的应用级架构。<p>rust-analyzer 的很多行为是可以配置的。有嵌套提示的切换，完成度可以调整，一些功能根据编辑器的不同而有不同的工作方式。第一个实现是将一个全局的 Config 结构和其他分析状态一起存储。然后各个子系统读取这个 Config 的位。为了避免通过这个共享结构将不同的功能耦合在一起，配置键是动态的。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>type </span><span>Config </span><span style=color:#a626a4>= </span><span>HashMap&LTString, String>;
+</span></code></pre><p>这个系统是可行的，但感觉相当笨拙。<p>现在的实现要简单得多。现在每个方法都接受一个特定的 config 参数，而不是将一个单一的 Config 作为状态的一部分来存储。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>get_completions</span><span>(
+</span><span>    </span><span style=color:#e45649>analysis</span><span>: </span><span style=color:#a626a4>&</span><span>Analysis,
+</span><span>    </span><span style=color:#e45649>config</span><span>: </span><span style=color:#a626a4>&</span><span>CompletionConfig,
+</span><span>    </span><span style=color:#e45649>file</span><span>: FileId,
+</span><span>    </span><span style=color:#e45649>offset</span><span>: </span><span style=color:#a626a4>usize</span><span>,
+</span><span>)
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>get_inlay_hints</span><span>(
+</span><span>    </span><span style=color:#e45649>analysis</span><span>: </span><span style=color:#a626a4>&</span><span>Analysis,
+</span><span>    </span><span style=color:#e45649>config</span><span>: </span><span style=color:#a626a4>&</span><span>HintsConfig,
+</span><span>    </span><span style=color:#e45649>file</span><span>: FileId,
+</span><span>)
+</span></code></pre><p>不仅代码更简单，而且更灵活。因为配置不再是状态的一部分，所以可以根据上下文的不同，对同一功能使用不同的配置。例如，显式调用的完成和异步的完成可能是不同的。<p>在 <a href=https://old.reddit.com/r/rust/comments/kmd41e/blog_post_call_site_dependency_injection/>/r/rust</a> 上讨论。<p>原文链接: https://matklad.github.io/2020/12/28/csdi.html<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/dependency-injection>/dependency injection/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

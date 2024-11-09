@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>焉知非鱼 - error</title>
+    <link rel="self" type="application/atom+xml" href="https://ohmycloud.github.io/tags/error/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://ohmycloud.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2021-04-14T00:00:00+00:00</updated>
+    <id>https://ohmycloud.github.io/tags/error/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Rust 中处理错误的初级指南</title>
+        <published>2021-04-14T00:00:00+00:00</published>
+        <updated>2021-04-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/"/>
+        <id>https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/">&lt;p&gt;《Rust 编程语言》中的示例项目对于向新的潜在 Rustaceans 介绍 Rust 的不同方面和特性是非常好的。在这篇文章中，我们将通过扩展《Rust 编程语言》中的 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 项目，看看实现更强大的错误处理基础架构的一些不同方法。&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;minigrep&lt;&#x2F;code&gt; 项目在&lt;a href=&quot;https:&#x2F;&#x2F;doc.rust-lang.org&#x2F;book&#x2F;ch12-00-an-io-project.html&quot;&gt;第12章&lt;&#x2F;a&gt;中介绍，它引导读者构建一个简单版本的 &lt;code&gt;grep&lt;&#x2F;code&gt; 命令行工具，这是一个用于搜索文本的工具。例如，你会传入一个查询，你要搜索的文本，以及文本所在的文件名，然后得到包含查询文本的所有行。&lt;&#x2F;p&gt;
+&lt;p&gt;这篇文章的目标是用更强大的错误处理模式来扩展本书的 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 实现，这样你就能更好地了解 Rust 项目中处理错误的不同方法。&lt;&#x2F;p&gt;
+&lt;p&gt;作为参考，你可以在&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;seanchen1991&#x2F;error-handling-examples&#x2F;tree&#x2F;minigrep-control&#x2F;examples&#x2F;minigrep&quot;&gt;这里&lt;&#x2F;a&gt;找到本书的 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 版本的最终代码。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;cuo-wu-chu-li-yong-li&quot;&gt;错误处理用例&lt;&#x2F;h2&gt;
+&lt;p&gt;当涉及到 Rust 项目的结构时，一个常见的模式是有一个 &quot;库&quot; 的部分和一个 &quot;应用&quot; 的部分，前者是主要的数据结构、函数和逻辑，后者是将库函数联系在一起。&lt;&#x2F;p&gt;
+&lt;p&gt;你可以在原始 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 代码的文件结构中看到这一点：应用逻辑存在于 &lt;code&gt;src&#x2F;bin&#x2F;main.rs&lt;&#x2F;code&gt; 文件中，它只是一个薄薄的包裹，包裹着在 &lt;code&gt;src&#x2F;lib.rs&lt;&#x2F;code&gt; 文件中定义的数据结构和函数；主函数所做的就是调用 &lt;code&gt;minigrep::run&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;这一点很重要，因为取决于我们是在构建一个应用程序还是一个库，会改变我们处理错误的方式。&lt;&#x2F;p&gt;
+&lt;p&gt;当涉及到一个应用程序时，最终用户很可能不想知道是什么原因导致了一个错误的琐碎细节。事实上，应用程序的最终用户可能只应该在错误无法恢复的情况下被通知错误。在这种情况下，提供关于为什么发生不可恢复的错误的细节也是有用的，特别是当它与用户输入有关时。如果某种可恢复的错误发生在后台，应用程序的消费者可能不需要知道它。&lt;&#x2F;p&gt;
+&lt;p&gt;相反，当涉及到一个库时，最终用户是其他开发人员，他们正在使用该库并在其之上构建一些东西。在这种情况下，我们希望尽可能多地提供关于我们的库中发生的任何错误的相关细节。然后，库的消费者将决定他们想要如何处理这些错误。&lt;&#x2F;p&gt;
+&lt;p&gt;那么，当我们的项目中既有库部分又有应用部分时，这两种方法是如何一起发挥作用的呢？&lt;code&gt;main&lt;&#x2F;code&gt; 函数执行 &lt;code&gt;minigrep::run&lt;&#x2F;code&gt; 函数，并输出结果中出现的任何错误。所以我们大部分的错误处理工作将集中在库部分。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;fu-xian-ku-cuo-wu&quot;&gt;浮现库错误&lt;&#x2F;h2&gt;
+&lt;p&gt;在 &lt;code&gt;src&#x2F;lib.rs&lt;&#x2F;code&gt; 中，我们有两个函数，&lt;code&gt;Config::new&lt;&#x2F;code&gt; 和 &lt;code&gt;run&lt;&#x2F;code&gt;，它们可能会返回错误。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Config {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;args&lt;&#x2F;span&gt;&lt;span&gt;: env::Args) -&amp;gt; Result&amp;lt;Config, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&amp;#39;static str&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; query &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;        Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span&gt;        None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;    };
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; filename &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;        Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span&gt;        None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;    };
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; case_sensitive &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;env::var(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;CASE_INSENSITIVE&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;is_err&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    Ok(Config {
+&lt;&#x2F;span&gt;&lt;span&gt;        query,
+&lt;&#x2F;span&gt;&lt;span&gt;        filename,
+&lt;&#x2F;span&gt;&lt;span&gt;        case_sensitive,
+&lt;&#x2F;span&gt;&lt;span&gt;    })
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;run&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: Config) -&amp;gt; Result&amp;lt;(), Box&amp;lt;dyn Error&amp;gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; contents &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;fs::read_to_string(config.filename)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; results &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= if&lt;&#x2F;span&gt;&lt;span&gt; config.case_sensitive {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;search&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;config.query, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;contents)
+&lt;&#x2F;span&gt;&lt;span&gt;    } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;else &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;search_case_insensitive&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;config.query, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;contents)
+&lt;&#x2F;span&gt;&lt;span&gt;    };
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for&lt;&#x2F;span&gt;&lt;span&gt; line &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;in&lt;&#x2F;span&gt;&lt;span&gt; results {
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, line);
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    Ok(())
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;确切有三个地方在返回错误：两个错误发生在 &lt;code&gt;Config::new&lt;&#x2F;code&gt; 函数中，该函数返回一个 &lt;code&gt;Result&amp;lt;Config，&amp;amp;&#x27;static str&amp;gt;&lt;&#x2F;code&gt;。在这种情况下，&lt;code&gt;Result&lt;&#x2F;code&gt; 的错误变体是一个静态字符串切片。&lt;&#x2F;p&gt;
+&lt;p&gt;在这里，当用户没有提供查询时，我们会返回一个错误。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; query &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span&gt;    None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;};
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这里，当用户没有提供文件名时，我们会返回一个错误。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; filename &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span&gt;    None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;};
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;以这种方式将错误结构化为静态字符串的主要问题是，错误信息并没有被放置在一个中心位置，如果需要的话，我们可以轻松地重构它们。这也使得我们更难在相同类型的错误之间保持错误信息的一致性。&lt;&#x2F;p&gt;
+&lt;p&gt;第三种错误发生在 &lt;code&gt;run&lt;&#x2F;code&gt; 函数的顶部，它返回一个 &lt;code&gt;Result&amp;lt;(), Box&amp;lt;dyn Error&amp;gt;&amp;gt;&lt;&#x2F;code&gt;。在这种情况下，错误变体是一个实现  &lt;code&gt;Error&lt;&#x2F;code&gt; &lt;a href=&quot;https:&#x2F;&#x2F;doc.rust-lang.org&#x2F;std&#x2F;error&#x2F;trait.Error.html&quot;&gt;trait&lt;&#x2F;a&gt; 的 trait 对象。换句话说，这个函数的错误变体是实现 &lt;code&gt;Error&lt;&#x2F;code&gt; trait 的类型的任何实例。&lt;&#x2F;p&gt;
+&lt;p&gt;在这里，我们将调用 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 时可能发生的任何错误冒出来。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; contents &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;fs::read_to_string(config.filename)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这适用于调用 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 时可能出现的错误，因为这个函数能够返回多种类型的错误。因此，我们需要一种方法来表示这些不同的可能的错误类型；它们之间的共同点是它们都实现了 &lt;code&gt;Error&lt;&#x2F;code&gt; trait！最终，我们要做的是定义所有这些错误类型。&lt;&#x2F;p&gt;
+&lt;p&gt;最终，我们要做的是在一个中心位置定义所有这些不同类型的错误，并让它们都成为单一类型的变体。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;zai-yi-ge-zhong-xin-lei-xing-zhong-ding-yi-cuo-wu-bian-chong&quot;&gt;在一个中心类型中定义错误变种&lt;&#x2F;h2&gt;
+&lt;p&gt;我们将创建一个新的 &lt;code&gt;src&#x2F;error.rs&lt;&#x2F;code&gt; 文件，并定义一个枚举 &lt;code&gt;AppError&lt;&#x2F;code&gt;，并在此过程中派生出 &lt;code&gt;Debug&lt;&#x2F;code&gt; trait，以便我们在需要时可以得到一个调试表示。我们将为这个枚举的每一个变体命名，使它们恰当地代表三种类型的错误。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingQuery,
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingFilename,
+&lt;&#x2F;span&gt;&lt;span&gt;    ConfigLoad,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;第三个变体，&lt;code&gt;ConfigLoad&lt;&#x2F;code&gt;，映射到 &lt;code&gt;Config::run&lt;&#x2F;code&gt; 函数中调用 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 时可能出现的错误。乍一看，这似乎有点不妥，因为如果该函数出现错误，那就是在读取提供的配置文件时出现了某种I&#x2F;O问题。那么我们为什么不把它命名为 &lt;code&gt;IOError&lt;&#x2F;code&gt; 或者类似的东西呢？&lt;&#x2F;p&gt;
+&lt;p&gt;在这种情况下，由于我们是将一个标准库函数的错误浮出水面，所以描述浮出水面的错误是如何影响它的，而不是简单地重申它，这与我们的应用更相关。当 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 发生错误时，会阻止我们的 &lt;code&gt;Config&lt;&#x2F;code&gt; 加载，所以这就是为什么我们把它命名为 &lt;code&gt;ConfigLoad&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;现在我们有了这个类型，我们需要更新代码中所有返回错误的地方以利用这个 &lt;code&gt;AppError&lt;&#x2F;code&gt; 枚举。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;fan-hui-apperror-de-bian-ti&quot;&gt;返回 &lt;code&gt;AppError&lt;&#x2F;code&gt; 的变体&lt;&#x2F;h2&gt;
+&lt;p&gt;在我们的 &lt;code&gt;src&#x2F;lib.rs&lt;&#x2F;code&gt; 文件的顶部，我们需要声明我们的错误模块，并将 &lt;code&gt;error::AppError&lt;&#x2F;code&gt; 带入作用域。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mod &lt;&#x2F;span&gt;&lt;span&gt;error;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;error::AppError;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在我们的 &lt;code&gt;Config::new&lt;&#x2F;code&gt; 函数中，我们需要更新我们作为错误返回静态字符串切片的地方，以及函数本身的返回类型。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;- pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;args&lt;&#x2F;span&gt;&lt;span&gt;: env::Args) -&amp;gt; Result&amp;lt;Config, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&amp;#39;static str&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;args&lt;&#x2F;span&gt;&lt;span&gt;: env::Args) -&amp;gt; Result&amp;lt;Config, AppError&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; --snip--
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; query &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;        Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-       &lt;&#x2F;span&gt;&lt;span&gt;None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+       &lt;&#x2F;span&gt;&lt;span&gt;None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(AppError::MissingQuery),
+&lt;&#x2F;span&gt;&lt;span&gt;    };
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; filename &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= match&lt;&#x2F;span&gt;&lt;span&gt; args.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;next&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;        Some(arg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; arg,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-       &lt;&#x2F;span&gt;&lt;span&gt;None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+       &lt;&#x2F;span&gt;&lt;span&gt;None &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; return &lt;&#x2F;span&gt;&lt;span&gt;Err(AppError::MissingFilename),
+&lt;&#x2F;span&gt;&lt;span&gt;    };
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; --snip--
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;运行函数中的第三个错误，只需要我们更新它的返回类型，因为 &lt;code&gt;?&lt;&#x2F;code&gt; 操作符已经负责将错误冒出来，并在发生时返回。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;- pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;run&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: Config) -&amp;gt; Result&amp;lt;(), Box&amp;lt;dyn Error&amp;gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;run&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: Config) -&amp;gt; Result&amp;lt;(), AppError&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;好了，现在我们正在使用我们的错误变体，一旦发生，这些错误变体将被浮现到我们的 &lt;code&gt;main&lt;&#x2F;code&gt; 函数中并打印出来。但是我们不再有之前定义的实际错误信息了！我们可以用 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 注释错误变体。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;yong-thiserror-zhu-shi-cuo-wu-bian-ti&quot;&gt;用 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 注释错误变体&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;thiserror&lt;&#x2F;code&gt; &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;thiserror&#x2F;1.0.24&#x2F;thiserror&#x2F;&quot;&gt;crate&lt;&#x2F;a&gt; 是一个常用的工具，它提供了一种符合人体工程学的方式来格式化 Rust 库中的错误信息。&lt;&#x2F;p&gt;
+&lt;p&gt;它允许我们在 &lt;code&gt;AppError&lt;&#x2F;code&gt; 枚举中用我们希望显示给最终用户的实际错误信息来注解每个变体。&lt;&#x2F;p&gt;
+&lt;p&gt;让我们在 Cargo.toml 中添加它作为依赖。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;toml&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-toml &quot;&gt;&lt;code class=&quot;language-toml&quot; data-lang=&quot;toml&quot;&gt;&lt;span&gt;[dependencies]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;thiserror &lt;&#x2F;span&gt;&lt;span&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;1&amp;quot;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在 &lt;code&gt;src&#x2F;error.rs&lt;&#x2F;code&gt; 中，我们将把 &lt;code&gt;thiserror::Error&lt;&#x2F;code&gt; trait 带入作用域，并让我们的 &lt;code&gt;AppError&lt;&#x2F;code&gt; 类型派生它。我们需要派生这个 trait，以便用 &lt;code&gt;#[error]&lt;&#x2F;code&gt; 块来注解每个枚举变量。现在我们指定我们希望为每个特定变量显示的错误信息。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ use &lt;&#x2F;span&gt;&lt;span&gt;std::io;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ use &lt;&#x2F;span&gt;&lt;span&gt;thiserror::Error;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;- &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug, Error)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingQuery,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingFilename,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Could not load config&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    ConfigLoad {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+       &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;from&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+&lt;&#x2F;span&gt;&lt;span&gt;       source: io::Error,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+   &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;ConfigLoad&lt;&#x2F;code&gt; 变体中增加了什么额外的东西？由于 &lt;code&gt;ConfigLoad&lt;&#x2F;code&gt; 错误只有在调用 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 出现底层错误时才会发生，所以 &lt;code&gt;ConfigLoad&lt;&#x2F;code&gt; 变体实际上做的是围绕底层I&#x2F;O错误提供额外的上下文。&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;thiserror&lt;&#x2F;code&gt; 允许我们通过用 &lt;code&gt;#[from]&lt;&#x2F;code&gt; 来注解一个低级错误，以将源码转换为我们自制的错误类型，从而将其包裹在额外的上下文中。这样一来，当一个I&#x2F;O错误发生时（比如我们指定了一个要搜索的文件，但实际上并不存在），我们就会得到这样一个错误。&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;Could not load config: Os { code: 2, kind: NotFound, message: &amp;quot;No such file or directory&amp;quot; }
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;如果没有它，产生的错误信息看起来像这样。&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;Os { code: 2, kind: NotFound, message: &amp;quot;No such file or directory&amp;quot; }
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;对于我们库的消费者来说，要想找出这个错误的来源是比较困难的，额外的上下文帮助很大。&lt;&#x2F;p&gt;
+&lt;p&gt;你可以在&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;seanchen1991&#x2F;error-handling-examples&#x2F;tree&#x2F;minigrep-thiserror&#x2F;examples&#x2F;minigrep&quot;&gt;这里&lt;&#x2F;a&gt;找到使用这个错误的 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 版本。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;geng-jia-shou-dong-de-fang-fa&quot;&gt;更加手动的方法&lt;&#x2F;h2&gt;
+&lt;p&gt;现在，我们将换个角度，看看如何在不将其作为依赖的情况下，实现与 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 相同的结果。&lt;&#x2F;p&gt;
+&lt;p&gt;在引擎盖下，&lt;code&gt;thiserror&lt;&#x2F;code&gt; 用程序宏执行了一些魔法，这对编译速度有明显的影响。在 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 的情况下，我们的错误变体很少，而且项目也很小，所以依赖 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 并不会增加多少编译时间，但是在一个更大更复杂的项目中，这可能是一个考虑因素。&lt;&#x2F;p&gt;
+&lt;p&gt;所以在这一点上，我们将把这篇文章撕掉，换成我们自己的手动实现来结束这篇文章。走这条路的好处是，我们只需要修改 &lt;code&gt;src&#x2F;error.rs&lt;&#x2F;code&gt; 文件就可以实现所有必要的改变（当然，除了从我们的 Cargo.toml 中删除 thiserror 之外）。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;toml&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-toml &quot;&gt;&lt;code class=&quot;language-toml&quot; data-lang=&quot;toml&quot;&gt;&lt;span&gt;[dependencies]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;-&lt;&#x2F;span&gt;&lt;span style=&quot;background-color:#e06c75;color:#fafafa;&quot;&gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;thiserror &lt;&#x2F;span&gt;&lt;span&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;1&amp;quot;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;让我们删除所有 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 提供给我们的注释。我们还将用 &lt;code&gt;std::error::Error&lt;&#x2F;code&gt; trait 替换 &lt;code&gt;thiserror::Error&lt;&#x2F;code&gt; trait。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;- use &lt;&#x2F;span&gt;&lt;span&gt;thiserror::Error;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ use &lt;&#x2F;span&gt;&lt;span&gt;std::error::Error;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;- &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Debug, Error)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Error)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingQuery,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    MissingFilename,
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-   &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Could not load config&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)]
+&lt;&#x2F;span&gt;&lt;span&gt;    ConfigLoad {
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;-      &lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;from&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;       source: io::Error,
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;为了恢复我们刚刚擦除的所有功能，我们需要做三件事。&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;&#x2F;code&gt; 实现 &lt;code&gt;Display&lt;&#x2F;code&gt; trait，这样我们的错误变体就可以显示给用户了。&lt;&#x2F;li&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;&#x2F;code&gt; 实现 &lt;code&gt;Error&lt;&#x2F;code&gt; trait。这个 trait 代表了对错误类型的基本期望，即它们实现了 &lt;code&gt;Display&lt;&#x2F;code&gt; 和 &lt;code&gt;Debug&lt;&#x2F;code&gt;，再加上获取错误底层源或原因的能力。&lt;&#x2F;li&gt;
+&lt;li&gt;为 &lt;code&gt;AppError&lt;&#x2F;code&gt; 实现 &lt;code&gt;From&amp;lt;io::Error&amp;gt;&lt;&#x2F;code&gt;。这是必要的，这样我们就可以将从 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 返回的I&#x2F;O错误转换为 &lt;code&gt;AppError&lt;&#x2F;code&gt; 的实例。&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;这里是我们对 &lt;code&gt;AppError&lt;&#x2F;code&gt; 的 &lt;code&gt;Display&lt;&#x2F;code&gt; trait 的实现。它将每个错误变量映射为一个字符串，并将其写入到 &lt;code&gt;Display&lt;&#x2F;code&gt;  formatter 中。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::fmt;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;fmt::Display &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;f&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;fmt::Formatter&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; fmt::Result {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::MissingQuery &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; f.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;write_str&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a query string&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::MissingFilename &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; f.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;write_str&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Didn&amp;#39;t get a file name&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::ConfigLoad { source } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;write!(f, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;Could not load config: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, source),
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;而这就是我们对 &lt;code&gt;Error&lt;&#x2F;code&gt; trait 的实现。要实现的主要方法是 &lt;code&gt;Error::source&lt;&#x2F;code&gt; 方法，它的目的是提供错误源的信息。对于我们的 &lt;code&gt;AppError&lt;&#x2F;code&gt; 类型，只有 &lt;code&gt;ConfigLoad&lt;&#x2F;code&gt; 会暴露任何底层源信息，即调用 &lt;code&gt;fs::read_to_string&lt;&#x2F;code&gt; 可能发生的I&#x2F;O错误。在其他错误变体的情况下，没有底层的源信息需要暴露。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::error;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;source&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; Option&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;(dyn Error + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;#39;static&lt;&#x2F;span&gt;&lt;span&gt;)&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::ConfigLoad { source } &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;Some(source),
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_ =&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;返回类型的 &lt;code&gt;&amp;amp;(dyn Error + &#x27;static&#x27;)&lt;&#x2F;code&gt; 部分类似于我们之前看到的 &lt;code&gt;Box&amp;lt;dyn Error&amp;gt;&lt;&#x2F;code&gt; trait 对象。这里的主要区别是，trait 对象是在一个不可变的引用后面，而不是 &lt;code&gt;Box&lt;&#x2F;code&gt; 指针。这里的 &lt;code&gt;&#x27;static&lt;&#x2F;code&gt; lifetime 意味着 trait 对象本身只包含拥有的值，也就是说，它内部不存储任何引用。这是必要的，以便让编译器确信这里没有悬空指针的机会。&lt;&#x2F;p&gt;
+&lt;p&gt;最后，我们需要一种将 &lt;code&gt;io::Error&lt;&#x2F;code&gt; 转换为 &lt;code&gt;AppError&lt;&#x2F;code&gt; 的方法。我们将通过为 &lt;code&gt;AppError for From&amp;lt;io::error&amp;gt;&lt;&#x2F;code&gt; 来实现。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;From&amp;lt;io::Error&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;AppError {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;source&lt;&#x2F;span&gt;&lt;span&gt;: io::Error) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::ConfigLoad { source }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这个没什么好说的。如果我们得到一个 &lt;code&gt;io::Error&lt;&#x2F;code&gt;，我们要做的就是将其转换为 &lt;code&gt;AppError&lt;&#x2F;code&gt;，并将其封装在 &lt;code&gt;ConfigLoad&lt;&#x2F;code&gt; 变体中。&lt;&#x2F;p&gt;
+&lt;p&gt;这就是全部了，伙计们 你可以在&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;seanchen1991&#x2F;error-handling-examples&#x2F;tree&#x2F;main&#x2F;examples&#x2F;minigrep&quot;&gt;这里&lt;&#x2F;a&gt;找到这个版本的 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 实现。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;zong-jie&quot;&gt;总结&lt;&#x2F;h2&gt;
+&lt;p&gt;最后，我们讨论了《Rust编程语言》一书中介绍的原始 &lt;code&gt;minigrep&lt;&#x2F;code&gt; 实现在错误处理方面是如何有点欠缺的，以及如何考虑不同的错误处理用例。&lt;&#x2F;p&gt;
+&lt;p&gt;从那里，我们展示了如何使用 &lt;code&gt;thiserror&lt;&#x2F;code&gt; crate 将所有可能的错误变体集中到一个类型中。&lt;&#x2F;p&gt;
+&lt;p&gt;最后，我们剥开了 &lt;code&gt;thiserror&lt;&#x2F;code&gt; 提供的外衣，展示了如何手动复制同样的功能。&lt;&#x2F;p&gt;
+&lt;p&gt;希望大家能从这篇文章中学到一些东西!&lt;&#x2F;p&gt;
+&lt;p&gt;原文链接: https:&#x2F;&#x2F;dev.to&#x2F;seanchen1991&#x2F;a-beginner-s-guide-to-handling-errors-in-rust-40k2&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Std Error in Rust</title>
+        <published>2021-04-05T00:00:00+00:00</published>
+        <updated>2021-04-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/std-error-in-rust/"/>
+        <id>https://ohmycloud.github.io/notes/std-error-in-rust/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/std-error-in-rust/">&lt;h1 id=&quot;xue-xi-std-io-error&quot;&gt;学习 std::io::Error&lt;&#x2F;h1&gt;
+&lt;p&gt;在这篇文章中，我们将剖析 Rust 标准库中 std::io::Error 类型的实现。相关代码在这里：&lt;code&gt;library&#x2F;std&#x2F;src&#x2F;io&#x2F;error.rs&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;你可以把这篇文章看成是其中之一。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;一个标准库的特定位的研究&lt;&#x2F;li&gt;
+&lt;li&gt;一个高级错误管理指南&lt;&#x2F;li&gt;
+&lt;li&gt;一个漂亮的 API 设计案例&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;文章要求基本熟悉 Rust 错误处理。&lt;&#x2F;p&gt;
+&lt;p&gt;在设计一个用于 &lt;code&gt;Result&amp;lt;T，E&amp;gt;&lt;&#x2F;code&gt; 的 Error 类型时，主要的问题是&quot;如何使用这个错误？&quot;。通常，以下情况之一为真。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;错误被程序化处理。消费者检查错误，所以它的内部结构需要在合理的程度上暴露出来。&lt;&#x2F;li&gt;
+&lt;li&gt;错误被传播并显示给用户。消费者不检查 &lt;code&gt;fmt::Display&lt;&#x2F;code&gt; 之外的错误；所以它的内部结构可以被封装。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;请注意，暴露实现细节和封装细节之间存在紧张关系。实现第一种情况的常见反模式是定义一个厨房水槽枚举。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  Tokio(tokio::io::Error),
+&lt;&#x2F;span&gt;&lt;span&gt;  ConnectionDiscovery {
+&lt;&#x2F;span&gt;&lt;span&gt;    path: PathBuf,
+&lt;&#x2F;span&gt;&lt;span&gt;    reason: String,
+&lt;&#x2F;span&gt;&lt;span&gt;    stderr: String,
+&lt;&#x2F;span&gt;&lt;span&gt;  },
+&lt;&#x2F;span&gt;&lt;span&gt;  Deserialize {
+&lt;&#x2F;span&gt;&lt;span&gt;    source: serde_json::Error,
+&lt;&#x2F;span&gt;&lt;span&gt;    data: String,
+&lt;&#x2F;span&gt;&lt;span&gt;  },
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  Generic(String),
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这种方法有很多问题。&lt;&#x2F;p&gt;
+&lt;p&gt;首先，从底层库中暴露错误会使它们成为你的公共 API 的一部分。在你的依赖关系中的主要 semver bump 会要求你也做一个新的主要版本。&lt;&#x2F;p&gt;
+&lt;p&gt;其次，它将所有的实现细节都固定下来。例如，如果你注意到 ConnectionDiscovery 的大小是巨大的，那么将这个变体装箱将是一个突破性的变化。&lt;&#x2F;p&gt;
+&lt;p&gt;第三，它通常表明了一个更大的设计问题。厨房水槽错误将不同的故障模式打包成一种类型。但是，如果故障模式差异很大，处理起来可能就不合理了! 这说明情况看起来更像案例二。&lt;&#x2F;p&gt;
+&lt;p&gt;错误厨房水槽病的一个经常有效的治疗方法是将错误推送给调用者的模式。&lt;&#x2F;p&gt;
+&lt;p&gt;考虑这个例子:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;my_function&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; Result&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;, MyError&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; thing &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;dep_function&lt;&#x2F;span&gt;&lt;span&gt;()&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;?&lt;&#x2F;span&gt;&lt;span&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;  Ok(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;92&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;my_function&lt;&#x2F;code&gt; 调用 &lt;code&gt;dep_function&lt;&#x2F;code&gt;，所以 &lt;code&gt;MyError&lt;&#x2F;code&gt; 应该可以从 &lt;code&gt;DepError&lt;&#x2F;code&gt; 转换过来。更好的写法可能是这样的。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;my_function&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;thing&lt;&#x2F;span&gt;&lt;span&gt;: DepThing) -&amp;gt; Result&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;, MyError&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;  Ok(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;92&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在这个版本中，调用者被迫调用 &lt;code&gt;dep_function&lt;&#x2F;code&gt; 并处理其错误。这就用更多的类型交换了更多的类型安全。&lt;code&gt;MyError&lt;&#x2F;code&gt; 和 &lt;code&gt;DepError&lt;&#x2F;code&gt; 现在是不同的类型，调用者可以分别处理它们。如果 &lt;code&gt;DepError&lt;&#x2F;code&gt; 是 &lt;code&gt;MyError&lt;&#x2F;code&gt; 的变体，那么就需要进行运行时匹配。&lt;&#x2F;p&gt;
+&lt;p&gt;这个想法的一个极端版本是 &lt;code&gt;sans-io&lt;&#x2F;code&gt; 编程。大多数错误来自于 IO；如果你把所有的 IO 推给调用者，你就可以跳过大部分的错误处理。&lt;&#x2F;p&gt;
+&lt;p&gt;无论枚举方法多么糟糕，它确实实现了第一种情况的最大可检查性。&lt;&#x2F;p&gt;
+&lt;p&gt;以传播为中心的第二种情况下的错误管理，通常是通过使用盒状特质对象来处理。像 &lt;code&gt;Box&amp;lt;dyn std::error::Error&amp;gt;&lt;&#x2F;code&gt; 这样的类型可以从任何具体的错误中构造出来，可以通过 &lt;code&gt;Display&lt;&#x2F;code&gt; 打印出来，并且仍然可以选择通过动态下传来暴露底层错误。&lt;code&gt;Anyhow&lt;&#x2F;code&gt; crate 就是这种风格的一个很好的例子。&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 的例子很有趣，因为它想同时具备上述两种风格。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;这是 std，所以封装和面向未来是最重要的。&lt;&#x2F;li&gt;
+&lt;li&gt;来自操作系统的 IO 错误往往可以被处理（比如 EWOULDBLOCK）。&lt;&#x2F;li&gt;
+&lt;li&gt;对于系统编程语言来说，准确地暴露底层 OS 错误是很重要的。&lt;&#x2F;li&gt;
+&lt;li&gt;未来潜在的操作系统错误集是没有限制的。&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;io::Error&lt;&#x2F;code&gt; 也是一种词汇类型，应该可以表示一些不完全的 os 错误。例如，Rust Paths 可以包含内部的0字节，打开这样的路径应该在进行 &lt;code&gt;syscall&lt;&#x2F;code&gt; 之前返回一个 &lt;code&gt;io::Error&lt;&#x2F;code&gt;。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;下面是 &lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 的样子。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub struct &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;repr&lt;&#x2F;span&gt;&lt;span&gt;: Repr,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;enum &lt;&#x2F;span&gt;&lt;span&gt;Repr {
+&lt;&#x2F;span&gt;&lt;span&gt;  Os(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;  Simple(ErrorKind),
+&lt;&#x2F;span&gt;&lt;span&gt;  Custom(Box&amp;lt;Custom&amp;gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Custom {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;: ErrorKind,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;: Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;首先要注意的是，它内部是一个枚举，但这是一个隐藏得很好的实现细节。为了允许检查和处理各种错误条件，有一个单独的公共无字段种类枚举。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Clone, Copy)]
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;non_exhaustive&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub enum &lt;&#x2F;span&gt;&lt;span&gt;ErrorKind {
+&lt;&#x2F;span&gt;&lt;span&gt;  NotFound,
+&lt;&#x2F;span&gt;&lt;span&gt;  PermissionDenied,
+&lt;&#x2F;span&gt;&lt;span&gt;  Interrupted,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;  Other,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; ErrorKind {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(code) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;sys::decode_error_kind(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;code),
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(c) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; c.kind,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(kind) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; *&lt;&#x2F;span&gt;&lt;span&gt;kind,
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;虽然 ErrorKind 和 Repr 都是枚举，但公开暴露 ErrorKind 就没那么可怕了。一个 &lt;code&gt;#[non_exhaustive]Copy&lt;&#x2F;code&gt; 无字段枚举的设计空间是一个点 - 没有合理的替代方案或兼容性隐患。&lt;&#x2F;p&gt;
+&lt;p&gt;有些 &lt;code&gt;io::Errors&lt;&#x2F;code&gt; 只是原始的操作系统错误代码。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from_raw_os_error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;code&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; Error {
+&lt;&#x2F;span&gt;&lt;span&gt;    Error { repr: Repr::Os(code) }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;raw_os_error&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; Option&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(i) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;Some(i),
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;特定平台的 &lt;code&gt;sys::decode_error_kind&lt;&#x2F;code&gt; 函数负责将错误代码映射到 &lt;code&gt;ErrorKind&lt;&#x2F;code&gt; 枚举。所有这些都意味着代码可以通过检查 &lt;code&gt;.kind()&lt;&#x2F;code&gt; 来跨平台处理错误类别。然而，如果需要以一种依赖于操作系统的方式处理一个非常特殊的错误代码，这也是可能的。API 小心翼翼地提供了一个方便的抽象，而没有抽象掉重要的低级细节。&lt;&#x2F;p&gt;
+&lt;p&gt;一个 &lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 也可以从一个 &lt;code&gt;ErrorKind&lt;&#x2F;code&gt; 中构造出来。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;From&amp;lt;ErrorKind&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;: ErrorKind) -&amp;gt; Error {
+&lt;&#x2F;span&gt;&lt;span&gt;    Error { repr: Repr::Simple(kind) }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这提供了跨平台访问错误代码风格的错误处理。如果你需要尽可能快的错误，这很方便。&lt;&#x2F;p&gt;
+&lt;p&gt;最后，还有第三种完全自定义的变体表示。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;E&amp;gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;: ErrorKind, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;: E) -&amp;gt; Error
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;where
+&lt;&#x2F;span&gt;&lt;span&gt;    E: Into&amp;lt;Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self&lt;&#x2F;span&gt;&lt;span&gt;::_new(kind, error.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;into&lt;&#x2F;span&gt;&lt;span&gt;())
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;_new&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;: ErrorKind,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;: Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  ) -&amp;gt; Error {
+&lt;&#x2F;span&gt;&lt;span&gt;    Error {
+&lt;&#x2F;span&gt;&lt;span&gt;      repr: Repr::Custom(Box::new(Custom { kind, error })),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;get_ref&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  ) -&amp;gt; Option&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;(dyn error::Error + Send + Sync + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;#39;static&lt;&#x2F;span&gt;&lt;span&gt;)&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(c) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;Some(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;*&lt;&#x2F;span&gt;&lt;span&gt;c.error),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;into_inner&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  ) -&amp;gt; Option&amp;lt;Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;None,
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(c) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;Some(c.error),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;需要注意的地方。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;通用的 &lt;code&gt;new&lt;&#x2F;code&gt; 函数委托给单态的 &lt;code&gt;_new&lt;&#x2F;code&gt; 函数。这改善了编译时间，因为在单态化过程中需要重复的代码更少。我认为这也改善了一些运行时：&lt;code&gt;_new&lt;&#x2F;code&gt; 函数没有被标记为内联，所以会在调用处产生一个函数调用。这是好的，因为错误构造是冷路径，节省指令缓存是受欢迎的。&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;自定义变体被框住了 - 这是为了让整体 &lt;code&gt;size_of&lt;&#x2F;code&gt; 更小。错误的 &lt;code&gt;on-the-stack&lt;&#x2F;code&gt; 大小是很重要的：即使没有错误，你也要为此付出代价!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;这两种类型都是指&quot;静态错误&quot;。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;A &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=   &amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;(dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &amp;#39;static&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;B &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在 &lt;code&gt;dyn Trait + &#x27;_&lt;&#x2F;code&gt; 中，&lt;code&gt;&#x27;_&lt;&#x2F;code&gt; 被省略为 &lt;code&gt;&#x27;static&lt;&#x2F;code&gt;，除非 trait 对象是在引用后面，在这种情况下，它被省略为 &lt;code&gt;&amp;amp;&#x27;a dyn Trait + &#x27;a&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;get_ref&lt;&#x2F;code&gt;, &lt;code&gt;get_mut&lt;&#x2F;code&gt; 和 &lt;code&gt;into_inner&lt;&#x2F;code&gt; 提供了对底层错误的完全访问。类似于 &lt;code&gt;os_error&lt;&#x2F;code&gt; 的情况，抽象模糊了细节，但也提供了钩子来获取底层数据的原样。&lt;&#x2F;p&gt;
+&lt;p&gt;同样，Display 的实现揭示了内部表示的最重要细节。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;fmt::Display &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;fmt::Formatter&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; fmt::Result {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(code) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; detail &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;sys::os::error_string(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;code);
+&lt;&#x2F;span&gt;&lt;span&gt;        write!(fmt, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt; (os error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;)&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, detail, code)
+&lt;&#x2F;span&gt;&lt;span&gt;      }
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(kind) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;write!(fmt, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, kind.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_str&lt;&#x2F;span&gt;&lt;span&gt;()),
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(c) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; c.error.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;(fmt),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;综上所述，std::io::Error:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;封装了它的内部表现形式，并通过框定大的枚举变体来优化它。&lt;&#x2F;li&gt;
+&lt;li&gt;通过 &lt;code&gt;ErrorKind&lt;&#x2F;code&gt; 模式提供了一种方便的方法来处理基于类别的错误。&lt;&#x2F;li&gt;
+&lt;li&gt;完全暴露底层操作系统的错误（如果有的话）。&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;可以透明地包裹任何其他错误类型。&lt;&#x2F;p&gt;
+&lt;p&gt;最后一点意味着 &lt;code&gt;io::Error&lt;&#x2F;code&gt; 可以用于临时错误，因为 &lt;code&gt;&amp;amp;str&lt;&#x2F;code&gt; 和 String 可以转换为 &lt;code&gt;Box&amp;lt;dyn std::error::Error&amp;gt;&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;io::Error::new(io::ErrorKind::Other, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;something went wrong&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;它也可以作为 anyhow 的简单替换。我想一些库可能会用这个来简化他们的错误处理。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;io::Error::new(io::ErrorKind::InvalidData, my_specific_error)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;例如，&lt;code&gt;serde_json&lt;&#x2F;code&gt; 提供了以下方法。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from_reader&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;R, T&amp;gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;rdr&lt;&#x2F;span&gt;&lt;span&gt;: R) -&amp;gt; Result&amp;lt;T, serde_json::Error&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;where
+&lt;&#x2F;span&gt;&lt;span&gt;  R: Read,
+&lt;&#x2F;span&gt;&lt;span&gt;  T: DeserializeOwned,
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;读取会因为 &lt;code&gt;io::Error&lt;&#x2F;code&gt; 而失败，所以 &lt;code&gt;serde_json::Error&lt;&#x2F;code&gt; 需要能够在内部表示 &lt;code&gt;io::Error&lt;&#x2F;code&gt;。我认为这是倒退的 (但我不知道整个上下文，如果被证明是错的我会很高兴！)，签名应该是这样的。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from_reader&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;R, T&amp;gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;rdr&lt;&#x2F;span&gt;&lt;span&gt;: R) -&amp;gt; Result&amp;lt;T, io::Error&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;where
+&lt;&#x2F;span&gt;&lt;span&gt;  R: Read,
+&lt;&#x2F;span&gt;&lt;span&gt;  T: DeserializeOwned,
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;那么，&lt;code&gt;serde_json::Error&lt;&#x2F;code&gt; 就不会有 &lt;code&gt;Io&lt;&#x2F;code&gt; 的变体，而会以 &lt;code&gt;InvalidData&lt;&#x2F;code&gt; 的形式被藏到 &lt;code&gt;io::Error&lt;&#x2F;code&gt; 中。
+补遗, 2021-01-25&lt;&#x2F;p&gt;
+&lt;p&gt;重新阅读这篇文章，我现在认为正确的返回类型应该是：&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;from_reader&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;R, T&amp;gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;rdr&lt;&#x2F;span&gt;&lt;span&gt;: R,
+&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; Result&amp;lt;Result&amp;lt;T, serde_json::Error&amp;gt;, io::Error&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;where
+&lt;&#x2F;span&gt;&lt;span&gt;  R: Read,
+&lt;&#x2F;span&gt;&lt;span&gt;  T: DeserializeOwned,
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这迫使 IO 和反序列化错误分开处理，这在这种情况下是有意义的。IO 错误可能是程序领域之外的硬件&#x2F;环境问题，而序列化错误很可能是系统中的某个错误。&lt;&#x2F;p&gt;
+&lt;p&gt;我认为 &lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 是一个非常了不起的类型，它能够在没有太多妥协的情况下为许多不同的用例服务。但我们是否可以做得更好呢？&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 的首要问题是，当一个文件系统操作失败时，你不知道它是为哪个路径失败的。这是可以理解的 - Rust 是一种系统语言，所以它不应该比 OS 原生提供的东西增加多少脂肪。OS 返回的是一个整数返回代码，而将其与一个堆分配的 &lt;code&gt;PathBuf&lt;&#x2F;code&gt; 耦合在一起，可能是一个不可接受的开销!&lt;&#x2F;p&gt;
+&lt;p&gt;我很惊讶地得知，事实上，&lt;code&gt;std&lt;&#x2F;code&gt; 对每一个与路径相关的系统调用都会进行分配。&lt;&#x2F;p&gt;
+&lt;p&gt;它需要以某种形式存在。&lt;code&gt;OS API&lt;&#x2F;code&gt; 需要在字符串的结尾有一个不幸的零字节. 但我想知道对短路径使用堆栈分配的缓冲区是否有意义。可能不会 - 路径通常不会那么短，而且现代分配器能有效地处理瞬时分配。&lt;&#x2F;p&gt;
+&lt;p&gt;我不知道这里有什么明显的好办法。一个选择是在编译时（一旦我们得到 &lt;code&gt;std-aware cargo&lt;&#x2F;code&gt;）或运行时（&lt;code&gt;a-la RUST_BACKTRACE&lt;&#x2F;code&gt;）添加开关，以堆分配所有与路径相关的 IO 错误。一个类似形的问题是 &lt;code&gt;io::Error&lt;&#x2F;code&gt; 不携带 backtrace。&lt;&#x2F;p&gt;
+&lt;p&gt;另一个问题是，&lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 的效率不高。&lt;&#x2F;p&gt;
+&lt;p&gt;它的体积是相当大的。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;assert_eq!(size_of::&amp;lt;io::Error&amp;gt;(), &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;2 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;* &lt;&#x2F;span&gt;&lt;span&gt;size_of::&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;());
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;对于自定义的情况，会产生双重的间接和分配。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;enum &lt;&#x2F;span&gt;&lt;span&gt;Repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Os(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;      Simple(ErrorKind),
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; First Box :|
+&lt;&#x2F;span&gt;&lt;span&gt;      Custom(Box&amp;lt;Custom&amp;gt;),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Custom {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;kind&lt;&#x2F;span&gt;&lt;span&gt;: ErrorKind,
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Second Box :(
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;error&lt;&#x2F;span&gt;&lt;span&gt;: Box&amp;lt;dyn error::Error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Send &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span&gt;Sync&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;我想我们现在可以解决这个问题了&lt;&#x2F;p&gt;
+&lt;p&gt;首先，我们可以通过使用一个瘦的特质对象来摆脱双重内向性，比如失败或 anyhow。现在 GlobalAlloc 已经存在，这是一个比较直接的实现。&lt;&#x2F;p&gt;
+&lt;p&gt;其次，我们可以利用指针是对齐的这一事实，将 Os 和 Simple 变体都用最小的有效位集储藏到 usize 中。我认为我们甚至可以发挥创意，使用第二个最小有意义的位，把第一个位留作小众。这样一来，即使是像 &lt;code&gt;io::Result&amp;lt;i32&amp;gt;&lt;&#x2F;code&gt; 这样的东西，也可以是指针大小的!&lt;&#x2F;p&gt;
+&lt;p&gt;本篇文章到此结束。下一次你要为你的库设计一个错误类型的时候，花点时间去看看 &lt;code&gt;std::io::Error&lt;&#x2F;code&gt; 的源头，你可能会发现一些值得偷的东西。&lt;&#x2F;p&gt;
+&lt;p&gt;讨论在 &#x2F;r&#x2F;rust.Net 上进行。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;e-wai-de-mi-ti&quot;&gt;额外的谜题&lt;&#x2F;h2&gt;
+&lt;p&gt;看看实现中的这一行。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;fmt::Display &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;Error {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span&gt;fmt::Formatter&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;) -&amp;gt; fmt::Result {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match &amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.repr {
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Os(code) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; detail &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;sys::os::error_string(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span&gt;code);
+&lt;&#x2F;span&gt;&lt;span&gt;        write!(fmt, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt; (os error &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;)&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, detail, code)
+&lt;&#x2F;span&gt;&lt;span&gt;      }
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Simple(kind) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;write!(fmt, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, kind.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_str&lt;&#x2F;span&gt;&lt;span&gt;()),
+&lt;&#x2F;span&gt;&lt;span&gt;      Repr::Custom(c) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; c.error.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;fmt&lt;&#x2F;span&gt;&lt;span&gt;(fmt),
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;原文链接: https:&#x2F;&#x2F;matklad.github.io&#x2F;2020&#x2F;10&#x2F;15&#x2F;study-of-std-io-error.html&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

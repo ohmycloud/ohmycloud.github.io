@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>焉知非鱼 - dependency injection</title>
+    <link rel="self" type="application/atom+xml" href="https://ohmycloud.github.io/tags/dependency-injection/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://ohmycloud.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2021-04-05T00:00:00+00:00</updated>
+    <id>https://ohmycloud.github.io/tags/dependency-injection/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Call Site Dependency Injection</title>
+        <published>2021-04-05T00:00:00+00:00</published>
+        <updated>2021-04-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/call-site-dependency-injection/"/>
+        <id>https://ohmycloud.github.io/notes/call-site-dependency-injection/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/call-site-dependency-injection/">&lt;p&gt;本帖文档调用站点依赖注入模式。这是一个相当低级的样本，和企业 DI 没有什么关系。这个模式有点 Rust 特有。&lt;&#x2F;p&gt;
+&lt;p&gt;通常，当你实现一个需要用户提供一些功能的类型时，首先想到的是在构造函数中提供它。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Engine {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: Config,
+&lt;&#x2F;span&gt;&lt;span&gt;    ...
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Engine {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: Config) -&amp;gt; Engine { &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;go&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) { &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在这个例子中，我们实现了 Engine，调用者提供了 Config。&lt;&#x2F;p&gt;
+&lt;p&gt;另一种方法是将依赖关系传递给每个方法调用。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Engine {
+&lt;&#x2F;span&gt;&lt;span&gt;    ...
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Engine {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; Engine { &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;go&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;Config) { &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;在 Rust 中，后者(call-site injection)有时用 lifetime 更好。让我们来看看这些例子吧!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;lazy-zi-duan&quot;&gt;Lazy 字段&lt;&#x2F;h2&gt;
+&lt;p&gt;在第一个例子中，我们想根据其他字段惰性地计算一个字段的值。就像这样:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name_hash&lt;&#x2F;span&gt;&lt;span&gt;: Lazy&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;        Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;            name,
+&lt;&#x2F;span&gt;&lt;span&gt;            name_hash: Lazy::new(|| {
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;compute_hash&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.name)
+&lt;&#x2F;span&gt;&lt;span&gt;            }),
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这个设计的问题是在 Rust 中无法使用。Lazy 中的闭包需要访问 &lt;strong&gt;self&lt;&#x2F;strong&gt;，而这将创建一个自引用的数据结构!&lt;&#x2F;p&gt;
+&lt;p&gt;解决的办法是在使用 Lazy 的地方提供闭包。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name_hash&lt;&#x2F;span&gt;&lt;span&gt;: OnceCell&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;new&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;        Widget {
+&lt;&#x2F;span&gt;&lt;span&gt;            name,
+&lt;&#x2F;span&gt;&lt;span&gt;            name_hash: OnceCell::new(),
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;name_hash&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.name_hash.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;get_or_init&lt;&#x2F;span&gt;&lt;span&gt;(|| {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;compute_hash&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.name)
+&lt;&#x2F;span&gt;&lt;span&gt;        })
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;jian-jie-ha-xi-biao&quot;&gt;间接哈希表&lt;&#x2F;h2&gt;
+&lt;p&gt;下一个例子是关于将一个自定义的哈希函数插入到哈希表中。在 Rust 的标准库中，这只能在类型级别上实现，通过实现类型的 Hash 特性。更通用的设计是在运行时用哈希函数给表做参数。这是 &lt;code&gt;C++&lt;&#x2F;code&gt; 所做的。然而在 Rust 中，这就不够通用了。&lt;&#x2F;p&gt;
+&lt;p&gt;考虑一个字符串互译器，它将字符串存储在一个向量中，并额外维护一个基于哈希的索引。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Interner {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;vec&lt;&#x2F;span&gt;&lt;span&gt;: Vec&amp;lt;String&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;: HashSet&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Interner {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;intern&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;lookup&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;i&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;set&lt;&#x2F;strong&gt; 字段将字符串存储在一个哈希表中，但它是用相邻 &lt;strong&gt;vec&lt;&#x2F;strong&gt; 的索引来表示它们。&lt;&#x2F;p&gt;
+&lt;p&gt;用一个闭包来构造 &lt;strong&gt;set&lt;&#x2F;strong&gt; 不会成功，原因和 Lazy 一样 - 这将创建一个自引用结构。在 &lt;code&gt;C++&lt;&#x2F;code&gt; 中，存在一个变通的方法 - 可以将 &lt;strong&gt;vec&lt;&#x2F;strong&gt; 装箱，并在 &lt;strong&gt;Interner&lt;&#x2F;strong&gt; 和闭包之间共享一个稳定的指针。在 Rust 中，这会产生别名，阻止使用 &lt;strong&gt;&amp;amp;mut Vec&lt;&#x2F;strong&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;奇怪的是，在 std API 中，使用排序的 vec 而不是哈希是可行的。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;Interner {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;vec&lt;&#x2F;span&gt;&lt;span&gt;: Vec&amp;lt;String&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F; Invariant: sorted
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;: Vec&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;Interner {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;intern&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; idx &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.set.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;binary_search_by&lt;&#x2F;span&gt;&lt;span&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;idx&lt;&#x2F;span&gt;&lt;span&gt;| {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.vec[idx].&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;cmp&lt;&#x2F;span&gt;&lt;span&gt;(s)
+&lt;&#x2F;span&gt;&lt;span&gt;        });
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match&lt;&#x2F;span&gt;&lt;span&gt; idx {
+&lt;&#x2F;span&gt;&lt;span&gt;            Ok(idx) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.set[idx],
+&lt;&#x2F;span&gt;&lt;span&gt;            Err(idx) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; res &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.vec.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;len&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.vec.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(s.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;());
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;.set.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;insert&lt;&#x2F;span&gt;&lt;span&gt;(idx, res);
+&lt;&#x2F;span&gt;&lt;span&gt;                res
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;lookup&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;i&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这是因为闭包是在调用站点而不是在构造站点供给的。&lt;&#x2F;p&gt;
+&lt;p&gt;hashbrown crate 通过 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;hashbrown&#x2F;0.9.1&#x2F;hashbrown&#x2F;hash_map&#x2F;struct.HashMap.html#method.raw_entry_mut&quot;&gt;RawEntry&lt;&#x2F;a&gt; 为哈希提供了这种风格的 API。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;per-rong-qi-fen-pei-qi&quot;&gt;Per 容器分配器&lt;&#x2F;h2&gt;
+&lt;p&gt;第三个例子来自 Zig 编程语言。与 Rust 不同，Zig 没有一个祝福的全局分配器。相反，Zig 中的容器有两种风味。&quot;Managed&quot; 风味接受一个分配器作为构造参数，并将其存储为一个字段（&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;blob&#x2F;1590ed9d6aea95e5a21e3455e8edba4cdb374f2c&#x2F;lib&#x2F;std&#x2F;array_list.zig#L36-L43&quot;&gt;Source&lt;&#x2F;a&gt;）。而 &quot;Unmanaged&quot; 风味则在每个方法中添加一个分配器参数（&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;ziglang&#x2F;zig&#x2F;blob&#x2F;1590ed9d6aea95e5a21e3455e8edba4cdb374f2c&#x2F;lib&#x2F;std&#x2F;array_list.zig#L436-L440&quot;&gt;Source&lt;&#x2F;a&gt;）。&lt;&#x2F;p&gt;
+&lt;p&gt;第二种方式更节俭 - 可以用一个分配器引用与许多容器。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;pang-zhi-zhen&quot;&gt;胖指针&lt;&#x2F;h2&gt;
+&lt;p&gt;最后一个例子来自于 Rust 语言本身。为了实现动态调度，Rust 使用了胖指针，它有两个字宽。第一个字指向对象，第二个字指向 vtable。这些指针是在泛用具体类型的时候制造的。&lt;&#x2F;p&gt;
+&lt;p&gt;这与 &lt;code&gt;C++&lt;&#x2F;code&gt; 不同，&lt;code&gt;C++&lt;&#x2F;code&gt; 的 vtable 指针是在构造过程中嵌入到对象本身中的。&lt;&#x2F;p&gt;
+&lt;p&gt;看了这些例子后，我对 Scala 式的隐式参数很热衷。考虑一下这段带有 Zig 风格向量的 Rust 代码的假设。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; a &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;get_allocator&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; xs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Vec::new();
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let mut&lt;&#x2F;span&gt;&lt;span&gt; ys &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;Vec::new();
+&lt;&#x2F;span&gt;&lt;span&gt;    xs.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; a, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    ys.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;push&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; a, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这里的问题是 Drop - 释放向量需要访问分配器，而如何提供一个分配器并不清楚。Zig 通过使用 defer 语句而不是 destructors 躲避了这个问题。在使用隐式参数的 Rust 中，我想下面的方法可以用。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;implicit a: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;mut&lt;&#x2F;span&gt;&lt;span&gt; Allocator, T&amp;gt; Drop &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;Vec&amp;lt;T&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;最后，我想分享最后一个例子，CSDI 思维帮助我发现了一个更好的应用级架构。&lt;&#x2F;p&gt;
+&lt;p&gt;rust-analyzer 的很多行为是可以配置的。有嵌套提示的切换，完成度可以调整，一些功能根据编辑器的不同而有不同的工作方式。第一个实现是将一个全局的 Config 结构和其他分析状态一起存储。然后各个子系统读取这个 Config 的位。为了避免通过这个共享结构将不同的功能耦合在一起，配置键是动态的。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;Config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;HashMap&amp;lt;String, String&amp;gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;这个系统是可行的，但感觉相当笨拙。&lt;&#x2F;p&gt;
+&lt;p&gt;现在的实现要简单得多。现在每个方法都接受一个特定的 config 参数，而不是将一个单一的 Config 作为状态的一部分来存储。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;get_completions&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;analysis&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;Analysis,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;CompletionConfig,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;file&lt;&#x2F;span&gt;&lt;span&gt;: FileId,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;offset&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;usize&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;get_inlay_hints&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;analysis&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;Analysis,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;HintsConfig,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;file&lt;&#x2F;span&gt;&lt;span&gt;: FileId,
+&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;不仅代码更简单，而且更灵活。因为配置不再是状态的一部分，所以可以根据上下文的不同，对同一功能使用不同的配置。例如，显式调用的完成和异步的完成可能是不同的。&lt;&#x2F;p&gt;
+&lt;p&gt;在 &lt;a href=&quot;https:&#x2F;&#x2F;old.reddit.com&#x2F;r&#x2F;rust&#x2F;comments&#x2F;kmd41e&#x2F;blog_post_call_site_dependency_injection&#x2F;&quot;&gt;&#x2F;r&#x2F;rust&lt;&#x2F;a&gt; 上讨论。&lt;&#x2F;p&gt;
+&lt;p&gt;原文链接: https:&#x2F;&#x2F;matklad.github.io&#x2F;2020&#x2F;12&#x2F;28&#x2F;csdi.html&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

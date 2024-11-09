@@ -1,0 +1,70 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>交叉编译 OpenSSL</title><meta content="交叉编译 OpenSSL" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/2024-cross-compile-openssl/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="交叉编译 OpenSSL" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/2024-cross-compile-openssl/ property=twitter:url><meta content="交叉编译 OpenSSL" property=twitter:title><link href=https://ohmycloud.github.io/notes/2024-cross-compile-openssl/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>2024-cross-compile-openssl</span></div><time datetime=2024-04-11>Published on: <span class=accent-data>2024-04-11</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>交叉编译 OpenSSL</h1><p>Debian 交叉编译 rdkafka 时报错，直接在 centos7 上安装了 rustup, 但是需要安装一些环境：<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>yum</span><span> groupinstall </span><span style=color:#50a14f>"Development Tools"
+</span><span style=color:#e45649>yum</span><span> install cyrus-sasl-devel
+</span><span style=color:#e45649>yum</span><span> install cmake
+</span></code></pre><p>cmake 版本过低, 升级 cmake<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>yum</span><span> remove cmake</span><span style=color:#e45649> -f
+</span><span style=color:#e45649>wget -c</span><span> https://cmake.org/files/v3.22/cmake-3.22.6.tar.gz
+</span><span style=color:#e45649>gunzip -c</span><span> cmake-3.22.6.tar.gz </span><span style=color:#a626a4>| </span><span style=color:#e45649>tar</span><span> xopf -
+</span><span style=color:#0184bc>cd</span><span> cmake-3.22.6
+</span><span style=color:#e45649>./configure --prefix</span><span style=color:#a626a4>=</span><span>/usr/local/cmake
+</span><span style=color:#e45649>make </span><span style=color:#a626a4>&& </span><span style=color:#e45649>make</span><span> install
+</span><span style=color:#e45649>ln -s</span><span> /usr/local/cmake/bin/cmake /usr/bin/cmake
+</span><span>
+</span><span style=color:#e45649>$vim</span><span> /etc/profile
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>CMAKE_HOME</span><span style=color:#a626a4>=</span><span style=color:#50a14f>/usr/local/cmake
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>PATH</span><span style=color:#a626a4>=</span><span style=color:#50a14f>$</span><span style=color:#e45649>PATH</span><span style=color:#50a14f>:$</span><span style=color:#e45649>CMAKE_HOME</span><span style=color:#50a14f>/bin
+</span></code></pre><h2 id=jiao-cha-bian-yi>交叉编译</h2><pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>cargo</span><span> build</span><span style=color:#e45649> --release --target</span><span> x86_64-unknown-linux-musl
+</span></code></pre><p>编译的时候报错：<pre style=color:#383a42;background-color:#fafafa><code><span>
+</span><span>  --- stderr
+</span><span>  thread 'main' panicked at /home/sxw/.cargo/registry/src/index.crates.io-6f17d22bba15001f/sasl2-sys-0.1.20+2.1.28/build.rs:342:5:
+</span><span>  Unable to find libsasl2 on your system. Hints:
+</span><span>
+</span><span>    * Have you installed the libsasl2 development package for your platform?
+</span><span>      On Debian-based systems, try libsasl2-dev. On RHEL-based systems, try
+</span><span>      cyrus-sasl-devel. On macOS with Homebrew, try cyrus-sasl.
+</span><span>
+</span><span>    * Have you incorrectly set the SASL2_STATIC environment variable when your
+</span><span>      system only supports dynamic linking?
+</span><span>
+</span><span>    * Are you willing to enable the `vendored` feature to instead build and link
+</span><span>      against a bundled copy of libsasl2?
+</span><span>
+</span><span>  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+</span><span>warning: build failed, waiting for other jobs to finish...
+</span></code></pre><p>交叉编译失败。<p>使用 <code>cargo install cross --git https://github.com/cross-rs/cross</code> 进行交叉编译<p>交叉编译到 Windows:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>cargo</span><span> install cargo-xwin
+</span><span style=color:#e45649>rustup</span><span> target add x86_64-pc-windows-msvc
+</span><span style=color:#e45649>cargo</span><span> xwin build</span><span style=color:#e45649> --target</span><span> x86_64-pc-windows-msvc</span><span style=color:#e45649> --release
+</span></code></pre><p>或使用 zigbuild:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>cargo</span><span> install cargo-zigbuild
+</span><span style=color:#e45649>rustup</span><span> target add x86_64-pc-windows-msvc
+</span><span style=color:#e45649>cargo</span><span> zigbuild</span><span style=color:#e45649> --target</span><span> x86_64-pc-windows-msvc</span><span style=color:#e45649> --release
+</span></code></pre><pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>ln -s</span><span> /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm </span><span style=color:#a626a4>&&
+</span><span style=color:#e45649>ln -s</span><span> /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic </span><span style=color:#a626a4>&&
+</span><span style=color:#e45649>ln -s</span><span> /usr/include/linux /usr/include/x86_64-linux-musl/linux
+</span><span>
+</span><span style=color:#e45649>mkdir</span><span> /musl
+</span><span>
+</span><span>
+</span><span style=color:#e45649>wget</span><span> https://github.com/openssl/openssl/archive/OpenSSL_1_1_1f.tar.gz
+</span><span style=color:#e45649>tar</span><span> zxvf OpenSSL_1_1_1f.tar.gz
+</span><span style=color:#0184bc>cd</span><span> openssl-OpenSSL_1_1_1f/
+</span><span>
+</span><span style=color:#e45649>CC</span><span style=color:#a626a4>=</span><span style=color:#50a14f>"musl-gcc -fPIE -pie" </span><span style=color:#e45649>./Configure</span><span> no-shared no-async</span><span style=color:#e45649> --prefix</span><span style=color:#a626a4>=</span><span>/musl</span><span style=color:#e45649> --openssldir</span><span style=color:#a626a4>=</span><span>/musl/ssl linux-x86_64
+</span><span style=color:#e45649>make</span><span> depend
+</span><span style=color:#e45649>make -j$(nproc)
+</span><span style=color:#e45649>make</span><span> install
+</span></code></pre><p><code>openssl</code> 安装完成后, 导出环境配置:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>sudo</span><span> apt install musl-tools
+</span><span>
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>PKG_CONFIG_ALLOW_CROSS</span><span style=color:#a626a4>=</span><span style=color:#50a14f>1
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>OPENSSL_STATIC</span><span style=color:#a626a4>=</span><span style=color:#50a14f>true
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>OPENSSL_DIR</span><span style=color:#a626a4>=</span><span style=color:#50a14f>/musl
+</span><span style=color:#e45649>cargo</span><span> build</span><span style=color:#e45649> --target</span><span> x86_64-unknown-linux-musl</span><span style=color:#e45649> --release
+</span></code></pre><p>或<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>wget</span><span> https://www.openssl.org/source/openssl-1.0.1t.tar.gz
+</span><span style=color:#e45649>tar</span><span> xzf openssl-1.0.1t.tar.gz
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>MACHINE</span><span style=color:#a626a4>=</span><span style=color:#50a14f>armv7
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>ARCH</span><span style=color:#a626a4>=</span><span style=color:#50a14f>arm
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>CC</span><span style=color:#a626a4>=</span><span style=color:#50a14f>arm-linux-gnueabihf-gcc
+</span><span style=color:#0184bc>cd</span><span> openssl-1.0.1t </span><span style=color:#a626a4>&& </span><span style=color:#e45649>./config</span><span> shared </span><span style=color:#a626a4>&& </span><span style=color:#e45649>make </span><span style=color:#a626a4>&& </span><span style=color:#0184bc>cd</span><span> -
+</span><span>
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>OPENSSL_LIB_DIR</span><span style=color:#a626a4>=</span><span style=color:#e45649>~</span><span style=color:#50a14f>/openssl-1.0.1t/
+</span><span style=color:#a626a4>export </span><span style=color:#e45649>OPENSSL_INCLUDE_DIR</span><span style=color:#a626a4>=</span><span style=color:#e45649>~</span><span style=color:#50a14f>/openssl-1.0.1t/include
+</span><span style=color:#e45649>cargo</span><span> build</span><span style=color:#e45649> --target</span><span style=color:#a626a4>=</span><span>armv7-unknown-linux-gnueabi</span><span style=color:#e45649> --release
+</span></code></pre><p>参考了以下链接:<ul><li>https://users.rust-lang.org/t/cant-cross-compile-project-with-openssl/70922<li>https://blog.xco.moe/posts/rust_build_musl/<li>https://xuanwo.io/2021/10-rust-cross-aarch64/</ul><p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/cross-compile>/cross compile/</a> <a href=/tags/openssl>/openssl/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

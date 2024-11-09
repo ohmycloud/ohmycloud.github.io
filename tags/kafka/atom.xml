@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>焉知非鱼 - kafka</title>
+    <link rel="self" type="application/atom+xml" href="https://ohmycloud.github.io/tags/kafka/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://ohmycloud.github.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2021-04-14T00:00:00+00:00</updated>
+    <id>https://ohmycloud.github.io/tags/kafka/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Kafka 和 Rust入门 - 第一部分</title>
+        <published>2021-04-14T00:00:00+00:00</published>
+        <updated>2021-04-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/"/>
+        <id>https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/</id>
+        
+        <content type="html" xml:base="https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/">&lt;p&gt;这是一个两部分的系列，帮助你开始使用 Rust 和 Kafka。我们将使用 &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;fede1024&#x2F;rust-rdkafka&#x2F;&quot;&gt;rust-rdkafka&lt;&#x2F;a&gt; crate，它本身就是基于 &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;edenhill&#x2F;librdkafka&quot;&gt;librdkafka&lt;&#x2F;a&gt;（C库）的。&lt;&#x2F;p&gt;
+&lt;p&gt;在这篇文章中，我们将介绍 Kafka Producer API。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;chu-shi-she-zhi&quot;&gt;初始设置&lt;&#x2F;h2&gt;
+&lt;p&gt;确保你&lt;a href=&quot;https:&#x2F;&#x2F;kafka.apache.org&#x2F;downloads&quot;&gt;安装了一个 Kafka broker&lt;&#x2F;a&gt; - 本地设置应该足够了。当然，你也需要&lt;a href=&quot;https:&#x2F;&#x2F;www.rust-lang.org&#x2F;tools&#x2F;install&quot;&gt;安装Rust&lt;&#x2F;a&gt; - 你需要&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;fede1024&#x2F;rust-rdkafka#minimum-supported-rust-version-msrv&quot;&gt;1.45或以上版本&lt;&#x2F;a&gt;。&lt;&#x2F;p&gt;
+&lt;p&gt;在你开始之前，先克隆 GitHub repo。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;git&lt;&#x2F;span&gt;&lt;span&gt; clone https:&#x2F;&#x2F;github.com&#x2F;abhirockzz&#x2F;rust-kafka-101
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;cd&lt;&#x2F;span&gt;&lt;span&gt; part1
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;检查 Cargo.toml 文件:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;[dependencies]
+&lt;&#x2F;span&gt;&lt;span&gt;rdkafka = { version = &amp;quot;0.25&amp;quot;, features = [&amp;quot;cmake-build&amp;quot;,&amp;quot;ssl&amp;quot;] }
+&lt;&#x2F;span&gt;&lt;span&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;guan-yu-cmake-build-gong-neng-de-shuo-ming&quot;&gt;关于 cmake-build 功能的说明&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;rust-rdkafka&lt;&#x2F;code&gt; 提供了几种解决 &lt;code&gt;librdkafka&lt;&#x2F;code&gt; 依赖关系的方法。我选择了 &lt;code&gt;static&lt;&#x2F;code&gt; 链接，其中 &lt;code&gt;librdkafka&lt;&#x2F;code&gt; 被编译。不过你也可以选择 &lt;code&gt;dynamic&lt;&#x2F;code&gt; 链接来引用本地安装的版本。&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;更多内容，请&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;fede1024&#x2F;rust-rdkafka&#x2F;blob&#x2F;master&#x2F;rdkafka-sys&#x2F;README.md#features&quot;&gt;参考以下链接&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;好吧，我们先从基本的开始说起。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;jian-dan-de-sheng-chan-zhe&quot;&gt;简单的生产者&lt;&#x2F;h2&gt;
+&lt;p&gt;这里是一个基于 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;struct.BaseProducer.html&quot;&gt;BaseProducer&lt;&#x2F;a&gt; 的简单生产者。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; producer: BaseProducer &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;ClientConfig::new()
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;bootstrap.servers&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;localhost:9092&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;security.protocol&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;SASL_SSL&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;sasl.mechanisms&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;PLAIN&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;sasl.username&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&amp;lt;update&amp;gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;sasl.password&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&amp;lt;update&amp;gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;create&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;invalid producer config&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;send&lt;&#x2F;code&gt; 方法开始产生消息 - 它是在紧缩 &lt;code&gt;loop&lt;&#x2F;code&gt; 中完成的，中间有一个 &lt;code&gt;thread::sleep&lt;&#x2F;code&gt;(不是在生产中会做的事情)，以使其更容易追踪&#x2F;跟踪结果。键、值（有效载荷）和目标 Kafka 主题以 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;struct.BaseRecord.html&quot;&gt;BaseRecord&lt;&#x2F;a&gt; 的形式表示。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for&lt;&#x2F;span&gt;&lt;span&gt; i &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;..&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;100 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;sending message&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;        producer
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;                BaseRecord::to(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;rust&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;key&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;format!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;key-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, i))
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;payload&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;format!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;value-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, i)),
+&lt;&#x2F;span&gt;&lt;span&gt;            )
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;failed to send message&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;        thread::sleep(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;你可以在文件 &lt;code&gt;src&#x2F;1_producer_simple.rs&lt;&#x2F;code&gt; 中查看整个代码。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;yao-ce-shi-sheng-chan-zhe-shi-fou-zai-gong-zuo&quot;&gt;要测试生产者是否在工作 ...&lt;&#x2F;h2&gt;
+&lt;p&gt;运行这段代码:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;只需将文件 &lt;code&gt;src&#x2F;1_producer_simple.rs&lt;&#x2F;code&gt; 重命名为 &lt;code&gt;main.rs&lt;&#x2F;code&gt;。&lt;&#x2F;li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;你应该看到这个输出:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;到底发生了什么？要弄清楚 - 使用 Kafka CLI 消费者（或其他消费者客户端，如 kafkacat）连接到你的 Kafka 主题（我在上面的例子中使用 rust 作为 Kafka 主题的名称）。你应该看到消息流进来了。&lt;&#x2F;p&gt;
+&lt;p&gt;例如&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;KAFKA_HOME&#x2F;bin&#x2F;kafka-console-consumer.sh --bootstrap-server&lt;&#x2F;span&gt;&lt;span&gt; localhost:9092&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --topic&lt;&#x2F;span&gt;&lt;span&gt; rust&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --from-beginning
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;sheng-chan-zhe-hui-diao&quot;&gt;生产者回调&lt;&#x2F;h2&gt;
+&lt;p&gt;我们现在是在瞎飞! 除非我们明确地创建一个消费者来查看我们的消息，否则我们不知道它们是否被发送到 Kafka。让我们通过实现 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;trait.ProducerContext.html&quot;&gt;ProducerContext&lt;&#x2F;a&gt;(trait)来解决这个问题，以挂接到 produce 事件 - 它就像一个回调。&lt;&#x2F;p&gt;
+&lt;p&gt;首先为 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;client&#x2F;trait.ClientContext.html&quot;&gt;ClientContext&lt;&#x2F;a&gt; trait 创建一个结构体和一个空的实现（这是必须的）。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;ProducerCallbackLogger;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;ClientContext &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;ProducerCallbackLogger {}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;现在到了主要部分，我们在 &lt;code&gt;ProducerContext&lt;&#x2F;code&gt; trait 中实现 &lt;code&gt;delivery&lt;&#x2F;code&gt; 函数。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;ProducerContext &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;ProduceCallbackLogger {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span&gt;DeliveryOpaque &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;delivery&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;delivery_result&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;rdkafka::producer::DeliveryResult&amp;lt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;_delivery_opaque&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;Self::&lt;&#x2F;span&gt;&lt;span&gt;DeliveryOpaque,
+&lt;&#x2F;span&gt;&lt;span&gt;    ) {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; dr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; delivery_result.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_ref&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;match&lt;&#x2F;span&gt;&lt;span&gt; dr {
+&lt;&#x2F;span&gt;&lt;span&gt;            Ok(msg) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; key: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str =&lt;&#x2F;span&gt;&lt;span&gt; msg.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;key_view&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;                println!(
+&lt;&#x2F;span&gt;&lt;span&gt;                    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;produced message with key &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt; in offset &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt; of partition &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;                    key,
+&lt;&#x2F;span&gt;&lt;span&gt;                    msg.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;offset&lt;&#x2F;span&gt;&lt;span&gt;(),
+&lt;&#x2F;span&gt;&lt;span&gt;                    msg.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;partition&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;                )
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;            Err(producer_err) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;=&amp;gt; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; key: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;str =&lt;&#x2F;span&gt;&lt;span&gt; producer_err.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;1.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;key_view&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;                println!(
+&lt;&#x2F;span&gt;&lt;span&gt;                    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;failed to produce message with key &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt; - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;                    key, producer_err.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;                )
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;我们根据 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;type.DeliveryResult.html&quot;&gt;DeliveryResult&lt;&#x2F;a&gt;(毕竟它是一个 &lt;code&gt;Result&lt;&#x2F;code&gt;)来匹配成功(&lt;code&gt;Ok&lt;&#x2F;code&gt;)和失败(&lt;code&gt;Err&lt;&#x2F;code&gt;)的情况。我们所做的只是简单地记录这两种情况下的消息，因为这只是一个例子。你可以在这里做任何你想做的事情（虽然不要太疯狂！）。&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;我们忽略了 &lt;code&gt;ProducerContext&lt;&#x2F;code&gt; trait 的关联类型 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;trait.ProducerContext.html#associatedtype.DeliveryOpaque&quot;&gt;DeliveryOpaque&lt;&#x2F;a&gt;。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;我们需要确保我们插入了 &lt;code&gt;ProducerContext&lt;&#x2F;code&gt; 的实现。我们通过使用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;config&#x2F;struct.ClientConfig.html#method.create_with_context&quot;&gt;create_with_context&lt;&#x2F;a&gt; 方法（而不是 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;config&#x2F;struct.ClientConfig.html#method.create&quot;&gt;create&lt;&#x2F;a&gt;）来实现，并确保为 &lt;code&gt;BaseProducer&lt;&#x2F;code&gt; 提供正确的类型。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; producer: BaseProducer&amp;lt;ProduceCallbackLogger&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;ClientConfig::new().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;set&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt;.)
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;create_with_context&lt;&#x2F;span&gt;&lt;span&gt;(ProduceCallbackLogger {})
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;ru-he-diao-yong-hui-diao&quot;&gt;如何调用 &quot;回调&quot;？&lt;&#x2F;h2&gt;
+&lt;p&gt;好了，我们有了实现，但我们需要一种方法来触发它! 其中一个方法就是在生产者上调用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;struct.BaseProducer.html#method.flush&quot;&gt;flush&lt;&#x2F;a&gt;。所以，我们可以把我们的 producer 写成这样。&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;添加 &lt;code&gt;producer.flush(Duration::from_secs(3));&lt;&#x2F;code&gt;, 并&lt;&#x2F;li&gt;
+&lt;li&gt;注释掉 &lt;code&gt;sleep&lt;&#x2F;code&gt; (just for now)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;        producer
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;                BaseRecord::to(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;rust&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;key&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;format!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;key-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, i))
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;payload&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;format!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;value-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, i)),
+&lt;&#x2F;span&gt;&lt;span&gt;            )
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;failed to send message&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        producer.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;flush&lt;&#x2F;span&gt;&lt;span&gt;(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span&gt;        println!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;flushed message&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F;thread::sleep(Duration::from_secs(3));
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;deng-deng-wo-men-ke-yi-zuo-de-geng-hao&quot;&gt;等等，我们可以做得更好&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;send&lt;&#x2F;code&gt; 方法是非阻塞的（默认），但通过在每次 &lt;code&gt;send&lt;&#x2F;code&gt; 后调用 &lt;code&gt;flush&lt;&#x2F;code&gt;，我们现在已经将其转换为同步调用 - 从性能角度来看，不推荐使用。&lt;&#x2F;p&gt;
+&lt;p&gt;我们可以通过使用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;struct.ThreadedProducer.html&quot;&gt;ThreadedProducer&lt;&#x2F;a&gt; 来改善这种情况。它负责在后台线程中调用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;producer&#x2F;base_producer&#x2F;struct.BaseProducer.html#method.poll&quot;&gt;poll&lt;&#x2F;a&gt; 方法，以确保发送回调通知的传递。这样做非常简单 - 只需将类型从 &lt;code&gt;BaseProducer&lt;&#x2F;code&gt; 改为 &lt;code&gt;ThreadedProducer&lt;&#x2F;code&gt; 即可!&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span&gt; before: BaseProducer&amp;lt;ProduceCallbackLogger&amp;gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;#&lt;&#x2F;span&gt;&lt;span&gt; after: ThreadedProducer&amp;lt;ProduceCallbackLogger&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;而且，我们也不需要再调用 &lt;code&gt;flush&lt;&#x2F;code&gt; 了。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F;producer.flush(Duration::from_secs(3));
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F;println!(&amp;quot;flushed message&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;thread::sleep(Duration::from_secs(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;));
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;代码在 &lt;code&gt;src&#x2F;2_threaded_producer.rs&lt;&#x2F;code&gt; 中可以找到。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;zai-ci-yun-xing-gai-cheng-xu&quot;&gt;再次运行该程序&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;将文件 &lt;code&gt;src&#x2F;2_threaded_producer.rs&lt;&#x2F;code&gt; 重命名为 &lt;code&gt;main.rs&lt;&#x2F;code&gt;，并且&lt;&#x2F;li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;输出:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;produced message with key key-1 in offset 6 of partition 2
+&lt;&#x2F;span&gt;&lt;span&gt;produced message with key key-2 in offset 3 of partition 0
+&lt;&#x2F;span&gt;&lt;span&gt;sending message
+&lt;&#x2F;span&gt;&lt;span&gt;produced message with key key-3 in offset 7 of partition 2
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;正如预期的那样，你应该能够看到生产者事件回调，表示消息确实被发送到了 Kafka 主题。当然，你可以直接连接到主题，并再次检查，就像之前一样。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;KAFKA_HOME&#x2F;bin&#x2F;kafka-console-consumer.sh --bootstrap-server&lt;&#x2F;span&gt;&lt;span&gt; localhost:9092&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --topic&lt;&#x2F;span&gt;&lt;span&gt; rust&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --from-beginning
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;要尝试失败的情况，请尝试使用一个不正确的主题名称，并注意 &lt;code&gt;delivery&lt;&#x2F;code&gt; 实现的 &lt;code&gt;Err&lt;&#x2F;code&gt; 变体是如何被调用的。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;fa-song-json-xiao-xi&quot;&gt;发送 JSON 消息&lt;&#x2F;h2&gt;
+&lt;p&gt;到目前为止，我们只是发送 &lt;code&gt;String&lt;&#x2F;code&gt; 作为 key 和 value。JSON 是一种常用的消息格式，让我们看看如何使用它。&lt;&#x2F;p&gt;
+&lt;p&gt;假设我们要发送 &lt;code&gt;User&lt;&#x2F;code&gt; 信息，将使用这个结构体来表示。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;User {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;id&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;email&lt;&#x2F;span&gt;&lt;span&gt;: String,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;然后我们可以使用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.serde.rs&#x2F;serde_json&#x2F;&quot;&gt;serde_json&lt;&#x2F;a&gt; 库将其序列化为 JSON。我们所需要的就是使用 &lt;a href=&quot;https:&#x2F;&#x2F;serde.rs&#x2F;derive.html&quot;&gt;serde 中的自定义派生函数&lt;&#x2F;a&gt; - &lt;code&gt;Deserialize&lt;&#x2F;code&gt; 和 &lt;code&gt;Serialize&lt;&#x2F;code&gt;。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;serde::{Deserialize, Serialize};
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Serialize, Deserialize, Debug)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;User {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;id&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;i32&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;email&lt;&#x2F;span&gt;&lt;span&gt;: String,
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;xiu-gai-sheng-chan-zhe-xun-huan&quot;&gt;修改生产者循环。&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;创建一个 &lt;code&gt;User&lt;&#x2F;code&gt; 实例&lt;&#x2F;li&gt;
+&lt;li&gt;使用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.serde.rs&#x2F;serde_json&#x2F;fn.to_string_pretty.html&quot;&gt;to_string_pretty&lt;&#x2F;a&gt; 将其序列化为 JSON 字符串。&lt;&#x2F;li&gt;
+&lt;li&gt;在有效载荷中加入这一点&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; user_json &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;serde_json::to_string_pretty(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;user).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;json serialization failed&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        producer
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;                BaseRecord::to(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;rust&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;key&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;format!(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;user-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;, i))
+&lt;&#x2F;span&gt;&lt;span&gt;                    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;payload&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;user_json),
+&lt;&#x2F;span&gt;&lt;span&gt;            )
+&lt;&#x2F;span&gt;&lt;span&gt;            .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;failed to send message&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;你也可以使用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.serde.rs&#x2F;serde_json&#x2F;fn.to_vec.html&quot;&gt;to_vec&lt;&#x2F;a&gt;(而不是 &lt;code&gt;to_string()&lt;&#x2F;code&gt;)将其转换为一个字节的&lt;code&gt;Vec&lt;&#x2F;code&gt;(&lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;&#x2F;code&gt;)。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;yao-yun-xing-gai-cheng-xu&quot;&gt;要运行该程序...&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;将文件 &lt;code&gt;src&#x2F;3_JSON_payload.rs&lt;&#x2F;code&gt; 重命名为 &lt;code&gt;main.rs&lt;&#x2F;code&gt;，然后&lt;&#x2F;li&gt;
+&lt;li&gt;执行 &lt;code&gt;cargo run&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;从主题中消费:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;KAFKA_HOME&#x2F;bin&#x2F;kafka-console-consumer.sh --bootstrap-server&lt;&#x2F;span&gt;&lt;span&gt; localhost:9092&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --topic&lt;&#x2F;span&gt;&lt;span&gt; rust&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt; --from-beginning
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;你应该看到带有 &lt;code&gt;String&lt;&#x2F;code&gt; 的键（如 &lt;code&gt;user-34&lt;&#x2F;code&gt;）和 JSON 值的消息。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;id&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;34&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;email&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;user-34@foobar.com&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;you-geng-hao-de-fang-fa-ma&quot;&gt;有更好的方法吗？&lt;&#x2F;h2&gt;
+&lt;p&gt;是的！如果你习惯了 Kafka Java 客户端中的声明式序列化&#x2F;去序列化方法（可能其他客户端也一样），你可能不喜欢这种 &quot;显式&quot; 方法。只是为了让大家明白，这是你在 Java 中的做法。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;java&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-java &quot;&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;Properties&lt;&#x2F;span&gt;&lt;span&gt; props &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= new &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;Properties&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;props.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;put&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;ProducerConfig&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;BOOTSTRAP_SERVERS_CONFIG&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;localhost:9092&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;props.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;put&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;ProducerConfig&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;KEY_SERIALIZER_CLASS_CONFIG&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;org.apache.kafka.common.serialization.StringSerializer&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;props.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;put&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;ProducerConfig&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;VALUE_SERIALIZER_CLASS_CONFIG&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;....
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;ProducerRecord&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;String&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;User&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt; record &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= new &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;ProducerRecord&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;String&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c18401;&quot;&gt;User&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;(topic, key, user);
+&lt;&#x2F;span&gt;&lt;span&gt;producer.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span&gt;(record);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;请注意，您只需将 &lt;code&gt;Producer&lt;&#x2F;code&gt; 配置为使用 &lt;code&gt;KafkaJsonSchemaSerializer&lt;&#x2F;code&gt;，&lt;code&gt;User&lt;&#x2F;code&gt; 类就会被序列化为 JSON。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;&lt;code&gt;rust-rdkafka&lt;&#x2F;code&gt; 用 &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;rdkafka&#x2F;0.26.0&#x2F;rdkafka&#x2F;message&#x2F;trait.ToBytes.html&quot;&gt;ToBytes&lt;&#x2F;a&gt; trait 提供了类似的东西。下面是它的样子。&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;pub trait &lt;&#x2F;span&gt;&lt;span&gt;ToBytes {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a0a1a7;&quot;&gt;&#x2F;&#x2F;&#x2F; Converts the provided data to bytes.
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_bytes&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u8&lt;&#x2F;span&gt;&lt;span&gt;];
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;不言而喻吧？&lt;code&gt;String&lt;&#x2F;code&gt;、&lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;&#x2F;code&gt; 等都有现有的实现。所以你可以使用这些类型作为键或值，而不需要任何额外的工作 - 这正是我们刚刚做的。但问题是我们的方法是 &quot;显式&quot; 的，即我们将 &lt;code&gt;User&lt;&#x2F;code&gt; 结构转换为 JSON 字符串，并将其传递出去。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;ru-guo-wo-men-ke-yi-wei-user-shi-xian-tobytes-ni&quot;&gt;如果我们可以为 &lt;code&gt;User&lt;&#x2F;code&gt; 实现 &lt;code&gt;ToBytes&lt;&#x2F;code&gt; 呢？&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#fafafa;color:#383a42;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;impl &lt;&#x2F;span&gt;&lt;span&gt;ToBytes &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;for &lt;&#x2F;span&gt;&lt;span&gt;User {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;to_bytes&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;u8&lt;&#x2F;span&gt;&lt;span&gt;] {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; b &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;serde_json::to_vec_pretty(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a626a4;&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#e45649;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#50a14f;&quot;&gt;&amp;quot;json serialization failed&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;        b.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#0184bc;&quot;&gt;as_slice&lt;&#x2F;span&gt;&lt;span&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;你会看到一个编译器错误。&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#fafafa;color:#383a42;&quot;&gt;&lt;code&gt;&lt;span&gt;cannot return value referencing local variable `b`
+&lt;&#x2F;span&gt;&lt;span&gt;returns a value referencing data owned by the current function
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;更多的背景资料，请参考 &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;fede1024&#x2F;rust-rdkafka&#x2F;issues&#x2F;128&quot;&gt;GitHub&lt;&#x2F;a&gt; 的问题。我很乐意看到其他可以与 &lt;code&gt;ToBytes&lt;&#x2F;code&gt; 一起工作的例子 - 如果你有这方面的意见，请在留言中留下。&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;TL;DR是，最好坚持用 &quot;显式&quot; 的方式做事，除非你有一个 &lt;code&gt;ToBytes&lt;&#x2F;code&gt; 的实现，&quot;不涉及分配，不能失败&quot;。&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;zong-jie&quot;&gt;总结&lt;&#x2F;h2&gt;
+&lt;p&gt;第一部分就到这里。第二部分将涉及围绕 Kafka 消费者的话题。&lt;&#x2F;p&gt;
+&lt;p&gt;原文链接: https:&#x2F;&#x2F;dev.to&#x2F;abhirockzz&#x2F;getting-started-with-kafka-and-rust-part-1-4hkb&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

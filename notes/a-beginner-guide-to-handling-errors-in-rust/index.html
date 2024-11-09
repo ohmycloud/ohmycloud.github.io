@@ -1,0 +1,141 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Rust 中处理错误的初级指南</title><meta content="Rust 中处理错误的初级指南" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Rust 中处理错误的初级指南" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/ property=twitter:url><meta content="Rust 中处理错误的初级指南" property=twitter:title><link href=https://ohmycloud.github.io/notes/a-beginner-guide-to-handling-errors-in-rust/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>a-beginner-guide-to-handling-errors-in-rust</span></div><time datetime=2021-04-14>Published on: <span class=accent-data>2021-04-14</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Rust 中处理错误的初级指南</h1><p>《Rust 编程语言》中的示例项目对于向新的潜在 Rustaceans 介绍 Rust 的不同方面和特性是非常好的。在这篇文章中，我们将通过扩展《Rust 编程语言》中的 <code>minigrep</code> 项目，看看实现更强大的错误处理基础架构的一些不同方法。<p><code>minigrep</code> 项目在<a href=https://doc.rust-lang.org/book/ch12-00-an-io-project.html>第12章</a>中介绍，它引导读者构建一个简单版本的 <code>grep</code> 命令行工具，这是一个用于搜索文本的工具。例如，你会传入一个查询，你要搜索的文本，以及文本所在的文件名，然后得到包含查询文本的所有行。<p>这篇文章的目标是用更强大的错误处理模式来扩展本书的 <code>minigrep</code> 实现，这样你就能更好地了解 Rust 项目中处理错误的不同方法。<p>作为参考，你可以在<a href=https://github.com/seanchen1991/error-handling-examples/tree/minigrep-control/examples/minigrep>这里</a>找到本书的 <code>minigrep</code> 版本的最终代码。<h2 id=cuo-wu-chu-li-yong-li>错误处理用例</h2><p>当涉及到 Rust 项目的结构时，一个常见的模式是有一个 "库" 的部分和一个 "应用" 的部分，前者是主要的数据结构、函数和逻辑，后者是将库函数联系在一起。<p>你可以在原始 <code>minigrep</code> 代码的文件结构中看到这一点：应用逻辑存在于 <code>src/bin/main.rs</code> 文件中，它只是一个薄薄的包裹，包裹着在 <code>src/lib.rs</code> 文件中定义的数据结构和函数；主函数所做的就是调用 <code>minigrep::run</code>。<p>这一点很重要，因为取决于我们是在构建一个应用程序还是一个库，会改变我们处理错误的方式。<p>当涉及到一个应用程序时，最终用户很可能不想知道是什么原因导致了一个错误的琐碎细节。事实上，应用程序的最终用户可能只应该在错误无法恢复的情况下被通知错误。在这种情况下，提供关于为什么发生不可恢复的错误的细节也是有用的，特别是当它与用户输入有关时。如果某种可恢复的错误发生在后台，应用程序的消费者可能不需要知道它。<p>相反，当涉及到一个库时，最终用户是其他开发人员，他们正在使用该库并在其之上构建一些东西。在这种情况下，我们希望尽可能多地提供关于我们的库中发生的任何错误的相关细节。然后，库的消费者将决定他们想要如何处理这些错误。<p>那么，当我们的项目中既有库部分又有应用部分时，这两种方法是如何一起发挥作用的呢？<code>main</code> 函数执行 <code>minigrep::run</code> 函数，并输出结果中出现的任何错误。所以我们大部分的错误处理工作将集中在库部分。<h2 id=fu-xian-ku-cuo-wu>浮现库错误</h2><p>在 <code>src/lib.rs</code> 中，我们有两个函数，<code>Config::new</code> 和 <code>run</code>，它们可能会返回错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>Config {
+</span><span>    </span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>args</span><span>: env::Args) -> Result&LTConfig, </span><span style=color:#a626a4>&'static str</span><span>> {
+</span><span>        args.</span><span style=color:#0184bc>next</span><span>();
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> query </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>        Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span>        None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>),
+</span><span>    };
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> filename </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>        Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span>        None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>),
+</span><span>    };
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> case_sensitive </span><span style=color:#a626a4>= </span><span>env::var(</span><span style=color:#50a14f>"CASE_INSENSITIVE"</span><span>).</span><span style=color:#0184bc>is_err</span><span>();
+</span><span>
+</span><span>    Ok(Config {
+</span><span>        query,
+</span><span>        filename,
+</span><span>        case_sensitive,
+</span><span>    })
+</span><span>}
+</span><span>
+</span><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>run</span><span>(</span><span style=color:#e45649>config</span><span>: Config) -> Result<(), Box&LTdyn Error>> {
+</span><span>    </span><span style=color:#a626a4>let</span><span> contents </span><span style=color:#a626a4>= </span><span>fs::read_to_string(config.filename)</span><span style=color:#a626a4>?</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> results </span><span style=color:#a626a4>= if</span><span> config.case_sensitive {
+</span><span>        </span><span style=color:#0184bc>search</span><span>(</span><span style=color:#a626a4>&</span><span>config.query, </span><span style=color:#a626a4>&</span><span>contents)
+</span><span>    } </span><span style=color:#a626a4>else </span><span>{
+</span><span>        </span><span style=color:#0184bc>search_case_insensitive</span><span>(</span><span style=color:#a626a4>&</span><span>config.query, </span><span style=color:#a626a4>&</span><span>contents)
+</span><span>    };
+</span><span>
+</span><span>    </span><span style=color:#a626a4>for</span><span> line </span><span style=color:#a626a4>in</span><span> results {
+</span><span>        println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, line);
+</span><span>    }
+</span><span>
+</span><span>    Ok(())
+</span><span>}
+</span></code></pre><p>确切有三个地方在返回错误：两个错误发生在 <code>Config::new</code> 函数中，该函数返回一个 <code>Result&LTConfig，&'static str></code>。在这种情况下，<code>Result</code> 的错误变体是一个静态字符串切片。<p>在这里，当用户没有提供查询时，我们会返回一个错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>let</span><span> query </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>    Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span>    None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>),
+</span><span>};
+</span></code></pre><p>这里，当用户没有提供文件名时，我们会返回一个错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>let</span><span> filename </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>    Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span>    None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>),
+</span><span>};
+</span></code></pre><p>以这种方式将错误结构化为静态字符串的主要问题是，错误信息并没有被放置在一个中心位置，如果需要的话，我们可以轻松地重构它们。这也使得我们更难在相同类型的错误之间保持错误信息的一致性。<p>第三种错误发生在 <code>run</code> 函数的顶部，它返回一个 <code>Result<(), Box&LTdyn Error>></code>。在这种情况下，错误变体是一个实现 <code>Error</code> <a href=https://doc.rust-lang.org/std/error/trait.Error.html>trait</a> 的 trait 对象。换句话说，这个函数的错误变体是实现 <code>Error</code> trait 的类型的任何实例。<p>在这里，我们将调用 <code>fs::read_to_string</code> 时可能发生的任何错误冒出来。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>let</span><span> contents </span><span style=color:#a626a4>= </span><span>fs::read_to_string(config.filename)</span><span style=color:#a626a4>?</span><span>;
+</span></code></pre><p>这适用于调用 <code>fs::read_to_string</code> 时可能出现的错误，因为这个函数能够返回多种类型的错误。因此，我们需要一种方法来表示这些不同的可能的错误类型；它们之间的共同点是它们都实现了 <code>Error</code> trait！最终，我们要做的是定义所有这些错误类型。<p>最终，我们要做的是在一个中心位置定义所有这些不同类型的错误，并让它们都成为单一类型的变体。<h2 id=zai-yi-ge-zhong-xin-lei-xing-zhong-ding-yi-cuo-wu-bian-chong>在一个中心类型中定义错误变种</h2><p>我们将创建一个新的 <code>src/error.rs</code> 文件，并定义一个枚举 <code>AppError</code>，并在此过程中派生出 <code>Debug</code> trait，以便我们在需要时可以得到一个调试表示。我们将为这个枚举的每一个变体命名，使它们恰当地代表三种类型的错误。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>#[</span><span style=color:#e45649>derive</span><span>(Debug)]
+</span><span style=color:#a626a4>pub enum </span><span>AppError {
+</span><span>    MissingQuery,
+</span><span>    MissingFilename,
+</span><span>    ConfigLoad,
+</span><span>}
+</span></code></pre><p>第三个变体，<code>ConfigLoad</code>，映射到 <code>Config::run</code> 函数中调用 <code>fs::read_to_string</code> 时可能出现的错误。乍一看，这似乎有点不妥，因为如果该函数出现错误，那就是在读取提供的配置文件时出现了某种I/O问题。那么我们为什么不把它命名为 <code>IOError</code> 或者类似的东西呢？<p>在这种情况下，由于我们是将一个标准库函数的错误浮出水面，所以描述浮出水面的错误是如何影响它的，而不是简单地重申它，这与我们的应用更相关。当 <code>fs::read_to_string</code> 发生错误时，会阻止我们的 <code>Config</code> 加载，所以这就是为什么我们把它命名为 <code>ConfigLoad</code>。<p>现在我们有了这个类型，我们需要更新代码中所有返回错误的地方以利用这个 <code>AppError</code> 枚举。<h2 id=fan-hui-apperror-de-bian-ti>返回 <code>AppError</code> 的变体</h2><p>在我们的 <code>src/lib.rs</code> 文件的顶部，我们需要声明我们的错误模块，并将 <code>error::AppError</code> 带入作用域。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>mod </span><span>error;
+</span><span>
+</span><span style=color:#a626a4>use </span><span>error::AppError;
+</span></code></pre><p>在我们的 <code>Config::new</code> 函数中，我们需要更新我们作为错误返回静态字符串切片的地方，以及函数本身的返回类型。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>- pub fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>args</span><span>: env::Args) -> Result&LTConfig, </span><span style=color:#a626a4>&'static str</span><span>>
+</span><span style=color:#a626a4>+ pub fn </span><span style=color:#0184bc>new</span><span>(</span><span style=color:#a626a4>mut </span><span style=color:#e45649>args</span><span>: env::Args) -> Result&LTConfig, AppError>
+</span><span>    </span><span style=color:#a0a1a7>// --snip--
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> query </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>        Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span style=color:#a626a4>-       </span><span>None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>),
+</span><span style=color:#a626a4>+       </span><span>None </span><span style=color:#a626a4>=> return </span><span>Err(AppError::MissingQuery),
+</span><span>    };
+</span><span>
+</span><span>    </span><span style=color:#a626a4>let</span><span> filename </span><span style=color:#a626a4>= match</span><span> args.</span><span style=color:#0184bc>next</span><span>() {
+</span><span>        Some(arg) </span><span style=color:#a626a4>=></span><span> arg,
+</span><span style=color:#a626a4>-       </span><span>None </span><span style=color:#a626a4>=> return </span><span>Err(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>),
+</span><span style=color:#a626a4>+       </span><span>None </span><span style=color:#a626a4>=> return </span><span>Err(AppError::MissingFilename),
+</span><span>    };
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// --snip--
+</span></code></pre><p>运行函数中的第三个错误，只需要我们更新它的返回类型，因为 <code>?</code> 操作符已经负责将错误冒出来，并在发生时返回。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>- pub fn </span><span style=color:#0184bc>run</span><span>(</span><span style=color:#e45649>config</span><span>: Config) -> Result<(), Box&LTdyn Error>>
+</span><span style=color:#a626a4>+ pub fn </span><span style=color:#0184bc>run</span><span>(</span><span style=color:#e45649>config</span><span>: Config) -> Result<(), AppError>
+</span></code></pre><p>好了，现在我们正在使用我们的错误变体，一旦发生，这些错误变体将被浮现到我们的 <code>main</code> 函数中并打印出来。但是我们不再有之前定义的实际错误信息了！我们可以用 <code>thiserror</code> 注释错误变体。<h2 id=yong-thiserror-zhu-shi-cuo-wu-bian-ti>用 <code>thiserror</code> 注释错误变体</h2><p><code>thiserror</code> <a href=https://docs.rs/thiserror/1.0.24/thiserror/>crate</a> 是一个常用的工具，它提供了一种符合人体工程学的方式来格式化 Rust 库中的错误信息。<p>它允许我们在 <code>AppError</code> 枚举中用我们希望显示给最终用户的实际错误信息来注解每个变体。<p>让我们在 Cargo.toml 中添加它作为依赖。<pre class=language-toml data-lang=toml style=color:#383a42;background-color:#fafafa><code class=language-toml data-lang=toml><span>[dependencies]
+</span><span style=color:#e45649>thiserror </span><span>= </span><span style=color:#50a14f>"1"
+</span></code></pre><p>在 <code>src/error.rs</code> 中，我们将把 <code>thiserror::Error</code> trait 带入作用域，并让我们的 <code>AppError</code> 类型派生它。我们需要派生这个 trait，以便用 <code>#[error]</code> 块来注解每个枚举变量。现在我们指定我们希望为每个特定变量显示的错误信息。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>+ use </span><span>std::io;
+</span><span>
+</span><span style=color:#a626a4>+ use </span><span>thiserror::Error;
+</span><span>
+</span><span style=color:#a626a4>- </span><span>#[</span><span style=color:#e45649>derive</span><span>(Debug)]
+</span><span style=color:#a626a4>+ </span><span>#[</span><span style=color:#e45649>derive</span><span>(Debug, Error)]
+</span><span style=color:#a626a4>pub enum </span><span>AppError {
+</span><span style=color:#a626a4>+   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>)]
+</span><span>    MissingQuery,
+</span><span style=color:#a626a4>+   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>)]
+</span><span>    MissingFilename,
+</span><span style=color:#a626a4>+   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Could not load config"</span><span>)]
+</span><span>    ConfigLoad {
+</span><span style=color:#a626a4>+       </span><span>#[</span><span style=color:#e45649>from</span><span>]
+</span><span style=color:#a626a4>+</span><span>       source: io::Error,
+</span><span style=color:#a626a4>+   </span><span>}
+</span><span>}
+</span></code></pre><p><code>ConfigLoad</code> 变体中增加了什么额外的东西？由于 <code>ConfigLoad</code> 错误只有在调用 <code>fs::read_to_string</code> 出现底层错误时才会发生，所以 <code>ConfigLoad</code> 变体实际上做的是围绕底层I/O错误提供额外的上下文。<p><code>thiserror</code> 允许我们通过用 <code>#[from]</code> 来注解一个低级错误，以将源码转换为我们自制的错误类型，从而将其包裹在额外的上下文中。这样一来，当一个I/O错误发生时（比如我们指定了一个要搜索的文件，但实际上并不存在），我们就会得到这样一个错误。<pre style=color:#383a42;background-color:#fafafa><code><span>Could not load config: Os { code: 2, kind: NotFound, message: "No such file or directory" }
+</span></code></pre><p>如果没有它，产生的错误信息看起来像这样。<pre style=color:#383a42;background-color:#fafafa><code><span>Os { code: 2, kind: NotFound, message: "No such file or directory" }
+</span></code></pre><p>对于我们库的消费者来说，要想找出这个错误的来源是比较困难的，额外的上下文帮助很大。<p>你可以在<a href=https://github.com/seanchen1991/error-handling-examples/tree/minigrep-thiserror/examples/minigrep>这里</a>找到使用这个错误的 <code>minigrep</code> 版本。<h2 id=geng-jia-shou-dong-de-fang-fa>更加手动的方法</h2><p>现在，我们将换个角度，看看如何在不将其作为依赖的情况下，实现与 <code>thiserror</code> 相同的结果。<p>在引擎盖下，<code>thiserror</code> 用程序宏执行了一些魔法，这对编译速度有明显的影响。在 <code>minigrep</code> 的情况下，我们的错误变体很少，而且项目也很小，所以依赖 <code>thiserror</code> 并不会增加多少编译时间，但是在一个更大更复杂的项目中，这可能是一个考虑因素。<p>所以在这一点上，我们将把这篇文章撕掉，换成我们自己的手动实现来结束这篇文章。走这条路的好处是，我们只需要修改 <code>src/error.rs</code> 文件就可以实现所有必要的改变（当然，除了从我们的 Cargo.toml 中删除 thiserror 之外）。<pre class=language-toml data-lang=toml style=color:#383a42;background-color:#fafafa><code class=language-toml data-lang=toml><span>[dependencies]
+</span><span style=color:#e45649>-</span><span style=color:#fafafa;background-color:#e06c75> </span><span style=color:#e45649>thiserror </span><span>= </span><span style=color:#50a14f>"1"
+</span></code></pre><p>让我们删除所有 <code>thiserror</code> 提供给我们的注释。我们还将用 <code>std::error::Error</code> trait 替换 <code>thiserror::Error</code> trait。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>- use </span><span>thiserror::Error;
+</span><span style=color:#a626a4>+ use </span><span>std::error::Error;
+</span><span>
+</span><span style=color:#a626a4>- </span><span>#[</span><span style=color:#e45649>derive</span><span>(Debug, Error)]
+</span><span style=color:#a626a4>+ </span><span>#[</span><span style=color:#e45649>derive</span><span>(Error)]
+</span><span style=color:#a626a4>pub enum </span><span>AppError {
+</span><span style=color:#a626a4>-   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>)]
+</span><span>    MissingQuery,
+</span><span style=color:#a626a4>-   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>)]
+</span><span>    MissingFilename,
+</span><span style=color:#a626a4>-   </span><span>#[</span><span style=color:#e45649>error</span><span>(</span><span style=color:#50a14f>"Could not load config"</span><span>)]
+</span><span>    ConfigLoad {
+</span><span style=color:#a626a4>-      </span><span>#[</span><span style=color:#e45649>from</span><span>]
+</span><span>       source: io::Error,
+</span><span>    }
+</span><span>}
+</span></code></pre><p>为了恢复我们刚刚擦除的所有功能，我们需要做三件事。<ol><li>为 <code>AppError</code> 实现 <code>Display</code> trait，这样我们的错误变体就可以显示给用户了。<li>为 <code>AppError</code> 实现 <code>Error</code> trait。这个 trait 代表了对错误类型的基本期望，即它们实现了 <code>Display</code> 和 <code>Debug</code>，再加上获取错误底层源或原因的能力。<li>为 <code>AppError</code> 实现 <code>From&LTio::Error></code>。这是必要的，这样我们就可以将从 <code>fs::read_to_string</code> 返回的I/O错误转换为 <code>AppError</code> 的实例。</ol><p>这里是我们对 <code>AppError</code> 的 <code>Display</code> trait 的实现。它将每个错误变量映射为一个字符串，并将其写入到 <code>Display</code> formatter 中。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::fmt;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>fmt::Display </span><span style=color:#a626a4>for </span><span>AppError {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>fmt</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>, </span><span style=color:#e45649>f</span><span>: </span><span style=color:#a626a4>&mut </span><span>fmt::Formatter<'</span><span style=color:#a626a4>_</span><span>>) -> fmt::Result {
+</span><span>        </span><span style=color:#a626a4>match </span><span style=color:#e45649>self </span><span>{
+</span><span>            </span><span style=color:#a626a4>Self</span><span>::MissingQuery </span><span style=color:#a626a4>=></span><span> f.</span><span style=color:#0184bc>write_str</span><span>(</span><span style=color:#50a14f>"Didn't get a query string"</span><span>),
+</span><span>            </span><span style=color:#a626a4>Self</span><span>::MissingFilename </span><span style=color:#a626a4>=></span><span> f.</span><span style=color:#0184bc>write_str</span><span>(</span><span style=color:#50a14f>"Didn't get a file name"</span><span>),
+</span><span>            </span><span style=color:#a626a4>Self</span><span>::ConfigLoad { source } </span><span style=color:#a626a4>=> </span><span>write!(f, </span><span style=color:#50a14f>"Could not load config: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, source),
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>而这就是我们对 <code>Error</code> trait 的实现。要实现的主要方法是 <code>Error::source</code> 方法，它的目的是提供错误源的信息。对于我们的 <code>AppError</code> 类型，只有 <code>ConfigLoad</code> 会暴露任何底层源信息，即调用 <code>fs::read_to_string</code> 可能发生的I/O错误。在其他错误变体的情况下，没有底层的源信息需要暴露。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>std::error;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>error::Error </span><span style=color:#a626a4>for </span><span>AppError {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>source</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> Option<</span><span style=color:#a626a4>&</span><span>(dyn Error + </span><span style=color:#a626a4>'static</span><span>)> {
+</span><span>        </span><span style=color:#a626a4>match </span><span style=color:#e45649>self </span><span>{
+</span><span>            </span><span style=color:#a626a4>Self</span><span>::ConfigLoad { source } </span><span style=color:#a626a4>=> </span><span>Some(source),
+</span><span>            </span><span style=color:#a626a4>_ => </span><span>None,
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>返回类型的 <code>&(dyn Error + 'static')</code> 部分类似于我们之前看到的 <code>Box&LTdyn Error></code> trait 对象。这里的主要区别是，trait 对象是在一个不可变的引用后面，而不是 <code>Box</code> 指针。这里的 <code>'static</code> lifetime 意味着 trait 对象本身只包含拥有的值，也就是说，它内部不存储任何引用。这是必要的，以便让编译器确信这里没有悬空指针的机会。<p>最后，我们需要一种将 <code>io::Error</code> 转换为 <code>AppError</code> 的方法。我们将通过为 <code>AppError for From&LTio::error></code> 来实现。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>From&LTio::Error> </span><span style=color:#a626a4>for </span><span>AppError {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>from</span><span>(</span><span style=color:#e45649>source</span><span>: io::Error) -> </span><span style=color:#a626a4>Self </span><span>{
+</span><span>        </span><span style=color:#a626a4>Self</span><span>::ConfigLoad { source }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>这个没什么好说的。如果我们得到一个 <code>io::Error</code>，我们要做的就是将其转换为 <code>AppError</code>，并将其封装在 <code>ConfigLoad</code> 变体中。<p>这就是全部了，伙计们 你可以在<a href=https://github.com/seanchen1991/error-handling-examples/tree/main/examples/minigrep>这里</a>找到这个版本的 <code>minigrep</code> 实现。<h2 id=zong-jie>总结</h2><p>最后，我们讨论了《Rust编程语言》一书中介绍的原始 <code>minigrep</code> 实现在错误处理方面是如何有点欠缺的，以及如何考虑不同的错误处理用例。<p>从那里，我们展示了如何使用 <code>thiserror</code> crate 将所有可能的错误变体集中到一个类型中。<p>最后，我们剥开了 <code>thiserror</code> 提供的外衣，展示了如何手动复制同样的功能。<p>希望大家能从这篇文章中学到一些东西!<p>原文链接: https://dev.to/seanchen1991/a-beginner-s-guide-to-handling-errors-in-rust-40k2<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/error>/error/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

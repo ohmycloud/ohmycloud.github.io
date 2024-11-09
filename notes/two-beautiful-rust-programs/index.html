@@ -1,0 +1,37 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Two Beautiful Rust Programs</title><meta content="Two Beautiful Rust Programs" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/two-beautiful-rust-programs/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Two Beautiful Rust Programs" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/two-beautiful-rust-programs/ property=twitter:url><meta content="Two Beautiful Rust Programs" property=twitter:title><link href=https://ohmycloud.github.io/notes/two-beautiful-rust-programs/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>two-beautiful-rust-programs</span></div><time datetime=2021-04-05>Published on: <span class=accent-data>2021-04-05</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Two Beautiful Rust Programs</h1><h1 id=two-beautiful-rust-programs>Two Beautiful Rust Programs</h1><p>这是一则 Rust 编程语言的短广告，目标是有经验的 <code>C++</code> 开发者。作为一则广告，它只能吊起你的胃口，具体内容请参考其他资源。<p>第一个程序:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>  </span><span style=color:#a626a4>let mut</span><span> xs </span><span style=color:#a626a4>= </span><span>vec![</span><span style=color:#c18401>1</span><span>, </span><span style=color:#c18401>2</span><span>, </span><span style=color:#c18401>3</span><span>];
+</span><span>  </span><span style=color:#a626a4>let</span><span> x: </span><span style=color:#a626a4>&i32 = &</span><span>xs[</span><span style=color:#c18401>0</span><span>];
+</span><span>  xs.</span><span style=color:#0184bc>push</span><span>(</span><span style=color:#c18401>92</span><span>);
+</span><span>  println!(</span><span style=color:#50a14f>"</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, </span><span style=color:#a626a4>*</span><span>x);
+</span><span>}
+</span></code></pre><p>这个程序创建了一个 32 位整数的向量(<code>std::vector&LTint32_t></code>)，接收第一个元素 <code>x</code> 的引用，再向向量推送一个数字，然后使用 <code>x</code>。这个程序是错误的：扩展向量可能会使对元素的引用无效，而且 <code>*x</code> 可能会取消引用一个 danging 指针。<p>这个程序的好处是它不会被编译。<pre style=color:#383a42;background-color:#fafafa><code><span>error[E0502]: cannot borrow xs as mutable
+</span><span>    because it is also borrowed as immutable
+</span><span> --> src/main.rs:4:5
+</span><span>
+</span><span>     let x: &i32 = &xs[0];
+</span><span>                    -- immutable borrow occurs here
+</span><span>     xs.push(92);
+</span><span>     ^^^^^^^^^^^ mutable borrow occurs here
+</span><span>     println!(x);
+</span><span>              - immutable borrow later used here
+</span></code></pre><p>Rust 编译器跟踪每块数据的别名状态，并禁止潜在的别名数据的突变。在这个例子中，<code>x</code> 和 <code>xs</code> 别名了向量在堆中存储的第一个整数。<p>Rust 不允许做傻事。<p>第二个程序:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>crossbeam::scope;
+</span><span style=color:#a626a4>use </span><span>parking_lot::{Mutex, MutexGuard};
+</span><span>
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>  </span><span style=color:#a626a4>let mut</span><span> counter </span><span style=color:#a626a4>= </span><span>Mutex::new(</span><span style=color:#c18401>0</span><span>);
+</span><span>
+</span><span>  </span><span style=color:#0184bc>scope</span><span>(|</span><span style=color:#e45649>s</span><span>| {
+</span><span>    </span><span style=color:#a626a4>for _ in </span><span style=color:#c18401>0</span><span style=color:#a626a4>..</span><span style=color:#c18401>10 </span><span>{
+</span><span>      s.</span><span style=color:#0184bc>spawn</span><span>(|_| {
+</span><span>        </span><span style=color:#a626a4>for _ in </span><span style=color:#c18401>0</span><span style=color:#a626a4>..</span><span style=color:#c18401>10 </span><span>{
+</span><span>          </span><span style=color:#a626a4>let mut</span><span> guard: MutexGuard<</span><span style=color:#a626a4>i32</span><span>> </span><span style=color:#a626a4>=</span><span> counter.</span><span style=color:#0184bc>lock</span><span>();
+</span><span>          </span><span style=color:#a626a4>*</span><span>guard </span><span style=color:#a626a4>+= </span><span style=color:#c18401>1</span><span>;
+</span><span>        }
+</span><span>      });
+</span><span>    }
+</span><span>  }).</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>
+</span><span>  </span><span style=color:#a626a4>let</span><span> total: </span><span style=color:#a626a4>&mut i32 =</span><span> counter.</span><span style=color:#0184bc>get_mut</span><span>();
+</span><span>  println!(</span><span style=color:#50a14f>"total = </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, </span><span style=color:#a626a4>*</span><span>total)
+</span><span>}
+</span></code></pre><p>这个程序创建一个由 mutex 保护的整数计数器，生成10个线程，从每个线程开始将计数器递增10次，并打印出总数。<p>计数器变量位于堆栈中，这些堆栈数据的指针与其他线程共享。线程必须锁定 mutex 才能进行增量。打印总数时，绕过 mutex 读取计数器，没有任何同步。<p>这个程序的妙处在于，它的正确性依赖于几位精妙的推理，每一个推理都会被编译器检查。<p>子线程不会逃离主函数 所以可以从它的堆栈中读取计数器<p>子线程只通过 mutex 访问 counter。<p>子线程将在我们从计数器中读出总数而不使用 mutex 时终止。<p>如果这些约束中的任何一个被破坏，编译器就会拒绝该代码。没有必要使用 <code>std::shared_ptr</code> 只是为了防御性地确保内存不会在你的脚下被释放。<p>Rust 允许做危险的、聪明的、快速的事情，而不用担心引入未定义的行为。<p>如果你喜欢你所看到的，这里有两本我推荐的书，可以让你更深入地了解 Rust。<p>原文链接: https://matklad.github.io/2020/07/15/two-beautiful-programs.html<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/mutex>/mutex/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

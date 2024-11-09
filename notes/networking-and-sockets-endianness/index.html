@@ -1,0 +1,149 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Networking and Sockets: Endianness</title><meta content="Networking and Sockets: Endianness" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/networking-and-sockets-endianness/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Networking and Sockets: Endianness" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/networking-and-sockets-endianness/ property=twitter:url><meta content="Networking and Sockets: Endianness" property=twitter:title><link href=https://ohmycloud.github.io/notes/networking-and-sockets-endianness/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>networking-and-sockets-endianness</span></div><time datetime=2024-06-15>Published on: <span class=accent-data>2024-06-15</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Networking and Sockets: Endianness</h1><p>在我之前的文章中，我们介绍了关于网络和套接字的一些基本概念。我们讨论了不同的模型，并使用套接字创建了一个简单的网络通信示例，特别是从 <code>Stream TCP</code> 套接字开始。<p>我们选择这种套接字类型及其家族，因为它是最常见的实现之一，也是大多数开发人员最常用的。<code>Stream TCP</code> 套接字因其可靠性和建立面向连接的通信通道的能力而被广泛使用。这使得它们在数据完整性和顺序性至关重要的场景中非常理想，如网页浏览、电子邮件和文件传输。通过了解 <code>Stream TCP</code> 套接字的基础知识，开发人员可以构建健壮的网络应用程序并更有效地排除故障。<p>在本文中，我们将继续使用这种套接字类型，深入探讨套接字编程。到目前为止，我们已经看到了如何创建一个作为服务器的监听套接字以及如何使用另一个套接字连接到它。现在，我们将探索这种通信的一个关键细节——字节序（endianness）！<h1 id=endianness>Endianness</h1><p><img src="https://www.kungfudev.com/_next/image?url=%2Fimages%2Fblog%2Fendianness_had.jpeg&w=2048&q=75" alt=img><p>字节序（endianness）指的是在内存中排列字节的顺序。在大端序系统中，最高有效字节存储在最小的内存地址，而在小端序系统中，最低有效字节最先存储。理解字节序在套接字编程中至关重要，因为通过网络传输的数据可能需要在不同的字节序格式之间转换，以确保不同系统能够正确解释数据。这种转换确保了数据的一致性和准确性，无论通信设备的底层架构如何。<p>例如，一个 32 位值 1,200,000（十六进制 <code>0x00124F80</code>）展示了字节序。在大端序系统中，字节按 <code>0x00 0x12 0x4F 0x80</code> 从低地址到高地址存储。在小端序系统中，顺序相反：<code>0x80 0x4F 0x12 0x00</code>。<pre style=color:#383a42;background-color:#fafafa><code><span>                        Endianness
+</span><span>              (Order of bytes in memory)
+</span><span>
+</span><span>                    Big-Endian System
+</span><span>+-----------------+-----------------+-----------------+------------------+
+</span><span>| Most Significant|                 |                 | Least Significant|
+</span><span>| Byte            |                 |                 | Byte             |
+</span><span>| (MSB)           |                 |                 | (LSB)            |
+</span><span>+-----------------+-----------------+-----------------+------------------+
+</span><span>|      0x00       |      0x12       |      0x4F       |      0x80        |
+</span><span>+-----------------+-----------------+-----------------+------------------+
+</span><span>| Address: 0x00   | Address: 0x01   | Address: 0x02   | Address: 0x03    |
+</span><span>+-----------------+-----------------+-----------------+------------------+
+</span><span>
+</span><span>                   Little-Endian System
+</span><span>+------------------+-----------------+-----------------+------------------+
+</span><span>| Least Significant|                 |                 | Most Significant |
+</span><span>| Byte             |                 |                 | Byte             |
+</span><span>| (LSB)            |                 |                 | (MSB)            |
+</span><span>+------------------+-----------------+-----------------+------------------+
+</span><span>|      0x80        |      0x4F       |      0x12       |      0x00        |
+</span><span>+------------------+-----------------+-----------------+------------------+
+</span><span>| Address: 0x00    | Address: 0x01   | Address: 0x02   | Address: 0x03    |
+</span><span>+------------------+-----------------+-----------------+------------------+
+</span></code></pre><p>假设你收到 <code>0x00124F80</code>，而你不知道它是大端序还是小端序。如果使用错误的字节序来解释这些字节，你将得到一个完全不同的值。在大端序格式中，最高有效字节在前，所以 <code>0x00124F80</code> 保持不变（十进制值：1,200,000）。然而，在小端序格式中，字节顺序反转，值变为 <code>0x804F1200</code>（十进制值：2,152,665,600）。这种差异可能导致数据处理中的重大错误，因此正确处理字节序非常重要。<p>为了用更简单的十进制例子说明字节序的概念，考虑 32 位值 574。在大端序系统中，最高有效数字先存储。对于 574，数字是 5、7 和 4。在大端序系统中，这将存储为 500（5 x 100）、70（7 x 10）和 4（4 x 1），按此顺序。相反，小端序系统将这些数字按相反顺序存储：4（4 x 1）、70（7 x 10）和 500（5 x 100）。这种反转可能导致数值被错误解释。<h1 id=network-byte-order>Network byte order</h1><p>因此，机器在通信时对字节序达成一致是至关重要的，以确保数据被正确解释。例如，在互联网通信中，RFC 1700 和 RFC 9293 等标准定义了使用大端序格式，也称为网络字节序。这种标准化确保了网络上所有设备一致地解释数据，防止错误和误解。<p>RFC 1700: 互联网协议文档中使用十进制表示数字，并以“大端序”顺序描述数据…… RFC 9293: 源地址: 网络字节序中的 IPv4 源地址 目标地址: 网络字节序中的 IPv4 目标地址 https://datatracker.ietf.org/doc/html/rfc768 https://datatracker.ietf.org/doc/html/rfc1700<h1 id=ji-qi-xie-yi>机器协议</h1><p>如果应用程序定义了一个指定字节序的协议，发送方和接收方必须遵守该协议。如果协议规定数据中的某些字段应为网络字节序，则必须相应地转换这些字段。依赖纯文本的数据格式（如 JSON 和 XML）要么对字节序无依赖（将数据视为字节串），要么有自己的编码和解码多字节值的规范。<p>字节序只适用于多字节值，影响表示较大数据类型（如整数和浮点数）的字节序列的顺序。单字节值不受字节序的影响。<p>例如，在 Rust 中，crates <code>bincode</code> 和 <code>postcard</code> 默认使用小端序。这意味着，当你使用这些 crates 序列化数据时，多字节值将按小端序格式排序，除非另有规定。<h1 id=bang-ding-de-tao-jie-zi-di-zhi>绑定的套接字地址</h1><p>如果你阅读或观看过任何关于套接字编程的内容，你几乎肯定会遇到一些C语言的示例。例如，你可能见过如下代码。这是因为，如前所述，IP地址和端口需要以大端序格式表示：<pre class=language-c data-lang=c style=color:#383a42;background-color:#fafafa><code class=language-c data-lang=c><span>address.</span><span style=color:#e45649>sin_family </span><span style=color:#a626a4>=</span><span> AF_INET;
+</span><span>address.</span><span style=color:#e45649>sin_addr</span><span>.</span><span style=color:#e45649>s_addr </span><span style=color:#a626a4>= </span><span style=color:#e45649>htonl</span><span>(</span><span style=color:#a626a4>...</span><span>);
+</span><span>address.</span><span style=color:#e45649>sin_port </span><span style=color:#a626a4>= </span><span style=color:#e45649>htons</span><span>(PORT);
+</span><span style=color:#e45649>bind</span><span>(sockfd, (</span><span style=color:#a626a4>struct</span><span> sockaddr </span><span style=color:#a626a4>*</span><span>)</span><span style=color:#a626a4>&</span><span>address, </span><span style=color:#a626a4>sizeof</span><span>(</span><span style=color:#a626a4>struct</span><span> address))
+</span><span style=color:#a626a4>...
+</span></code></pre><p>这些函数 <code>htons</code> 和 <code>htonl</code> 是一系列 C 辅助函数的一部分，帮助将多字节值转换为主机字节序。这些函数确保数据能被正确解释，不论底层系统的字节序如何。<pre style=color:#383a42;background-color:#fafafa><code><span>The htonl() function converts the unsigned integer hostlong from host byte order to network byte order.
+</span><span>The htons() function converts the unsigned short integer hostshort from host byte order to network byte order.
+</span><span>The ntohl() function converts the unsigned integer netlong from network byte order to host byte order.
+</span><span>The ntohs() function converts the unsigned short integer netshort from network byte order to host byte order.
+</span></code></pre><p>现代编程语言和框架通常会处理这些格式，并提供管理它们的专门函数。例如，在 Rust 中，我们可以这样创建地址：<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>let</span><span> server_address </span><span style=color:#a626a4>= </span><span>SockaddrIn::from_str(</span><span style=color:#50a14f>"127.0.0.1:8080"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span></code></pre><p>在前一行中，由于实现原因，我们不必处理字节排序。但是，我们可以检查地址以确定机器上的默认字节顺序，在我的例子中是小端序。我们还可以根据 IP 地址和端口的需要将其转换为大端字节。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// Create a socket address
+</span><span style=color:#a626a4>let</span><span> sock_addr </span><span style=color:#a626a4>= </span><span>SockaddrIn::from_str(</span><span style=color:#50a14f>"127.0.0.1:6797"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>
+</span><span style=color:#a626a4>let</span><span> sockaddr: sockaddr_in </span><span style=color:#a626a4>=</span><span> sock_addr.</span><span style=color:#0184bc>into</span><span>();
+</span><span>println!(</span><span style=color:#50a14f>"sockaddr: </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, sockaddr);
+</span><span>println!(</span><span style=color:#50a14f>"s_addr Default: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, sockaddr.sin_addr.s_addr);
+</span><span style=color:#a0a1a7>// big endian
+</span><span>println!(</span><span style=color:#50a14f>"s_addr be: </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, sockaddr.sin_addr.s_addr.</span><span style=color:#0184bc>to_be</span><span>());
+</span><span style=color:#a0a1a7>// little endian
+</span><span>println!(</span><span style=color:#50a14f>"s_addr le: </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, sockaddr.sin_addr.s_addr.</span><span style=color:#0184bc>to_le</span><span>());
+</span></code></pre><p>当我们运行这段代码， 我们会获得如下输出：<pre style=color:#383a42;background-color:#fafafa><code><span>$ cargo run --bin addr
+</span><span>sockaddr: sockaddr_in { sin_len: 16, sin_family: 2, sin_port: 36122, sin_addr: in_addr { s_addr: 16777343 }, sin_zero: [0, 0, 0, 0, 0, 0, 0, 0] }
+</span><span>s_addr Default: 16777343
+</span><span>s_addr be: 2130706433
+</span><span>s_addr le: 16777343
+</span></code></pre><p>正如我们所提到的，尽管 Rust 和其他现代编程语言在某些级别上处理字节排序并提供方便的抽象，但理解这些基本概念总是有价值的。<h1 id=shi-ji-shi-li-chu-li-ke-hu-duan-fu-wu-qi-tong-xin-zhong-de-duan-xu>实际示例: 处理客户端-服务器通信中的端序</h1><p>既然我们已经了解了字节排序，那么我们将创建一个简单的示例来说明到目前为止所涉及的内容。为此，我们将创建一个从套接字接收文件的简单程序。客户端首先发送文件的大小，然后发送文件的数据。请注意，这将是一个简单的实现，保持代码简单以说明这个概念。<h2 id=fu-wu-qi-duan>服务器端</h2><p>我们将重用上一篇文章中关于创建流类型和 INET 系列的套接字服务器的代码。我们将创建一个简单的函数来设置这个套接字服务器并返回文件描述符。这将帮助我们保持一个干净的实现，并在以后的所有示例中重用它。该函数名为 <code>create_tcp_server_socket</code>，它非常简单，如下所示:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>pub fn </span><span style=color:#0184bc>create_tcp_server_socket</span><span>(</span><span style=color:#e45649>addr</span><span>: </span><span style=color:#a626a4>&str</span><span>) -> Result&LTOwnedFd, nix::Error> {
+</span><span>    </span><span style=color:#a626a4>let</span><span> socket_fd </span><span style=color:#a626a4>= </span><span style=color:#0184bc>socket</span><span>(
+</span><span>        nix::sys::socket::AddressFamily::Inet, </span><span style=color:#a0a1a7>// Socket family
+</span><span>        nix::sys::socket::SockType::Stream,    </span><span style=color:#a0a1a7>// Socket type
+</span><span>        nix::sys::socket::SockFlag::empty(),
+</span><span>        None,
+</span><span>    )</span><span style=color:#a626a4>?</span><span>;
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// Create a socket address
+</span><span>    </span><span style=color:#a626a4>let</span><span> sock_addr </span><span style=color:#a626a4>= </span><span>SockaddrIn::from_str(addr).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    </span><span style=color:#a0a1a7>// Bind the socket to the address
+</span><span>    </span><span style=color:#0184bc>bind</span><span>(socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>(), </span><span style=color:#a626a4>&</span><span>sock_addr)</span><span style=color:#a626a4>?</span><span>;
+</span><span>    </span><span style=color:#a0a1a7>// Listen for incoming connections
+</span><span>    </span><span style=color:#a626a4>let</span><span> backlog </span><span style=color:#a626a4>= </span><span>Backlog::new(</span><span style=color:#c18401>1</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    </span><span style=color:#0184bc>listen</span><span>(</span><span style=color:#a626a4>&</span><span>socket_fd, backlog)</span><span style=color:#a626a4>?</span><span>;
+</span><span>    Ok(socket_fd)
+</span><span>}
+</span></code></pre><p>现在我们可以使用该函数创建服务器套接字并接受传入的连接。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> socket_fd </span><span style=color:#a626a4>= </span><span style=color:#0184bc>create_tcp_server_socket</span><span>(</span><span style=color:#50a14f>"127.0.0.1:8000"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    </span><span style=color:#a0a1a7>// Accept incoming connections
+</span><span>    </span><span style=color:#a626a4>let</span><span> conn_fd </span><span style=color:#a626a4>= </span><span style=color:#0184bc>accept</span><span>(socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>}
+</span></code></pre><p>接下来，在接受连接之后，我们期望接收客户端将通过网络传输的文件的大小。我们希望接收一个 32 位的无符号整数，所以我们准备了一个 4 字节的缓冲区来接收这个大小。然后从套接字中读取数据并将数据放入缓冲区:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// Receive the size of the file
+</span><span style=color:#a626a4>let mut</span><span> size_buf </span><span style=color:#a626a4>= </span><span>[</span><span style=color:#c18401>0</span><span>; </span><span style=color:#c18401>4</span><span>];
+</span><span style=color:#0184bc>recv</span><span>(conn_fd, </span><span style=color:#a626a4>&mut</span><span> size_buf, MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span style=color:#a626a4>let</span><span> file_size </span><span style=color:#a626a4>= u32</span><span>::from_ne_bytes(size_buf);
+</span><span>println!(</span><span style=color:#50a14f>"File size: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, file_size);
+</span></code></pre><p>如果您注意到，我们在这里使用了 <code>from_ne_bytes</code>。这个函数假设字节是按照机器的本机端序排列的(ne stands for native endianness)。因此，我们期望该值使用与我们的机器相同的端序。<p>最后，我们将使用该大小创建一个内存缓冲区，以便通过连接接收文件的数据并打印读取的字节。如上所述，这是一个简单而基本的实现，只是为了说明情况:<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a0a1a7>// Receive the file data
+</span><span style=color:#a626a4>let mut</span><span> file_buf </span><span style=color:#a626a4>= </span><span>vec![</span><span style=color:#c18401>0</span><span>; file_size </span><span style=color:#a626a4>as usize</span><span>];
+</span><span style=color:#a626a4>let</span><span> bytes_read </span><span style=color:#a626a4>= </span><span style=color:#0184bc>recv</span><span>(conn_fd, </span><span style=color:#a626a4>&mut</span><span> file_buf, MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>println!(</span><span style=color:#50a14f>"File data bytes read: </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, bytes_read);
+</span></code></pre><p>完整代码：<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>nix::sys::socket::{accept, recv, MsgFlags};
+</span><span style=color:#a626a4>use </span><span>socket_net::server::create_tcp_server_socket;
+</span><span style=color:#a626a4>use </span><span>std::os::fd::AsRawFd;
+</span><span style=color:#a626a4>fn </span><span style=color:#0184bc>main</span><span>() {
+</span><span>    </span><span style=color:#a626a4>let</span><span> socket_fd </span><span style=color:#a626a4>= </span><span style=color:#0184bc>create_tcp_server_socket</span><span>(</span><span style=color:#50a14f>"127.0.0.1:8000"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    </span><span style=color:#a0a1a7>// Accept incoming connections
+</span><span>    </span><span style=color:#a626a4>let</span><span> conn_fd </span><span style=color:#a626a4>= </span><span style=color:#0184bc>accept</span><span>(socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// Receive the size of the file
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> size_buf </span><span style=color:#a626a4>= </span><span>[</span><span style=color:#c18401>0</span><span>; </span><span style=color:#c18401>4</span><span>];
+</span><span>	</span><span style=color:#0184bc>recv</span><span>(conn_fd, </span><span style=color:#a626a4>&mut</span><span> size_buf, MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    </span><span style=color:#a626a4>let</span><span> file_size </span><span style=color:#a626a4>= u32</span><span>::from_ne_bytes(size_buf);
+</span><span>    println!(</span><span style=color:#50a14f>"File size: </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, file_size);
+</span><span>
+</span><span>    </span><span style=color:#a0a1a7>// Receive the file data
+</span><span>    </span><span style=color:#a626a4>let mut</span><span> file_buf </span><span style=color:#a626a4>= </span><span>vec![</span><span style=color:#c18401>0</span><span>; file_size </span><span style=color:#a626a4>as usize</span><span>];
+</span><span>    </span><span style=color:#a626a4>let</span><span> bytes_read </span><span style=color:#a626a4>= </span><span style=color:#0184bc>recv</span><span>(conn_fd, </span><span style=color:#a626a4>&mut</span><span> file_buf, MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>    println!(</span><span style=color:#50a14f>"File data bytes read: </span><span style=color:#c18401>{:?}</span><span style=color:#50a14f>"</span><span>, bytes_read);
+</span><span>}
+</span></code></pre><h2 id=ke-hu-duan>客户端</h2><p>对于我们的客户端，逻辑同样非常简单，类似于我们之前使用的逻辑，但是添加了一些微妙的内容，例如在发送实际数据之前读取文件并发送其大小。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>...</span><span> socket creation and connection
+</span><span style=color:#a0a1a7>// Read the file into a buffer
+</span><span style=color:#a626a4>let</span><span> buffer </span><span style=color:#a626a4>= </span><span>std::fs::read(</span><span style=color:#50a14f>"./src/data/data.txt"</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"Failed to read file"</span><span>);
+</span><span>
+</span><span style=color:#a0a1a7>// send the size of the file to the server
+</span><span style=color:#a626a4>let</span><span> size: </span><span style=color:#a626a4>u32 =</span><span> buffer.</span><span style=color:#0184bc>len</span><span>() </span><span style=color:#a626a4>as u32</span><span>;
+</span><span style=color:#0184bc>send</span><span>( socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>(), </span><span style=color:#a626a4>&</span><span>size.</span><span style=color:#0184bc>to_ne_bytes</span><span>(), MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span><span>
+</span><span style=color:#a0a1a7>// send the file to the server
+</span><span style=color:#0184bc>send</span><span>(socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>(), </span><span style=color:#a626a4>&</span><span>buffer, MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span></code></pre><p>有两件事需要注意: 正如我们前面提到的，我们为文件大小创建了一个 u32，并且我们使用 <code>to_ne_bytes</code> 函数来发送按本地端序排列的字节，在我的例子中是 little-endian。<p><code>data.txt</code> 文件是一个简单的文本文件，包含一些 lorem ipsum 数据。我们可以使用 <code>stat</code> 命令检查它的大小:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>$</span><span> stat</span><span style=color:#e45649> -c</span><span>%</span><span style=color:#e45649>s</span><span> ./src/data/data.txt
+</span><span style=color:#e45649>574
+</span></code></pre><p>如果你想知道为什么我们必须处理大小的端序，而不是文件内容本身，记住我们之前学到的: 许多依赖于纯文本的应用程序数据格式要么是字节顺序独立的(将数据作为字节字符串处理)，要么…<h1 id=yun-xing>运行</h1><p>现在我们可以运行服务器和客户机来查看输出并了解其工作原理。文件的大小是 574 字节，我们发送整个文件。<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a0a1a7># Server
+</span><span style=color:#e45649>$</span><span> cargo run</span><span style=color:#e45649> --bin</span><span> tcp-file-server
+</span><span style=color:#e45649>Socket</span><span> file descriptor: 3
+</span><span style=color:#e45649>Socket</span><span> bound to address: 127.0.0.1:8000
+</span><span style=color:#e45649>File</span><span> size: 574
+</span><span style=color:#e45649>File</span><span> data bytes read: 574
+</span></code></pre><pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a0a1a7># Client
+</span><span style=color:#e45649>$</span><span> cargo run</span><span style=color:#e45649> --bin</span><span> tcp-file-client
+</span><span style=color:#e45649>Socket</span><span> file descriptor: 3
+</span><span style=color:#e45649>Sending</span><span> file size: 574
+</span><span style=color:#e45649>Sending</span><span> file data
+</span></code></pre><p>到目前为止，一切顺利，对吧? 行为如预期的那样: 我们正在发送一个 574 字节的文件，并且我们正在服务器中接收它。这是因为客户端和服务器都使用 <code>ne (native endianness)</code>，而且由于它们在同一台机器上，它们都使用 little-endian。但是如果客户端使用不同的端序呢? 例如，如果它使用大端字节 <code>big-endian</code> 来发送大小呢?<p>我们可以通过修改客户端的这一行来模拟将要发生的事情，以指示它以大端字节而不是小端字节发送数据。为此，我们使用 <code>to_be_bytes</code> (be 代表大端字节):<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#0184bc>send</span><span>( socket_fd.</span><span style=color:#0184bc>as_raw_fd</span><span>(), </span><span style=color:#a626a4>&</span><span>size.</span><span style=color:#0184bc>to_be_bytes</span><span>(), MsgFlags::empty()).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"..."</span><span>);
+</span></code></pre><p>如果我们再次运行程序，我们将看到为什么理解端序是重要的。从客户端的角度来看，我们发送的是相同的值，只是用了不同的端序。然而，如果你看看我们的服务器，你会注意到这个问题:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a0a1a7># Client
+</span><span style=color:#e45649>$</span><span> cargo run</span><span style=color:#e45649> --bin</span><span> tcp-file-client
+</span><span style=color:#e45649>Socket</span><span> file descriptor: 3
+</span><span style=color:#e45649>Sending</span><span> file size: 574
+</span><span style=color:#e45649>Sending</span><span> file data
+</span></code></pre><p>服务器仍然将大小视为以相同的端序来处理，即小端序。但它不再是小端式的;它是大端的。这将导致一个完全不同且不正确的值。在这个简单的例子中，它导致服务器分配的内存远远超过缓冲区接收文件所需的内存。可以想象，在更复杂的情况下，这个问题可能会产生更大、更严重的影响。<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a0a1a7># Server
+</span><span style=color:#e45649>$</span><span> cargo run</span><span style=color:#e45649> --bin</span><span> tcp-file-server
+</span><span style=color:#e45649>Socket</span><span> file descriptor: 3
+</span><span style=color:#e45649>Socket</span><span> bound to address: 127.0.0.1:8000
+</span><span style=color:#e45649>File</span><span> size: 1040318464
+</span><span style=color:#e45649>File</span><span> data bytes read: 574
+</span></code></pre><p>如果我们使用本地的操作系统位大小，比如 64 位整数，并在客户端和服务器中使用 u64 类型作为大小变量，那么问题可能会更糟。我们可以在客户端和服务器端修改以下几行，看看结果:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>//</span><span> server
+</span><span style=color:#0184bc>let</span><span> mut size_buf </span><span style=color:#a626a4>=</span><span> [</span><span style=color:#c18401>0</span><span>; </span><span style=color:#c18401>8</span><span>];
+</span><span style=color:#e45649>...
+</span><span style=color:#0184bc>let</span><span> file_size </span><span style=color:#a626a4>=</span><span> u64</span><span style=color:#a626a4>::</span><span>from_ne_bytes(size_buf);
+</span><span>
+</span><span style=color:#e45649>//</span><span> client
+</span><span style=color:#0184bc>let</span><span> size</span><span style=color:#a626a4>:</span><span> u64 </span><span style=color:#a626a4>=</span><span> buffer.len() as u64;
+</span></code></pre><p>在做了这些修改之后，让我们再次运行服务器和客户端:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a0a1a7># Server
+</span><span style=color:#e45649>$</span><span> cargo run</span><span style=color:#e45649> --bin</span><span> tcp-file-server
+</span><span style=color:#e45649>Socket</span><span> file descriptor: 3
+</span><span style=color:#e45649>Socket</span><span> bound to address: 127.0.0.1:8000
+</span><span style=color:#e45649>File</span><span> size: 4468133780304953344
+</span><span style=color:#e45649>memory</span><span> allocation of 4468133780304953344 bytes failed
+</span><span style=color:#e45649>Aborted</span><span> (core dumped)
+</span></code></pre><p>在这种情况下，整数的多字节表示更大，并且在错误的字节顺序下，值表示变得巨大。在这里，服务器尝试分配大约 4.4 eb 的内存，这远远超过当前任何机器上的可用内存。这说明正确处理端序是多么重要，因为不正确的处理可能导致严重的问题，如内存分配失败和程序崩溃。 您可以在这个 <a href=https://github.com/douglasmakey/socket_net>repo</a> 中找到这个示例和未来示例的代码。<h1 id=zong-jie>总结</h1><p>理解字节序对于开发健壮的网络应用至关重要。如示例所示，即使是简单的任务如通过网络发送文件，如果不正确处理字节序，也会导致严重问题。通过遵循标准并正确管理字节顺序，我们确保数据在不同系统间被准确解释，防止错误并提高应用的可靠性。现代编程语言如Rust提供了有用的抽象，但对这些基础概念的牢固掌握使开发人员能够更有效地排除故障和优化代码。在网络通信中处理多字节值时，务必注意字节序，以避免潜在的陷阱。<p>感谢你的阅读。这篇博客是我学习旅程的一部分，非常重视你的反馈。关于套接字和网络还有更多内容可供探索和分享，请关注即将发布的文章。希望我们能在这个领域共同学习和成长。编程愉快！<p>原文链接：https://www.kungfudev.com/blog/2024/06/14/network-sockets-endianness<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/endianness>/endianness/</a> <a href=/tags/networking>/networking/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>

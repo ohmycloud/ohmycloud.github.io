@@ -1,0 +1,144 @@
+<!doctype html><html lang=en><head><meta charset=UTF-8><meta content="IE=edge" http-equiv=X-UA-Compatible><meta content="text/html; charset=UTF-8" http-equiv=content-type><meta content="width=device-width,initial-scale=1,user-scalable=no" name=viewport><meta content="index, follow" name=robots><title>Kafka 和 Rust入门 - 第一部分</title><meta content="Kafka 和 Rust入门 - 第一部分" name=title><meta content=焉知非鱼 name=author><meta content=website property=og:type><meta content=https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/ property=og:url><meta content=焉知非鱼 property=og:site_name><meta content="Kafka 和 Rust入门 - 第一部分" property=og:title><meta content=summary_large_image property=twitter:card><meta content=https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/ property=twitter:url><meta content="Kafka 和 Rust入门 - 第一部分" property=twitter:title><link href=https://ohmycloud.github.io/notes/getting-started-with-kafka-and-rust-part1/ rel=canonical><link href=https://speyll.github.io/suCSS/reset-min.css rel=stylesheet><link href=https://speyll.github.io/suCSS/suCSS-min.css rel=stylesheet><link href=https://ohmycloud.github.io/css/style.css rel=stylesheet><script defer src=https://ohmycloud.github.io/js/script.js></script><body><header><nav id=nav-bar><a href=/> /home </a><a href=/notes> /notes </a><a href=/blog> /blog </a><a href=/about> /about </a><a href=/tags> /tag </a><div><input id=theme-toggle style=display:none type=checkbox><label for=theme-toggle id=theme-toggle-label><svg class=icons id=theme-icon><use href=https://ohmycloud.github.io/icons.svg#lightMode></use></svg></label><audio id=theme-sound><source src=https://ohmycloud.github.io/click.ogg type=audio/ogg></audio></div></nav></header><main><div><a href=..>..</a>/<span class=accent-data>getting-started-with-kafka-and-rust-part1</span></div><time datetime=2021-04-14>Published on: <span class=accent-data>2021-04-14</span></time><address rel=author>By <span class=accent-data>焉知非鱼</span></address><h1>Kafka 和 Rust入门 - 第一部分</h1><p>这是一个两部分的系列，帮助你开始使用 Rust 和 Kafka。我们将使用 <a href=https://github.com/fede1024/rust-rdkafka/>rust-rdkafka</a> crate，它本身就是基于 <a href=https://github.com/edenhill/librdkafka>librdkafka</a>（C库）的。<p>在这篇文章中，我们将介绍 Kafka Producer API。<h2 id=chu-shi-she-zhi>初始设置</h2><p>确保你<a href=https://kafka.apache.org/downloads>安装了一个 Kafka broker</a> - 本地设置应该足够了。当然，你也需要<a href=https://www.rust-lang.org/tools/install>安装Rust</a> - 你需要<a href=https://github.com/fede1024/rust-rdkafka#minimum-supported-rust-version-msrv>1.45或以上版本</a>。<p>在你开始之前，先克隆 GitHub repo。<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#e45649>git</span><span> clone https://github.com/abhirockzz/rust-kafka-101
+</span><span style=color:#0184bc>cd</span><span> part1
+</span></code></pre><p>检查 Cargo.toml 文件:<pre style=color:#383a42;background-color:#fafafa><code><span>...
+</span><span>[dependencies]
+</span><span>rdkafka = { version = "0.25", features = ["cmake-build","ssl"] }
+</span><span>...
+</span></code></pre><h2 id=guan-yu-cmake-build-gong-neng-de-shuo-ming>关于 cmake-build 功能的说明</h2><p><code>rust-rdkafka</code> 提供了几种解决 <code>librdkafka</code> 依赖关系的方法。我选择了 <code>static</code> 链接，其中 <code>librdkafka</code> 被编译。不过你也可以选择 <code>dynamic</code> 链接来引用本地安装的版本。<blockquote><p>更多内容，请<a href=https://github.com/fede1024/rust-rdkafka/blob/master/rdkafka-sys/README.md#features>参考以下链接</a></blockquote><p>好吧，我们先从基本的开始说起。<h2 id=jian-dan-de-sheng-chan-zhe>简单的生产者</h2><p>这里是一个基于 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseProducer.html>BaseProducer</a> 的简单生产者。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>    </span><span style=color:#a626a4>let</span><span> producer: BaseProducer </span><span style=color:#a626a4>= </span><span>ClientConfig::new()
+</span><span>        .</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#50a14f>"bootstrap.servers"</span><span>, </span><span style=color:#50a14f>"localhost:9092"</span><span>)
+</span><span>        .</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#50a14f>"security.protocol"</span><span>, </span><span style=color:#50a14f>"SASL_SSL"</span><span>)
+</span><span>        .</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#50a14f>"sasl.mechanisms"</span><span>, </span><span style=color:#50a14f>"PLAIN"</span><span>)
+</span><span>        .</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#50a14f>"sasl.username"</span><span>, </span><span style=color:#50a14f>"&LTupdate>"</span><span>)
+</span><span>        .</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#50a14f>"sasl.password"</span><span>, </span><span style=color:#50a14f>"&LTupdate>"</span><span>)
+</span><span>        .</span><span style=color:#0184bc>create</span><span>()
+</span><span>        .</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"invalid producer config"</span><span>);
+</span></code></pre><p><code>send</code> 方法开始产生消息 - 它是在紧缩 <code>loop</code> 中完成的，中间有一个 <code>thread::sleep</code>(不是在生产中会做的事情)，以使其更容易追踪/跟踪结果。键、值（有效载荷）和目标 Kafka 主题以 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseRecord.html>BaseRecord</a> 的形式表示。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>    </span><span style=color:#a626a4>for</span><span> i </span><span style=color:#a626a4>in </span><span style=color:#c18401>1</span><span style=color:#a626a4>..</span><span style=color:#c18401>100 </span><span>{
+</span><span>        println!(</span><span style=color:#50a14f>"sending message"</span><span>);
+</span><span>        producer
+</span><span>            .</span><span style=color:#0184bc>send</span><span>(
+</span><span>                BaseRecord::to(</span><span style=color:#50a14f>"rust"</span><span>)
+</span><span>                    .</span><span style=color:#0184bc>key</span><span>(</span><span style=color:#a626a4>&</span><span>format!(</span><span style=color:#50a14f>"key-</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, i))
+</span><span>                    .</span><span style=color:#0184bc>payload</span><span>(</span><span style=color:#a626a4>&</span><span>format!(</span><span style=color:#50a14f>"value-</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, i)),
+</span><span>            )
+</span><span>            .</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"failed to send message"</span><span>);
+</span><span>        thread::sleep(Duration::from_secs(</span><span style=color:#c18401>3</span><span>));
+</span><span>    }
+</span></code></pre><blockquote><p>你可以在文件 <code>src/1_producer_simple.rs</code> 中查看整个代码。</blockquote><h2 id=yao-ce-shi-sheng-chan-zhe-shi-fou-zai-gong-zuo>要测试生产者是否在工作 ...</h2><p>运行这段代码:<ul><li>只需将文件 <code>src/1_producer_simple.rs</code> 重命名为 <code>main.rs</code>。<li>执行 <code>cargo run</code></ul><p>你应该看到这个输出:<pre style=color:#383a42;background-color:#fafafa><code><span>sending message
+</span><span>sending message
+</span><span>sending message
+</span><span>...
+</span></code></pre><p>到底发生了什么？要弄清楚 - 使用 Kafka CLI 消费者（或其他消费者客户端，如 kafkacat）连接到你的 Kafka 主题（我在上面的例子中使用 rust 作为 Kafka 主题的名称）。你应该看到消息流进来了。<p>例如<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a626a4>&</span><span style=color:#e45649>KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server</span><span> localhost:9092</span><span style=color:#e45649> --topic</span><span> rust</span><span style=color:#e45649> --from-beginning
+</span></code></pre><h2 id=sheng-chan-zhe-hui-diao>生产者回调</h2><p>我们现在是在瞎飞! 除非我们明确地创建一个消费者来查看我们的消息，否则我们不知道它们是否被发送到 Kafka。让我们通过实现 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/trait.ProducerContext.html>ProducerContext</a>(trait)来解决这个问题，以挂接到 produce 事件 - 它就像一个回调。<p>首先为 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/client/trait.ClientContext.html>ClientContext</a> trait 创建一个结构体和一个空的实现（这是必须的）。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>ProducerCallbackLogger;
+</span><span>
+</span><span style=color:#a626a4>impl </span><span>ClientContext </span><span style=color:#a626a4>for </span><span>ProducerCallbackLogger {}
+</span></code></pre><p>现在到了主要部分，我们在 <code>ProducerContext</code> trait 中实现 <code>delivery</code> 函数。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>ProducerContext </span><span style=color:#a626a4>for </span><span>ProduceCallbackLogger {
+</span><span>    </span><span style=color:#a626a4>type </span><span>DeliveryOpaque </span><span style=color:#a626a4>= </span><span>();
+</span><span>
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>delivery</span><span>(
+</span><span>        </span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>,
+</span><span>        </span><span style=color:#e45649>delivery_result</span><span>: </span><span style=color:#a626a4>&</span><span>rdkafka::producer::DeliveryResult<'</span><span style=color:#a626a4>_</span><span>>,
+</span><span>        </span><span style=color:#e45649>_delivery_opaque</span><span>: </span><span style=color:#a626a4>Self::</span><span>DeliveryOpaque,
+</span><span>    ) {
+</span><span>        </span><span style=color:#a626a4>let</span><span> dr </span><span style=color:#a626a4>=</span><span> delivery_result.</span><span style=color:#0184bc>as_ref</span><span>();
+</span><span>        </span><span style=color:#a626a4>match</span><span> dr {
+</span><span>            Ok(msg) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>                </span><span style=color:#a626a4>let</span><span> key: </span><span style=color:#a626a4>&str =</span><span> msg.</span><span style=color:#0184bc>key_view</span><span>().</span><span style=color:#0184bc>unwrap</span><span>().</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>                println!(
+</span><span>                    </span><span style=color:#50a14f>"produced message with key </span><span style=color:#c18401>{}</span><span style=color:#50a14f> in offset </span><span style=color:#c18401>{}</span><span style=color:#50a14f> of partition </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>,
+</span><span>                    key,
+</span><span>                    msg.</span><span style=color:#0184bc>offset</span><span>(),
+</span><span>                    msg.</span><span style=color:#0184bc>partition</span><span>()
+</span><span>                )
+</span><span>            }
+</span><span>            Err(producer_err) </span><span style=color:#a626a4>=> </span><span>{
+</span><span>                </span><span style=color:#a626a4>let</span><span> key: </span><span style=color:#a626a4>&str =</span><span> producer_err.</span><span style=color:#c18401>1.</span><span style=color:#0184bc>key_view</span><span>().</span><span style=color:#0184bc>unwrap</span><span>().</span><span style=color:#0184bc>unwrap</span><span>();
+</span><span>
+</span><span>                println!(
+</span><span>                    </span><span style=color:#50a14f>"failed to produce message with key </span><span style=color:#c18401>{}</span><span style=color:#50a14f> - </span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>,
+</span><span>                    key, producer_err.</span><span style=color:#c18401>0</span><span>,
+</span><span>                )
+</span><span>            }
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre><p>我们根据 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/type.DeliveryResult.html>DeliveryResult</a>(毕竟它是一个 <code>Result</code>)来匹配成功(<code>Ok</code>)和失败(<code>Err</code>)的情况。我们所做的只是简单地记录这两种情况下的消息，因为这只是一个例子。你可以在这里做任何你想做的事情（虽然不要太疯狂！）。<blockquote><p>我们忽略了 <code>ProducerContext</code> trait 的关联类型 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/trait.ProducerContext.html#associatedtype.DeliveryOpaque>DeliveryOpaque</a>。</blockquote><p>我们需要确保我们插入了 <code>ProducerContext</code> 的实现。我们通过使用 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/config/struct.ClientConfig.html#method.create_with_context>create_with_context</a> 方法（而不是 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/config/struct.ClientConfig.html#method.create>create</a>）来实现，并确保为 <code>BaseProducer</code> 提供正确的类型。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>let</span><span> producer: BaseProducer&LTProduceCallbackLogger> </span><span style=color:#a626a4>= </span><span>ClientConfig::new().</span><span style=color:#0184bc>set</span><span>(</span><span style=color:#a626a4>...</span><span>.)
+</span><span style=color:#a626a4>...
+</span><span>.</span><span style=color:#0184bc>create_with_context</span><span>(ProduceCallbackLogger {})
+</span><span style=color:#a626a4>...
+</span></code></pre><h2 id=ru-he-diao-yong-hui-diao>如何调用 "回调"？</h2><p>好了，我们有了实现，但我们需要一种方法来触发它! 其中一个方法就是在生产者上调用 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.BaseProducer.html#method.flush>flush</a>。所以，我们可以把我们的 producer 写成这样。<ul><li>添加 <code>producer.flush(Duration::from_secs(3));</code>, 并<li>注释掉 <code>sleep</code> (just for now)</ul><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span>        producer
+</span><span>            .</span><span style=color:#0184bc>send</span><span>(
+</span><span>                BaseRecord::to(</span><span style=color:#50a14f>"rust"</span><span>)
+</span><span>                    .</span><span style=color:#0184bc>key</span><span>(</span><span style=color:#a626a4>&</span><span>format!(</span><span style=color:#50a14f>"key-</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, i))
+</span><span>                    .</span><span style=color:#0184bc>payload</span><span>(</span><span style=color:#a626a4>&</span><span>format!(</span><span style=color:#50a14f>"value-</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, i)),
+</span><span>            )
+</span><span>            .</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"failed to send message"</span><span>);
+</span><span>
+</span><span>        producer.</span><span style=color:#0184bc>flush</span><span>(Duration::from_secs(</span><span style=color:#c18401>3</span><span>));
+</span><span>        println!(</span><span style=color:#50a14f>"flushed message"</span><span>);
+</span><span>        </span><span style=color:#a0a1a7>//thread::sleep(Duration::from_secs(3));
+</span></code></pre><h2 id=deng-deng-wo-men-ke-yi-zuo-de-geng-hao>等等，我们可以做得更好</h2><p><code>send</code> 方法是非阻塞的（默认），但通过在每次 <code>send</code> 后调用 <code>flush</code>，我们现在已经将其转换为同步调用 - 从性能角度来看，不推荐使用。<p>我们可以通过使用 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/struct.ThreadedProducer.html>ThreadedProducer</a> 来改善这种情况。它负责在后台线程中调用 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/producer/base_producer/struct.BaseProducer.html#method.poll>poll</a> 方法，以确保发送回调通知的传递。这样做非常简单 - 只需将类型从 <code>BaseProducer</code> 改为 <code>ThreadedProducer</code> 即可!<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>#</span><span> before: BaseProducer&LTProduceCallbackLogger>
+</span><span style=color:#a626a4>#</span><span> after: ThreadedProducer&LTProduceCallbackLogger>
+</span></code></pre><p>而且，我们也不需要再调用 <code>flush</code> 了。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>...
+</span><span style=color:#a0a1a7>//producer.flush(Duration::from_secs(3));
+</span><span style=color:#a0a1a7>//println!("flushed message");
+</span><span>thread::sleep(Duration::from_secs(</span><span style=color:#c18401>3</span><span>));
+</span><span style=color:#a626a4>...
+</span></code></pre><blockquote><p>代码在 <code>src/2_threaded_producer.rs</code> 中可以找到。</blockquote><h2 id=zai-ci-yun-xing-gai-cheng-xu>再次运行该程序</h2><ul><li>将文件 <code>src/2_threaded_producer.rs</code> 重命名为 <code>main.rs</code>，并且<li>执行 <code>cargo run</code></ul><p>输出:<pre style=color:#383a42;background-color:#fafafa><code><span>sending message
+</span><span>sending message
+</span><span>produced message with key key-1 in offset 6 of partition 2
+</span><span>produced message with key key-2 in offset 3 of partition 0
+</span><span>sending message
+</span><span>produced message with key key-3 in offset 7 of partition 2
+</span></code></pre><p>正如预期的那样，你应该能够看到生产者事件回调，表示消息确实被发送到了 Kafka 主题。当然，你可以直接连接到主题，并再次检查，就像之前一样。<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a626a4>&</span><span style=color:#e45649>KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server</span><span> localhost:9092</span><span style=color:#e45649> --topic</span><span> rust</span><span style=color:#e45649> --from-beginning
+</span></code></pre><blockquote><p>要尝试失败的情况，请尝试使用一个不正确的主题名称，并注意 <code>delivery</code> 实现的 <code>Err</code> 变体是如何被调用的。</blockquote><h2 id=fa-song-json-xiao-xi>发送 JSON 消息</h2><p>到目前为止，我们只是发送 <code>String</code> 作为 key 和 value。JSON 是一种常用的消息格式，让我们看看如何使用它。<p>假设我们要发送 <code>User</code> 信息，将使用这个结构体来表示。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>struct </span><span>User {
+</span><span>    </span><span style=color:#e45649>id</span><span>: </span><span style=color:#a626a4>i32</span><span>,
+</span><span>    </span><span style=color:#e45649>email</span><span>: String,
+</span><span>}
+</span></code></pre><p>然后我们可以使用 <a href=https://docs.serde.rs/serde_json/>serde_json</a> 库将其序列化为 JSON。我们所需要的就是使用 <a href=https://serde.rs/derive.html>serde 中的自定义派生函数</a> - <code>Deserialize</code> 和 <code>Serialize</code>。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>use </span><span>serde::{Deserialize, Serialize};
+</span><span>
+</span><span>#[</span><span style=color:#e45649>derive</span><span>(Serialize, Deserialize, Debug)]
+</span><span style=color:#a626a4>struct </span><span>User {
+</span><span>    </span><span style=color:#e45649>id</span><span>: </span><span style=color:#a626a4>i32</span><span>,
+</span><span>    </span><span style=color:#e45649>email</span><span>: String,
+</span><span>}
+</span></code></pre><h2 id=xiu-gai-sheng-chan-zhe-xun-huan>修改生产者循环。</h2><ul><li>创建一个 <code>User</code> 实例<li>使用 <a href=https://docs.serde.rs/serde_json/fn.to_string_pretty.html>to_string_pretty</a> 将其序列化为 JSON 字符串。<li>在有效载荷中加入这一点</ul><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>...
+</span><span>
+</span><span style=color:#a626a4>let</span><span> user_json </span><span style=color:#a626a4>= </span><span>serde_json::to_string_pretty(</span><span style=color:#a626a4>&</span><span>user).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"json serialization failed"</span><span>);
+</span><span>
+</span><span>        producer
+</span><span>            .</span><span style=color:#0184bc>send</span><span>(
+</span><span>                BaseRecord::to(</span><span style=color:#50a14f>"rust"</span><span>)
+</span><span>                    .</span><span style=color:#0184bc>key</span><span>(</span><span style=color:#a626a4>&</span><span>format!(</span><span style=color:#50a14f>"user-</span><span style=color:#c18401>{}</span><span style=color:#50a14f>"</span><span>, i))
+</span><span>                    .</span><span style=color:#0184bc>payload</span><span>(</span><span style=color:#a626a4>&</span><span>user_json),
+</span><span>            )
+</span><span>            .</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"failed to send message"</span><span>);
+</span><span style=color:#a626a4>...
+</span></code></pre><blockquote><p>你也可以使用 <a href=https://docs.serde.rs/serde_json/fn.to_vec.html>to_vec</a>(而不是 <code>to_string()</code>)将其转换为一个字节的<code>Vec</code>(<code>Vec&LTu8></code>)。</blockquote><h2 id=yao-yun-xing-gai-cheng-xu>要运行该程序...</h2><ul><li>将文件 <code>src/3_JSON_payload.rs</code> 重命名为 <code>main.rs</code>，然后<li>执行 <code>cargo run</code></ul><p>从主题中消费:<pre class=language-bash data-lang=bash style=color:#383a42;background-color:#fafafa><code class=language-bash data-lang=bash><span style=color:#a626a4>&</span><span style=color:#e45649>KAFKA_HOME/bin/kafka-console-consumer.sh --bootstrap-server</span><span> localhost:9092</span><span style=color:#e45649> --topic</span><span> rust</span><span style=color:#e45649> --from-beginning
+</span></code></pre><p>你应该看到带有 <code>String</code> 的键（如 <code>user-34</code>）和 JSON 值的消息。<pre class=language-json data-lang=json style=color:#383a42;background-color:#fafafa><code class=language-json data-lang=json><span>{
+</span><span>  </span><span style=color:#50a14f>"id"</span><span>: </span><span style=color:#c18401>34</span><span>,
+</span><span>  </span><span style=color:#50a14f>"email"</span><span>: </span><span style=color:#50a14f>"user-34@foobar.com"
+</span><span>}
+</span></code></pre><h2 id=you-geng-hao-de-fang-fa-ma>有更好的方法吗？</h2><p>是的！如果你习惯了 Kafka Java 客户端中的声明式序列化/去序列化方法（可能其他客户端也一样），你可能不喜欢这种 "显式" 方法。只是为了让大家明白，这是你在 Java 中的做法。<pre class=language-java data-lang=java style=color:#383a42;background-color:#fafafa><code class=language-java data-lang=java><span style=color:#c18401>Properties</span><span> props </span><span style=color:#a626a4>= new </span><span style=color:#c18401>Properties</span><span>();
+</span><span>props.</span><span style=color:#e45649>put</span><span>(</span><span style=color:#c18401>ProducerConfig</span><span>.</span><span style=color:#c18401>BOOTSTRAP_SERVERS_CONFIG</span><span>, </span><span style=color:#50a14f>"localhost:9092"</span><span>);
+</span><span>props.</span><span style=color:#e45649>put</span><span>(</span><span style=color:#c18401>ProducerConfig</span><span>.</span><span style=color:#c18401>KEY_SERIALIZER_CLASS_CONFIG</span><span>,
+</span><span>  </span><span style=color:#50a14f>"org.apache.kafka.common.serialization.StringSerializer"</span><span>);
+</span><span>props.</span><span style=color:#e45649>put</span><span>(</span><span style=color:#c18401>ProducerConfig</span><span>.</span><span style=color:#c18401>VALUE_SERIALIZER_CLASS_CONFIG</span><span>,
+</span><span>  </span><span style=color:#50a14f>"io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer"</span><span>);
+</span><span>
+</span><span>....
+</span><span>
+</span><span style=color:#c18401>ProducerRecord</span><span><</span><span style=color:#c18401>String</span><span>, </span><span style=color:#c18401>User</span><span>> record </span><span style=color:#a626a4>= new </span><span style=color:#c18401>ProducerRecord</span><span><</span><span style=color:#c18401>String</span><span>, </span><span style=color:#c18401>User</span><span>>(topic, key, user);
+</span><span>producer.</span><span style=color:#e45649>send</span><span>(record);
+</span></code></pre><blockquote><p>请注意，您只需将 <code>Producer</code> 配置为使用 <code>KafkaJsonSchemaSerializer</code>，<code>User</code> 类就会被序列化为 JSON。</blockquote><p><code>rust-rdkafka</code> 用 <a href=https://docs.rs/rdkafka/0.26.0/rdkafka/message/trait.ToBytes.html>ToBytes</a> trait 提供了类似的东西。下面是它的样子。<pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>pub trait </span><span>ToBytes {
+</span><span>    </span><span style=color:#a0a1a7>/// Converts the provided data to bytes.
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>to_bytes</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>u8</span><span>];
+</span><span>}
+</span></code></pre><p>不言而喻吧？<code>String</code>、<code>Vec&LTu8></code> 等都有现有的实现。所以你可以使用这些类型作为键或值，而不需要任何额外的工作 - 这正是我们刚刚做的。但问题是我们的方法是 "显式" 的，即我们将 <code>User</code> 结构转换为 JSON 字符串，并将其传递出去。<h2 id=ru-guo-wo-men-ke-yi-wei-user-shi-xian-tobytes-ni>如果我们可以为 <code>User</code> 实现 <code>ToBytes</code> 呢？</h2><pre class=language-rust data-lang=rust style=color:#383a42;background-color:#fafafa><code class=language-rust data-lang=rust><span style=color:#a626a4>impl </span><span>ToBytes </span><span style=color:#a626a4>for </span><span>User {
+</span><span>    </span><span style=color:#a626a4>fn </span><span style=color:#0184bc>to_bytes</span><span>(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>) -> </span><span style=color:#a626a4>&</span><span>[</span><span style=color:#a626a4>u8</span><span>] {
+</span><span>        </span><span style=color:#a626a4>let</span><span> b </span><span style=color:#a626a4>= </span><span>serde_json::to_vec_pretty(</span><span style=color:#a626a4>&</span><span style=color:#e45649>self</span><span>).</span><span style=color:#0184bc>expect</span><span>(</span><span style=color:#50a14f>"json serialization failed"</span><span>);
+</span><span>        b.</span><span style=color:#0184bc>as_slice</span><span>()
+</span><span>    }
+</span><span>}
+</span></code></pre><p>你会看到一个编译器错误。<pre style=color:#383a42;background-color:#fafafa><code><span>cannot return value referencing local variable `b`
+</span><span>returns a value referencing data owned by the current function
+</span></code></pre><blockquote><p>更多的背景资料，请参考 <a href=https://github.com/fede1024/rust-rdkafka/issues/128>GitHub</a> 的问题。我很乐意看到其他可以与 <code>ToBytes</code> 一起工作的例子 - 如果你有这方面的意见，请在留言中留下。</blockquote><p>TL;DR是，最好坚持用 "显式" 的方式做事，除非你有一个 <code>ToBytes</code> 的实现，"不涉及分配，不能失败"。<h2 id=zong-jie>总结</h2><p>第一部分就到这里。第二部分将涉及围绕 Kafka 消费者的话题。<p>原文链接: https://dev.to/abhirockzz/getting-started-with-kafka-and-rust-part-1-4hkb<p class=tags-data><a href=/tags/rust>/rust/</a> <a href=/tags/kafka>/kafka/</a></main><footer><hr><div id=footer-container><div>Built with <a rel="noopener noreferrer" href=https://www.getzola.org target=_blank>Zola</a> using <a rel="noopener noreferrer" href=https://github.com/Speyll/anemone target=_blank>anemone</a> theme<br></div></div></footer>
